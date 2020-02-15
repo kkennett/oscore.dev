@@ -1,0 +1,11 @@
+*.VC.db*
+*.vcxproj.user
+.vs/**
+*.suo
+*.opendb
+k2tools32/*
+bld/*
+*.ipch
+vhd/*
+src/uefi/build/*
+src/uefi/conf/*
