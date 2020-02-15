@@ -1,5 +1,3 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<!--
 #   
 #   BSD 3-Clause License
 #   
@@ -31,23 +29,10 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
--->
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros">
-    <K2_ROOT>C:\repo\oscore.dev</K2_ROOT>
-  </PropertyGroup>
-  <PropertyGroup />
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(K2_ROOT)\src\shared\inc</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <BuildMacro Include="K2_ROOT">
-      <Value>$(K2_ROOT)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
-  </ItemGroup>
-</Project>
+include $(K2_ROOT)/src/shared/build/pre.make
+
+TARGET_TYPE = LIB
+
+SOURCES += parse.c
+
+include $(K2_ROOT)/src/shared/build/post.make

@@ -1,5 +1,3 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<!--
 #   
 #   BSD 3-Clause License
 #   
@@ -31,23 +29,30 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
--->
-<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros">
-    <K2_ROOT>C:\repo\oscore.dev</K2_ROOT>
-  </PropertyGroup>
-  <PropertyGroup />
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <AdditionalIncludeDirectories>$(K2_ROOT)\src\shared\inc</AdditionalIncludeDirectories>
-      <TreatWarningAsError>true</TreatWarningAsError>
-    </ClCompile>
-  </ItemDefinitionGroup>
-  <ItemGroup>
-    <BuildMacro Include="K2_ROOT">
-      <Value>$(K2_ROOT)</Value>
-      <EnvironmentVariable>true</EnvironmentVariable>
-    </BuildMacro>
-  </ItemGroup>
-</Project>
+include $(K2_ROOT)/src/shared/build/pre.make
+
+TARGET_TYPE = LIB
+
+SOURCES += memset8.c
+SOURCES += memset16.c
+SOURCES += memset32.c
+SOURCES += memset64.c
+
+SOURCES += memcopy8.c
+SOURCES += memcopy16.c
+SOURCES += memcopy32.c
+SOURCES += memcopy64.c
+SOURCES += memcopy.c
+
+SOURCES += memcompare8.c
+SOURCES += memcompare16.c
+SOURCES += memcompare32.c
+SOURCES += memcompare64.c
+SOURCES += memcompare.c
+
+SOURCES += memverify8.c
+SOURCES += memverify16.c
+SOURCES += memverify32.c
+SOURCES += memverify64.c
+
+include $(K2_ROOT)/src/shared/build/post.make
