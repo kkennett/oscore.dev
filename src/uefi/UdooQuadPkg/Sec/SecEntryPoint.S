@@ -1,0 +1,287 @@
+//   
+//   BSD 3-Clause License
+//   
+//   Copyright (c) 2020, Kurt Kennett
+//   All rights reserved.
+//   
+//   Redistribution and use in source and binary forms, with or without
+//   modification, are permitted provided that the following conditions are met:
+//   
+//   1. Redistributions of source code must retain the above copyright notice, this
+//      list of conditions and the following disclaimer.
+//   
+//   2. Redistributions in binary form must reproduce the above copyright notice,
+//      this list of conditions and the following disclaimer in the documentation
+//      and/or other materials provided with the distribution.
+//   
+//   3. Neither the name of the copyright holder nor the names of its
+//      contributors may be used to endorse or promote products derived from
+//      this software without specific prior written permission.
+//   
+//   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+#include <AsmMacroIoLib.h>
+#include <Library/PcdLib.h>
+#include <AutoGen.h>
+#include <IMX6def.inc>
+#include <UdooQuadDef.inc>
+
+.text
+.align 3
+.arch_extension sec
+
+GCC_ASM_EXPORT(_ModuleEntryPoint)
+GCC_ASM_IMPORT(UdooQuadPrimaryCoreSecStart)
+GCC_ASM_IMPORT(UdooQuadSecondaryCoreSecStart)
+GCC_ASM_IMPORT(NonSecureSMC)
+GCC_ASM_EXPORT(ArmGetScuBaseAddress)
+
+#define A32_ACTRL_MAINT_BCAST               0x001
+#define A32_ACTLR_L1_PREFETCH_ENABLE        0x004
+#define A32_ACTLR_WRITE_ZEROS_MODE          0x008
+#define A32_ACTLR_SMP_MODE                  0x040
+#define A32_ACTLR_EXCLUSIVE_CACHE_CONFIG    0x080
+#define A32_ACTLR_CACHE_ALLOC_ONEWAY        0x100
+#define A32_ACTLR_PARITY_CHECK_ENABLE       0x200
+
+#define A32_SCTRL_M_MMUENABLE               0x00000001  // 0
+#define A32_SCTRL_A_ALIGNFAULTCHECKENABLE   0x00000002  // 1
+#define A32_SCTRL_C_DCACHEENABLE            0x00000004  // 2
+#define A32_SCTRL_Z_BRANCHPREDICTENABLE     0x00000800  // 11
+#define A32_SCTRL_I_ICACHEENABLE            0x00001000  // 12
+#define A32_SCTRL_V_HIGHVECTORS             0x00002000  // 13
+#define A32_SCTRL_EE_EXCEPTIONENDIAN        0x02000000  // 25
+
+#define A32_PSR_F_BIT                       0x00000040
+#define A32_PSR_I_BIT                       0x00000080
+#define A32_PSR_MODE_SVC                    0x13
+#define A32_PSR_MODE_MONITOR                0x16
+#define A32_PSR_MODE_MASK                   0x1F
+
+#define ARM_GIC_OFFSET_ICCPMR               0x04
+
+ASM_PFX(_ModuleEntryPoint):
+    // disable interrupts and set SVC mode
+    mrs r12, cpsr
+    bic r12, r12, #A32_PSR_MODE_MASK
+    orr r12, r12, #(A32_PSR_F_BIT | A32_PSR_I_BIT)
+    orr r12, r12, #A32_PSR_MODE_SVC
+    msr cpsr, r12      
+
+    // now in SVC mode in secure state. clear link register and backup our cpsr
+    mov lr, #0
+    mrs r12, cpsr
+    msr spsr_cxsf, r12
+
+    // set CP15 known state with MMU off, alignment check off, low vectors, caches off
+    mrc p15, 0, r12, c1, c0, 0   
+    bic r12, r12, #A32_SCTRL_M_MMUENABLE
+    bic r12, r12, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
+    bic r12, r12, #A32_SCTRL_V_HIGHVECTORS
+    bic r12, r12, #A32_SCTRL_I_ICACHEENABLE
+    bic r12, r12, #A32_SCTRL_C_DCACHEENABLE
+    bic r12, r12, #A32_SCTRL_Z_BRANCHPREDICTENABLE
+    bic r12, r12, #A32_SCTRL_EE_EXCEPTIONENDIAN
+    mcr p15, 0, r12, c1, c0, 0   
+    isb
+
+    // Auxiliary Control Register - enable SMP and cache/tlb maintenance broadcasts
+    mrc	p15, 0, r12, c1, c0, 1 
+    orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
+    mcr p15, 0, r12, c1, c0, 1 
+    isb
+
+    // setup argument value for MCRs
+    mov r12, #0                          
+    // invalidate TLB's
+    mcr p15, 0, r12, c8, c7, 0           
+    // invalidate I cache
+    mcr p15, 0, r12, c7, c5, 0           
+    // invalidate BP array
+    mcr p15, 0, r12, c7, c5, 6           
+
+    // ARM ERRATA 743622
+	mrc	p15, 0, r12, c15, c0, 1
+	orr	r12, r0, #0x40
+	mcr	p15, 0, r12, c15, c0, 1
+
+    // set manager access for all domains
+    mvn r12, #0                  
+    mcr p15, 0, r12, c3, c0, 0 
+
+    // set monitor vector table base address (MVBAR)
+    adr r12, _MonitorResetEntry
+    mcr p15, 0, r12, c12, c0, 1
+    isb
+
+    // set interrupt priority mask to maximum to allow all priorities through
+    ldr   r0, =FixedPcdGet32(PcdGicInterruptInterfaceBase)
+    mov   r12, #0xFF
+    str   r12, [r0, #ARM_GIC_OFFSET_ICCPMR]
+
+    // determine if we are the primary core and if so jump to primary-only init
+    mrc   p15, 0, r12, c0, c0, 5
+    ands  r12, r12, #3
+    mov   r7, r12
+    beq   _PrimaryInit
+
+    // for each core the L1 comes out of reset in an undefined state, so
+    // a clean causes a bunch of cache lines with uninitialized data and 
+    // uninitialized tags to get written out to memory, which does really 
+    // unpleasant things to the main processor.  So we invalidate the 
+    // whole L1 for a secondary core here when it comes out of reset
+    mov     r0, #0
+    mcr     p15, 2, r0, c0, c0, 0
+    mrc     p15, 1, r0, c0, c0, 0
+    mov     r1, #0x8000
+    sub     r1, r1, #1
+    and     r2, r1, r0, lsr #13
+    mov     r1, #0x400
+    sub     r1, r1, #1
+    and     r3, r1, r0, lsr #3
+    add     r2, r2, #1
+    and     r0, r0, #0x7
+    add     r0, r0, #4
+    clz     r1, r3    
+    add     r4, r3, #1
+1:  sub     r2, r2, #1
+    mov     r3, r4    
+2:  subs    r3, r3, #1
+    mov     r5, r3, lsl r1
+    mov     r6, r2, lsl r0
+    orr     r5, r5, r6
+    mcr     p15, 0, r5, c7, c6, 2
+    bgt     2b
+    cmp     r2, #0
+    bgt     1b
+    dsb
+    isb
+
+    // set secondary core stack location - 1KB each stack in SEC
+    ldr r0, =(UDOOQUAD_OCRAM_SEC_STACKS_MEM + UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE - 4)
+    ldr r1, =UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE
+    mul r2, r1, r7
+    add sp, r0, r2
+
+    // put core index in first arg, stack pointer in second arg
+    mov r0, r7
+    mov r1, sp
+    blx ASM_PFX(UdooQuadSecondaryCoreSecStart)
+
+    b _Do_Monitor_Init
+
+_PrimaryInit:
+    // Primary Core Only - Make sure L2 Cache is disabled
+    ldr r0, =0x00A02100
+    ldr r1, [r0]
+    bic r1, r1, #1
+    str r1, [r0]
+    dsb
+    isb
+    // invalidate the entire L2 (as per app note in manual)
+    ldr r0, =0x00A0277C
+    ldr r1, =0xFFFF 
+    str r1, [r0]
+_Wait_Invalidate_Completed:
+    ldr r2, [r0]
+    ands r3, r2, r1
+    bne _Wait_Invalidate_Completed
+
+    // set Primary core SVC stack location - 1KB stack at beginning of free OCRAM
+    ldr sp, =(UDOOQUAD_OCRAM_SEC_STACKS_MEM + UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE - 4)
+
+    // do C setup, return value is jump address for monitor mode
+    blx ASM_PFX(UdooQuadPrimaryCoreSecStart)
+
+_Do_Monitor_Init:
+    // store trusted monitor init address in r4
+    mov r4, r0
+
+    // initialize the secure monitor SPSR by jumping into it (errata?)
+    mrs r0, cpsr
+    isb 
+    smc #0
+
+    // should be back from secure monitor SPSR init here, into SVC mode again
+    mov r0, sp
+    mrs r1, cpsr
+    bic r12, r1, #A32_PSR_MODE_MASK
+    orr r12, r12, #A32_PSR_MODE_MONITOR
+    msr cpsr, r12      
+    isb
+    mrs r2, spsr
+    mrs r3, cpsr
+    mov sp, r0
+    blx r4
+    mov r4, r0
+
+    // r4 is return address in nonsecure mode
+
+    // set NSACR to allow CP10 and CP11 in NS mode
+    mov r12, #0xC00
+    mcr p15, 0, r12, c1, c1, 2
+
+    // set SCR to be in NS mode
+    mov r12, #0x31
+    mcr p15, 0, r12, c1, c1, 0
+    isb
+
+    // now return from exception back to svc (again)
+    adr lr, _Monitor_Return
+    movs pc, lr
+_Monitor_Return:
+    bx r4
+_Hang:
+    b   _Hang
+
+    // monitor vector table
+.align 5
+_MonitorResetEntry:
+    b   _MonitorResetEntry
+_MonitorUndefinedEntry:
+    b   _MonitorUndefinedEntry
+_MonitorSmcEntry:
+    b   _MonitorCall
+_MonitorPrefetchEntry:
+    b   _MonitorPrefetchEntry
+_MonitorDataAbortEntry:
+    b   _MonitorDataAbortEntry
+_MonitorReservedEntry:
+    b   _MonitorReservedEntry
+_MonitorIrqEntry:
+    b   _MonitorIrqEntry
+_MonitorFiqEntry:
+    b   _MonitorFiqEntry
+
+_MonitorCall:
+    mrc p15, 0, r12, c1, c1, 0
+    tst r12, #1
+    bne _CallNotFromSecure
+    // only call from secure is to initialize spsr to return to svc (above)
+    msr spsr_cxsf, r0 
+    isb
+    movs pc, lr
+
+_CallNotFromSecure:
+    mrs r12, spsr 
+    stmfd sp!, {r12, lr}
+    blx  NonSecureSMC 
+    ldmfd sp!, {r12, lr}
+    msr spsr_cxsf, r12
+    isb
+    movs pc, lr
+
+	// used by C code
+ArmGetScuBaseAddress:
+    mrc   p15, 4, r0, c15, c0, 0
+    bx    lr
