@@ -1,3 +1,4 @@
+@echo off
 rem    
 rem    BSD 3-Clause License
 rem    

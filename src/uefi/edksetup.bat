@@ -1,3 +1,4 @@
+@echo off
 @REM @file
 @REM   Windows batch file to setup a WORKSPACE environment
 @REM

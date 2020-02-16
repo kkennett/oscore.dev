@@ -1,34 +1,34 @@
-#   
-#   BSD 3-Clause License
-#   
-#   Copyright (c) 2020, Kurt Kennett
-#   All rights reserved.
-#   
-#   Redistribution and use in source and binary forms, with or without
-#   modification, are permitted provided that the following conditions are met:
-#   
-#   1. Redistributions of source code must retain the above copyright notice, this
-#      list of conditions and the following disclaimer.
-#   
-#   2. Redistributions in binary form must reproduce the above copyright notice,
-#      this list of conditions and the following disclaimer in the documentation
-#      and/or other materials provided with the distribution.
-#   
-#   3. Neither the name of the copyright holder nor the names of its
-#      contributors may be used to endorse or promote products derived from
-#      this software without specific prior written permission.
-#   
-#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-#   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-#   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-#   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-#   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-#   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-#   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-#   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#
+//   
+//   BSD 3-Clause License
+//   
+//   Copyright (c) 2020, Kurt Kennett
+//   All rights reserved.
+//   
+//   Redistribution and use in source and binary forms, with or without
+//   modification, are permitted provided that the following conditions are met:
+//   
+//   1. Redistributions of source code must retain the above copyright notice, this
+//      list of conditions and the following disclaimer.
+//   
+//   2. Redistributions in binary form must reproduce the above copyright notice,
+//      this list of conditions and the following disclaimer in the documentation
+//      and/or other materials provided with the distribution.
+//   
+//   3. Neither the name of the copyright holder nor the names of its
+//      contributors may be used to endorse or promote products derived from
+//      this software without specific prior written permission.
+//   
+//   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
 
 #ifndef __IMX6DEF_INC
 #define __IMX6DEF_INC
@@ -44,9 +44,9 @@
 #define IMX6_HIGH_OSC_CLOCK_FREQ              24000000
 #define IMX6_LOW_OSC_CLOCK_FREQ               32768
 
-#
-# Table 2-1 pg 213 in TRM Rev 3, 7/2015
-#
+//
+// Table 2-1 pg 213 in TRM Rev 3, 7/2015
+//
 #define IMX6_PHYSADDR_SDRAM_BASE              0x10000000
 #define IMX6_PHYSSIZE_SDRAM_AREA              0xF0000000
 
@@ -392,15 +392,15 @@
 #define IMX6_PHYSADDR_AIPS3_OPACR3            (IMX6_PHYSADDR_AIPS3_CONFIG + IMX6_AIPS_OFFSET_OPACR3)
 #define IMX6_PHYSADDR_AIPS3_OPACR4            (IMX6_PHYSADDR_AIPS3_CONFIG + IMX6_AIPS_OFFSET_OPACR4)
 
-#define IMX6_AIPS_MPR_MPROT0_SHL              28  # All masters excluding ARM core, SDMA, and CAAM
-#define IMX6_AIPS_MPR_MPROT1_SHL              24  # ARM A9
-#define IMX6_AIPS_MPR_MPROT2_SHL              20  # CAAM
-#define IMX6_AIPS_MPR_MPROT3_SHL              16  # SDMA
+#define IMX6_AIPS_MPR_MPROT0_SHL              28  // All masters excluding ARM core, SDMA, and CAAM
+#define IMX6_AIPS_MPR_MPROT1_SHL              24  // ARM A9
+#define IMX6_AIPS_MPR_MPROT2_SHL              20  // CAAM
+#define IMX6_AIPS_MPR_MPROT3_SHL              16  // SDMA
 
-#define IMX6_AIPS_MPR_MPROT_BIT_MPL           0x1   # Accesses NOT forced to user mode
-#define IMX6_AIPS_MPR_MPROT_BIT_MTW           0x2   # Trust Write Accesses
-#define IMX6_AIPS_MPR_MPROT_BIT_MTR           0x4   # Trust Read Accesses
-#define IMX6_AIPS_MPR_MPROT_BIT_MBW           0x8   # Allowed to buffer writes
+#define IMX6_AIPS_MPR_MPROT_BIT_MPL           0x1   // Accesses NOT forced to user mode
+#define IMX6_AIPS_MPR_MPROT_BIT_MTW           0x2   // Trust Write Accesses
+#define IMX6_AIPS_MPR_MPROT_BIT_MTR           0x4   // Trust Read Accesses
+#define IMX6_AIPS_MPR_MPROT_BIT_MBW           0x8   // Allowed to buffer writes
 #define IMX6_AIPS_MPR_MPROT_BIT_MASK          0xF
 
 #define IMX6_AIPS_MPR_MPROT_TRUST_UNBUFFERED  (IMX6_AIPS_MPR_MPROT_BIT_MTR | IMX6_AIPS_MPR_MPROT_BIT_MTW | IMX6_AIPS_MPR_MPROT_BIT_MPL)
@@ -415,14 +415,14 @@
                                                  IMX6_AIPS_MPR_MPROT2(IMX6_AIPS_MPR_MPROT_TRUST_UNBUFFERED) | \
                                                  IMX6_AIPS_MPR_MPROT3(IMX6_AIPS_MPR_MPROT_TRUST_UNBUFFERED))
 
-# OPACR07    GPIO1        
-# OPACR06    GPT          
-# OPACR05    CAN2         
-# OPACR04    CAN1         
-# OPACR03    PWM4         
-# OPACR02    PWM3         
-# OPACR01    PWM2         
-# OPACR00    PWM1         
+// OPACR07    GPIO1        
+// OPACR06    GPT          
+// OPACR05    CAN2         
+// OPACR04    CAN1         
+// OPACR03    PWM4         
+// OPACR02    PWM3         
+// OPACR01    PWM2         
+// OPACR00    PWM1         
 #define IMX6_AIPS_OPACR0_OPAC00_SHL             28  
 #define IMX6_AIPS_OPACR0_OPAC01_SHL             24  
 #define IMX6_AIPS_OPACR0_OPAC02_SHL             20  
@@ -432,14 +432,14 @@
 #define IMX6_AIPS_OPACR0_OPAC06_SHL             4   
 #define IMX6_AIPS_OPACR0_OPAC07_SHL             0   
 
-# OPACR15    WDOG1        
-# OPACR14    KPP          
-# OPACR13    GPIO7        
-# OPACR12    GPIO6        
-# OPACR11    GPIO5        
-# OPACR10    GPIO4        
-# OPACR09    GPIO3        
-# OPACR08    GPIO2        
+// OPACR15    WDOG1        
+// OPACR14    KPP          
+// OPACR13    GPIO7        
+// OPACR12    GPIO6        
+// OPACR11    GPIO5        
+// OPACR10    GPIO4        
+// OPACR09    GPIO3        
+// OPACR08    GPIO2        
 #define IMX6_AIPS_OPACR1_OPAC08_SHL             28  
 #define IMX6_AIPS_OPACR1_OPAC09_SHL             24  
 #define IMX6_AIPS_OPACR1_OPAC10_SHL             20  
@@ -449,14 +449,14 @@
 #define IMX6_AIPS_OPACR1_OPAC14_SHL             4   
 #define IMX6_AIPS_OPACR1_OPAC15_SHL             0   
 
-# OPACR23    Reserved     
-# OPACR22    SRC          
-# OPACR21    EPIT2        
-# OPACR20    EPIT1        
-# OPACR19    SNVS_HP      
-# OPACR18    Reserved     
-# OPACR17    CCM_DIGITAL  
-# OPACR16    WDOG2        
+// OPACR23    Reserved     
+// OPACR22    SRC          
+// OPACR21    EPIT2        
+// OPACR20    EPIT1        
+// OPACR19    SNVS_HP      
+// OPACR18    Reserved     
+// OPACR17    CCM_DIGITAL  
+// OPACR16    WDOG2        
 #define IMX6_AIPS_OPACR2_OPAC16_SHL             28  
 #define IMX6_AIPS_OPACR2_OPAC17_SHL             24  
 #define IMX6_AIPS_OPACR2_OPAC18_SHL             20  
@@ -466,14 +466,14 @@
 #define IMX6_AIPS_OPACR2_OPAC22_SHL             4   
 #define IMX6_AIPS_OPACR2_OPAC23_SHL             0   
 
-# OPACR31    Reserved     
-# OPACR30    Reserved     
-# OPACR29    Reserved     
-# OPACR28    Reserved     
-# OPACR27    SDMA         
-# OPACR26    DCIC2        
-# OPACR25    DCIC1        
-# OPACR24    IOMUXC       
+// OPACR31    Reserved     
+// OPACR30    Reserved     
+// OPACR29    Reserved     
+// OPACR28    Reserved     
+// OPACR27    SDMA         
+// OPACR26    DCIC2        
+// OPACR25    DCIC1        
+// OPACR24    IOMUXC       
 #define IMX6_AIPS_OPACR3_OPAC24_SHL             28  
 #define IMX6_AIPS_OPACR3_OPAC25_SHL             24  
 #define IMX6_AIPS_OPACR3_OPAC26_SHL             20  
@@ -483,15 +483,15 @@
 #define IMX6_AIPS_OPACR3_OPAC30_SHL             4   
 #define IMX6_AIPS_OPACR3_OPAC31_SHL             0   
 
-# OPACR33    VPU          
-# OPACR32    SPBA         
+// OPACR33    VPU          
+// OPACR32    SPBA         
 #define IMX6_AIPS_OPACR4_OPAC32_SHL             28  
 #define IMX6_AIPS_OPACR4_OPAC33_SHL             24  
 
-#define IMX6_AIPS_OPACR_OPAC_BIT_TP           0x1     # Trusted Protect (1 = accesses not allowed)
-#define IMX6_AIPS_OPACR_OPAC_BIT_WP           0x2     # Write Protect (1 = write protected)
-#define IMX6_AIPS_OPACR_OPAC_BIT_SP           0x4     # Supervisor Protect (1 = supervisor priviledge required)
-#define IMX6_AIPS_OPACR_OPAC_BIT_BW           0x8     # Buffer Writes (1 = writes are allowed to be buffered)
+#define IMX6_AIPS_OPACR_OPAC_BIT_TP           0x1     // Trusted Protect (1 = accesses not allowed)
+#define IMX6_AIPS_OPACR_OPAC_BIT_WP           0x2     // Write Protect (1 = write protected)
+#define IMX6_AIPS_OPACR_OPAC_BIT_SP           0x4     // Supervisor Protect (1 = supervisor priviledge required)
+#define IMX6_AIPS_OPACR_OPAC_BIT_BW           0x8     // Buffer Writes (1 = writes are allowed to be buffered)
 #define IMX6_AIPS_OPACR_OPAC_BIT_MASK         0xF
 
 #define IMX6_AIPS_OPACR_OPAC_TRUST_UNBUFFERED 0
@@ -1031,7 +1031,7 @@
 #define IMX6_PHYSADDR_WDOG2_WICR  (IMX6_PHYSADDR_WDOG2 + IMX6_WDOG_OFFSET_WICR )
 #define IMX6_PHYSADDR_WDOG2_WMCR  (IMX6_PHYSADDR_WDOG2 + IMX6_WDOG_OFFSET_WMCR )
 
-# 16 bit registers
+// 16 bit registers
 #define IMX6_WDOG_WMCR_PDE        0x0001
 
 /* --------------------------------------------------------------------------------- */
@@ -1431,7 +1431,7 @@
 #define IMX6_PHYSADDR_GPIO7_ISR               (IMX6_PHYSADDR_GPIO7 + IMX6_GPIO_OFFSET_ISR     )
 #define IMX6_PHYSADDR_GPIO7_EDGE_SEL          (IMX6_PHYSADDR_GPIO7 + IMX6_GPIO_OFFSET_EDGE_SEL)
 
-# GDIR: 1 is OUTPUT, 0 is INPUT
+// GDIR: 1 is OUTPUT, 0 is INPUT
 
 #define IMX6_GPIO_ICR_LOW_LEVEL       0
 #define IMX6_GPIO_ICR_HIGH_LEVEL      1
@@ -2356,9 +2356,9 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#if 0 # XXXXXXXXXXXXXXXXXXXX
+#if 0 // XXXXXXXXXXXXXXXXXXXX
 
-# 16 bit registers
+// 16 bit registers
 
 #define IMX6_I2C_OFFSET_IADR          0x0000        
 #define IMX6_I2C_OFFSET_IFDR          0x0004 
@@ -2411,7 +2411,7 @@
 
 #define IMX6_I2C_I2DR_DATA_MASK   0x00FF
 
-#endif # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#endif // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 /* --------------------------------------------------------------------------------- */
 
@@ -2561,7 +2561,7 @@
 #define IMX6_PHYSADDR_USDHC4_MMC_BOOT                (IMX6_PHYSADDR_USDHC4 + IMX6_USDHC_OFFSET_MMC_BOOT            )
 #define IMX6_PHYSADDR_USDHC4_VEND_SPEC2              (IMX6_PHYSADDR_USDHC4 + IMX6_USDHC_OFFSET_VEND_SPEC2          )
 
-# mask of defined interrupts in INT_STATUS, INT_STATUS_EN, INT_SIGNAL_EN
+// mask of defined interrupts in INT_STATUS, INT_STATUS_EN, INT_SIGNAL_EN
 #define IMX6_USDHC_INTREG_MASK    0x157F51FF
 
 #define IMX6_USDHC_CMD_XFR_TYP_CMDINX_SHL 24
@@ -2795,7 +2795,7 @@
 #define IMX6_USBCORE_OFFSET_ENDPTNAK                      0x0178 
 #define IMX6_USBCORE_OFFSET_ENDPTNAKEN                    0x017C 
 #define IMX6_USBCORE_OFFSET_CONFIGFLAG                    0x0180 
-#define IMX6_USBCORE_OPREG_SIZEBYTES                      0x0044    # USBCMD to beginning of PORTSC1
+#define IMX6_USBCORE_OPREG_SIZEBYTES                      0x0044    // USBCMD to beginning of PORTSC1
 #define IMX6_USBCORE_OFFSET_PORTSC1                       0x0184 
 
 #define IMX6_USBCORE_OFFSET_OTGSC                         0x01A4 
@@ -3000,9 +3000,9 @@
 #define IMX6_USBO3H_OFFSET_USBNC_USB_OTG_PHY_CTRL_0       0x0818 
 #define IMX6_USBO3H_OFFSET_USBNC_USB_UH1_PHY_CTRL_0       0x081C 
 
-#define IMX6_USB_PORTSC_CSC           0x00000002  # port status change
-#define IMX6_USB_PORTSC_PEC           0x00000008  # port enable change
-#define IMX6_USB_PORTSC_OCC           0x00000020  # overcurrent change
+#define IMX6_USB_PORTSC_CSC           0x00000002  // port status change
+#define IMX6_USB_PORTSC_PEC           0x00000008  // port enable change
+#define IMX6_USB_PORTSC_OCC           0x00000020  // overcurrent change
 #define IMX6_USB_PORTSC_CHANGE_BITS   (IMX6_USB_PORTSC_CSC | IMX6_USB_PORTSC_PEC | IMX6_USB_PORTSC_OCC)
 
 #define IMX6_USB_USBSTS_TI1           0x02000000
@@ -3157,7 +3157,7 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#if 0 # XXXXXXXXXXXXXXXXXXXX
+#if 0 // XXXXXXXXXXXXXXXXXXXX
 
 #define IMX6_OCOTP_OFFSET_CTRL                0x0000  
 #define IMX6_OCOTP_OFFSET_CTRL_SET            0x0004  
@@ -3272,13 +3272,13 @@
 #define IMX6_PHYSADDR_OCOTP_GP36                (IMX6_PHYSADDR_OCOTP + IMX6_OCOTP_OFFSET_GP36           )
 
 #define IMX6_OCOTP_CTRL_WR_UNLOCK_MASK        0xFFFF0000
-#define IMX6_OCOTP_CTRL_WR_UNLOCK_KEY         0x3E770000  # magic
+#define IMX6_OCOTP_CTRL_WR_UNLOCK_KEY         0x3E770000  // magic
 #define IMX6_OCOTP_CTRL_RELOAD_SHADOWS        0x00000400
 #define IMX6_OCOTP_CTRL_ERROR                 0x00000200
 #define IMX6_OCOTP_CTRL_BUSY                  0x00000100
 #define IMX6_OCOTP_CTRL_ADDR_MASK             0x000000FF
 
-# section 63.2, table 63-1
+// section 63.2, table 63-1
 #define IMX6_PHYSADDR_OCOTP_TEMP_CALIB_REG    IMX6_PHYSADDR_OCOTP_ANA1
 #define IMX6_TEMP_CALIB_ROOM_COUNT_MASK       0xFFF00000
 #define IMX6_TEMP_CALIB_ROOM_COUNT_SHL        20
@@ -3286,11 +3286,11 @@
 #define IMX6_TEMP_CALIB_HOT_COUNT_SHL         8
 #define IMX6_TEMP_CALIB_HOT_TEMP_C_MASK       0x000000FF
 
-#endif # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#endif // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 /* --------------------------------------------------------------------------------- */
 
-#if 0 # XXXXXXXXXXXXXXXXXXXX
+#if 0 // XXXXXXXXXXXXXXXXXXXX
 
 #define IMX6_LCDIF_OFFSET_RL                 0x0000       
 #define IMX6_LCDIF_OFFSET_RL_SET             0x0004           
@@ -3557,11 +3557,11 @@
 #define IMX6_LCDIF_VDCTRL4_SYNC_SIGNALS_ON        0x00040000
 #define IMX6_LCDIF_VDCTRL4_DOTCLK_HVALID_DATA_CNT_MASK 0x0003FFFF
 
-#endif # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#endif // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 /* --------------------------------------------------------------------------------- */
 
-#if 0 # XXXXXXXXXXXXXXXXXXXX
+#if 0 // XXXXXXXXXXXXXXXXXXXX
 
 #define ENET_PACKET_BYTES       1518
 #define ENET_PACKET_MAX         1536
@@ -3784,11 +3784,11 @@
 #define IMX6_ENET_MIBC_IDLE           0x40000000
 #define IMX6_ENET_MIBC_CLEAR          0x20000000
 
-#endif # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#endif // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 /* --------------------------------------------------------------------------------- */
 
-#if 0 # XXXXXXXXXXXXXXXXXXXX
+#if 0 // XXXXXXXXXXXXXXXXXXXX
 
 #define IMX6_MU_OFFSET_ATR0           0x0000
 #define IMX6_MU_OFFSET_ATR1           0x0004
@@ -3843,7 +3843,7 @@
 #define IMX6_MU_ACR_ABF1              0x00000002
 #define IMX6_MU_ACR_ABF0              0x00000001
 
-#endif # XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+#endif // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 /* --------------------------------------------------------------------------------- */
 
@@ -3897,5 +3897,5 @@
 /* --------------------------------------------------------------------------------- */
 
 
-#endif  # __IMX6DEF_INC
+#endif  // __IMX6DEF_INC
 
