@@ -178,24 +178,24 @@ GCCOPT += -DK2_DLX
 
 LDOPT += --script $(K2_ROOT)/src/shared/build/gcc_link.l
 
-ifeq ($(basename $(K2_TARGET_NAME)),k2oscore)
+ifeq ($(basename $(K2_TARGET_NAME)),k2oscrt)
 
 ifeq ($(K2_KERNEL),)
-LDENTRY := -e __k2oscore_user_entry
+LDENTRY := -e __k2oscrt_user_entry
 else
-LDENTRY := -e __k2oscore_kern_entry
+LDENTRY := -e __k2oscrt_kern_entry
 endif
-CRT_OBJ := 
+CRTSTUB_OBJ := 
 
 else
 
 LDENTRY := -e __K2OS_dlx_crt
-CRT_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crt/crt.o
+CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crtstub/crtstub.o
 
 ifneq ($(K2_KERNEL),)
-KERN_SOURCE_DLX += @os/core/corekern/$(K2_ARCH)/k2oscore
+KERN_SOURCE_DLX += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
 else
-SOURCE_DLX += @os/core/coreuser/$(K2_ARCH)/k2oscore
+SOURCE_DLX += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
 endif
 
 endif
@@ -230,11 +230,11 @@ CHECK_REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
 CHECK_REFSRC_KERN_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
 CHECK_REFSRC_KERN_DLX = $(foreach libdep,$(KERN_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
 CHECK_REFSRC_DLX = $(foreach libdep,$(SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-CHECK_CRT_OBJ = checkref_os/crt
+CHECK_CRTSTUB_OBJ = checkref_os/crtstub
 
-default: $(CHECK_REFSRC_LIBS) $(CHECK_CRT_OBJ) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX) $(K2_TARGET_FULL_SPEC)
+default: $(CHECK_REFSRC_LIBS) $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX) $(K2_TARGET_FULL_SPEC)
 
-$(CHECK_CRT_OBJ) $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX):
+$(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX):
 	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
 
 $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF) 

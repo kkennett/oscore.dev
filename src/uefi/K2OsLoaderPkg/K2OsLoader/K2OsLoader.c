@@ -262,8 +262,8 @@ K2OsLoaderEntryPoint (
 
                         do
                         {
-                            k2Stat = DLX_Acquire("k2oscore.dlx", &gData.LoadInfo.mpDlxCore);
-                            if (gData.LoadInfo.mpDlxCore == NULL)
+                            k2Stat = DLX_Acquire("k2oscrt.dlx", &gData.LoadInfo.mpDlxCrt);
+                            if (gData.LoadInfo.mpDlxCrt == NULL)
                                 break;
 
                             do
@@ -308,7 +308,7 @@ K2OsLoaderEntryPoint (
                                 //
 
                                 k2Stat = K2DLXSUPP_Handoff(
-                                    &gData.LoadInfo.mpDlxCore,
+                                    &gData.LoadInfo.mpDlxCrt,
                                     sysDLX_ConvertLoadPtr,
                                     &gData.LoadInfo.mSystemVirtualEntrypoint);
 

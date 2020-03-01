@@ -110,7 +110,7 @@ struct _K2OS_UEFI_LOADINFO
     DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
     UINTN                   mKernArenaLow;
     UINTN                   mKernArenaHigh;
-    DLX *                   mpDlxCore;
+    DLX *                   mpDlxCrt;
     UINT32                  mTransBasePhys;
     UINT32                  mZeroPagePhys;
     UINT32                  mTransitionPageAddr;
@@ -154,7 +154,7 @@ K2_STATIC_ASSERT(sizeof(K2OS_PHYSTRACK_UEFI) == sizeof(K2TREE_NODE));
 //
 // this comes from the base CRT for dlx
 // for everything that links with it, which 
-// is everything except k2oscore (kern and user)
+// is everything except k2oscrt (kern and user)
 //
 DLX *
 K2OS_GetDlxModule(
@@ -169,7 +169,7 @@ typedef struct _K2OS_SYSINFO K2OS_SYSINFO;
 struct _K2OS_SYSINFO
 {
     UINT32  mStructBytes;
-    UINT32  mCoreVersion;
+    UINT32  mCrtVersion;
     UINT32  mKernVersion;
     UINT32  mHalVersion;
     UINT32  mHalVendorMarker;

@@ -135,7 +135,7 @@ static UINT32 const sTransitionCode[] =
     // in case of fault during transition:
     //
     // r0   phys==virt address of loadinfo in transition page
-    // r1   virtual kernel k2oscore.dlx entrypoint
+    // r1   virtual kernel k2oscrt.dlx entrypoint
     // r2   MPIDR high 2 bits 
     // r3   value that was put into SCTLR
     // r4   address of _JUMP_TO_KERNEL below

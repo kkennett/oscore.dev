@@ -29,11 +29,17 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 include $(K2_ROOT)/src/os/build/k2ospre.make
 
-TARGET_TYPE = OBJ
+TARGET_TYPE = DLX
+TARGET_SPECIFIC_ARCH = A32
 
-SOURCES += crt.cpp
+DLX_INF := ../../../k2oscrt.inf
+
+SOURCES += a32entry.c
+
+SOURCE_LIBS += @os/crt/crtuser
 
 include $(K2_ROOT)/src/shared/build/post.make
+
+
