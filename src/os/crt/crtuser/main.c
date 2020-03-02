@@ -66,6 +66,12 @@ K2OS_GetDlxModule(
     return (DLX *)__dso_handle;
 }
 
+K2STAT
+K2OS_GetAPI(K2OSAPI const **apRetAPI)
+{
+    return K2STAT_ERROR_NOT_READY;
+}
+
 void
 K2_CALLCONV_REGS
 __k2oscrt_user_entry(

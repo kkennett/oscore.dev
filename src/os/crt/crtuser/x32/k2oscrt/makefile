@@ -37,6 +37,16 @@ TARGET_SPECIFIC_ARCH = X32
 DLX_INF := ../../../k2oscrt.inf
 
 SOURCES += x32entry.c
+SOURCES += x32cache.c
+
+SOURCE_LIBS += @shared/lib/k2mem
+SOURCE_LIBS += @shared/lib/k2asc
+SOURCE_LIBS += @shared/lib/k2list
+SOURCE_LIBS += @shared/lib/k2tree
+SOURCE_LIBS += @shared/lib/k2atomic
+SOURCE_LIBS += @shared/lib/k2crc
+SOURCE_LIBS += @shared/lib/k2dlxsupp
+SOURCE_LIBS += @shared/lib/k2elf32
 
 SOURCE_LIBS += @os/crt/crtuser
 
