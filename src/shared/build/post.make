@@ -237,7 +237,7 @@ default: $(CHECK_REFSRC_LIBS) $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_KERN_LIBS) $(C
 $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX):
 	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
 
-$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF) 
+$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH)) md $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)) md $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH))
@@ -245,7 +245,7 @@ $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/
 	@echo -------- Create Exports from ELF for DLX $@ --------
 	@$(EXPORT_CMD)
 	@echo -------- Linking ELF for DLX $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(CRT_OBJ) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF_O) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(CRT_OBJ) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF_O) $(CRTSTUB_OBJ) -)
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------

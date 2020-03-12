@@ -38,8 +38,6 @@ K2OSKERN_SHARED     gShared;
 extern DLX_INFO *   gpDlxInfo;
 extern void *       __data_end;
 
-K2OSAPI const *     gpOSAPI;
-
 int  __cxa_atexit(__vfpv f, void *a, DLX * apDlx);
 void __call_dtors(DLX *apDlx);
 
@@ -58,18 +56,6 @@ K2OS_GetDlxModule(
 )
 {
     return (DLX *)__dso_handle;
-}
-
-K2STAT
-K2OS_GetAPI(K2OSAPI const **apRetAPI)
-{
-    if (gpOSAPI == NULL)
-    {
-        *apRetAPI = NULL;
-        return K2STAT_ERROR_NOT_READY;
-    }
-    *apRetAPI = gpOSAPI;
-    return K2STAT_OK;
 }
 
 static 
@@ -184,7 +170,7 @@ k2oscrt_kern_common_entry(
     //
     // Jump into kernel. will never return
     //
-    gShared.FuncTab.Exec(sThreadedPostInit, &gpOSAPI);
+    gShared.FuncTab.Exec(sThreadedPostInit);
 
     //
     // this will never execute as apUEFI will never equal 0xFEEDFOOD

@@ -45,23 +45,22 @@ static K2OS_CRITSEC sgSec;
 
 int __cxa_atexit(__vfpv f, void *a, DLX *apDlx)
 {
-    K2STAT  stat;
     DTOR *  pDTOR;
 
-    stat = gpOSAPI->HeapAlloc(sizeof(DTOR), (void **)&pDTOR);
-    if (K2STAT_IS_ERROR(stat))
+    pDTOR = gShared.FuncTab.HeapAlloc(sizeof(DTOR));
+    if (pDTOR == NULL)
         return -1;
 
     pDTOR->mFunc = f;
     pDTOR->mArg = a;
     pDTOR->mpDlx = apDlx;
 
-    gpOSAPI->CritSecEnter(&sgSec);
+    gShared.FuncTab.CritSecEnter(&sgSec);
 
     pDTOR->mpNext = sgpDTORList;
     sgpDTORList = pDTOR;
 
-    gpOSAPI->CritSecLeave(&sgSec);
+    gShared.FuncTab.CritSecLeave(&sgSec);
 
     return 0;
 }
@@ -78,7 +77,7 @@ void __call_dtors(DLX *apDlx)
 
     pPrev = NULL;
 
-    gpOSAPI->CritSecEnter(&sgSec);
+    gShared.FuncTab.CritSecEnter(&sgSec);
 
     pScan = sgpDTORList;
 
@@ -111,7 +110,7 @@ void __call_dtors(DLX *apDlx)
         } while (pScan != NULL);
     }
 
-    gpOSAPI->CritSecLeave(&sgSec);
+    gShared.FuncTab.CritSecLeave(&sgSec);
 
     if (pCall == NULL)
         return;
@@ -122,7 +121,8 @@ void __call_dtors(DLX *apDlx)
         pCall = pCall->mpNext;
 
         pCallEnd->mFunc(pCallEnd->mArg);
-        gpOSAPI->HeapFree(pCallEnd);
+
+        gShared.FuncTab.HeapFree(pCallEnd);
 
     } while (pCall != NULL);
 }
@@ -133,5 +133,5 @@ CrtKern_Threaded_InitAtExit(
 )
 {
     sgpDTORList = NULL;
-    gpOSAPI->CritSecInit(&sgSec);
+    gShared.FuncTab.CritSecInit(&sgSec);
 }

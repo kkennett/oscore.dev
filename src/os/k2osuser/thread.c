@@ -29,44 +29,19 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OS_H
-#define __K2OS_H
+#include <k2os.h>
 
-#include "k2osbase.h"
-
-//
-//------------------------------------------------------------------------
-//
-
-#define K2OS_CRITSEC_BYTES  K2OS_CACHELINE_ALIGNED_BUFFER_MAX
-
-typedef struct _K2OS_CRITSEC K2OS_CRITSEC;
-struct K2_ALIGN_ATTRIB(K2OS_MAX_CACHELINE_BYTES) _K2OS_CRITSEC
+UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnId(void)
 {
-    UINT8 mOpaque[K2OS_CRITSEC_BYTES];
-};
+    return 0;
+}
 
-typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecInit)(K2OS_CRITSEC *apSec);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecInit(K2OS_CRITSEC *apSec);
+K2STAT K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
 
-typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecEnter)(K2OS_CRITSEC *apSec);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec);
+void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus)
+{
 
-typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecLeave)(K2OS_CRITSEC *apSec);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef void * (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapAlloc)(UINT32 aByteCount);
-void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount);
-
-typedef BOOL   (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapFree)(void *aPtr);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr);
-
-//
-//------------------------------------------------------------------------
-//
-
-#endif // __K2OS_H
+}

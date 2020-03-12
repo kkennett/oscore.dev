@@ -47,8 +47,7 @@ void
 typedef 
 void 
 (*K2OSKERN_pf_Exec)(
-    K2OSKERN_pf_CrtThreadedPostInit afThreadedPostInit,
-    K2OSAPI const **                apRetOsApiPtr
+    K2OSKERN_pf_CrtThreadedPostInit afThreadedPostInit
     );
 
 typedef struct _K2OSKERN_FUNCTAB K2OSKERN_FUNCTAB;
@@ -70,6 +69,12 @@ struct _K2OSKERN_FUNCTAB
 
     K2OSHAL_pf_DebugOut         DebugOut;
     K2OSHAL_pf_DebugIn          DebugIn;
+
+    K2OS_pf_CritSecInit         CritSecInit;
+    K2OS_pf_CritSecEnter        CritSecEnter;
+    K2OS_pf_CritSecLeave        CritSecLeave;
+    K2OS_pf_HeapAlloc           HeapAlloc;
+    K2OS_pf_HeapFree            HeapFree;
 
     K2_pf_ASSERT                Assert;
     K2_pf_EXTRAP_MOUNT          ExTrap_Mount;

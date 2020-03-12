@@ -36,6 +36,8 @@
 
 typedef void(*__vfpv)(void *);
 
+extern K2OSKERN_SHARED gShared;
+
 void
 CrtKern_Threaded_InitAtExit(
     void
@@ -47,7 +49,5 @@ k2oscrt_kern_common_entry(
     K2OS_UEFI_LOADINFO const *  apUEFI,
     K2_CACHEINFO const *        apCacheInfo
 );
-
-extern K2OSAPI const * gpOSAPI;
 
 #endif // __CRTKERN_H
