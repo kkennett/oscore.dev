@@ -100,21 +100,6 @@ K2OSKERN_MicroStall(
 //
 
 typedef
-UINT64
-(*K2OSKERN_pf_GetAbsTimeMs)(
-    void
-    );
-
-UINT64
-K2OSKERN_GetAbsTimeMs(
-    void
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef
 BOOL
 (K2_CALLCONV_REGS *K2OSKERN_pf_SetIntr)(
     BOOL aEnable

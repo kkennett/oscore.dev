@@ -1,0 +1,84 @@
+//   
+//   BSD 3-Clause License
+//   
+//   Copyright (c) 2020, Kurt Kennett
+//   All rights reserved.
+//   
+//   Redistribution and use in source and binary forms, with or without
+//   modification, are permitted provided that the following conditions are met:
+//   
+//   1. Redistributions of source code must retain the above copyright notice, this
+//      list of conditions and the following disclaimer.
+//   
+//   2. Redistributions in binary form must reproduce the above copyright notice,
+//      this list of conditions and the following disclaimer in the documentation
+//      and/or other materials provided with the distribution.
+//   
+//   3. Neither the name of the copyright holder nor the names of its
+//      contributors may be used to endorse or promote products derived from
+//      this software without specific prior written permission.
+//   
+//   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+//   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+//   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+//   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+//   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+//   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+//   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+//   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+//   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+
+#ifndef __KERNDEF_INC
+#define __KERNDEF_INC
+
+#include "k2osdefs.inc"
+
+/* --------------------------------------------------------------------------------- */
+
+#define K2OSKERN_PHYSTRACK_FREE_FLAG                0x00000001
+
+#define K2OSKERN_PHYSTRACK_PROP_MASK                0x00000FFE
+
+#define K2OSKERN_PHYSTRACK_PROP_XP_CAP              0x00000800
+#define K2OSKERN_PHYSTRACK_PROP_RP_CAP              0x00000400
+#define K2OSKERN_PHYSTRACK_PROP_WP_CAP              0x00000200
+#define K2OSKERN_PHYSTRACK_PROP_UCE_CAP             0x00000100
+#define K2OSKERN_PHYSTRACK_PROP_WB_CAP              0x00000080
+#define K2OSKERN_PHYSTRACK_PROP_WT_CAP              0x00000040
+#define K2OSKERN_PHYSTRACK_PROP_WC_CAP              0x00000020
+#define K2OSKERN_PHYSTRACK_PROP_UC_CAP              0x00000010
+#define K2OSKERN_PHYSTRACK_RESERVED                 0x0000000E
+
+#define K2OSKERN_PHYSTRACK_FREE_COUNT_MASK          0xFFFFF000
+#define K2OSKERN_PHYSTRACK_FREE_COUNT_SHL           12
+
+#define K2OSKERN_PHYSTRACK_PAGE_LIST_MASK           0x0001F000
+#define K2OSKERN_PHYSTRACK_PAGE_LIST_SHL            12
+#define K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(x)   (((x) & K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL)
+
+/* --------------------------------------------------------------------------------- */
+
+#if K2_TARGET_ARCH_IS_ARM
+#define K2OSKERN_PTE_PRESENT_BIT            0x00000002
+#define K2OSKERN_PTE_NP_BIT                 0x00000001
+#else
+#define K2OSKERN_PTE_PRESENT_BIT            0x00000001
+#define K2OSKERN_PTE_NP_BIT                 0x00000002
+#endif
+#define K2OSKERN_PTE_NP_TYPE_MASK           0x0000000C
+#define K2OSKERN_PTE_NP_TYPE_RESERVED       0x0
+#define K2OSKERN_PTE_NP_TYPE_GUARD          0x4
+#define K2OSKERN_PTE_NP_TYPE_COMMITTED      0x8
+#define K2OSKERN_PTE_NP_TYPE_HARD           0xC
+#define K2OSKERN_PTE_NP_CONTENT_MASK        0xFFFFFFF0    // 256M possible entries
+
+#define K2OSKERN_PTE_NP_MASK                (K2OSKERN_PTE_NP_TYPE_MASK      | K2OSKERN_PTE_NP_BIT)
+#define K2OSKERN_PTE_NP_STACK_GUARD         (K2OSKERN_PTE_NP_TYPE_GUARD     | K2OSKERN_PTE_NP_BIT)
+#define K2OSKERN_PTE_NP_RESERVED            (K2OSKERN_PTE_NP_TYPE_RESERVED  | K2OSKERN_PTE_NP_BIT)
+#define K2OSKERN_PTE_NP_COMMITTED           (K2OSKERN_PTE_NP_TYPE_COMMITTED | K2OSKERN_PTE_NP_BIT)
+
+/* --------------------------------------------------------------------------------- */
+
+#endif // __KERNDEF_INC

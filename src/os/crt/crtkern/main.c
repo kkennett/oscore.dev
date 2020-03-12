@@ -29,6 +29,7 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+
 #include "crtkern.h"
 
 void *              __dso_handle;
@@ -133,15 +134,6 @@ sInitialize(
     K2_RaiseException = gShared.FuncTab.RaiseException;
 }
 
-static 
-void
-sThreadedPostInit(
-    void
-)
-{
-    CrtKern_Threaded_InitAtExit();
-}
-
 void
 K2_CALLCONV_REGS
 k2oscrt_kern_common_entry(
@@ -160,6 +152,7 @@ k2oscrt_kern_common_entry(
     K2MEM_Zero(&gShared, sizeof(gShared));
     K2MEM_Copy(&gShared.LoadInfo, apUEFI, sizeof(K2OS_UEFI_LOADINFO));
     gShared.FuncTab.GetDlxInfo = K2DLXSUPP_GetInfo;
+    gShared.FuncTab.CoreThreadedPostInit = CrtKern_Threaded_InitAtExit;
     gShared.mpCacheInfo = apCacheInfo;
 
     //
@@ -170,7 +163,7 @@ k2oscrt_kern_common_entry(
     //
     // Jump into kernel. will never return
     //
-    gShared.FuncTab.Exec(sThreadedPostInit);
+    gShared.FuncTab.Exec();
 
     //
     // this will never execute as apUEFI will never equal 0xFEEDFOOD
