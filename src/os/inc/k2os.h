@@ -38,6 +38,29 @@
 //------------------------------------------------------------------------
 //
 
+UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo);
+UINT64  K2_CALLCONV_CALLERCLEANS K2OS_SysUpTimeMs(void);
+
+//
+//------------------------------------------------------------------------
+//
+
+UINT32  K2_CALLCONV_CALLERCLEANS K2OS_DebugPrint(char const *apString);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_DebugPresent(void);
+void    K2_CALLCONV_CALLERCLEANS K2OS_DebugBreak(void);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsReadable(void *apAddr, UINT32 aLengthBytes);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsWriteable(void *apAddr, UINT32 aLengthBytes);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsExecutable(void *apAddr);
+
+//
+//------------------------------------------------------------------------
+//
+
 typedef enum _K2OS_ObjectType K2OS_ObjectType;
 enum _K2OS_ObjectType
 {
@@ -57,6 +80,12 @@ enum _K2OS_ObjectType
     K2OS_Obj_RwLockReq = 13
 };
 
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
+
+//
+//------------------------------------------------------------------------
+//
+
 //
 //------------------------------------------------------------------------
 //
@@ -72,11 +101,16 @@ struct K2_ALIGN_ATTRIB(K2OS_MAX_CACHELINE_BYTES) _K2OS_CRITSEC
 typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecInit)(K2OS_CRITSEC *apSec);
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecInit(K2OS_CRITSEC *apSec);
 
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecTryEnter(K2OS_CRITSEC *apSec);
+
 typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecEnter)(K2OS_CRITSEC *apSec);
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec);
 
 typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecLeave)(K2OS_CRITSEC *apSec);
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec);
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec);
+
 
 //
 //------------------------------------------------------------------------
@@ -88,17 +122,6 @@ UINT64 K2_CALLCONV_REGS K2OS_GetAbsTimeMs(void);
 //
 //------------------------------------------------------------------------
 //
-
-typedef void * (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapAlloc)(UINT32 aByteCount);
-void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount);
-
-typedef BOOL   (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapFree)(void *aPtr);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr);
-
-//
-//------------------------------------------------------------------------
-//
-
 #define K2OS_NAME_MAX_LEN   47
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName, K2OS_TOKEN *apRetNameToken);
@@ -203,6 +226,115 @@ void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds);
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs);
 UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAny(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs);
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs);
+
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
+struct _K2OS_PROCESSCREATE
+{
+    UINT32              mStructBytes;
+    UINT32              mThreadStackPages;
+    UINT32              mThreadReserved;
+    K2OS_THREADATTR     ThreadAttr;
+};
+
+typedef struct _K2OS_IMAGEINFO K2OS_IMAGEINFO;
+struct _K2OS_IMAGEINFO
+{
+    UINT32  mStructBytes;
+    UINT32  mLocator;
+};
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_TOKEN *apRetProcessToken);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
+UINT32  K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
+void    K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
+
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset, K2OS_TOKEN *apRetEventToken);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic, K2OS_TOKEN *apRetAlarmToken);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCounts, K2OS_TOKEN *apRetSemaphoreToken);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 *apRetNewCount);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN *apRetRwLockToken);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite, K2OS_TOKEN *apRetRwLockRequestToken);
+
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2OS_MSGIO K2OS_MSGIO;
+struct _K2OS_MSGIO
+{
+    union {
+        UINT32 mOpCode;
+        UINT32 mStatus;
+    } Hdr;
+    UINT32 mPayload[7];
+};
+K2_STATIC_ASSERT(sizeof(K2OS_MSGIO) == (8 * sizeof(UINT32)));
+
+#define K2OS_MAX_NUM_SLOT_MAILBOXES     K2OS_WAIT_MAX_TOKENS
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UINT32 aMailboxCount, K2OS_TOKEN const *apTokMailboxes, BOOL aInitBlocked, K2OS_TOKEN *apRetTokMailslot);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailslotSetBlock(K2OS_TOKEN aTokMailslot, BOOL aBlock);
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(UINT32 aMailboxCount, K2OS_TOKEN *apRetTokMailboxes);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGIO *apRetMsgIo, UINT32 *apRetRequestId);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRespIo);
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRetTokMsgs);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, BOOL aExpectResponse);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgWait(K2OS_TOKEN aTokMsg, UINT32 aTimeoutMs);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSendAndWait(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, UINT32 aTimeoutMs);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGIO *apRetRespIo, BOOL aClear);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgTransact(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsg, K2OS_MSGIO *apRetResp, UINT32 aTimeoutMs);
+
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2OS_HEAP_STATE K2OS_HEAP_STATE;
+struct _K2OS_HEAP_STATE
+{
+    UINT32  mAllocCount;
+    UINT32  mTotalAlloc;
+    UINT32  mTotalOverhead;
+    UINT32  mLargestFree;
+};
+
+typedef void * (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapAlloc)(UINT32 aByteCount);
+void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount);
+
+typedef BOOL   (K2_CALLCONV_CALLERCLEANS *K2OS_pf_HeapFree)(void *aPtr);
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr);
+
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_HeapGetState(K2OS_HEAP_STATE *apRetState);
+
 
 //
 //------------------------------------------------------------------------
