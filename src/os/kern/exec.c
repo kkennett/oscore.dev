@@ -35,14 +35,14 @@
 void KernInit_Stage(KernInitStage aStage)
 {
     gData.mKernInitStage = aStage;
-//    KernInit_Arch();
-//    KernInit_DlxHost();
-//    KernInit_Mem();
-//    KernInit_Process();
-//    KernInit_Thread();
-//    KernInit_Sched();
-//    KernInit_Hal();
-//    KernInit_CpuCore();
+    KernInit_Arch();
+    KernInit_DlxHost();
+    KernInit_Mem();
+    KernInit_Process();
+    KernInit_Thread();
+    KernInit_Sched();
+    KernInit_Hal();
+    KernInit_CpuCore();
 }
 
 static void sInit(void)
@@ -62,8 +62,8 @@ void K2_CALLCONV_REGS KernExec(void)
     sInit();
 
     // should never return
-//    K2OSKERN_Debug("Launch Cores...\n");
-//    KernArch_LaunchCores();
+    K2OSKERN_Debug("Launch Cores...\n");
+    KernArch_LaunchCores();
 
     // must never return
     K2OSKERN_Debug("Init end - HANG\n");
