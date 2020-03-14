@@ -210,7 +210,7 @@ K2OSKERN_MicroStall(
 
 UINT64
 K2_CALLCONV_REGS
-K2OS_GetAbsTimeMs(
+K2OS_SysUpTimeMs(
     void
 )
 {

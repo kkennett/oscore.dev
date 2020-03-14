@@ -207,7 +207,7 @@ void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE *apThisCore, UINT32 aTargetCo
 
     pEvent->mEventType = aEventType;
     pEvent->mSrcCoreIx = apThisCore->mCoreIx;
-    pEvent->mEventAbsTimeMs = K2OS_GetAbsTimeMs();
+    pEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
     K2_CpuWriteBarrier();
     KernArch_SendIci(apThisCore->mCoreIx, TRUE, aTargetCoreIx);
 }
@@ -239,7 +239,7 @@ void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE *apThisCore, KernCpuCor
         }
     }
 
-    absTime = K2OS_GetAbsTimeMs();
+    absTime = K2OS_SysUpTimeMs();
 
     for (coreIx = 0; coreIx < gData.mCpuCount; coreIx++)
     {

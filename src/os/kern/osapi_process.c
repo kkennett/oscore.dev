@@ -30,63 +30,36 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "a32kern.h"
+#include "kern.h"
 
-void 
-A32Kern_InitStall(
-    void
-)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_TOKEN *apRetProcessToken)
 {
-    UINT32 pfr1;
-
-    if (gpA32Kern_MADT_GICD != NULL)
-    {
-        K2OSKERN_Debug("Multicore, Global timer should be at 0x%08X\n", A32KERN_MP_GLOBAL_TIMER_VIRT);
-
-
-
-
-
-    }
-    else
-    {
-        pfr1 = A32_ReadIDPFR1();
-        if (!(pfr1 & A32_IDPFR1_TIMER_MASK))
-        {
-            K2OSKERN_Debug("IDPFR1 = 0x%08X\n", pfr1);
-            K2OSKERN_Panic("No MPCore and Generic timer is not implemented\n");
-        }
-
-        //
-        // Generic timer support not implemented yet
-        //
-        K2_ASSERT(0);
-    }
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void
-K2_CALLCONV_REGS
-K2OSKERN_MicroStall(
-    UINT32      aMicroseconds
-)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId)
 {
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-UINT64
-K2_CALLCONV_REGS
-K2OS_SysUpTimeMs(
-    void
-)
+UINT32  K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void)
 {
-    return 0;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void A32Kern_StartTime(void)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo)
 {
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+

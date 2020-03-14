@@ -39,7 +39,9 @@
 //
 
 UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo);
-UINT64  K2_CALLCONV_CALLERCLEANS K2OS_SysUpTimeMs(void);
+
+typedef UINT64 (K2_CALLCONV_REGS *K2OS_pf_SysUpTimeMs)(void);
+UINT64  K2_CALLCONV_REGS         K2OS_SysUpTimeMs(void);
 
 //
 //------------------------------------------------------------------------
@@ -86,10 +88,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
 //------------------------------------------------------------------------
 //
 
-//
-//------------------------------------------------------------------------
-//
-
 #define K2OS_CRITSEC_BYTES  K2OS_CACHELINE_ALIGNED_BUFFER_MAX
 
 typedef struct _K2OS_CRITSEC K2OS_CRITSEC;
@@ -110,14 +108,6 @@ typedef BOOL (K2_CALLCONV_CALLERCLEANS *K2OS_pf_CritSecLeave)(K2OS_CRITSEC *apSe
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec);
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec);
-
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef UINT64 (K2_CALLCONV_REGS *K2OS_pf_GetAbsTimeMs)(void);
-UINT64 K2_CALLCONV_REGS K2OS_GetAbsTimeMs(void);
 
 //
 //------------------------------------------------------------------------
@@ -253,7 +243,6 @@ UINT32  K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
 void    K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
 BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
 BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
-
 
 //
 //------------------------------------------------------------------------

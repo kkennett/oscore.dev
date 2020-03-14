@@ -51,11 +51,11 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     // main Thread0 actions can commence here
     //
     K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_GetAbsTimeMs();
+    last = K2OS_SysUpTimeMs();
     while (1)
     {
         do {
-            newTick = K2OS_GetAbsTimeMs();
+            newTick = K2OS_SysUpTimeMs();
         } while (newTick - last < 1000);
         last = newTick;
         K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));

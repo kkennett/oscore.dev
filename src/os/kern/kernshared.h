@@ -71,7 +71,7 @@ struct _K2OSKERN_FUNCTAB
     K2OSHAL_pf_DebugOut         DebugOut;
     K2OSHAL_pf_DebugIn          DebugIn;
 
-    K2OS_pf_GetAbsTimeMs        GetAbsTimeMs;
+    K2OS_pf_SysUpTimeMs         SysUpTimeMs;
     K2OS_pf_CritSecInit         CritSecInit;
     K2OS_pf_CritSecEnter        CritSecEnter;
     K2OS_pf_CritSecLeave        CritSecLeave;

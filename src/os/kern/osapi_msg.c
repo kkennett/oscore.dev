@@ -30,63 +30,47 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "a32kern.h"
+#include "kern.h"
 
-void 
-A32Kern_InitStall(
-    void
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRetTokMsgs)
 {
-    UINT32 pfr1;
-
-    if (gpA32Kern_MADT_GICD != NULL)
-    {
-        K2OSKERN_Debug("Multicore, Global timer should be at 0x%08X\n", A32KERN_MP_GLOBAL_TIMER_VIRT);
-
-
-
-
-
-    }
-    else
-    {
-        pfr1 = A32_ReadIDPFR1();
-        if (!(pfr1 & A32_IDPFR1_TIMER_MASK))
-        {
-            K2OSKERN_Debug("IDPFR1 = 0x%08X\n", pfr1);
-            K2OSKERN_Panic("No MPCore and Generic timer is not implemented\n");
-        }
-
-        //
-        // Generic timer support not implemented yet
-        //
-        K2_ASSERT(0);
-    }
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void
-K2_CALLCONV_REGS
-K2OSKERN_MicroStall(
-    UINT32      aMicroseconds
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, BOOL aExpectResponse)
 {
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-UINT64
-K2_CALLCONV_REGS
-K2OS_SysUpTimeMs(
-    void
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgWait(K2OS_TOKEN aTokMsg, UINT32 aTimeoutMs)
 {
-    return 0;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void A32Kern_StartTime(void)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSendAndWait(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, UINT32 aTimeoutMs)
 {
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGIO *apRetRespIo, BOOL aClear)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgTransact(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsg, K2OS_MSGIO *apRetResp, UINT32 aTimeoutMs)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+

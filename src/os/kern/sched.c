@@ -298,7 +298,7 @@ static BOOL sExecItems(void)
 
     } while (1);
 
-    timeNow = K2OS_GetAbsTimeMs();
+    timeNow = K2OS_SysUpTimeMs();
     if (timeNow > gData.Sched.mAbsTimeMs)
     {
         timeExecutedSomething = KernSched_TimePassedUntil(timeNow);

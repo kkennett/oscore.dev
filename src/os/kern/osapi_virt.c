@@ -30,63 +30,47 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "a32kern.h"
+#include "kern.h"
 
-void 
-A32Kern_InitStall(
-    void
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCount, UINT32 aVirtAllocFlags, UINT32 aPageAttrFlags)
 {
-    UINT32 pfr1;
-
-    if (gpA32Kern_MADT_GICD != NULL)
-    {
-        K2OSKERN_Debug("Multicore, Global timer should be at 0x%08X\n", A32KERN_MP_GLOBAL_TIMER_VIRT);
-
-
-
-
-
-    }
-    else
-    {
-        pfr1 = A32_ReadIDPFR1();
-        if (!(pfr1 & A32_IDPFR1_TIMER_MASK))
-        {
-            K2OSKERN_Debug("IDPFR1 = 0x%08X\n", pfr1);
-            K2OSKERN_Panic("No MPCore and Generic timer is not implemented\n");
-        }
-
-        //
-        // Generic timer support not implemented yet
-        //
-        K2_ASSERT(0);
-    }
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void
-K2_CALLCONV_REGS
-K2OSKERN_MicroStall(
-    UINT32      aMicroseconds
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPageCount, UINT32 aPageAttrFlags)
 {
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-UINT64
-K2_CALLCONV_REGS
-K2OS_SysUpTimeMs(
-    void
-)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 aPageCount)
 {
-    return 0;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
 
-void A32Kern_StartTime(void)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesSetAttr(UINT32 aPagesAddr, UINT32 aPageCount, UINT32 aPageAttrFlags) 
 {
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-
-
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesGetAttr(UINT32 aPagesAddr, UINT32 *apRetPageCount, UINT32 *apRetPagesAttrFlags)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesSetLock(UINT32 aPagesAddr, UINT32 aPageCount, BOOL aSetLocked)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesFree(UINT32 aPagesAllocAddr)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+

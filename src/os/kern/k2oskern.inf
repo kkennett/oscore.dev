@@ -1,7 +1,7 @@
 #   
 #   BSD 3-Clause License
 #   
-#   Copyright (c) 2020, Kurt Kennett
+#   Copyright                                         c) 2020, Kurt Kennett
 #   All rights reserved.
 #   
 #   Redistribution and use in source and binary forms, with or without
@@ -23,10 +23,10 @@
 #   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 #   DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 #   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-#   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+#   DAMAGES                                         INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 #   SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 #   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-#   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+#   OR TORT                                         INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 #
@@ -55,7 +55,83 @@ K2OSKERN_Esc
 #
 # Generic entry for K2OS functions when running in Kernel
 #
-K2OS_GetAbsTimeMs
+K2OS_SysGetInfo
+K2OS_SysUpTimeMs
+K2OS_DebugPrint
+K2OS_DebugPresent
+K2OS_DebugBreak
+K2OS_AddrIsReadable
+K2OS_AddrIsWriteable
+K2OS_AddrIsExecutable
+K2OS_TokenDestroy
+K2OS_CritSecInit
+K2OS_CritSecTryEnter
+K2OS_CritSecEnter
+K2OS_CritSecLeave
+K2OS_CritSecDone
+K2OS_NameDefine
+K2OS_NameString
+K2OS_NameAcquire
+K2OS_ThreadGetOwnId
+K2OS_ThreadGetStatus
+K2OS_ThreadSetStatus
+K2OS_ThreadAllocLocal
+K2OS_ThreadFreeLocal
+K2OS_ThreadSetLocal
+K2OS_ThreadGetLocal
+K2OS_ThreadCreate
+K2OS_ThreadGetInfo
+K2OS_ThreadGetOwnInfo
+K2OS_ThreadAcquire
+K2OS_ThreadPause
+K2OS_ThreadResume
+K2OS_ThreadExit
+K2OS_ThreadKill
+K2OS_ThreadSetAttr
+K2OS_ThreadGetAttr
+K2OS_ThreadSetOwnAttr
+K2OS_ThreadGetOwnAttr
+K2OS_ThreadSetPauseLock
+K2OS_ThreadSleep
+K2OS_ThreadWaitOne
+K2OS_ThreadWaitAny
+K2OS_ThreadWaitAll
+K2OS_ProcessCreate
+K2OS_ProcessGetId
+K2OS_ProcessGetOwnId
+# K2OS_ProcessExit
+K2OS_ProcessGetImageInfo
+K2OS_ProcessGetOwnImageInfo
+K2OS_EventCreate
+K2OS_EventSet
+K2OS_EventReset
+K2OS_AlarmCreate
+K2OS_SemaphoreCreate
+K2OS_SemaphoreRelease
+K2OS_RwLockCreate
+K2OS_RwLockCreateRequest
+K2OS_MailslotCreate
+K2OS_MailslotSetBlock
+K2OS_MailboxCreate
+K2OS_MailboxRecv
+K2OS_MailboxRespond
+K2OS_MsgCreate
+K2OS_MsgSend
+K2OS_MsgWait
+K2OS_MsgSendAndWait
+K2OS_MsgAbort
+K2OS_MsgReadResponse
+K2OS_MsgTransact
+K2OS_HeapAlloc
+K2OS_HeapFree
+K2OS_HeapGetState
+K2OS_VirtPagesAlloc
+K2OS_VirtPagesCommit
+K2OS_VirtPagesDecommit
+K2OS_VirtPagesSetAttr
+K2OS_VirtPagesGetAttr
+K2OS_VirtPagesSetLock
+K2OS_VirtPagesFree
 
 
 [Data]

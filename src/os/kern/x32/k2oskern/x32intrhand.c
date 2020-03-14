@@ -62,7 +62,7 @@ X32Kern_InterruptHandler(
                 {
                     pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
                     pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
-                    pCoreEvent->mEventAbsTimeMs = K2OS_GetAbsTimeMs();
+                    pCoreEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
                     pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
 
                     KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);

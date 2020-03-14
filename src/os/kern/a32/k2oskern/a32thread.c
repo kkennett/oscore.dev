@@ -90,7 +90,7 @@ void A32Kern_ThreadCallSched(UINT32 aStackPtr)
     // queue sched item to core as a core event 
     //
     pActiveThread->Sched.Item.CpuCoreEvent.mEventType = KernCpuCoreEvent_SchedulerCall;
-    pActiveThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs = K2OS_GetAbsTimeMs();
+    pActiveThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs = K2OS_SysUpTimeMs();
     pActiveThread->Sched.Item.CpuCoreEvent.mSrcCoreIx = pThisCore->mCoreIx;
 
     KernIntr_QueueCpuCoreEvent(pThisCore, &pActiveThread->Sched.Item.CpuCoreEvent);

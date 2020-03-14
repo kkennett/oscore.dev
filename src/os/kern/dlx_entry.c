@@ -70,7 +70,7 @@ dlx_entry(
     gData.mpShared->FuncTab.Panic = K2OSKERN_Panic;
     gData.mpShared->FuncTab.SetIntr = K2OSKERN_SetIntr;
     gData.mpShared->FuncTab.MicroStall = K2OSKERN_MicroStall;
-    gData.mpShared->FuncTab.GetAbsTimeMs = K2OS_GetAbsTimeMs;
+    gData.mpShared->FuncTab.SysUpTimeMs = K2OS_SysUpTimeMs;
     gData.mpShared->FuncTab.SeqIntrInit = K2OSKERN_SeqIntrInit;
     gData.mpShared->FuncTab.SeqIntrLock = K2OSKERN_SeqIntrLock;
     gData.mpShared->FuncTab.SeqIntrUnlock = K2OSKERN_SeqIntrUnlock;
