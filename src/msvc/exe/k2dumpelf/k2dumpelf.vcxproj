@@ -71,6 +71,14 @@
       <SubSystem>Console</SubSystem>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);k2win32.lib</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy $(TargetPath) $(SolutionDir)..\..\k2tools32</Command>
+      <Message>copy to k2tools32</Message>
+    </PostBuildEvent>
+    <PreLinkEvent>
+      <Command>if exist $(SolutionDir)..\..\k2tools32\$(TargetFileName) del $(SolutionDir)..\..\k2tools32\$(TargetFileName)</Command>
+      <Message>delete tool at k2tools32</Message>
+    </PreLinkEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>

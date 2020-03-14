@@ -61,6 +61,9 @@ typedef struct _DLX DLX;
 #define DLX_SHF_TYPE_IMPORTS            0x00200000
 #define DLX_SHF_TYPE_DLXINFO            0x00400000
 
+#define DLX_SHN_DLXINFO                 1
+#define DLX_SHN_SHSTR                   2
+
 #define DLX_SHT_DLX_EXPORTS             SHT_LOOS
 #define DLX_SHT_DLX_IMPORTS             (SHT_LOOS + 1)
 
