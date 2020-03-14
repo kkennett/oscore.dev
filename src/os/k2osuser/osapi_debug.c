@@ -32,12 +32,21 @@
 
 #include "k2osuser.h"
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
+UINT32  K2_CALLCONV_CALLERCLEANS K2OS_DebugPrint(char const *apString)
 {
-    return K2STAT_NO_ERROR;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return 0;
 }
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_DebugPresent(void)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+void K2_CALLCONV_CALLERCLEANS K2OS_DebugBreak(void)
+{
+    K2_ASSERT(0);
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+}
+

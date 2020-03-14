@@ -32,12 +32,15 @@
 
 #include "k2osuser.h"
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN *apRetRwLockToken)
 {
-    return K2STAT_NO_ERROR;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite, K2OS_TOKEN *apRetRwLockRequestToken)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+

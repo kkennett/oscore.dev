@@ -32,12 +32,19 @@
 
 #include "k2osuser.h"
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
+UINT64 K2_CALLCONV_REGS K2OS_SysUpTimeMs(void)
 {
-    return K2STAT_NO_ERROR;
+    return 0;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeGet(K2_EARTHTIME *apRetTime)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }

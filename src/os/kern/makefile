@@ -75,9 +75,9 @@ SOURCES += osapi_rwlock.c
 SOURCES += osapi_sem.c 
 SOURCES += osapi_sys.c 
 SOURCES += osapi_thread.c 
+SOURCES += osapi_time.c 
 SOURCES += osapi_token.c 
 SOURCES += osapi_virt.c 
-
 
 include $(K2_ROOT)/src/shared/build/post.make
 

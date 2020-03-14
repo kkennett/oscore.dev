@@ -132,6 +132,8 @@ K2OS_VirtPagesSetAttr
 K2OS_VirtPagesGetAttr
 K2OS_VirtPagesSetLock
 K2OS_VirtPagesFree
+K2OS_TimeGet
+K2OS_TimeSet
 
 
 [Data]

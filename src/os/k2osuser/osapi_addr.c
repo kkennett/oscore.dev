@@ -32,12 +32,21 @@
 
 #include "k2osuser.h"
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsReadable(void *apAddr, UINT32 aLengthBytes)
 {
-    return K2STAT_NO_ERROR;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
 }
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsWriteable(void *apAddr, UINT32 aLengthBytes)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AddrIsExecutable(void *apAddr)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+

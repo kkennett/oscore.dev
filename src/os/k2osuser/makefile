@@ -36,7 +36,25 @@ TARGET_TYPE = DLX
 DLX_INF := k2osuser.inf
 
 SOURCES += entry.c
-SOURCES += thread.c
+
+SOURCES += osapi_addr.c 
+SOURCES += osapi_alarm.c 
+SOURCES += osapi_critsec.c 
+SOURCES += osapi_debug.c 
+SOURCES += osapi_event.c 
+SOURCES += osapi_heap.c 
+SOURCES += osapi_mailbox.c 
+SOURCES += osapi_mailslot.c 
+SOURCES += osapi_msg.c 
+SOURCES += osapi_name.c 
+SOURCES += osapi_process.c 
+SOURCES += osapi_rwlock.c 
+SOURCES += osapi_sem.c 
+SOURCES += osapi_sys.c 
+SOURCES += osapi_time.c
+SOURCES += osapi_thread.c 
+SOURCES += osapi_token.c 
+SOURCES += osapi_virt.c 
 
 include $(K2_ROOT)/src/shared/build/post.make
 

@@ -352,4 +352,11 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesFree(UINT32 aPagesAllocAddr);
 //------------------------------------------------------------------------
 //
 
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeGet(K2_EARTHTIME *apRetTime);
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
+
+//
+//------------------------------------------------------------------------
+//
+
 #endif // __K2OS_H
