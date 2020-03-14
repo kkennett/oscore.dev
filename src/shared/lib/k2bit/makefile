@@ -30,55 +30,12 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/os/build/k2ospre.make
+include $(K2_ROOT)/src/shared/build/pre.make
 
-TARGET_TYPE = DLX
+TARGET_TYPE = LIB
 
-TARGET_SPECIFIC_ARCH = X32
-
-K2_KERNEL := TRUE
-
-DLX_INF := ../../k2oskern.inf
-
-SOURCES += x32kern.c
-
-SOURCES += x32coreix.c
-
-SOURCES += x32gdt.c
-SOURCES += x32gdtasm.s
-
-SOURCES += x32idt.c
-SOURCES += x32idtasm.s
-
-SOURCES += x32intr.c 
-SOURCES += x32intrasm.s
-SOURCES += x32intrhand.c
-
-SOURCES += x32tss.c
-
-SOURCES += x32kernex.c
-
-SOURCES += x32map.c
-
-SOURCES += x32cpu.c
-SOURCES += x32cpuasm.s
-
-SOURCES += x32monitor.c 
-SOURCES += x32monitorasm.s 
-
-SOURCES += x32thread.c 
-SOURCES += x32threadasm.s 
-
-SOURCES += x32time.c
-
-SOURCE_LIBS += @shared/lib/k2archx32
-SOURCE_LIBS += @shared/lib/k2heap
-SOURCE_LIBS += @shared/lib/k2bit
-
-SOURCE_LIBS += @os/lib/k2ramheap
-
-KERN_SOURCE_LIBS += @os/kern
-
+SOURCES += bit32.c
+SOURCES += bit64.c
+SOURCES += bitfield.c
 
 include $(K2_ROOT)/src/shared/build/post.make
-

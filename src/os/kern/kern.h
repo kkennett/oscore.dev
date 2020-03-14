@@ -38,6 +38,7 @@
 #include "kernshared.h"
 #include <lib/k2heap.h>
 #include <lib/k2ramheap.h>
+#include <lib/k2bit.h>
 
 /* --------------------------------------------------------------------------------- */
 

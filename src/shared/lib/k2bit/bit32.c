@@ -30,67 +30,102 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include <lib/k2bit.h>
 
-void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
+BOOL
+K2BIT_GetHighestPos32(
+    UINT32      aValue,
+    UINT32 *    apRetHighestBitSet
+    )
 {
-    K2STAT  stat;
-    void *  ptr;
+    UINT32 ret;
 
-    if (aByteCount == 0)
-        return NULL;
-
-    ptr = NULL;
-    stat = K2OS_RAMHEAP_Alloc(&gData.RamHeap, aByteCount, TRUE, &ptr);
-    if (K2STAT_IS_ERROR(stat))
+    if (aValue == 0)
     {
-        K2OS_ThreadSetStatus(stat);
-        ptr = NULL;
+        if (apRetHighestBitSet != NULL)
+            *apRetHighestBitSet = (UINT32)-1;
+        return FALSE;
+    }
+    else if (apRetHighestBitSet == NULL)
+        return TRUE;
+
+    if (aValue & 0xFFFF0000)
+    {
+        ret = 16;
+        aValue >>= 16;
     }
     else
+        ret = 0;
+
+    if (aValue & 0xFF00)
     {
-        K2_ASSERT(((UINT32)ptr) >= K2OS_KVA_KERN_BASE);
+        ret += 8;
+        aValue >>= 8;
     }
 
-    return ptr;
-}
-
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr)
-{
-    K2STAT  stat;
-    BOOL    result;
-
-    K2_ASSERT(((UINT32)aPtr) >= K2OS_KVA_KERN_BASE);
-
-    stat = K2OS_RAMHEAP_Free(&gData.RamHeap, aPtr);
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-
-    return result;
-}
-
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapGetState(K2OS_HEAP_STATE *apRetState)
-{
-    K2STAT              stat;
-    BOOL                result;
-    K2OS_RAMHEAP_STATE  heapState;
-    UINT32              largestFree;
-
-    K2_ASSERT(((UINT32)apRetState) >= K2OS_KVA_KERN_BASE);
-
-    stat = K2OS_RAMHEAP_GetState(&gData.RamHeap, &heapState, &largestFree);
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-    else
+    if (aValue & 0xF0)
     {
-        apRetState->mAllocCount = heapState.mAllocCount;
-        apRetState->mTotalAlloc = heapState.mTotalAlloc;
-        apRetState->mTotalOverhead = heapState.mTotalOverhead;
-        apRetState->mLargestFree = largestFree;
+        ret += 4;
+        aValue >>= 4;
     }
 
-    return result;
+    if (aValue & 0xC)
+    {
+        ret += 2;
+        aValue >>= 4;
+    }
+
+    if (aValue & 2)
+        ret++;
+
+     *apRetHighestBitSet = ret;
+
+     return TRUE;
+}
+
+UINT32
+K2BIT_GetLowestOnly32(
+    UINT32  aValue
+    )
+{
+    return (aValue | (aValue - 1)) ^ (aValue - 1);
+}
+
+BOOL
+K2BIT_IsOnlyOneSet32(
+    UINT32 aValue
+    )
+{
+    if (aValue == 0)
+        return FALSE;
+    return ((aValue & (aValue - 1)) == 0);
+}
+
+BOOL
+K2BIT_GetLowestPos32(
+    UINT32      aValue,
+    UINT32 *    apRetLowestBitSet
+    )
+{
+    if (aValue == 0)
+    {
+        if (apRetLowestBitSet != NULL)
+            *apRetLowestBitSet = (UINT32)-1;
+        return FALSE;
+    }
+
+    return K2BIT_GetHighestPos32(K2BIT_GetLowestOnly32(aValue), apRetLowestBitSet);
+}
+
+UINT32
+K2BIT_CountNumberSet32(
+    UINT32   aValue
+    )
+{
+    aValue = (aValue & 0x55555555) + ((aValue >>  1) & 0x55555555);
+    aValue = (aValue & 0x33333333) + ((aValue >>  2) & 0x33333333);
+    aValue = (aValue & 0x0F0F0F0F) + ((aValue >>  4) & 0x0F0F0F0F);
+    aValue = (aValue & 0x00FF00FF) + ((aValue >>  8) & 0x00FF00FF);
+    return   (aValue & 0x0000FFFF) + ((aValue >> 16) & 0x0000FFFF);
 }
 

@@ -34,43 +34,252 @@
 
 UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnId(void)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return 0;
+    K2OSKERN_OBJ_THREAD *pThisThread;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    return pThisThread->Env.mId;
 }
 
 K2STAT K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2OSKERN_OBJ_THREAD *pThisThread;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    return pThisThread->Env.mLastStatus;
 }
 
-void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus)
+void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    K2OSKERN_OBJ_THREAD *pThisThread;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Env.mLastStatus = aStatus;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadAllocLocal(UINT32 *apRetSlotId)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadAllocLocal(UINT32 *apRetSlotId)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    BOOL                    result;
+    BOOL                    ok;
+    UINT32                  slotBit;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_OBJ_PROCESS *  pThisProc;
+
+    do {
+        if (NULL == apRetSlotId)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        pThisThread = K2OSKERN_CURRENT_THREAD;
+        pThisProc = pThisThread->mpProc;
+
+        ok = K2OS_CritSecEnter(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+        if (pThisProc->mTlsMask == (UINT32)-1)
+        {
+            stat = K2STAT_ERROR_OUT_OF_RESOURCES;
+        }
+        else
+        {
+            slotBit = K2BIT_GetLowestOnly32(~pThisProc->mTlsMask);
+            pThisProc->mTlsMask |= slotBit;
+            stat = K2STAT_NO_ERROR;
+        }
+
+        ok = K2OS_CritSecLeave(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+        if (K2STAT_IS_ERROR(stat))
+            break;
+
+        K2BIT_GetLowestPos32(slotBit, apRetSlotId);
+
+    } while (0);
+
+    result = (!K2STAT_IS_ERROR(stat));
+    if (!result)
+        K2OS_ThreadSetStatus(stat);
+
+    return result;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    BOOL                    result;
+    UINT32                  slotBit;
+    BOOL                    ok;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_OBJ_PROCESS *  pThisProc;
+    K2LIST_LINK *           pLink;
+    K2OSKERN_OBJ_THREAD *   pOtherThread;
+
+    do {
+        if (aSlotId >= 32)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        slotBit = (1 << aSlotId);
+
+        pThisThread = K2OSKERN_CURRENT_THREAD;
+        pThisProc = pThisThread->mpProc;
+
+        if (0 == (pThisProc->mTlsMask & slotBit))
+        {
+            stat = K2STAT_ERROR_NOT_IN_USE;
+            break;
+        }
+
+        ok = K2OS_CritSecEnter(&pThisProc->ThreadListSec);
+        K2_ASSERT(ok);
+        ok = K2OS_CritSecEnter(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+        if (0 == (pThisProc->mTlsMask & slotBit))
+        {
+            stat = K2STAT_ERROR_NOT_IN_USE;
+        }
+        else
+        {
+            pThisProc->mTlsMask &= ~slotBit;
+            stat = K2STAT_NO_ERROR;
+
+            //
+            // clear value in slots in all threads for the process
+            //
+            pLink = pThisProc->ThreadList.mpHead;
+            K2_ASSERT(pLink != NULL);
+            do {
+                pOtherThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, pLink, ProcThreadListLink);
+                pOtherThread->Env.mTlsValue[aSlotId] = 0;
+                pLink = pLink->mpNext;
+            } while (pLink != NULL);
+        }
+
+        ok = K2OS_CritSecLeave(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+        ok = K2OS_CritSecLeave(&pThisProc->ThreadListSec);
+        K2_ASSERT(ok);
+
+    } while (0);
+
+    result = (!K2STAT_IS_ERROR(stat));
+    if (!result)
+        K2OS_ThreadSetStatus(stat);
+
+    return result;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetLocal(UINT32 aSlotId, UINT32 aValue)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetLocal(UINT32 aSlotId, UINT32 aValue)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    BOOL                    result;
+    UINT32                  slotBit;
+    BOOL                    ok;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_OBJ_PROCESS *  pThisProc;
+
+    do {
+        if (aSlotId >= 32)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        slotBit = (1 << aSlotId);
+
+        pThisThread = K2OSKERN_CURRENT_THREAD;
+        pThisProc = pThisThread->mpProc;
+
+        if (0 == (pThisProc->mTlsMask & slotBit))
+        {
+            stat = K2STAT_ERROR_NOT_IN_USE;
+            break;
+        }
+
+        ok = K2OS_CritSecEnter(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+        if (0 == (pThisProc->mTlsMask & slotBit))
+        {
+            stat = K2STAT_ERROR_NOT_IN_USE;
+        }
+        else
+        {
+            pThisThread->Env.mTlsValue[aSlotId] = aValue;
+            stat = K2STAT_NO_ERROR;
+        }
+
+        ok = K2OS_CritSecLeave(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+    } while (0);
+
+    result = (!K2STAT_IS_ERROR(stat));
+    if (!result)
+        K2OS_ThreadSetStatus(stat);
+
+    return result;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetValue)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetValue)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    BOOL                    result;
+    UINT32                  slotBit;
+    BOOL                    ok;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_OBJ_PROCESS *  pThisProc;
+
+    do {
+        if (aSlotId >= 32)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        if (apRetValue == NULL)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        slotBit = (1 << aSlotId);
+
+        pThisThread = K2OSKERN_CURRENT_THREAD;
+        pThisProc = pThisThread->mpProc;
+
+        ok = K2OS_CritSecEnter(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+        if (0 == (pThisProc->mTlsMask & slotBit))
+        {
+            stat = K2STAT_ERROR_NOT_IN_USE;
+        }
+        else
+        {
+            *apRetValue = pThisThread->Env.mTlsValue[aSlotId];
+            stat = K2STAT_NO_ERROR;
+        }
+
+        ok = K2OS_CritSecLeave(&pThisProc->TlsMaskSec);
+        K2_ASSERT(ok);
+
+    } while (0);
+
+    result = (!K2STAT_IS_ERROR(stat));
+    if (!result)
+        K2OS_ThreadSetStatus(stat);
+
+    return result;
 }
 
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate, K2OS_TOKEN *apRetThreadToken)

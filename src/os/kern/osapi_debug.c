@@ -34,18 +34,19 @@
 
 UINT32  K2_CALLCONV_CALLERCLEANS K2OS_DebugPrint(char const *apString)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return 0;
+    K2_ASSERT(((UINT32)apString) >= K2OS_KVA_KERN_BASE);
+    return K2OSKERN_Debug("%s\n", apString);
 }
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_DebugPresent(void)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_DebugPresent(void)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;
 }
 
-void    K2_CALLCONV_CALLERCLEANS K2OS_DebugBreak(void)
+void K2_CALLCONV_CALLERCLEANS K2OS_DebugBreak(void)
 {
+    K2_ASSERT(0);
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
 }
 
