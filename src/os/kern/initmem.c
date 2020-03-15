@@ -1168,6 +1168,12 @@ static void sInit_BeforeVirt(void)
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_HAL;
     sInitMapDlxSegments(&gData.DlxHal);
 
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxAcpi.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
+    pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_ACPI;
+    sInitMapDlxSegments(&gData.DlxAcpi);
+
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gpProc0->PrimaryModule.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
