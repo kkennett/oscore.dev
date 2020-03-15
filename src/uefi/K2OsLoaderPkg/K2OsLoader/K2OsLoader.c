@@ -154,6 +154,7 @@ K2OsLoaderEntryPoint (
     K2STAT                  k2Stat;
     DLX *                   pDlxHal;
     DLX *                   pDlxKern;
+    DLX *                   pDlxAcpi;
     EFI_EVENT               efiEvent;
     EFI_PHYSICAL_ADDRESS    physAddr;
 
@@ -256,73 +257,82 @@ K2OsLoaderEntryPoint (
                         if (!sVerifyHAL(pDlxHal))
                             break;
 
-                        k2Stat = DLX_Acquire("k2oskern.dlx", &pDlxKern);
+                        k2Stat = DLX_Acquire("k2osacpi.dlx", &pDlxAcpi);
                         if (K2STAT_IS_ERROR(k2Stat))
                             break;
 
-                        do
-                        {
-                            k2Stat = DLX_Acquire("k2oscrt.dlx", &gData.LoadInfo.mpDlxCrt);
-                            if (gData.LoadInfo.mpDlxCrt == NULL)
+                        do {
+                            k2Stat = DLX_Acquire("k2oskern.dlx", &pDlxKern);
+                            if (K2STAT_IS_ERROR(k2Stat))
                                 break;
 
                             do
                             {
-                                k2Stat = Loader_CreateVirtualMap();
-                                if (K2STAT_IS_ERROR(k2Stat))
+                                k2Stat = DLX_Acquire("k2oscrt.dlx", &gData.LoadInfo.mpDlxCrt);
+                                if (gData.LoadInfo.mpDlxCrt == NULL)
                                     break;
 
-                                k2Stat = Loader_MapAllDLX();
-                                if (K2STAT_IS_ERROR(k2Stat))
-                                    break;
+                                do
+                                {
+                                    k2Stat = Loader_CreateVirtualMap();
+                                    if (K2STAT_IS_ERROR(k2Stat))
+                                        break;
 
-                                k2Stat = Loader_AssembleAcpi();
-                                if (K2STAT_IS_ERROR(k2Stat))
-                                    break;
+                                    k2Stat = Loader_MapAllDLX();
+                                    if (K2STAT_IS_ERROR(k2Stat))
+                                        break;
+
+                                    k2Stat = Loader_AssembleAcpi();
+                                    if (K2STAT_IS_ERROR(k2Stat))
+                                        break;
 
 #if 1
-                                gData.LoadInfo.mDebugPageVirt = gData.LoadInfo.mKernArenaLow;
-                                gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
+                                    gData.LoadInfo.mDebugPageVirt = gData.LoadInfo.mKernArenaLow;
+                                    gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
 #if K2_TARGET_ARCH_IS_ARM
-                                k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
 #else
-                                k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
 #endif
-                                //                        K2Printf(L"DebugPageVirt = 0x%08X\n", gData.LoadInfo.mDebugPageVirt);
-                                if (K2STAT_IS_ERROR(k2Stat))
-                                    break;
+                                    //                        K2Printf(L"DebugPageVirt = 0x%08X\n", gData.LoadInfo.mDebugPageVirt);
+                                    if (K2STAT_IS_ERROR(k2Stat))
+                                        break;
 #else
-                                gData.LoadInfo.mDebugPageVirt = 0;
+                                    gData.LoadInfo.mDebugPageVirt = 0;
 #endif
 
-                                K2Printf(L"\n----------------\nTransition...\n");
+                                    K2Printf(L"\n----------------\nTransition...\n");
 
-                                k2Stat = Loader_TrackEfiMap();
-                                if (K2STAT_IS_ERROR(k2Stat))
-                                    break;
+                                    k2Stat = Loader_TrackEfiMap();
+                                    if (K2STAT_IS_ERROR(k2Stat))
+                                        break;
 
-                                //
-                                // DO NOT ALLOCATE ANY MEMORY AFTER THIS
-                                //
-                                // DO NOT DO DEBUG PRINTS AFTER THIS
-                                //
+                                    //
+                                    // DO NOT ALLOCATE ANY MEMORY AFTER THIS
+                                    //
+                                    // DO NOT DO DEBUG PRINTS AFTER THIS
+                                    //
 
-                                k2Stat = K2DLXSUPP_Handoff(
-                                    &gData.LoadInfo.mpDlxCrt,
-                                    sysDLX_ConvertLoadPtr,
-                                    &gData.LoadInfo.mSystemVirtualEntrypoint);
+                                    k2Stat = K2DLXSUPP_Handoff(
+                                        &gData.LoadInfo.mpDlxCrt,
+                                        sysDLX_ConvertLoadPtr,
+                                        &gData.LoadInfo.mSystemVirtualEntrypoint);
 
-                                if (!K2STAT_IS_ERROR(k2Stat))
-                                    Loader_TransitionToKernel();
+                                    if (!K2STAT_IS_ERROR(k2Stat))
+                                        Loader_TransitionToKernel();
+
+                                } while (0);
+
+                                gRT->ResetSystem(EfiResetWarm, EFI_DEVICE_ERROR, 0, NULL);
+                                while (1);
 
                             } while (0);
 
-                            gRT->ResetSystem(EfiResetWarm, EFI_DEVICE_ERROR, 0, NULL);
-                            while (1);
+                            DLX_Release(pDlxKern);
 
                         } while (0);
 
-                        DLX_Release(pDlxKern);
+                        DLX_Release(pDlxAcpi);
 
                     } while (0);
 

@@ -32,8 +32,26 @@
 
 #include "kern.h"
 
+static void sStartAcpi(void)
+{
+    DLX_pf_ENTRYPOINT   acpiEntryPoint;
+    K2STAT              stat;
+
+    stat = gData.mpShared->FuncTab.GetDlxInfo(
+        gData.mpShared->mpDlxAcpi,
+        NULL,
+        &acpiEntryPoint,
+        NULL,
+        NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    stat = acpiEntryPoint(gData.mpShared->mpDlxAcpi, DLX_ENTRY_REASON_LOAD);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+}
+
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
+
     UINT64 last, newTick;
 
     //
@@ -60,6 +78,11 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
         last = newTick;
         K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
     }
+
+    //
+    // find and call entrypoint for acpi dlx
+    //
+    sStartAcpi();
 
     return 0xAABBCCDD;
 }

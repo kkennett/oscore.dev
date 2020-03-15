@@ -118,6 +118,10 @@ void KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FIL
     {
         sInitBuiltInDlx(&gpProc0->PrimaryModule, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
+    else if (apDlx == gData.mpShared->mpDlxAcpi)
+    {
+        sInitBuiltInDlx(&gData.DlxAcpi, apDlx, aModulePageLinkAddr, apInOutHostFile);
+    }
     else
     {
         K2_ASSERT(0);

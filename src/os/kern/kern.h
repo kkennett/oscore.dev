@@ -601,6 +601,7 @@ struct _KERN_DATA
     // dlxsupp.c - 
     K2OSKERN_OBJ_DLX                    DlxCrt;
     K2OSKERN_OBJ_DLX                    DlxHal;
+    K2OSKERN_OBJ_DLX                    DlxAcpi;
 
     // sched.c
     K2OSKERN_SCHED                      Sched;

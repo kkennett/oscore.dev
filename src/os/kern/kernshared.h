@@ -93,6 +93,7 @@ struct _K2OSKERN_SHARED
     K2_CACHEINFO const *    mpCacheInfo;
     DLX *                   mpDlxKern;
     DLX *                   mpDlxHal;
+    DLX *                   mpDlxAcpi;
     K2OSKERN_FUNCTAB        FuncTab;
 };
 

@@ -507,9 +507,11 @@ Export(
     EXPORT_SPEC *   pPrev;
     EXPORT_SPEC *   pHold;
     EXPORT_SPEC *   pSpecEnd;
+    int             result;
 
     if (gOut.mTotalExports > 0)
     {
+        result = 0;
         pSpec = gOut.mOutSec[OUTSEC_CODE].mpSpec;
         while (pSpec != NULL)
         {
@@ -517,33 +519,35 @@ Export(
             if (pTreeNode == NULL)
             {
                 printf("*** Exported global code symbol \"%s\" was not found in any input file\n", pSpec->mpName);
-                return -100;
+                result = -100;
             }
-            pGlob = K2_GET_CONTAINER(GLOBAL_SYMBOL, pTreeNode, TreeNode);
-            if (!pGlob->mIsCode)
+            else
             {
-                printf("*** Exported global code symbol \"%s\" found, but is as data\n", pSpec->mpName);
-                return -101;
+                pGlob = K2_GET_CONTAINER(GLOBAL_SYMBOL, pTreeNode, TreeNode);
+                if (!pGlob->mIsCode)
+                {
+                    printf("*** Exported global code symbol \"%s\" found, but is as data\n", pSpec->mpName);
+                    result = -101;
+                }
+                else if (pGlob->mIsWeak)
+                {
+                    printf("*** Exported global code symbol \"%s\" cannot be weak\n", pSpec->mpName);
+                    result = -102;
+                }
+                else if ((pGlob->mpObjFile->SectionHeader(pGlob->mpSymEnt->st_shndx)->sh_flags & DLX_SHF_TYPE_MASK) ==
+                    DLX_SHF_TYPE_IMPORTS)
+                {
+                    printf("** Exported global code symbol \"%s\" cannot be an import\n", pSpec->mpName);
+                    result = -107;
+                }
             }
-            if (pGlob->mIsWeak)
-            {
-                printf("*** Exported global code symbol \"%s\" cannot be weak\n", pSpec->mpName);
-                return -102;
-            }
-
-            //printf("Found %s\n   In %s\n", pSpec->mpName, pGlob->mpObjFile->ParentFile().FileName());
-
-            if ((pGlob->mpObjFile->SectionHeader(pGlob->mpSymEnt->st_shndx)->sh_flags & DLX_SHF_TYPE_MASK) ==
-                DLX_SHF_TYPE_IMPORTS)
-            {
-                printf("** Exported global code symbol \"%s\" cannot be an import\n", pSpec->mpName);
-                return -107;
-            }
-
             pSpec = pSpec->mpNext;
         }
+        if (result != 0)
+            return result;
         //    printf("Code symbols all found ok\n");
 
+        result = 0;
         pSpec = gOut.mOutSec[OUTSEC_DATA].mpSpec;
         pSpecEnd = NULL;
         pPrev = NULL;
@@ -553,55 +557,58 @@ Export(
             if (pTreeNode == NULL)
             {
                 printf("*** Exported global data symbol \"%s\" was not found in any input file\n", pSpec->mpName);
-                return -103;
-            }
-            pGlob = K2_GET_CONTAINER(GLOBAL_SYMBOL, pTreeNode, TreeNode);
-            if (pGlob->mIsCode)
-            {
-                printf("*** Exported global data symbol \"%s\" found, but is as code\n", pSpec->mpName);
-                return -104;
-            }
-            if (pGlob->mIsWeak)
-            {
-                printf("*** Exported global data symbol \"%s\" cannot be weak\n", pSpec->mpName);
-                return -105;
-            }
-
-            //printf("Found %s\n   In %s\n", pSpec->mpName, pGlob->mpObjFile->ParentFile().FileName());
-
-            if ((pGlob->mpObjFile->SectionHeader(pGlob->mpSymEnt->st_shndx)->sh_flags & DLX_SHF_TYPE_MASK) ==
-                DLX_SHF_TYPE_IMPORTS)
-            {
-                printf("** Exported global data or read symbol \"%s\" cannot be an import\n", pSpec->mpName);
-                return -107;
-            }
-
-            if (pGlob->mIsRead)
-            {
-                pHold = pSpec->mpNext;
-
-                if (pPrev == NULL)
-                    gOut.mOutSec[OUTSEC_DATA].mpSpec = pSpec->mpNext;
-                else
-                    pPrev->mpNext = pSpec->mpNext;
-                pSpec->mpNext = NULL;
-                gOut.mOutSec[OUTSEC_DATA].mCount--;
-
-                if (pSpecEnd != NULL)
-                    pSpecEnd->mpNext = pSpec;
-                else
-                    gOut.mOutSec[OUTSEC_READ].mpSpec = pSpec;
-                pSpecEnd = pSpec;
-                gOut.mOutSec[OUTSEC_READ].mCount++;
-
-                pSpec = pHold;
+                result = -103;
+                pSpec = pSpec->mpNext;
             }
             else
             {
-                pPrev = pSpec;
-                pSpec = pSpec->mpNext;
+                pGlob = K2_GET_CONTAINER(GLOBAL_SYMBOL, pTreeNode, TreeNode);
+                if (pGlob->mIsCode)
+                {
+                    printf("*** Exported global data symbol \"%s\" found, but is as code\n", pSpec->mpName);
+                    result = -104;
+                }
+                else if (pGlob->mIsWeak)
+                {
+                    printf("*** Exported global data symbol \"%s\" cannot be weak\n", pSpec->mpName);
+                    result = -105;
+                }
+                else if ((pGlob->mpObjFile->SectionHeader(pGlob->mpSymEnt->st_shndx)->sh_flags & DLX_SHF_TYPE_MASK) ==
+                    DLX_SHF_TYPE_IMPORTS)
+                {
+                    printf("** Exported global data or read symbol \"%s\" cannot be an import\n", pSpec->mpName);
+                    result = -107;
+                }
+
+                if (pGlob->mIsRead)
+                {
+                    pHold = pSpec->mpNext;
+
+                    if (pPrev == NULL)
+                        gOut.mOutSec[OUTSEC_DATA].mpSpec = pSpec->mpNext;
+                    else
+                        pPrev->mpNext = pSpec->mpNext;
+                    pSpec->mpNext = NULL;
+                    gOut.mOutSec[OUTSEC_DATA].mCount--;
+
+                    if (pSpecEnd != NULL)
+                        pSpecEnd->mpNext = pSpec;
+                    else
+                        gOut.mOutSec[OUTSEC_READ].mpSpec = pSpec;
+                    pSpecEnd = pSpec;
+                    gOut.mOutSec[OUTSEC_READ].mCount++;
+
+                    pSpec = pHold;
+                }
+                else
+                {
+                    pPrev = pSpec;
+                    pSpec = pSpec->mpNext;
+                }
             }
         }
+        if (result != 0)
+            return result;
         //    printf("Data symbols all found ok.  %d are read, %d are data\n", gOut.mOutSec[OUTSEC_READ].mCount, gOut.mOutSec[OUTSEC_DATA].mCount);
     }
 
