@@ -48,7 +48,7 @@ void KernInit_Stage(KernInitStage aStage)
 static void sInit(void)
 {
     KernInitStage initStage;
-    for (initStage = KernInitStage_dlx_entry + 1; initStage < KernInitStage_Count; initStage++)
+    for (initStage = KernInitStage_dlx_entry + 1; initStage < KernInitStage_Threaded; initStage++)
     {
         KernInit_Stage(initStage);
     }

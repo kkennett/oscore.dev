@@ -654,7 +654,7 @@ sInitHeap_ReleaseNode(
     K2LIST_AddAtTail(&sgInitHeapNodeList, (K2LIST_LINK *)apNode);
 }
 
-#if 0
+#if 1
 
 static
 void 
@@ -1250,7 +1250,7 @@ static void sInit_BeforeVirt(void)
 
 static void sInit_AfterHal(void)
 {
-//    K2HEAP_Dump(&gData.KernVirtHeap, sDumpHeapNode);
+    K2HEAP_Dump(&gData.KernVirtHeap, sDumpHeapNode);
 
     //
     // light up the heap API

@@ -572,10 +572,10 @@ enum _KernInitStage
     KernInitStage_Before_Hal,
 //    KernInitStage_At_Hal_Entry,
     KernInitStage_After_Hal,
-
-
     KernInitStage_Before_Launch_Cores,
-   
+
+// should be last entry
+    KernInitStage_Threaded,
     KernInitStage_Count
 };
 
@@ -714,6 +714,7 @@ BOOL KernDebug_Service(BOOL aExecutedSchedItems);
 
 void K2_CALLCONV_REGS KernExec(void);
 
+void KernInit_Stage(KernInitStage aStage);
 void KernInit_Arch(void);
 void KernInit_DlxHost(void);
 void KernInit_Mem(void);
