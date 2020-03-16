@@ -40,8 +40,14 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
     if (aByteCount == 0)
         return NULL;
 
-    ptr = NULL;
-    stat = K2OS_RAMHEAP_Alloc(&gData.RamHeap, aByteCount, TRUE, &ptr);
+    if (gData.mKernInitStage < KernInitStage_Threaded)
+        stat = K2STAT_ERROR_NOT_READY;
+    else
+    {
+        ptr = NULL;
+        stat = K2OS_RAMHEAP_Alloc(&gData.RamHeap, aByteCount, TRUE, &ptr);
+    }
+
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
@@ -60,9 +66,13 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr)
     K2STAT  stat;
     BOOL    result;
 
-    K2_ASSERT(((UINT32)aPtr) >= K2OS_KVA_KERN_BASE);
-
-    stat = K2OS_RAMHEAP_Free(&gData.RamHeap, aPtr);
+    if (gData.mKernInitStage < KernInitStage_Threaded)
+        stat = K2STAT_ERROR_NOT_READY;
+    else
+    {
+        K2_ASSERT(((UINT32)aPtr) >= K2OS_KVA_KERN_BASE);
+        stat = K2OS_RAMHEAP_Free(&gData.RamHeap, aPtr);
+    }
     result = (!K2STAT_IS_ERROR(stat));
     if (!result)
         K2OS_ThreadSetStatus(stat);
@@ -77,9 +87,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapGetState(K2OS_HEAP_STATE *apRetState)
     K2OS_RAMHEAP_STATE  heapState;
     UINT32              largestFree;
 
-    K2_ASSERT(((UINT32)apRetState) >= K2OS_KVA_KERN_BASE);
+    if (gData.mKernInitStage < KernInitStage_Threaded)
+        stat = K2STAT_ERROR_NOT_READY;
+    else
+    {
+        K2_ASSERT(((UINT32)apRetState) >= K2OS_KVA_KERN_BASE);
+        stat = K2OS_RAMHEAP_GetState(&gData.RamHeap, &heapState, &largestFree);
+    }
 
-    stat = K2OS_RAMHEAP_GetState(&gData.RamHeap, &heapState, &largestFree);
     result = (!K2STAT_IS_ERROR(stat));
     if (!result)
         K2OS_ThreadSetStatus(stat);

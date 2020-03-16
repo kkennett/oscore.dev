@@ -51,7 +51,7 @@ static void sStartAcpi(void)
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
-
+    KernInitStage initStage;
     UINT64 last, newTick;
 
     //
@@ -64,6 +64,14 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     // init core stuff that needs threads
     //
     gData.mpShared->FuncTab.CoreThreadedPostInit();
+
+    //
+    // ready to go
+    //
+    for (initStage = KernInitStage_Threaded; initStage < KernInitStage_Count; initStage++)
+    {
+        KernInit_Stage(initStage);
+    }
 
     //
     // main Thread0 actions can commence here
