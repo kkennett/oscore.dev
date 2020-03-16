@@ -34,6 +34,10 @@
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCount, UINT32 aVirtAllocFlags, UINT32 aPageAttrFlags)
 {
+
+
+
+
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     K2_ASSERT(0);
     return FALSE;

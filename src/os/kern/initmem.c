@@ -34,6 +34,7 @@
 
 #define PHYS_AUDIT      1
 #define VIRT_AUDIT      1
+#define DUMP_HEAP       0
 
 #if 0
 
@@ -654,7 +655,7 @@ sInitHeap_ReleaseNode(
     K2LIST_AddAtTail(&sgInitHeapNodeList, (K2LIST_LINK *)apNode);
 }
 
-#if 1
+#if DUMP_HEAP
 
 static
 void 
@@ -889,16 +890,6 @@ static void sDumpSegmentTree(void)
 }
 
 #endif
-
-static UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
-{
-    return 0;
-}
-
-static void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
-{
-
-}
 
 #if K2_TARGET_ARCH_IS_ARM
 static void sA32Init_BeforeVirt(void)
@@ -1182,12 +1173,6 @@ static void sInit_BeforeVirt(void)
 
     sAddEfiRuntimeMappings();
 
-    //
-    // add user space to proc0
-    //
-    stat = K2HEAP_AddFreeSpaceNode(&gData.KernVirtHeap, 0, K2OS_KVA_KERN_BASE, NULL);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
     // now audit before hal runs
 //    K2HEAP_Dump(&gData.KernVirtHeap, sDumpHeapNode);
 
@@ -1195,7 +1180,7 @@ static void sInit_BeforeVirt(void)
     // unallocated VM must not be mapped. all VM must be accounted for
     //
 #if VIRT_AUDIT
-    lastEnd = 0;
+    lastEnd = K2OS_KVA_KERN_BASE;
     pHeapNode = K2HEAP_GetFirstNode(&gData.KernVirtHeap);
     K2_ASSERT(pHeapNode != NULL);
     do {
@@ -1248,9 +1233,29 @@ static void sInit_BeforeVirt(void)
 #endif
 }
 
+static UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
+{
+    return 0;
+}
+
+static void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
+{
+
+}
+
 static void sInit_AfterHal(void)
 {
+#if DUMP_HEAP
     K2HEAP_Dump(&gData.KernVirtHeap, sDumpHeapNode);
+#endif
+
+
+    //
+    // start manage both physical and virtual memory here
+    //
+    K2OSKERN_Debug("%d/%d nodes used in InitHeapNodes\n", INIT_HEAP_NODE_COUNT - sgInitHeapNodeList.mNodeCount, INIT_HEAP_NODE_COUNT);
+
+    //    gData.FreePhysTree holds physical memory, protected by gData.FreePhysSeqLock
 
     //
     // light up the heap API
