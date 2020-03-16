@@ -47,12 +47,15 @@ static void sStartAcpi(void)
 
     stat = acpiEntryPoint(gData.mpShared->mpDlxAcpi, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    K2OSKERN_Debug("ACPI entry point returned\n");
 }
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
+//    UINT64 last, newTick;
 
-    UINT64 last, newTick;
+    K2OSKERN_Debug("++K2OSKERN_Thread0\n");
 
     //
     // initialize proc0 stuff that needs threads in order to init
@@ -63,11 +66,14 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     //
     // init core stuff that needs threads
     //
+    K2OSKERN_Debug("Call Crt Threaded Post Init\n");
+    K2_ASSERT(gData.mpShared->FuncTab.CoreThreadedPostInit != NULL);
     gData.mpShared->FuncTab.CoreThreadedPostInit();
 
     //
     // main Thread0 actions can commence here
     //
+#if 0
     K2OSKERN_Debug("Hang ints on\n");
     last = K2OS_SysUpTimeMs();
     while (1)
@@ -78,6 +84,7 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
         last = newTick;
         K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
     }
+#endif
 
     //
     // find and call entrypoint for acpi dlx

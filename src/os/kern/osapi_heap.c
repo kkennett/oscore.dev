@@ -40,6 +40,8 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
     if (aByteCount == 0)
         return NULL;
 
+    K2OSKERN_Debug("+K2OS_HeapAlloc(%d)\n", aByteCount);
+
     ptr = NULL;
     stat = K2OS_RAMHEAP_Alloc(&gData.RamHeap, aByteCount, TRUE, &ptr);
     if (K2STAT_IS_ERROR(stat))
@@ -52,6 +54,8 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
         K2_ASSERT(((UINT32)ptr) >= K2OS_KVA_KERN_BASE);
     }
 
+    K2OSKERN_Debug("-K2OS_HeapAlloc(%08X)\n", ptr);
+
     return ptr;
 }
 
@@ -62,10 +66,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr)
 
     K2_ASSERT(((UINT32)aPtr) >= K2OS_KVA_KERN_BASE);
 
+    K2OSKERN_Debug("+K2OS_HeapFree(%d)\n", aPtr);
+
     stat = K2OS_RAMHEAP_Free(&gData.RamHeap, aPtr);
     result = (!K2STAT_IS_ERROR(stat));
     if (!result)
         K2OS_ThreadSetStatus(stat);
+
+    K2OSKERN_Debug("-K2OS_HeapFree(%s)\n", result ? "TRUE" : "FALSE");
 
     return result;
 }

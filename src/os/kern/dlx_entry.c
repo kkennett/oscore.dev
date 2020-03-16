@@ -76,6 +76,13 @@ dlx_entry(
     gData.mpShared->FuncTab.SeqIntrUnlock = K2OSKERN_SeqIntrUnlock;
     gData.mpShared->FuncTab.GetCpuIndex = K2OSKERN_GetCpuIndex;
 
+    gData.mpShared->FuncTab.SysUpTimeMs = K2OS_SysUpTimeMs;
+    gData.mpShared->FuncTab.CritSecInit = K2OS_CritSecInit;
+    gData.mpShared->FuncTab.CritSecEnter = K2OS_CritSecEnter;
+    gData.mpShared->FuncTab.CritSecLeave = K2OS_CritSecLeave;
+    gData.mpShared->FuncTab.HeapAlloc = K2OS_HeapAlloc;
+    gData.mpShared->FuncTab.HeapFree = K2OS_HeapFree;
+
     gData.mpShared->FuncTab.DlxHost.CritSec = KernDlx_CritSec;
     gData.mpShared->FuncTab.DlxHost.Open = KernDlx_Open;
     gData.mpShared->FuncTab.DlxHost.AtReInit = KernDlx_AtReInit;

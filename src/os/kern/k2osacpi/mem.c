@@ -4,14 +4,13 @@ void *
 AcpiOsAllocate(
     ACPI_SIZE               Size)
 {
-    K2_ASSERT(0);
-    return NULL;
+    return K2OS_HeapAlloc(Size);
 }
 
 void
 AcpiOsFree(
     void *                  Memory)
 {
-    K2_ASSERT(0);
+    K2OS_HeapFree(Memory);
 }
 
