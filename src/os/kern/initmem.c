@@ -187,7 +187,7 @@ sDumpEfiMap(void)
 static void sRemoveTransitionPage(void)
 {
     UINT32 *                pPTE;
-    UINT32 *                pPTCount;
+    UINT32 *                pPTPageCount;
     UINT32                  virtPT;
     UINT32                  physPT;
     UINT32                  transPageAddr;
@@ -214,8 +214,8 @@ static void sRemoveTransitionPage(void)
     //
     // see if we need to unmap the pagetable that held the transition page
     //
-    pPTCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
-    if (0 == --pPTCount[transPageAddr / K2_VA32_PAGETABLE_MAP_BYTES])
+    pPTPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
+    if (0 == --pPTPageCount[transPageAddr / K2_VA32_PAGETABLE_MAP_BYTES])
     {
         //
         // pagetable for transition page is now empty and should be unmapped
@@ -227,7 +227,7 @@ static void sRemoveTransitionPage(void)
         //
         // virtPt / pagetable map bytes is page table page table. if this one hits zero we don't care
         //
-        pPTCount[virtPT / K2_VA32_PAGETABLE_MAP_BYTES]--;
+        pPTPageCount[virtPT / K2_VA32_PAGETABLE_MAP_BYTES]--;
 
         //
         // must return the physical page used for pagetable to usable memory type
@@ -531,6 +531,11 @@ sInitPhysTrack(
     UINT32                      pageListCount[KernPageList_Count];
 #endif
 
+    //
+    // make sure tree node userval and PHYSTRACK_FREE.mFlags are in same location 
+    //
+    K2_ASSERT(K2_FIELDOFFSET(K2TREE_NODE, mUserVal) == K2_FIELDOFFSET(K2OSKERN_PHYSTRACK_FREE, mFlags));
+
     for (entCount = 0; entCount < KernPageList_Count; entCount++)
     {
         sInitKernPageList(entCount);
@@ -549,6 +554,9 @@ sInitPhysTrack(
         if ((!(pDesc->Attribute & K2EFI_MEMORYFLAG_RUNTIME)) &&
             (pDesc->Type == K2EFI_MEMTYPE_Conventional))
         {
+            //
+            // tree node userval and PHYSTRACK_FREE.mFlags are in same location 
+            //
             pTreeNode = (K2TREE_NODE *)pTrackEFI;
             pTreeNode->mUserVal = 
                 (((UINT32)pDesc->NumberOfPages) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
@@ -996,7 +1004,6 @@ static void sInit_BeforeVirt(void)
     K2HEAP_NODE *       pHeapNode;
 #endif
 
-    K2OSKERN_SeqIntrInit(&gData.FreePhysSeqLock);
     K2TREE_Init(&gData.FreePhysTree, sUserValCompare);
     K2TREE_Init(&gData.KernSegTree, sUserValCompare);
 
@@ -1233,34 +1240,14 @@ static void sInit_BeforeVirt(void)
 #endif
 }
 
-static UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
-{
-    return 0;
-}
-
-static void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
-{
-
-}
-
 static void sInit_AfterHal(void)
 {
-#if DUMP_HEAP
-    K2HEAP_Dump(&gData.KernVirtHeap, sDumpHeapNode);
-#endif
-
-
-    //
-    // start manage both physical and virtual memory here
-    //
     K2OSKERN_Debug("%d/%d nodes used in InitHeapNodes\n", INIT_HEAP_NODE_COUNT - sgInitHeapNodeList.mNodeCount, INIT_HEAP_NODE_COUNT);
+}
 
-    //    gData.FreePhysTree holds physical memory, protected by gData.FreePhysSeqLock
-
-    //
-    // light up the heap API
-    //
-    K2OS_RAMHEAP_Init(&gData.RamHeap, sRamHeapLock, sRamHeapUnlock);
+static void sInit_Threaded(void)
+{
+    KernMem_Start();
 }
 
 void KernInit_Mem(void)
@@ -1272,6 +1259,9 @@ void KernInit_Mem(void)
         break;
     case KernInitStage_After_Hal:
         sInit_AfterHal();
+        break;
+    case KernInitStage_Threaded:
+        sInit_Threaded();
         break;
     default:
         break;

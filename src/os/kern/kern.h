@@ -315,7 +315,8 @@ enum _KernSegType
     KernSeg_DlxPart,
     KernSeg_Process,
     KernSeg_ThreadStack,
-    KernSeg_DeviceMap
+    KernSeg_DeviceMap,
+    KernSeg_HeapTracking
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -335,13 +336,19 @@ struct _K2OSKERN_SEGMENT_INFO_DLX_PART
 {
     K2OSKERN_OBJ_DLX *      mpDlxObj;
     UINT32                  mSegmentIndex;
-    DLX_SEGMENT_INFO        DlxSegmentInfo;
+    DLX_SEGMENT_INFO        DlxSegmentInfo; // 5 * sizeof(UINT32)
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP K2OSKERN_SEGMENT_INFO_DEVICEMAP;
 struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP
 {
     UINT32                  mEfiMapIndex;
+};
+
+typedef struct _K2OSKERN_SEGMENT_INFO_HEAPTRACK K2OSKERN_SEGMENT_INFO_HEAPTRACK;
+struct _K2OSKERN_SEGMENT_INFO_HEAPTRACK
+{
+    UINT32                  mBlocksFree;
 };
 
 typedef union _K2OSKERN_SEGMENT_INFO K2OSKERN_SEGMENT_INFO;
@@ -351,6 +358,7 @@ union _K2OSKERN_SEGMENT_INFO
     K2OSKERN_SEGMENT_INFO_PROCESS       Process;        // KernSeg_Process
     K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;    // KernSeg_ThreadStack
     K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;      // KernSeg_DeviceMap
+    K2OSKERN_SEGMENT_INFO_HEAPTRACK     HeapTracking;   // KernSeg_HeapTracking
 };
 
 struct _K2OSKERN_OBJ_SEGMENT
@@ -425,6 +433,8 @@ struct _K2OSKERN_OBJ_THREAD
 
     UINT32                  mStackPtr_Kernel;
     UINT32                  mStackPtr_User;
+
+    K2LIST_ANCHOR           WorkPages;
 
     K2_EXCEPTION_TRAP *     mpKernExTrapStack;
 };
@@ -515,6 +525,18 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == K2OS_PHYSTRACK_BYTES);
 K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == sizeof(K2OS_PHYSTRACK_UEFI));
 K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == sizeof(K2TREE_NODE));
 
+typedef struct _K2OSKERN_PHYSTRACK_FREE K2OSKERN_PHYSTRACK_FREE;
+struct _K2OSKERN_PHYSTRACK_FREE
+{
+    UINT32      mFlags; // must be exact same location as mUserVal
+    UINT32      mTreeNode_ParentBal;
+    UINT32      mTreeNode_LeftChild;
+    UINT32      mTreeNode_RightChild;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == K2OS_PHYSTRACK_BYTES);
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2OS_PHYSTRACK_UEFI));
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
+
 #define K2OSKERN_VMNODE_TYPE_SEGMENT    0       // MUST BE TYPE ZERO
 #define K2OSKERN_VMNODE_TYPE_RESERVED   1
 #define K2OSKERN_VMNODE_TYPE_UNKNOWN    2
@@ -592,11 +614,14 @@ struct _KERN_DATA
     INT32 volatile                      mCoresInPanic;
 
     // init in initmem.c
-    K2OSKERN_SEQLOCK                    FreePhysSeqLock;
     K2TREE_ANCHOR                       FreePhysTree;
     K2LIST_ANCHOR                       PageList[KernPageList_Count];
-    K2HEAP_ANCHOR                       KernVirtHeap;
     K2TREE_ANCHOR                       KernSegTree;
+    K2HEAP_ANCHOR                       KernVirtHeap;
+
+    // mem.c managed
+    K2OSKERN_SEQLOCK                    FreePhysSeqLock;
+    K2OS_CRITSEC                        KernVirtSec;
     K2OS_RAMHEAP                        RamHeap;
 
     // dlxsupp.c - 
@@ -642,6 +667,10 @@ BOOL   KernDlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
 K2STAT KernDlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
 K2STAT KernDlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
 K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile);
+
+/* --------------------------------------------------------------------------------- */
+
+void   KernMem_Start(void);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -696,10 +725,6 @@ void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
 void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore);
 void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE *apThisCore, UINT32 aTargetCoreIx, KernCpuCoreEventType aEventType);
 void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE *apThisCore, KernCpuCoreEventType aEventType);
-
-/* --------------------------------------------------------------------------------- */
-
-void KernMem_AtInit_AddStaticArchDeviceMapSegment(K2OSKERN_OBJ_SEGMENT *apSegment);
 
 /* --------------------------------------------------------------------------------- */
 

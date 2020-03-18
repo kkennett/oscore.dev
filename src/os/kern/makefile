@@ -59,6 +59,7 @@ SOURCES += schedex_debug.c
 SOURCES += sched_time.c
 SOURCES += map.c
 SOURCES += intr.c
+SOURCES += mem.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 

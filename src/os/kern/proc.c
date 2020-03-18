@@ -63,9 +63,10 @@ static void sInit_AtDlxEntry(void)
     K2LIST_Init(&gpProc0->ThreadList);
 }
 
-static void sInit_AfterVirt(void)
+static void sInit_Threaded(void)
 {
-
+    K2OS_CritSecInit(&gpProc0->ThreadListSec);
+    K2OS_CritSecInit(&gpProc0->TlsMaskSec);
 }
 
 void KernInit_Process(void)
@@ -76,12 +77,8 @@ void KernInit_Process(void)
         sInit_AtDlxEntry();
         break;
 
-    case KernInitStage_After_Virt:
-        sInit_AfterVirt();
-        break;
-
-    case KernInitStage_After_Hal:
-        KernProc_Dump(gpProc0);
+    case KernInitStage_Threaded:
+        sInit_Threaded();
         break;
 
     default:

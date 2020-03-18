@@ -87,7 +87,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecTryEnter(K2OS_CRITSEC *apSec)
 
         K2_ASSERT(apSec != NULL);
         K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) >= K2OS_KVA_KERN_BASE))
+        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
             break;
 
         pThisThread = K2OSKERN_CURRENT_THREAD;
@@ -147,7 +147,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
 
         K2_ASSERT(apSec != NULL);
         K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) >= K2OS_KVA_KERN_BASE))
+        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
             break;
 
         pThisThread = K2OSKERN_CURRENT_THREAD;
@@ -262,7 +262,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
 
         K2_ASSERT(apSec != NULL);
         K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) >= K2OS_KVA_KERN_BASE))
+        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
             break;
 
         pThisThread = K2OSKERN_CURRENT_THREAD;

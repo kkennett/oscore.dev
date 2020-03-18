@@ -57,17 +57,6 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     UINT64 last, newTick;
 
     //
-    // initialize proc0 stuff that needs threads in order to init
-    //
-    K2OS_CritSecInit(&gpProc0->ThreadListSec);
-    K2OS_CritSecInit(&gpProc0->TlsMaskSec);
-
-    //
-    // init core stuff that needs threads
-    //
-    gData.mpShared->FuncTab.CoreThreadedPostInit();
-
-    //
     // ready to go
     //
     for (initStage = KernInitStage_Threaded; initStage < KernInitStage_Count; initStage++)
@@ -76,25 +65,30 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     }
 
     //
+    // kernel init finished.  init core stuff that needs threads
+    //
+    gData.mpShared->FuncTab.CoreThreadedPostInit();
+
+    //
+    // find and call entrypoint for acpi dlx
+    //
+    sStartAcpi();
+
+    //
     // main Thread0 actions can commence here
     //
-#if 0
+#if 1
     K2OSKERN_Debug("Hang ints on\n");
     last = K2OS_SysUpTimeMs();
     while (1)
     {
         do {
             newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
+} while (newTick - last < 1000);
+last = newTick;
+K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
     }
 #endif
-
-    //
-    // find and call entrypoint for acpi dlx
-    //
-    sStartAcpi();
 
     return 0xAABBCCDD;
 }
@@ -153,6 +147,7 @@ static void sInit_BeforeVirt(void)
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;
     pThread->Info.CreateInfo.mStackPages = K2OS_KVA_THREAD0_PHYS_BYTES / K2_VA32_MEMPAGE_BYTES;
+    K2LIST_Init(&pThread->WorkPages);
 
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);
