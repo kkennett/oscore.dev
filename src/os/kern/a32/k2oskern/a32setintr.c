@@ -43,3 +43,14 @@ K2OSKERN_SetIntr(
     return (v & A32_PSR_I_BIT) ? FALSE : TRUE;
 }
 
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_GetIntr(
+    void
+    )
+{
+    register UINT32 v;
+    v = A32_GetCoreInterruptMask();
+    return (v & A32_PSR_I_BIT) ? FALSE : TRUE;
+}
+

@@ -69,6 +69,7 @@ dlx_entry(
     gData.mpShared->FuncTab.Debug = K2OSKERN_Debug;
     gData.mpShared->FuncTab.Panic = K2OSKERN_Panic;
     gData.mpShared->FuncTab.SetIntr = K2OSKERN_SetIntr;
+    gData.mpShared->FuncTab.GetIntr = K2OSKERN_GetIntr;
     gData.mpShared->FuncTab.MicroStall = K2OSKERN_MicroStall;
     gData.mpShared->FuncTab.SysUpTimeMs = K2OS_SysUpTimeMs;
     gData.mpShared->FuncTab.SeqIntrInit = K2OSKERN_SeqIntrInit;

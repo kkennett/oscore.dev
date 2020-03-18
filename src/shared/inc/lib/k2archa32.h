@@ -67,6 +67,7 @@ UINT32 A32_ReadStackPointer(void)
 /*-------------------------------------------------------------------------------*/
 
 UINT32  A32_SetCoreInterruptMask(UINT32 aMaskBits);
+UINT32  A32_GetCoreInterruptMask(void);
 
 UINT32  A32_ReadMIDR(void);
 

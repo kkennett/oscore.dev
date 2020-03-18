@@ -50,5 +50,17 @@ END_A32_PROC(A32_SetCoreInterruptMask)
 
 /* --------------------------------------------------------------------------------- */
 
+// UINT32 A32_GetCoreInterruptMask(void);
+BEGIN_A32_PROC(A32_GetCoreInterruptMask)
+
+    mrs r0, cpsr
+    isb
+    and r0, r0, #(A32_PSR_F_BIT | A32_PSR_I_BIT)
+    bx lr
+        
+END_A32_PROC(A32_SetCoreInterruptMask)
+
+/* --------------------------------------------------------------------------------- */
+
     .end
 

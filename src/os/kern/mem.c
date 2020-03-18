@@ -64,6 +64,149 @@ sDumpHeapNode(
     );
 }
 
+K2STAT KernMem_PhysAllocContig(UINT32 aPageCount, UINT32 aMask, UINT32 aMatchAny, UINT32 aMatchAll, UINT32 *apRetPhysAddr)
+{
+    BOOL                        disp;
+    K2TREE_NODE *               pTreeNode;
+    K2OSKERN_PHYSTRACK_FREE *   pTrackFree;
+    UINT32                      pageCount;
+    K2STAT                      stat;
+    UINT32                      chk;
+
+    if (aPageCount == 0)
+        return K2STAT_ERROR_BAD_ARGUMENT;
+
+    stat = K2STAT_ERROR_OUT_OF_MEMORY;
+    *apRetPhysAddr = 0;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.FreePhysSeqLock);
+
+    pTreeNode = K2TREE_FindOrAfter(&gData.FreePhysTree, (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL));
+    if (pTreeNode != NULL)
+    {
+        do {
+            chk = pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_MASK;
+            chk &= aMask;
+            if (aMatchAny != 0)
+            {
+                if (aMatchAny & chk)
+                    break;
+            }
+            else
+            {
+                if ((aMatchAll & chk) == aMatchAll)
+                    break;
+            }
+            pTreeNode = K2TREE_NextNode(&gData.FreePhysTree, pTreeNode);
+        } while (pTreeNode != NULL);
+
+        if (pTreeNode != NULL)
+        {
+            //
+            // allocate from this node 
+            //
+            stat = K2STAT_NO_ERROR;
+
+            K2TREE_Remove(&gData.FreePhysTree, pTreeNode);
+
+            pTrackFree = (K2OSKERN_PHYSTRACK_FREE *)pTreeNode;
+
+            pageCount = pTrackFree->mFlags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+            K2_ASSERT(pageCount >= aPageCount);
+            if (pageCount > aPageCount)
+            {
+                //
+                // put back the chunk we are not using
+                //
+                pTreeNode += aPageCount;
+                pTreeNode->mUserVal =
+                    (pTrackFree->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) |
+                    ((pageCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
+                    K2OSKERN_PHYSTRACK_FREE_FLAG;
+
+                K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
+            }
+
+            pTrackFree->mFlags &= ~(K2OSKERN_PHYSTRACK_FREE_FLAG | K2OSKERN_PHYSTRACK_FREE_COUNT_MASK);
+            pTrackFree->mFlags |= (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
+
+            *apRetPhysAddr = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackFree);
+            pTrackFree++;
+            aPageCount--;
+        }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.FreePhysSeqLock, disp);
+
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (aPageCount > 0)
+        {
+            //
+            // clear all flags but props on all the rest of the pages in the range.
+            // we don't have to lock the phys tree to do this because we own the pages
+            //
+            do {
+                pTrackFree->mFlags &= K2OSKERN_PHYSTRACK_PROP_MASK;
+                pTrackFree++;
+            } while (--aPageCount);
+        }
+
+        // 
+        // now the first page in the contiguous alloc should have the contig flag set and
+        // a correct pagecount.  all the rest of the pages should have a count of zero and
+        // a pagelist of 'error' and the free flag cleared.
+        //
+    }
+
+    return stat;
+}
+
+void KernMem_PhysFreeContig(UINT32 aPhysAddr)
+{
+    BOOL                        disp;
+    K2TREE_NODE *               pTreeNode;
+    K2OSKERN_PHYSTRACK_FREE *   pTrackFree;
+
+    K2_ASSERT((aPhysAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.FreePhysSeqLock);
+
+    pTrackFree = (K2OSKERN_PHYSTRACK_FREE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
+    K2_ASSERT((pTrackFree->mFlags & K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG) != 0);
+    K2_ASSERT((pTrackFree->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG) == 0);
+
+    pTrackFree->mFlags &= ~K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
+    pTrackFree->mFlags |= K2OSKERN_PHYSTRACK_FREE_FLAG;
+
+    //
+    // now coalesce with next node if there is one
+    //
+    pTreeNode = ((K2TREE_NODE *)pTrackFree) + (pTrackFree->mFlags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL);
+    if (((UINT32)pTreeNode) != K2OS_KVA_PHYSTRACKAREA_END)
+    {
+        // 
+        // some address space comes after this.  see if it is another contiguous block of free pages
+        // that matches the same attributes
+        //
+
+
+    }
+
+    //
+    // now coalesce with prev node if there is one matching the same attributes that is adjacent
+    //
+
+
+
+    K2OSKERN_SeqIntrUnlock(&gData.FreePhysSeqLock, disp);
+}
+
+UINT32 KernMem_PhysToThread(UINT32 aPageCount, BOOL aTakeClean)
+{
+    return 0;
+}
+
 void KernMem_Start(void)
 {
     K2TREE_NODE *               pTreeNode;
@@ -76,10 +219,10 @@ void KernMem_Start(void)
     UINT32                      takePages;
     UINT32                      physPageAddr;
     UINT32                      virtPageAddr;
-    UINT32                      pageTableVirtAddr;
+//    UINT32                      pageTableVirtAddr;
     UINT32                      pageTableIndex;
     UINT32 *                    pPTPageCount;
-    UINT32                      pageTablePageTableIndex;
+//    UINT32                      pageTablePageTableIndex;
     BOOL                        ptIsPresent;
     UINT32                      pte;
     UINT32                      accessAttr;
@@ -155,7 +298,7 @@ void KernMem_Start(void)
     // now set up 'next free tracker'
     //
     virtPageAddr = K2HEAP_AllocAligned(&gData.KernVirtHeap, 1, K2_VA32_MEMPAGE_BYTES);
-    K2_ASSERT(virtPageAddr != NULL);
+    K2_ASSERT(virtPageAddr != 0);
     K2OSKERN_Debug("Got nextFreeTrack at virt 0x%08X\n", virtPageAddr);
 
     //
@@ -196,7 +339,7 @@ void KernMem_Start(void)
     //
     // this is a new segment
     //
-
+#if 0
 typedef struct _K2OSKERN_HEAPTRACKPAGE K2OSKERN_HEAPTRACKPAGE;
 
 #define TRACK_BYTES     (K2_VA32_MEMPAGE_BYTES - (sizeof(K2OSKERN_OBJ_SEGMENT) + sizeof(K2OSKERN_HEAPTRACKPAGE *)))
@@ -213,5 +356,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_HEAPTRACKPAGE) == K2_VA32_MEMPAGE_BYTES);
 K2OSKERN_HEAPTRACKPAGE * gpTrackPages = NULL;
 
 K2OSKERN_HEAPTRACKPAGE * gpNextTrackPage;
+#endif
 
 }

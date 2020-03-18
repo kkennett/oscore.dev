@@ -434,7 +434,8 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                  mStackPtr_Kernel;
     UINT32                  mStackPtr_User;
 
-    K2LIST_ANCHOR           WorkPages;
+    K2LIST_ANCHOR           WorkPages_Dirty;
+    K2LIST_ANCHOR           WorkPages_Clean;
 
     K2_EXCEPTION_TRAP *     mpKernExTrapStack;
 };

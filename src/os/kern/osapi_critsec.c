@@ -142,6 +142,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
     K2OSKERN_OBJ_THREAD *   pThisThread;
     UINT32                  v;
 
+    if (FALSE == K2OSKERN_GetIntr())
+        K2OSKERN_Panic("Interrupts disabled at CritSecEnter!\n");
+
     do {
         stat = K2STAT_ERROR_BAD_ARGUMENT;
 

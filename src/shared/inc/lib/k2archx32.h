@@ -70,6 +70,7 @@ void   K2_CALLCONV_REGS X32_TLBInvalidateAll(void);
 void   K2_CALLCONV_REGS X32_TLBInvalidatePage(UINT32 aVirtAddr);
 
 UINT32 K2_CALLCONV_REGS X32_SetCoreInterruptMask(UINT32 aMaskBits);
+UINT32 K2_CALLCONV_REGS X32_GetCoreInterruptMask(void);
 
 void   K2_CALLCONV_REGS X32_IoWait(void);
 void   K2_CALLCONV_REGS X32_IoWrite8(UINT8 aValue, UINT16 aPort);

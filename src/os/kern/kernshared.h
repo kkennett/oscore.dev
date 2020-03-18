@@ -63,6 +63,7 @@ struct _K2OSKERN_FUNCTAB
     K2OSKERN_pf_Panic           Panic;
     K2OSKERN_pf_MicroStall      MicroStall;
     K2OSKERN_pf_SetIntr         SetIntr;
+    K2OSKERN_pf_GetIntr         GetIntr;
     K2OSKERN_pf_SeqIntrInit     SeqIntrInit;
     K2OSKERN_pf_SeqIntrLock     SeqIntrLock;
     K2OSKERN_pf_SeqIntrUnlock   SeqIntrUnlock;

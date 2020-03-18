@@ -111,6 +111,18 @@ K2OSKERN_SetIntr(
     BOOL aEnable
 );
 
+typedef
+BOOL
+(K2_CALLCONV_REGS *K2OSKERN_pf_GetIntr)(
+    void
+    );
+
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_GetIntr(
+    void
+    );
+
 //
 //------------------------------------------------------------------------
 //

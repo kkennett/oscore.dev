@@ -67,4 +67,21 @@ END_X32_PROC(X32_SetCoreInterruptMask)
 
 /*-------------------------------------------------------------------------------*/
 
+BEGIN_X32_PROC(X32_GetCoreInterruptMask)
+
+   /* get curret interrupt state */
+   pushf
+   pop %eax
+   and  %eax, X32_EFLAGS_INTENABLE
+   jz   wasDisabled
+   xor  %eax, %eax
+   ret
+getWasDisabled:
+   mov %eax, 1
+   ret
+   
+END_X32_PROC(X32_GetCoreInterruptMask)
+
+/*-------------------------------------------------------------------------------*/
+
     .end

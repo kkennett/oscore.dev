@@ -41,6 +41,15 @@ K2OSKERN_SetIntr(
     return !X32_SetCoreInterruptMask(!aEnable);
 }
 
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_GetIntr(
+    void
+    )
+{
+    return X32_GetCoreInterruptMask() ? FALSE : TRUE;
+}
+
 void
 X32Kern_PICInit(void)
 {

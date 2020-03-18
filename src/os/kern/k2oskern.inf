@@ -44,6 +44,7 @@ K2OSKERN_Debug
 K2OSKERN_Panic
 K2OSKERN_MicroStall
 K2OSKERN_SetIntr
+K2OSKERN_GetIntr
 K2OSKERN_SeqIntrInit
 K2OSKERN_SeqIntrLock
 K2OSKERN_SeqIntrUnlock

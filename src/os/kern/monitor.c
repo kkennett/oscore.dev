@@ -59,9 +59,8 @@ void KernMonitor_Run(void)
 
     /* interrupts MUST BE ON running here */
 #ifdef K2_DEBUG
-    if (FALSE == K2OSKERN_SetIntr(FALSE))
+    if (FALSE == K2OSKERN_GetIntr())
         K2OSKERN_Panic("Interrupts disabled in monitor!\n");
-    K2OSKERN_SetIntr(TRUE);
 #endif
 
     do
