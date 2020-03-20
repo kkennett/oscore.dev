@@ -551,17 +551,34 @@ sInitPhysTrack(
         memProp = pTrackEFI->mProp;
         memProp = ((memProp & 0x00007000) >> 3) | ((memProp & 0x0000001F) << 4);
 
+        pTrackPage = (K2OSKERN_PHYSTRACK_PAGE *)pTrackEFI;
+        pageCount = pDesc->NumberOfPages;
+
         if ((!(pDesc->Attribute & K2EFI_MEMORYFLAG_RUNTIME)) &&
             (pDesc->Type == K2EFI_MEMTYPE_Conventional))
         {
+            memProp |= K2OSKERN_PHYSTRACK_FREE_FLAG;
             //
             // tree node userval and PHYSTRACK_FREE.mFlags are in same location 
             //
             pTreeNode = (K2TREE_NODE *)pTrackEFI;
             pTreeNode->mUserVal = 
                 (((UINT32)pDesc->NumberOfPages) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
-                memProp | K2OSKERN_PHYSTRACK_FREE_FLAG;
+                memProp;
             K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
+
+            pTreeNode++;
+            if (--pageCount > 0)
+            {
+                //
+                // mark all pages in this range with the same flags, with pagecount= 0
+                //
+                do {
+                    K2_ASSERT(pDesc->Type == ((K2OS_PHYSTRACK_UEFI *)pTreeNode)->mType);
+                    pTreeNode->mUserVal = memProp;
+                    pTreeNode++;
+                } while (--pageCount);
+            }
         }
         else
         {
@@ -569,8 +586,6 @@ sInitPhysTrack(
             // every page in the region goes onto a list
             //
             listIx = sMemTypeToPageList(pTrackEFI->mType);
-            pTrackPage = (K2OSKERN_PHYSTRACK_PAGE *)pTrackEFI;
-            pageCount = pDesc->NumberOfPages;
             do {
                 K2_ASSERT(pDesc->Type == ((K2OS_PHYSTRACK_UEFI *)pTrackPage)->mType);
                 pTrackPage->mFlags = (listIx << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) | memProp;
@@ -591,9 +606,22 @@ sInitPhysTrack(
         if (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG)
         {
             pageCount = (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_FREE_COUNT_MASK) >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+            K2_ASSERT(pageCount > 0);
             K2_ASSERT(pageCount < entCount);
-            pTrackPage += pageCount;
-            entCount -= pageCount;
+            //
+            // all other pages in the range should have identical properties and a zero pagecount
+            //
+            memProp = (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) | K2OSKERN_PHYSTRACK_FREE_FLAG;
+            pTrackPage++;
+            entCount--;
+            if (--pageCount > 0)
+            {
+                do {
+                    K2_ASSERT((pTrackPage->mFlags & (K2OSKERN_PHYSTRACK_PROP_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG)) == memProp);
+                    pTrackPage++;
+                    --entCount;
+                } while (--pageCount);
+            }
         }
         else
         {

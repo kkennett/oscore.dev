@@ -50,7 +50,7 @@
 #define K2OSKERN_PHYSTRACK_PROP_WT_CAP              0x00000040  // supports being configured as cacheable with a “write through” policy. Writes that hit in the cache will also be written to main memory.
 #define K2OSKERN_PHYSTRACK_PROP_WC_CAP              0x00000020  // supports being configured as write combining.
 #define K2OSKERN_PHYSTRACK_PROP_UC_CAP              0x00000010  // supports being configured as not cacheable.
-#define K2OSKERN_PHYSTRACK_RESERVED                 0x0000000E
+#define K2OSKERN_PHYSTRACK_RESERVED                 0x00000006
 
 #define K2OSKERN_PHYSTRACK_PROPMASK_UNCACHEABLE     (K2OSKERN_PHYSTRACK_PROP_UCE_CAP | K2OSKERN_PHYSTRACK_PROP_UC_CAP)
 

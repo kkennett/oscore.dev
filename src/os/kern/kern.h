@@ -316,7 +316,8 @@ enum _KernSegType
     KernSeg_Process,
     KernSeg_ThreadStack,
     KernSeg_DeviceMap,
-    KernSeg_HeapTracking
+    KernSeg_HeapTracking,
+    KernSeg_PhysBuf
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -351,6 +352,12 @@ struct _K2OSKERN_SEGMENT_INFO_HEAPTRACK
     UINT32                  mBlocksFree;
 };
 
+typedef struct _K2OSKERN_SEGMENT_INFO_PHYSBUF K2OSKERN_SEGMENT_INFO_PHYSBUF;
+struct _K2OSKERN_SEGMENT_INFO_PHYSBUF
+{
+    UINT32                  mPhysAddr;
+};
+
 typedef union _K2OSKERN_SEGMENT_INFO K2OSKERN_SEGMENT_INFO;
 union _K2OSKERN_SEGMENT_INFO
 {
@@ -359,6 +366,7 @@ union _K2OSKERN_SEGMENT_INFO
     K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;    // KernSeg_ThreadStack
     K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;      // KernSeg_DeviceMap
     K2OSKERN_SEGMENT_INFO_HEAPTRACK     HeapTracking;   // KernSeg_HeapTracking
+    K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;        // KernSeg_PhysBuf
 };
 
 struct _K2OSKERN_OBJ_SEGMENT

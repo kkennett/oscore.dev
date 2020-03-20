@@ -64,143 +64,208 @@ sDumpHeapNode(
     );
 }
 
-K2STAT KernMem_PhysAllocContig(UINT32 aPageCount, UINT32 aMask, UINT32 aMatchAny, UINT32 aMatchAll, UINT32 *apRetPhysAddr)
+typedef enum _KernPhysBuf_Disposition KernPhysBuf_Disposition;
+enum _KernPhysBuf_Disposition
 {
-    BOOL                        disp;
+    KernPhysBuf_Disp_Uncached = 0,
+    KernPhysBuf_Disp_Cached_WriteThrough,
+    KernPhysBuf_Disp_Cached,
+
+    // goes last
+    KernPhysBuf_Disp_Count
+};
+
+K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysBuf_Disposition aDisp, UINT32 aAlign)
+{
+    BOOL                        intrDisp;
     K2TREE_NODE *               pTreeNode;
     K2OSKERN_PHYSTRACK_FREE *   pTrackFree;
     UINT32                      pageCount;
-    K2STAT                      stat;
-    UINT32                      chk;
+    UINT32                      pageIndex;
+    UINT32                      alignIndex;
+    K2OSKERN_OBJ_SEGMENT *      pSeg;
+    UINT32                      virtAddr;
 
-    if (aPageCount == 0)
-        return K2STAT_ERROR_BAD_ARGUMENT;
-
-    stat = K2STAT_ERROR_OUT_OF_MEMORY;
-    *apRetPhysAddr = 0;
-
-    disp = K2OSKERN_SeqIntrLock(&gData.FreePhysSeqLock);
-
-    pTreeNode = K2TREE_FindOrAfter(&gData.FreePhysTree, (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL));
-    if (pTreeNode != NULL)
+    K2_ASSERT(aPageCount > 0);
+    K2_ASSERT(aPageCount < K2_VA32_PAGEFRAMES_FOR_2G);
+    K2_ASSERT(aDisp < KernPhysBuf_Disp_Count);
+    if (aAlign == 0)
+        aAlign = 1;
+    else
     {
+        K2_ASSERT(aAlign >= K2_VA32_MEMPAGE_BYTES);
+        aAlign /= K2_VA32_MEMPAGE_BYTES;
+    }
+    K2_ASSERT((aAlign & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+
+    pSeg = K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SEGMENT));
+    if (pSeg == NULL)
+        return NULL;
+
+    do {
+        virtAddr = 0;
+        if (!K2OS_VirtPagesAlloc(&virtAddr, aPageCount, 0, K2OS_VIRTCOMMIT_NOACCESS))
+            break;
+        K2_ASSERT(virtAddr != 0);
+
         do {
-            chk = pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_MASK;
-            chk &= aMask;
-            if (aMatchAny != 0)
-            {
-                if (aMatchAny & chk)
-                    break;
-            }
-            else
-            {
-                if ((aMatchAll & chk) == aMatchAll)
-                    break;
-            }
-            pTreeNode = K2TREE_NextNode(&gData.FreePhysTree, pTreeNode);
-        } while (pTreeNode != NULL);
+            pTrackFree = NULL;
 
-        if (pTreeNode != NULL)
-        {
-            //
-            // allocate from this node 
-            //
-            stat = K2STAT_NO_ERROR;
-
-            K2TREE_Remove(&gData.FreePhysTree, pTreeNode);
-
-            pTrackFree = (K2OSKERN_PHYSTRACK_FREE *)pTreeNode;
-
-            pageCount = pTrackFree->mFlags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
-            K2_ASSERT(pageCount >= aPageCount);
-            if (pageCount > aPageCount)
-            {
-                //
-                // put back the chunk we are not using
-                //
-                pTreeNode += aPageCount;
-                pTreeNode->mUserVal =
-                    (pTrackFree->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) |
-                    ((pageCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
-                    K2OSKERN_PHYSTRACK_FREE_FLAG;
-
-                K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
-            }
-
-            pTrackFree->mFlags &= ~(K2OSKERN_PHYSTRACK_FREE_FLAG | K2OSKERN_PHYSTRACK_FREE_COUNT_MASK);
-            pTrackFree->mFlags |= (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
-
-            *apRetPhysAddr = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackFree);
-            pTrackFree++;
-            aPageCount--;
-        }
-    }
-
-    K2OSKERN_SeqIntrUnlock(&gData.FreePhysSeqLock, disp);
-
-    if (!K2STAT_IS_ERROR(stat))
-    {
-        if (aPageCount > 0)
-        {
-            //
-            // clear all flags but props on all the rest of the pages in the range.
-            // we don't have to lock the phys tree to do this because we own the pages
-            //
+            intrDisp = K2OSKERN_SeqIntrLock(&gData.FreePhysSeqLock);
             do {
-                pTrackFree->mFlags &= K2OSKERN_PHYSTRACK_PROP_MASK;
-                pTrackFree++;
-            } while (--aPageCount);
+                pTreeNode = K2TREE_FindOrAfter(&gData.FreePhysTree, (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL));
+                if (pTreeNode == NULL)
+                {
+                    break;
+                }
+
+                do {
+                    K2_ASSERT(pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_FREE_FLAG);
+
+                    pageCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+                    K2_ASSERT(pageCount >= aPageCount);
+
+                    switch (aDisp)
+                    {
+                    case KernPhysBuf_Disp_Uncached:
+                        //
+                        // if region cannot be uncached then set pagecount = 0
+                        //
+                        if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROPMASK_UNCACHEABLE) == 0)
+                            pageCount = 0;
+                        break;
+
+                    case KernPhysBuf_Disp_Cached_WriteThrough:
+                        if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WT_CAP) == 0)
+                            pageCount = 0;
+                        break;
+
+                    case KernPhysBuf_Disp_Cached:
+                        if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WB_CAP) == 0)
+                            pageCount = 0;
+                        break;
+
+                    default:
+                        K2_ASSERT(0);
+                        break;
+                    }
+
+                    if (pageCount > 0)
+                    {
+                        pageIndex = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTreeNode) >> K2_VA32_MEMPAGE_BYTES_POW2;
+
+                        if (aAlign > 1)
+                        {
+                            alignIndex = ((pageIndex + (aAlign - 1)) / aAlign) * aAlign;
+                            if ((alignIndex + aPageCount) > (pageIndex + pageCount))
+                            {
+                                //
+                                // allocation won't fit in this chunk when aligned
+                                //
+                                alignIndex = 0;
+                            }
+                        }
+                        else
+                            alignIndex = pageIndex;
+
+                        if (alignIndex != 0)
+                        {
+                            //
+                            // take the allocation from this tree node
+                            //
+                            break;
+                        }
+                    }
+
+                    pTreeNode = K2TREE_NextNode(&gData.FreePhysTree, pTreeNode);
+
+                } while (pTreeNode != NULL);
+
+                if (pTreeNode == NULL)
+                    break;
+
+                //
+                // pageIndex is index of page that free space starts at
+                // pageCount is number of pages starting at pageIndex that are free
+                // alignIndex is the index of the page that we start allocating from
+                // aPageCount is the number of pages starting at alignIndex that we are allocating
+                //
+                K2OSKERN_Debug("pageIndex = %d, pageCount = %d, alignIndex = %d, aPageCount = %d\n",
+                    pageIndex, pageCount, alignIndex, aPageCount);
+
+                K2TREE_Remove(&gData.FreePhysTree, pTreeNode);
+
+                if (alignIndex != pageIndex)
+                {
+                    //
+                    // re-add tree node that comes before allocation, and align-up 
+                    //
+                    pTreeNode->mUserVal &= ~K2OSKERN_PHYSTRACK_FREE_COUNT_MASK;
+                    pTreeNode->mUserVal |= (alignIndex - pageIndex) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+
+                    K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
+
+                    pTreeNode += (alignIndex - pageIndex);
+                    pageCount -= (alignIndex - pageIndex);
+                    pageIndex = alignIndex;
+                }
+
+                pTrackFree = (K2OSKERN_PHYSTRACK_FREE *)pTreeNode;
+
+                if (pageCount != aPageCount)
+                {
+                    //
+                    // add the tree node that comes after the allocation
+                    //
+                    pTreeNode += aPageCount;
+
+                    pTreeNode->mUserVal = (pTrackFree->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) |
+                        ((pageCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
+                        K2OSKERN_PHYSTRACK_FREE_FLAG;
+
+                    K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
+                }
+
+                pTrackFree->mFlags &= ~(K2OSKERN_PHYSTRACK_FREE_COUNT_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG);
+                pTrackFree->mFlags |= (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
+            } while (0);
+
+            K2OSKERN_SeqIntrUnlock(&gData.FreePhysSeqLock, intrDisp);
+
+            if (pTrackFree == NULL)
+            {
+                K2OS_ThreadSetStatus(K2STAT_ERROR_OUT_OF_MEMORY);
+                break;
+            }
+
+            //
+            // now we map memory at pTrackFree starting at virtAddr for aPageCount, using
+            // the properties selected in aDisp
+            //
+
+        } while (0);
+
+        if (pTrackFree == NULL)
+        {
+            K2OS_VirtPagesFree(virtAddr);
         }
 
-        // 
-        // now the first page in the contiguous alloc should have the contig flag set and
-        // a correct pagecount.  all the rest of the pages should have a count of zero and
-        // a pagelist of 'error' and the free flag cleared.
-        //
-    }
+    } while (0);
 
-    return stat;
-}
-
-void KernMem_PhysFreeContig(UINT32 aPhysAddr)
-{
-    BOOL                        disp;
-    K2TREE_NODE *               pTreeNode;
-    K2OSKERN_PHYSTRACK_FREE *   pTrackFree;
-
-    K2_ASSERT((aPhysAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
-
-    disp = K2OSKERN_SeqIntrLock(&gData.FreePhysSeqLock);
-
-    pTrackFree = (K2OSKERN_PHYSTRACK_FREE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
-    K2_ASSERT((pTrackFree->mFlags & K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG) != 0);
-    K2_ASSERT((pTrackFree->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG) == 0);
-
-    pTrackFree->mFlags &= ~K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
-    pTrackFree->mFlags |= K2OSKERN_PHYSTRACK_FREE_FLAG;
-
-    //
-    // now coalesce with next node if there is one
-    //
-    pTreeNode = ((K2TREE_NODE *)pTrackFree) + (pTrackFree->mFlags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL);
-    if (((UINT32)pTreeNode) != K2OS_KVA_PHYSTRACKAREA_END)
+    if (pTrackFree == NULL)
     {
-        // 
-        // some address space comes after this.  see if it is another contiguous block of free pages
-        // that matches the same attributes
-        //
-
-
+        K2OS_HeapFree(pSeg);
+        return NULL;
     }
 
-    //
-    // now coalesce with prev node if there is one matching the same attributes that is adjacent
-    //
-
-
-
-    K2OSKERN_SeqIntrUnlock(&gData.FreePhysSeqLock, disp);
+    return pSeg;
 }
+
+K2STAT KernMem_PhysBuf_FreeSegment(UINT32 aVirtAddr)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
 
 UINT32 KernMem_PhysToThread(UINT32 aPageCount, BOOL aTakeClean)
 {
