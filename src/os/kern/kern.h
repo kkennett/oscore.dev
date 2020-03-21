@@ -317,7 +317,8 @@ enum _KernSegType
     KernSeg_ThreadStack,
     KernSeg_DeviceMap,
     KernSeg_HeapTracking,
-    KernSeg_PhysBuf
+    KernSeg_PhysBuf,
+    KernSeg_LooseLeaf
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -346,16 +347,16 @@ struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP
     UINT32                  mEfiMapIndex;
 };
 
-typedef struct _K2OSKERN_SEGMENT_INFO_HEAPTRACK K2OSKERN_SEGMENT_INFO_HEAPTRACK;
-struct _K2OSKERN_SEGMENT_INFO_HEAPTRACK
-{
-    UINT32                  mBlocksFree;
-};
-
 typedef struct _K2OSKERN_SEGMENT_INFO_PHYSBUF K2OSKERN_SEGMENT_INFO_PHYSBUF;
 struct _K2OSKERN_SEGMENT_INFO_PHYSBUF
 {
     UINT32                  mPhysAddr;
+};
+
+typedef struct _K2OSKERN_SEGMENT_INFO_LOOSELEAF K2OSKERN_SEGMENT_INFO_LOOSELEAF;
+struct _K2OSKERN_SEGMENT_INFO_LOOSELEAF
+{
+    K2OSKERN_OBJ_PROCESS *  mpProc;
 };
 
 typedef union _K2OSKERN_SEGMENT_INFO K2OSKERN_SEGMENT_INFO;
@@ -365,8 +366,9 @@ union _K2OSKERN_SEGMENT_INFO
     K2OSKERN_SEGMENT_INFO_PROCESS       Process;        // KernSeg_Process
     K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;    // KernSeg_ThreadStack
     K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;      // KernSeg_DeviceMap
-    K2OSKERN_SEGMENT_INFO_HEAPTRACK     HeapTracking;   // KernSeg_HeapTracking
+//    K2OSKERN_SEGMENT_INFO_HEAPTRACK     HeapTracking;   // KernSeg_HeapTracking
     K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;        // KernSeg_PhysBuf
+    K2OSKERN_SEGMENT_INFO_LOOSELEAF     LooseLeaf;      // KernSeg_LooseLeaf
 };
 
 struct _K2OSKERN_OBJ_SEGMENT
@@ -442,6 +444,7 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                  mStackPtr_Kernel;
     UINT32                  mStackPtr_User;
 
+    UINT32                  mWorkVirt;
     K2LIST_ANCHOR           WorkPages_Dirty;
     K2LIST_ANCHOR           WorkPages_Clean;
 
@@ -593,6 +596,32 @@ struct _K2OSKERN_VMNODE
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernPhys_Disp KernPhys_Disp;
+enum _KernPhys_Disp
+{
+    KernPhys_Disp_Uncached = 0,
+    KernPhys_Disp_Cached_WriteThrough,
+    KernPhys_Disp_Cached,
+    KernPhys_Disp_Cached_WriteCombine,
+    // goes last
+    KernPhys_Disp_Count
+};
+
+typedef struct _K2OSKERN_HEAPTRACKPAGE K2OSKERN_HEAPTRACKPAGE;
+
+#define TRACK_BYTES     (K2_VA32_MEMPAGE_BYTES - (sizeof(K2OSKERN_OBJ_SEGMENT) + sizeof(K2OSKERN_HEAPTRACKPAGE *)))
+#define TRACK_PER_PAGE  (TRACK_BYTES / sizeof(K2HEAP_NODE))
+
+struct _K2OSKERN_HEAPTRACKPAGE
+{
+    K2OSKERN_OBJ_SEGMENT        SegObj;
+    K2OSKERN_HEAPTRACKPAGE *    mpNext;
+    UINT8                       TrackSpace[TRACK_BYTES];
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_HEAPTRACKPAGE) == K2_VA32_MEMPAGE_BYTES);
+
+/* --------------------------------------------------------------------------------- */
+
 typedef enum _KernInitStage KernInitStage;
 enum _KernInitStage
 {
@@ -644,6 +673,10 @@ struct _KERN_DATA
     // debugger
     BOOL                                mDebuggerActive;
 
+    K2LIST_ANCHOR                       HeapTrackFreeList;
+    K2OSKERN_HEAPTRACKPAGE *            mpTrackPages;
+    K2OSKERN_HEAPTRACKPAGE *            mpNextTrackPage;
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                              mA32VectorPagePhys;
@@ -680,6 +713,17 @@ K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 /* --------------------------------------------------------------------------------- */
 
 void   KernMem_Start(void);
+
+K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_Disp aDisp, UINT32 aAlign);
+
+K2STAT KernMem_VirtAllocToThread(UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
+void   KernMem_VirtFreeFromThread(void);
+
+K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp);
+void   KernMem_PhysFreeFromThread(void);
+
+K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSec, K2OSKERN_OBJ_SEGMENT *apSegTarget);
+K2STAT KernMem_DestroySegmentToThread(K2OSKERN_OBJ_SEGMENT *apSeg);
 
 /* --------------------------------------------------------------------------------- */
 

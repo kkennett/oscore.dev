@@ -34,13 +34,106 @@
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCount, UINT32 aVirtAllocFlags, UINT32 aPageAttrFlags)
 {
+    K2STAT                  stat;
+    UINT32                  useAddr;
+    KernPhys_Disp           disp;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
 
+    K2_ASSERT(apAddr != NULL);
+    useAddr = *apAddr;
+    K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+    if (aPageAttrFlags & K2OS_PAGEATTR_NOCACHE)
+    {
+        K2_ASSERT((aPageAttrFlags & K2OS_PAGEATTR_WRITECOMBINE) == 0);
+    }
 
+    if (!(aPageAttrFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT))
+    {
+        K2_ASSERT((aPageAttrFlags & ~K2OS_VIRTALLOCFLAG_TOP_DOWN) == 0);
+    }
 
+    stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
 
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    K2_ASSERT(0);
-    return FALSE;
+    do {
+        pSeg = K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SEGMENT));
+        if (pSeg == NULL)
+            return FALSE;
+
+        pCurThread = K2OSKERN_CURRENT_THREAD;
+
+        K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+        pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+        pSeg->Hdr.mRefCount = 1;
+        K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+        pSeg->mPagesBytes = aPageCount * K2_VA32_MEMPAGE_BYTES;
+        pSeg->mAccessAttr = aPageAttrFlags;
+        pSeg->mSegType = KernSeg_LooseLeaf;
+        pSeg->Info.LooseLeaf.mpProc = pCurThread->mpProc;
+        pSeg->SegTreeNode.mUserVal = useAddr;
+
+        if (aPageAttrFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
+        {
+            if (aPageAttrFlags & K2OS_PAGEATTR_NOCACHE)
+            {
+                disp = KernPhys_Disp_Uncached;
+            }
+            else if (aPageAttrFlags & K2OS_PAGEATTR_WRITECOMBINE)
+            {
+                disp = KernPhys_Disp_Cached_WriteCombine;
+            }
+            else
+            {
+                disp = KernPhys_Disp_Cached;
+            }
+
+            stat = KernMem_PhysAllocToThread(aPageCount, disp);
+            if (!K2STAT_IS_ERROR(stat))
+            {
+                K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount >= aPageCount);
+
+                stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    KernMem_PhysFreeFromThread();
+                }
+            }
+        }
+        else
+        {
+            K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+            K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+
+            stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+        }
+
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            K2OS_HeapFree(pSeg);
+        }
+        else
+        {
+            K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+            K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+            K2_ASSERT(pCurThread->mWorkVirt == 0);
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernMem_VirtFreeFromThread();
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPageCount, UINT32 aPageAttrFlags)

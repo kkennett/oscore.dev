@@ -49,6 +49,38 @@ static void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
     K2_ASSERT(ok);
 }
 
+static K2HEAP_NODE * sKernVirtHeapAcquireNode(K2HEAP_ANCHOR *apHeap)
+{
+    K2HEAP_NODE *pRet;
+
+    K2_ASSERT(apHeap == &gData.KernVirtHeap);
+    if (gData.HeapTrackFreeList.mNodeCount < 5)
+    {
+        //
+        // replenish from next track
+        //
+        K2_ASSERT(0);
+
+        //
+        // refill next track
+        //
+    }
+
+    pRet = (K2HEAP_NODE *)gData.HeapTrackFreeList.mpHead;
+    K2_ASSERT(pRet != NULL);
+
+    K2LIST_Remove(&gData.HeapTrackFreeList, gData.HeapTrackFreeList.mpHead);
+
+    return pRet;
+}
+
+static void sKernVirtHeapReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+{
+    K2_ASSERT(apHeap == &gData.KernVirtHeap);
+
+    K2LIST_AddAtTail(&gData.HeapTrackFreeList, (K2LIST_LINK *)apNode);
+}
+
 static
 void
 sDumpHeapNode(
@@ -64,18 +96,7 @@ sDumpHeapNode(
     );
 }
 
-typedef enum _KernPhysBuf_Disposition KernPhysBuf_Disposition;
-enum _KernPhysBuf_Disposition
-{
-    KernPhysBuf_Disp_Uncached = 0,
-    KernPhysBuf_Disp_Cached_WriteThrough,
-    KernPhysBuf_Disp_Cached,
-
-    // goes last
-    KernPhysBuf_Disp_Count
-};
-
-K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysBuf_Disposition aDisp, UINT32 aAlign)
+K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_Disp aDisp, UINT32 aAlign)
 {
     BOOL                        intrDisp;
     K2TREE_NODE *               pTreeNode;
@@ -88,7 +109,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysB
 
     K2_ASSERT(aPageCount > 0);
     K2_ASSERT(aPageCount < K2_VA32_PAGEFRAMES_FOR_2G);
-    K2_ASSERT(aDisp < KernPhysBuf_Disp_Count);
+    K2_ASSERT(aDisp < KernPhys_Disp_Count);
     if (aAlign == 0)
         aAlign = 1;
     else
@@ -104,7 +125,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysB
 
     do {
         virtAddr = 0;
-        if (!K2OS_VirtPagesAlloc(&virtAddr, aPageCount, 0, K2OS_VIRTCOMMIT_NOACCESS))
+        if (!K2OS_VirtPagesAlloc(&virtAddr, aPageCount, 0, K2OS_PAGEATTR_NOACCESS))
             break;
         K2_ASSERT(virtAddr != 0);
 
@@ -127,7 +148,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysB
 
                     switch (aDisp)
                     {
-                    case KernPhysBuf_Disp_Uncached:
+                    case KernPhys_Disp_Uncached:
                         //
                         // if region cannot be uncached then set pagecount = 0
                         //
@@ -135,13 +156,18 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysB
                             pageCount = 0;
                         break;
 
-                    case KernPhysBuf_Disp_Cached_WriteThrough:
+                    case KernPhys_Disp_Cached_WriteThrough:
                         if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WT_CAP) == 0)
                             pageCount = 0;
                         break;
 
-                    case KernPhysBuf_Disp_Cached:
+                    case KernPhys_Disp_Cached:
                         if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WB_CAP) == 0)
+                            pageCount = 0;
+                        break;
+
+                    case KernPhys_Disp_Cached_WriteCombine:
+                        if ((pTreeNode->mUserVal & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
                             pageCount = 0;
                         break;
 
@@ -261,17 +287,6 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhysB
     return pSeg;
 }
 
-K2STAT KernMem_PhysBuf_FreeSegment(UINT32 aVirtAddr)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-
-UINT32 KernMem_PhysToThread(UINT32 aPageCount, BOOL aTakeClean)
-{
-    return 0;
-}
-
 void KernMem_Start(void)
 {
     K2TREE_NODE *               pTreeNode;
@@ -284,19 +299,19 @@ void KernMem_Start(void)
     UINT32                      takePages;
     UINT32                      physPageAddr;
     UINT32                      virtPageAddr;
-//    UINT32                      pageTableVirtAddr;
-    UINT32                      pageTableIndex;
-    UINT32 *                    pPTPageCount;
-//    UINT32                      pageTablePageTableIndex;
-    BOOL                        ptIsPresent;
-    UINT32                      pte;
-    UINT32                      accessAttr;
+    K2OSKERN_OBJ_SEGMENT        tempSeg;
+    K2OSKERN_HEAPTRACKPAGE *    pHeapTrack;
+    K2STAT                      stat;
+    K2OSKERN_OBJ_THREAD *       pCurThread;
 
     //
     // should be threaded
     //
     K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
 
+    K2LIST_Init(&gData.HeapTrackFreeList);
+    gData.mpTrackPages = NULL;
+    gData.mpNextTrackPage = NULL;
     K2OSKERN_SeqIntrInit(&gData.FreePhysSeqLock);
     K2OS_CritSecInit(&gData.KernVirtSec);
     K2OS_RAMHEAP_Init(&gData.RamHeap, sRamHeapLock, sRamHeapUnlock);
@@ -360,67 +375,138 @@ void KernMem_Start(void)
     } while (pageCount > 0);
 
     //
-    // now set up 'next free tracker'
+    // set up next free tracker
     //
     virtPageAddr = K2HEAP_AllocAligned(&gData.KernVirtHeap, 1, K2_VA32_MEMPAGE_BYTES);
     K2_ASSERT(virtPageAddr != 0);
-    K2OSKERN_Debug("Got nextFreeTrack at virt 0x%08X\n", virtPageAddr);
 
-    //
-    // ensure pagetable is mapped
-    //
-    pPTPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
-    pageTableIndex = virtPageAddr / K2_VA32_PAGETABLE_MAP_BYTES;
-    KernArch_Translate(gpProc0, virtPageAddr, &ptIsPresent, &pte, &accessAttr);
-    if (!ptIsPresent)
-    {
-        pTrackPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, gData.PageList[KernPageList_Free_Dirty].mpHead, ListLink);
-        K2LIST_Remove(&gData.PageList[KernPageList_Free_Dirty], &pTrackPage->ListLink);
-        physPageAddr = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
 
-        KernArch_MapPageTable(gpProc0, virtPageAddr, physPageAddr);
-
-        K2_ASSERT(pPTPageCount[pageTableIndex] == 0);
-    }
-    else
-    {
-        //
-        // pagetable for the page is already mapped.  assert that the page is not currently valid
-        //
-        K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) == 0);
-        K2_ASSERT(pPTPageCount[pageTableIndex] != 0);
-    }
 
     pTrackPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, gData.PageList[KernPageList_Free_Dirty].mpHead, ListLink);
     K2LIST_Remove(&gData.PageList[KernPageList_Free_Dirty], &pTrackPage->ListLink);
-    physPageAddr = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
-
-    KernMap_MakeOnePage(gpProc0->mVirtMapKVA, virtPageAddr, physPageAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
-
-    pPTPageCount[pageTableIndex]++;
-
-    K2MEM_Zero((void *)virtPageAddr, K2_VA32_MEMPAGE_BYTES);
 
     //
     // this is a new segment
     //
-#if 0
-typedef struct _K2OSKERN_HEAPTRACKPAGE K2OSKERN_HEAPTRACKPAGE;
+    K2MEM_Zero(&tempSeg, sizeof(tempSeg));
 
-#define TRACK_BYTES     (K2_VA32_MEMPAGE_BYTES - (sizeof(K2OSKERN_OBJ_SEGMENT) + sizeof(K2OSKERN_HEAPTRACKPAGE *)))
-#define TRACK_PER_PAGE  (TRACK_BYTES / sizeof(K2HEAP_NODE))
+    pCurThread = K2OSKERN_CURRENT_THREAD;
 
-struct _K2OSKERN_HEAPTRACKPAGE
-{
-    K2OSKERN_OBJ_SEGMENT        SegObj;
-    K2OSKERN_HEAPTRACKPAGE *    mpNext;
-    UINT8                       mTrack[TRACK_BYTES];
-};
-K2_STATIC_ASSERT(sizeof(K2OSKERN_HEAPTRACKPAGE) == K2_VA32_MEMPAGE_BYTES);
+    K2MEM_Zero(&tempSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+    tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
+    tempSeg.Hdr.mRefCount = 1;
+    K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
+    tempSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
+    tempSeg.mAccessAttr = K2OS_PAGEATTR_READWRITE;
+    tempSeg.mSegType = KernSeg_HeapTracking;
+    tempSeg.SegTreeNode.mUserVal = virtPageAddr;
+    
+    pHeapTrack = (K2OSKERN_HEAPTRACKPAGE *)virtPageAddr; // !not mapped yet!
 
-K2OSKERN_HEAPTRACKPAGE * gpTrackPages = NULL;
+    pCurThread->mWorkVirt = virtPageAddr;
+    K2LIST_AddAtTail(&pCurThread->WorkPages_Dirty, &pTrackPage->ListLink);
 
-K2OSKERN_HEAPTRACKPAGE * gpNextTrackPage;
-#endif
+    stat = KernMem_CreateSegmentFromThread(&tempSeg, &pHeapTrack->SegObj);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
+    pHeapTrack->mpNext = NULL;
+
+    gData.mpNextTrackPage = pHeapTrack;
+
+    //
+    // switch over the virtual heap off the init static list of tracks to the
+    // new dynamic one
+    //
+    gData.KernVirtHeap.mfAcquireNode = sKernVirtHeapAcquireNode;
+    gData.KernVirtHeap.mfReleaseNode = sKernVirtHeapReleaseNode;
+
+    //
+    // tracking list starts empty and first alloc will bump it
+    //
 }
+
+K2STAT KernMem_VirtAllocToThread(UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown)
+{
+    BOOL                    ok;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+
+    if (aUseAddr != 0)
+    {
+        K2_ASSERT((aUseAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+    }
+
+    ok = K2OS_CritSecEnter(&gData.KernVirtSec);
+    K2_ASSERT(ok);
+
+    if (aUseAddr != 0)
+    {
+        stat = K2HEAP_AllocAt(&gData.KernVirtHeap, aUseAddr, aPageCount * K2_VA32_MEMPAGE_BYTES);
+    }
+    else
+    {
+        if (aTopDown)
+        {
+            aUseAddr = K2HEAP_AllocAlignedHighest(&gData.KernVirtHeap, aPageCount * K2_VA32_MEMPAGE_BYTES, K2_VA32_MEMPAGE_BYTES);
+        }
+        else
+        {
+            aUseAddr = K2HEAP_AllocAligned(&gData.KernVirtHeap, aPageCount * K2_VA32_MEMPAGE_BYTES, K2_VA32_MEMPAGE_BYTES);
+        }
+        if (aUseAddr == 0)
+            stat = K2STAT_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        pCurThread = K2OSKERN_CURRENT_THREAD;
+        pCurThread->mWorkVirt = aUseAddr;
+    }
+
+    ok = K2OS_CritSecLeave(&gData.KernVirtSec);
+    K2_ASSERT(ok);
+
+    return stat;
+}
+
+void KernMem_VirtFreeFromThread(void)
+{
+    BOOL                    ok;
+    UINT32                  temp;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+    K2_ASSERT(pCurThread->mWorkVirt != 0);
+
+    ok = K2OS_CritSecEnter(&gData.KernVirtSec);
+    K2_ASSERT(ok);
+
+    temp = pCurThread->mWorkVirt;
+    pCurThread->mWorkVirt = 0;
+
+    ok = K2HEAP_Free(&gData.KernVirtHeap, temp);
+    K2_ASSERT(ok);
+
+    ok = K2OS_CritSecLeave(&gData.KernVirtSec);
+    K2_ASSERT(ok);
+}
+
+K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+void KernMem_PhysFreeFromThread(void)
+{
+}
+
+K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_OBJ_SEGMENT *apSegTarget)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernMem_DestroySegmentToThread(K2OSKERN_OBJ_SEGMENT *apSeg)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
