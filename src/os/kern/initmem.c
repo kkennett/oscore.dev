@@ -1164,6 +1164,12 @@ static void sInit_BeforeVirt(void)
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_LOADER;
     sCheckPteRange(K2OS_KVA_LOADERPAGE_BASE, 1, K2OS_ACCESS_ATTR_DATA, KernPageList_KOver);
 
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_CLEANERPAGE_BASE, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
+    pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_CLEANER;
+    sCheckPteRangeUnmapped(K2OS_KVA_CLEANERPAGE_BASE, 1);
+
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;

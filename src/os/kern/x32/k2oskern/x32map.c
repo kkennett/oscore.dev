@@ -152,6 +152,10 @@ BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)
 
 void KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT)
 {
+
+
+
+
     K2_ASSERT(0);
 }
 

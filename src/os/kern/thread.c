@@ -149,6 +149,8 @@ static void sInit_BeforeVirt(void)
     pThread->Info.CreateInfo.mStackPages = K2OS_KVA_THREAD0_PHYS_BYTES / K2_VA32_MEMPAGE_BYTES;
     K2LIST_Init(&pThread->WorkPages_Dirty);
     K2LIST_Init(&pThread->WorkPages_Clean);
+    K2LIST_Init(&pThread->PtPages_Dirty);
+    K2LIST_Init(&pThread->PtPages_Clean);
 
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);

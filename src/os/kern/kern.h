@@ -318,7 +318,9 @@ enum _KernSegType
     KernSeg_DeviceMap,
     KernSeg_HeapTracking,
     KernSeg_PhysBuf,
-    KernSeg_LooseLeaf
+    KernSeg_LooseLeaf,
+
+    KernSegType_Count
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -447,6 +449,8 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                  mWorkVirt;
     K2LIST_ANCHOR           WorkPages_Dirty;
     K2LIST_ANCHOR           WorkPages_Clean;
+    K2LIST_ANCHOR           PtPages_Dirty;
+    K2LIST_ANCHOR           PtPages_Clean;
 
     K2_EXCEPTION_TRAP *     mpKernExTrapStack;
 };
@@ -512,16 +516,16 @@ enum _KernPageList
     KernPageList_Non_UText,     //  11
     KernPageList_Non_URead,     //  12
     KernPageList_Non_UData,     //  13
-    KernPageList_Pag_KText,     //  14
-    KernPageList_Pag_KRead,     //  15
-    KernPageList_Pag_KData,     //  16
-    KernPageList_Pag_UText,     //  17
-    KernPageList_Pag_URead,     //  18
-    KernPageList_Pag_UData,     //  19
-    KernPageList_DeviceU,       //  20
-    KernPageList_DeviceC,       //  21
+    KernPageList_General,       //  14
+    KernPageList_DeviceU,       //  15
+    KernPageList_DeviceC,       //  16
 
-    KernPageList_Count
+    KernPageList_Count,         //  17
+
+    KernPageList_Thread_Dirty  = 0x1C,      // temporarily on thread dirty list
+    KernPageList_Thread_Clean  = 0x1D,      // temporarily on thread clean list
+    KernPageList_Thread_PtDirty =0x1E,      // temporarily on thread pagetable dirty list
+    KernPageList_Thread_PtClean =0x1F,      // temporarily on thread pagetable clean list
 };
 
 K2_STATIC_ASSERT((K2OSKERN_PHYSTRACK_PAGE_LIST_MASK >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) >= KernPageList_Count);
@@ -575,6 +579,7 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
 #define K2OSKERN_VMNODE_RESERVED_UNKNOWN        18
 #define K2OSKERN_VMNODE_RESERVED_EFI_MAPPED_IO  19
 #define K2OSKERN_VMNODE_RESERVED_DLX_ACPI       20
+#define K2OSKERN_VMNODE_RESERVED_CLEANER        21
 
 typedef struct _K2OSKERN_VMNODE_NONSEG K2OSKERN_VMNODE_NONSEG;
 struct _K2OSKERN_VMNODE_NONSEG
@@ -658,9 +663,13 @@ struct _KERN_DATA
     K2HEAP_ANCHOR                       KernVirtHeap;
 
     // mem.c managed
-    K2OSKERN_SEQLOCK                    FreePhysSeqLock;
+    K2OSKERN_SEQLOCK                    SysPageListsLock;
     K2OS_CRITSEC                        KernVirtSec;
     K2OS_RAMHEAP                        RamHeap;
+    K2LIST_ANCHOR                       HeapTrackFreeList;
+    K2OSKERN_HEAPTRACKPAGE *            mpTrackPages;
+    K2OSKERN_HEAPTRACKPAGE *            mpNextTrackPage;
+    K2OS_CRITSEC                        CleanerSec;
 
     // dlxsupp.c - 
     K2OSKERN_OBJ_DLX                    DlxCrt;
@@ -672,10 +681,6 @@ struct _KERN_DATA
 
     // debugger
     BOOL                                mDebuggerActive;
-
-    K2LIST_ANCHOR                       HeapTrackFreeList;
-    K2OSKERN_HEAPTRACKPAGE *            mpTrackPages;
-    K2OSKERN_HEAPTRACKPAGE *            mpNextTrackPage;
 
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
@@ -716,10 +721,12 @@ void   KernMem_Start(void);
 
 K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_Disp aDisp, UINT32 aAlign);
 
+UINT32 KernMem_CountPT(UINT32 aVirtAddr, UINT32 aPageCount);
+
 K2STAT KernMem_VirtAllocToThread(UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
 void   KernMem_VirtFreeFromThread(void);
 
-K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp);
+K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aForPageTables);
 void   KernMem_PhysFreeFromThread(void);
 
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSec, K2OSKERN_OBJ_SEGMENT *apSegTarget);
