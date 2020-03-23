@@ -32,66 +32,41 @@
 
 #include "x32kern.h"
 
-UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINTN  aMapType)
+UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
 {
     K2OSKERN_PHYSTRACK_PAGE *   pTrack;
     UINT32                      pte;
 
     pTrack = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
     K2_ASSERT(!(pTrack->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG));
-    K2_ASSERT(aMapType < K2OS_VIRTMAPTYPE_COUNT);
 
-    if ((aMapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_STACK_GUARD)
-    {
-        pte = K2OSKERN_PTE_NP_STACK_GUARD;
-    }
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_GUARD)
+        return K2OSKERN_PTE_NP_STACK_GUARD;
+
+    pte = X32_PTE_PRESENT | aPhysAddr;
+
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
+        pte |= X32_PTE_WRITEABLE;
+
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
+        pte |= X32_PTE_CACHEDISABLE;
+
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+        pte |= X32_PTE_WRITETHROUGH;
+
+    if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
+        pte |= X32_PTE_USER;
     else
-    {
-        pte = X32_PTE_PRESENT | aPhysAddr;
-
-        if (aMapType & K2OS_VIRTMAPTYPE_WRITEABLE_BIT)
-            pte |= X32_PTE_WRITEABLE;
-
-        if (((aMapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_DEVICE) ||
-            ((aMapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_UNCACHED))
-        {
-            pte |= (X32_PTE_WRITETHROUGH | X32_PTE_CACHEDISABLE);
-        }
-        else if ((aMapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_WRITETHRU_CACHED)
-        {
-            pte |= X32_PTE_WRITETHROUGH;
-        }
-
-        if (!(aMapType & K2OS_VIRTMAPTYPE_KERN_BIT))
-            pte |= X32_PTE_USER;
-        else
-        {
-            pte |= X32_PTE_GLOBAL;
-            if (aMapType == K2OS_VIRTMAPTYPE_KERN_TRANSITION)
-            {
-                pte |= (X32_PTE_WRITEABLE | X32_PTE_WRITETHROUGH);
-            }
-            else if (aMapType == K2OS_VIRTMAPTYPE_KERN_PAGETABLE)
-            {
-                //
-                // if pagetable is in memory that can be writethrough
-                // then use that.  otherwise use cache-disabled memory
-                //
-                if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP)
-                    pte |= (X32_PTE_WRITEABLE | X32_PTE_WRITETHROUGH);
-                else
-                    pte |= (X32_PTE_WRITEABLE | X32_PTE_CACHEDISABLE);
-            }
-        }
-    }
+        pte |= X32_PTE_GLOBAL;
 
     return pte;
 }
 
-void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr)
+void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32      transBase;
     UINT32 *    pPDE;
+    UINT32      pte;
 
     K2_ASSERT(apProc != NULL);
 
@@ -116,7 +91,7 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
-        *apRetPte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+        pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
     }
     else
     {
@@ -125,24 +100,35 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
         // we just use the kernel va map base as that is the same thing.
         //
         if (apProc == gpProc0)
-            *apRetPte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+            pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
         else
-            *apRetPte = *((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
+            pte = *((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
     }
 
-    if ((*apRetPte) & X32_PTE_WRITEABLE)
+    *apRetPte = pte;
+
+    if (pte & X32_PTE_WRITEABLE)
     {
-        *apRetAccessAttr = K2OS_ACCESS_ATTR_ANY;
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_WRITEABLE;
     }
     else
     {
-        *apRetAccessAttr = K2OS_ACCESS_ATTR_TEXT;
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_EXEC;
     }
+
+    if (pte & X32_PTE_CACHEDISABLE)
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_UNCACHED;
+
+    if (pte & X32_PTE_WRITETHROUGH)
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_WRITE_THRU;
+
+    if (pte & X32_PTE_USER)
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_KERNEL;
 }
 
 BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)
 {
-    if (aAttr & K2OS_ACCESS_ATTR_W)
+    if (aAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
     {
         return (aPTE & X32_PTE_WRITEABLE) ? TRUE : FALSE;
     }
@@ -152,10 +138,6 @@ BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)
 
 void KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT)
 {
-
-
-
-
     K2_ASSERT(0);
 }
 

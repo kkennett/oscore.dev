@@ -735,8 +735,8 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr);
 
 /* --------------------------------------------------------------------------------- */
 
-UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINTN  aMapType);
-void    KernArch_MapPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapType);
+UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
+void    KernArch_MapPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINT32 aPageMapAttr);
 void    KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT);
 void    KernArch_BreakMapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);

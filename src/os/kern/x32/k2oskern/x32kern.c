@@ -198,7 +198,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
             }
             ixCpu = (UINT32)gpX32Kern_HPET->Address.Address;
             ixCpu &= K2_VA32_PAGEFRAME_MASK;
-            KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_HPET_KVA, ixCpu, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+            KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_HPET_KVA, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
         } while (0);
     }
 
@@ -278,7 +278,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
     {
         localApicAddress = (UINT32)pOverride->LocalApicAddress;
     }
-    KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_LOCAPIC_KVA, localApicAddress, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+    KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_LOCAPIC_KVA, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
 
     //
     // init and enable cpu 0 APIC 
@@ -294,7 +294,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
     {
         K2_ASSERT(gpX32Kern_MADT_IoApic->GlobalSystemInterruptBase == 0);
 
-        KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_IOAPIC_KVA, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+        KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_IOAPIC_KVA, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
 
         //
         // initialize IO Apic

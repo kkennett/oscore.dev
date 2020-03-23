@@ -99,7 +99,7 @@ K2VMAP32_MapPage(
     K2VMAP32_CONTEXT *  apContext,
     UINT32              aVirtAddr, 
     UINT32              aPhysAddr, 
-    UINT32              aMapType
+    UINT32              aPageMapAttr
     );
 
 K2STAT

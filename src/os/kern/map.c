@@ -50,15 +50,15 @@ static UINT32 * sGetPTE(UINT32 aVirtMapBase, UINT32 aVirtAddr)
     return pPTE;
 }
 
-UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapType)
+UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINT32 aPageMapAttr)
 {
     UINT32* pPTE;
 
-    aMapType &= K2OS_MEMPAGE_ATTR_MASK;
+    aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
 
-    *pPTE = KernArch_MakePTE(aPhysAddr, aMapType);
+    *pPTE = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
 
     K2_CpuWriteBarrier();
 
