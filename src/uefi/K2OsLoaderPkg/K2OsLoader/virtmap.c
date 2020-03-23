@@ -189,7 +189,7 @@ Loader_CreateVirtualMap(
     efiPhysAddr = (EFI_PHYSICAL_ADDRESS)(UINT32)gData.mpMemoryMap;
     do
     {
-        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINT32)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINT32)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
         if (K2STAT_IS_ERROR(status))
         {
             K2Printf(L"*** K2VMAP32_MapPage for efi map page failed with status 0x%08X\n", status);
@@ -209,7 +209,7 @@ Loader_CreateVirtualMap(
         return K2STAT_ERROR_OUT_OF_MEMORY;
     }
     K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_PTPAGECOUNT_BASE, (UINTN)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_PTPAGECOUNT_BASE, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
     if (K2STAT_IS_ERROR(status))
     {
         K2Printf(L"*** K2VMAP32_MapPage for ptcount page failed with status 0x%08X\n", status);
@@ -235,7 +235,7 @@ Loader_CreateVirtualMap(
     do
     {
         K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
         if (K2STAT_IS_ERROR(status))
         {
             K2Printf(L"*** K2VMAP32_MapPage for thread0 stack failed with status 0x%08X\n", status);
@@ -250,7 +250,7 @@ Loader_CreateVirtualMap(
     do
     {
         K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
         if (K2STAT_IS_ERROR(status))
         {
             K2Printf(L"*** K2VMAP32_MapPage for proc0 tokens failed with status 0x%08X\n", status);
@@ -273,7 +273,7 @@ Loader_CreateVirtualMap(
             return K2STAT_ERROR_OUT_OF_MEMORY;
         }
         K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
         if (K2STAT_IS_ERROR(status))
         {
             K2Printf(L"*** K2VMAP32_MapPage for cores failed with status 0x%08X\n", status);
@@ -285,7 +285,7 @@ Loader_CreateVirtualMap(
     //
     // loader page
     //
-    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_LOADERPAGE_BASE, (UINT32)gData.mLoaderPagePhys, K2OS_VIRTMAPTYPE_KERN_DATA);
+    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_LOADERPAGE_BASE, (UINT32)gData.mLoaderPagePhys, K2OS_MAPTYPE_KERN_DATA);
     if (K2STAT_IS_ERROR(status))
     {
         K2Printf(L"*** mapping loader page failed with status 0x%08X\n", status);

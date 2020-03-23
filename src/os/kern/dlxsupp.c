@@ -35,10 +35,10 @@
 static UINT32 sSegToAttr(UINT32 aIndex)
 {
     if (aIndex == DlxSeg_Text)
-        return K2OS_ACCESS_ATTR_TEXT;
+        return K2OS_MAPTYPE_KERN_TEXT;
     if ((aIndex == DlxSeg_Read) || (aIndex == DlxSeg_Sym))
-        return K2OS_ACCESS_ATTR_READ;
-    return K2OS_ACCESS_ATTR_DATA;
+        return K2OS_MAPTYPE_KERN_READ;
+    return K2OS_MAPTYPE_KERN_DATA;
 }
 
 static 
@@ -68,12 +68,11 @@ sInitBuiltInDlx(
         if ((segInfo[ix].mMemActualBytes == 0) ||
             (segInfo[ix].mLinkAddr == 0))
         {
-            apDlxObj->SegObj[ix].mSegType = KernSeg_Unused;
+            apDlxObj->SegObj[ix].mSegAndMemPageAttr = 0;
         }
         else
         {
-            apDlxObj->SegObj[ix].mAccessAttr = sSegToAttr(ix);
-            apDlxObj->SegObj[ix].mSegType = KernSeg_DlxPart;
+            apDlxObj->SegObj[ix].mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_DLX_PART | sSegToAttr(ix);
             apDlxObj->SegObj[ix].Info.DlxPart.mpDlxObj = apDlxObj;
         }
     }

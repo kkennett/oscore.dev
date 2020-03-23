@@ -308,20 +308,18 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 
 /* --------------------------------------------------------------------------------- */
 
-typedef enum _KernSegType KernSegType;
-enum _KernSegType
-{
-    KernSeg_Unused,
-    KernSeg_DlxPart,
-    KernSeg_Process,
-    KernSeg_ThreadStack,
-    KernSeg_DeviceMap,
-    KernSeg_HeapTracking,
-    KernSeg_PhysBuf,
-    KernSeg_LooseLeaf,
-
-    KernSegType_Count
-};
+//
+// these coexist in the same UINT32 with K2OS_MEMPAGE_ATTR_xxx
+//
+#define K2OS_SEG_ATTR_TYPE_DLX_PART     0x00010000
+#define K2OS_SEG_ATTR_TYPE_PROCESS      0x00020000
+#define K2OS_SEG_ATTR_TYPE_THREAD       0x00030000
+#define K2OS_SEG_ATTR_TYPE_HEAP_TRACK   0x00040000
+#define K2OS_SEG_ATTR_TYPE_USER         0x00050000
+#define K2OS_SEG_ATTR_TYPE_DEVMAP       0x00060000
+#define K2OS_SEG_ATTR_TYPE_PHYSBUF      0x00070000
+#define K2OS_SEG_ATTR_TYPE_COUNT        0x00080000
+#define K2OS_SEG_ATTR_TYPE_MASK         0x000F0000
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
 struct _K2OSKERN_SEGMENT_INFO_THREADSTACK
@@ -355,8 +353,8 @@ struct _K2OSKERN_SEGMENT_INFO_PHYSBUF
     UINT32                  mPhysAddr;
 };
 
-typedef struct _K2OSKERN_SEGMENT_INFO_LOOSELEAF K2OSKERN_SEGMENT_INFO_LOOSELEAF;
-struct _K2OSKERN_SEGMENT_INFO_LOOSELEAF
+typedef struct _K2OSKERN_SEGMENT_INFO_USER K2OSKERN_SEGMENT_INFO_USER;
+struct _K2OSKERN_SEGMENT_INFO_USER
 {
     K2OSKERN_OBJ_PROCESS *  mpProc;
 };
@@ -364,13 +362,12 @@ struct _K2OSKERN_SEGMENT_INFO_LOOSELEAF
 typedef union _K2OSKERN_SEGMENT_INFO K2OSKERN_SEGMENT_INFO;
 union _K2OSKERN_SEGMENT_INFO
 {
-    K2OSKERN_SEGMENT_INFO_DLX_PART      DlxPart;        // KernSeg_DlxPart
-    K2OSKERN_SEGMENT_INFO_PROCESS       Process;        // KernSeg_Process
-    K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;    // KernSeg_ThreadStack
-    K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;      // KernSeg_DeviceMap
-//    K2OSKERN_SEGMENT_INFO_HEAPTRACK     HeapTracking;   // KernSeg_HeapTracking
-    K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;        // KernSeg_PhysBuf
-    K2OSKERN_SEGMENT_INFO_LOOSELEAF     LooseLeaf;      // KernSeg_LooseLeaf
+    K2OSKERN_SEGMENT_INFO_DLX_PART      DlxPart;
+    K2OSKERN_SEGMENT_INFO_PROCESS       Process;
+    K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;
+    K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;
+    K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;
+    K2OSKERN_SEGMENT_INFO_USER          User;
 };
 
 struct _K2OSKERN_OBJ_SEGMENT
@@ -378,8 +375,7 @@ struct _K2OSKERN_OBJ_SEGMENT
     K2OSKERN_OBJ_HEADER     Hdr;
     K2TREE_NODE             SegTreeNode;    // base address is tree node UserVal
     UINT32                  mPagesBytes;
-    UINT32                  mAccessAttr;
-    KernSegType             mSegType;
+    UINT32                  mSegAndMemPageAttr;
     K2OSKERN_SEGMENT_INFO   Info;
 };
 
@@ -607,7 +603,6 @@ enum _KernPhys_Disp
     KernPhys_Disp_Uncached = 0,
     KernPhys_Disp_Cached_WriteThrough,
     KernPhys_Disp_Cached,
-    KernPhys_Disp_Cached_WriteCombine,
     // goes last
     KernPhys_Disp_Count
 };

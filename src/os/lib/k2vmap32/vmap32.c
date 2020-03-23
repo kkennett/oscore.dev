@@ -129,7 +129,7 @@ K2VMAP32_Init(
     physEnd = physWork + K2_VA32_TRANSTAB_SIZE;
     do
     {
-        status = K2VMAP32_MapPage(apContext, virtWork, physWork, K2OS_VIRTMAPTYPE_KERN_PAGEDIR);
+        status = K2VMAP32_MapPage(apContext, virtWork, physWork, K2OS_MAPTYPE_KERN_PAGEDIR);
         if (K2STAT_IS_ERROR(status))
             return status;
         virtWork += K2_VA32_MEMPAGE_BYTES;
@@ -158,14 +158,14 @@ K2VMAP32_VirtToPTE(
 
     ixEntry = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
     entry = K2VMAP32_ReadPDE(apContext, ixEntry);
-    if ((entry & K2VMAP32_PDE_FLAG_PRESENT) == 0)
+    if ((entry & K2VMAP32_FLAG_PRESENT) == 0)
         return 0;
 
     *apRetFaultPDE = FALSE;
 
     ixEntry = (aVirtAddr / K2_VA32_MEMPAGE_BYTES) & ((1 << K2_VA32_PAGETABLE_PAGES_POW2) - 1);
-    entry = *((UINT32 *)((entry & K2VMAP32_PDE_PTPHYS_MASK) + (ixEntry * sizeof(UINT32))));
-    if ((entry & K2VMAP32_PTE_FLAG_PRESENT) == 0)
+    entry = *((UINT32 *)((entry & K2VMAP32_PAGEPHYS_MASK) + (ixEntry * sizeof(UINT32))));
+    if ((entry & K2VMAP32_FLAG_PRESENT) == 0)
         return 0;
 
     *apRetFaultPTE = FALSE;
@@ -191,12 +191,12 @@ K2VMAP32_MapPage(
     if (apContext->mFlags & K2VMAP32_FLAG_REALIZED)
         return K2STAT_ERROR_API_ORDER;
 
-    if ((aMapType & K2OS_VIRTMAPTYPE_MASK) == K2OS_VIRTMAPTYPE_NONE)
+    if ((aMapType & K2OS_MEMPAGE_ATTR_MASK) == K2OS_MEMPAGE_ATTR_NONE)
         return K2STAT_ERROR_BAD_ARGUMENT;
 
     ixEntry = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
     entry = K2VMAP32_ReadPDE(apContext, ixEntry);
-    if ((entry & K2VMAP32_PDE_FLAG_PRESENT) == 0)
+    if ((entry & K2VMAP32_FLAG_PRESENT) == 0)
     {
         virtPT = K2_VA32_TO_PT_ADDR(apContext->mVirtMapBase, aVirtAddr);
         if (virtPT != aVirtAddr)
@@ -207,7 +207,7 @@ K2VMAP32_MapPage(
 
             K2MEM_Zero((void *)physPT, K2_VA32_MEMPAGE_BYTES);
 
-            status = K2VMAP32_MapPage(apContext, virtPT, physPT, K2OS_VIRTMAPTYPE_KERN_PAGETABLE);
+            status = K2VMAP32_MapPage(apContext, virtPT, physPT, K2OS_MAPTYPE_KERN_PAGETABLE);
             if (K2STAT_IS_ERROR(status))
             {
                 apContext->PT_Free(physPT);
@@ -217,18 +217,18 @@ K2VMAP32_MapPage(
         else
             physPT = aPhysAddr;
 
-        entry = physPT | K2VMAP32_PDE_FLAG_PRESENT;
+        entry = physPT | K2VMAP32_FLAG_PRESENT;
 
         K2VMAP32_WritePDE(apContext, ixEntry, entry);
     }
 
     ixEntry = (aVirtAddr / K2_VA32_MEMPAGE_BYTES) & ((1 << K2_VA32_PAGETABLE_PAGES_POW2) - 1);
 
-    pPTE = (UINT32 *)((entry & K2VMAP32_PDE_PTPHYS_MASK) + (ixEntry * sizeof(UINT32)));
-    if (((*pPTE) & K2VMAP32_PTE_FLAG_PRESENT) != 0)
+    pPTE = (UINT32 *)((entry & K2VMAP32_PAGEPHYS_MASK) + (ixEntry * sizeof(UINT32)));
+    if (((*pPTE) & K2VMAP32_FLAG_PRESENT) != 0)
         return K2STAT_ERROR_BAD_ARGUMENT;
 
-    *pPTE = (aPhysAddr & K2VMAP32_PTE_PAGEPHYS_MASK) | (aMapType << K2VMAP32_PTE_MAPTYPE_SHL) | K2VMAP32_PTE_FLAG_PRESENT;
+    *pPTE = (aPhysAddr & K2VMAP32_PAGEPHYS_MASK) | aMapType | K2VMAP32_FLAG_PRESENT;
 
     return 0;
 }
@@ -252,7 +252,7 @@ K2VMAP32_VerifyOrMapPageTableForAddr(
 
     ixEntry = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
     entry = K2VMAP32_ReadPDE(apContext, ixEntry);
-    if ((entry & K2VMAP32_PDE_FLAG_PRESENT) != 0)
+    if ((entry & K2VMAP32_FLAG_PRESENT) != 0)
         return 0;
 
     status = apContext->PT_Alloc(&physPT);
@@ -263,14 +263,14 @@ K2VMAP32_VerifyOrMapPageTableForAddr(
 
     aVirtAddr = K2_VA32_TO_PT_ADDR(apContext->mVirtMapBase, aVirtAddr);
 
-    status = K2VMAP32_MapPage(apContext, aVirtAddr, physPT, K2OS_VIRTMAPTYPE_KERN_PAGETABLE);
+    status = K2VMAP32_MapPage(apContext, aVirtAddr, physPT, K2OS_MAPTYPE_KERN_PAGETABLE);
     if (K2STAT_IS_ERROR(status))
     {
         apContext->PT_Free(physPT);
         return status;
     }
 
-    entry = physPT | K2VMAP32_PDE_FLAG_PRESENT;
+    entry = physPT | K2VMAP32_FLAG_PRESENT;
 
     K2VMAP32_WritePDE(apContext, ixEntry, entry);
 
@@ -339,94 +339,76 @@ K2VMAP32_RealizeArchMappings(
     for (ixPDE = 0; ixPDE < K2_VA32_ENTRIES_PER_PAGETABLE; ixPDE++)
     {
         pde = K2VMAP32_ReadPDE(apContext, ixPDE);
-        if ((pde & K2VMAP32_PDE_FLAG_PRESENT) != 0)
+        if ((pde & K2VMAP32_FLAG_PRESENT) != 0)
         {
-            pPT = (UINT32 *)(pde & K2VMAP32_PDE_PTPHYS_MASK);
+            pPT = (UINT32 *)(pde & K2VMAP32_PAGEPHYS_MASK);
             for (ixPTE = 0;ixPTE < K2_VA32_ENTRIES_PER_PAGETABLE; ixPTE++)
             {
                 pte = pPT[ixPTE];
-                if (pte & K2VMAP32_PTE_FLAG_PRESENT)
+                if (pte & K2VMAP32_FLAG_PRESENT)
                 {
-                    mapType = (pte & K2VMAP32_PTE_MAPTYPE_MASK) >> K2VMAP32_PTE_MAPTYPE_SHL;
+                    mapType = pte & K2VMAP32_MAPTYPE_MASK;
                     
-                    if ((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_STACK_GUARD)
+                    if (mapType & K2OS_MEMPAGE_ATTR_GUARD)
                     {
                         // mark as not present
                         pte = 0;
                     }
                     else
                     {
-                        pte = (pte & K2VMAP32_PTE_PAGEPHYS_MASK) | pteProto;
+                        pte = (pte & K2VMAP32_PAGEPHYS_MASK) | pteProto;
 
 #if K2_TARGET_ARCH_IS_ARM
-                        if (((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) != K2OS_VIRTMAPTYPE_TEXT) &&
-                            (mapType != K2OS_VIRTMAPTYPE_KERN_TRANSITION))
+                        if (!(mapType & K2OS_MEMPAGE_ATTR_EXEC))
                         {
                             pte |= A32_PTE_EXEC_NEVER;
                         }
 
-                        if ((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_DEVICE)
+                        if (mapType & K2OS_MEMPAGE_ATTR_DEVICEIO)
                         {
                             if (apContext->mFlags & K2VMAP32_FLAG_MULTIPROC)
                                 pte |= A32_MMU_PTE_REGIONTYPE_SHAREABLE_DEVICE;
                             else
                                 pte |= A32_MMU_PTE_REGIONTYPE_NONSHAREABLE_DEVICE;
                         }
-                        else if ((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_WRITETHRU_CACHED)
+                        else if (mapType & K2OS_MEMPAGE_ATTR_WRITE_THRU)
                         {
                             pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
                         }
                         else
                         {
-                            if (mapType & K2OS_VIRTMAPTYPE_KERN_BIT)
-                            {
-                                if ((mapType == K2OS_VIRTMAPTYPE_KERN_TRANSITION) ||
-                                    (mapType == K2OS_VIRTMAPTYPE_KERN_PAGETABLE))
-                                    pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
-                                else
-                                    pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
-                            }
-                            else
-                            {
-                                pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
-                            }
+                            pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
                         }
 
-                        if (!(mapType & K2OS_VIRTMAPTYPE_KERN_BIT))
+                        if (!(mapType & K2OS_MEMPAGE_ATTR_KERNEL))
                         {
                             pte |= A32_PTE_NOT_GLOBAL;
-                            if (mapType & K2OS_VIRTMAPTYPE_WRITEABLE_BIT)
+                            if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_RW;
                             else
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_RO;
                         }
                         else
                         {
-                            if ((mapType & K2OS_VIRTMAPTYPE_WRITEABLE_BIT) ||
-                                (mapType == K2OS_VIRTMAPTYPE_KERN_TRANSITION) ||
-                                (mapType == K2OS_VIRTMAPTYPE_KERN_PAGETABLE))
+                            if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE;
                             else
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RO_USER_NONE;
                         }
 #else
-                        if (mapType & K2OS_VIRTMAPTYPE_WRITEABLE_BIT)
+                        if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
                             pte |= X32_PTE_WRITEABLE;
 
-                        if ((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_DEVICE)
-                            pte |= (X32_PTE_WRITETHROUGH | X32_PTE_CACHEDISABLE);
-                        else if ((mapType & K2OS_VIRTMAPTYPE_SUBTYPE_MASK) == K2OS_VIRTMAPTYPE_WRITETHRU_CACHED)
+                        if (mapType & K2OS_MEMPAGE_ATTR_UNCACHED)
+                            pte |= X32_PTE_CACHEDISABLE;
+
+                        if (mapType & K2OS_MEMPAGE_ATTR_WRITE_THRU)
                             pte |= X32_PTE_WRITETHROUGH;
  
-                        if (!(mapType & K2OS_VIRTMAPTYPE_KERN_BIT))
+                        if (!(mapType & K2OS_MEMPAGE_ATTR_KERNEL))
                             pte |= X32_PTE_USER;
                         else
-                        {
                             pte |= X32_PTE_GLOBAL;
-                            if ((mapType == K2OS_VIRTMAPTYPE_KERN_TRANSITION) ||
-                                (mapType == K2OS_VIRTMAPTYPE_KERN_PAGETABLE))
-                                pte |= (X32_PTE_WRITEABLE | X32_PTE_WRITETHROUGH);
-                        }
 #endif
                     }
                 }
@@ -436,9 +418,9 @@ K2VMAP32_RealizeArchMappings(
             }
 
 #if K2_TARGET_ARCH_IS_ARM
-            pde = (pde & K2VMAP32_PDE_PTPHYS_MASK) | A32_TTBE_PAGETABLE_PROTO;
+            pde = (pde & K2VMAP32_PAGEPHYS_MASK) | A32_TTBE_PAGETABLE_PROTO;
 #else
-            pde = (pde & K2VMAP32_PDE_PTPHYS_MASK) | X32_KERN_PAGETABLE_PROTO;
+            pde = (pde & K2VMAP32_PAGEPHYS_MASK) | X32_KERN_PAGETABLE_PROTO;
 #endif
         }
         else

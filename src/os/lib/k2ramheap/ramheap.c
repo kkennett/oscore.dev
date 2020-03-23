@@ -463,7 +463,7 @@ sPushBreak(
     //
     // push the break in the node
     //
-    if (!K2OS_VirtPagesCommit(apChunk->mBreak, aPushAmount, K2OS_PAGEATTR_READWRITE))
+    if (!K2OS_VirtPagesCommit(apChunk->mBreak, aPushAmount, K2OS_MEMPAGE_ATTR_READWRITE))
     {
         //
         // should never happen in K2OS because of pool fill on initial alloc
@@ -696,12 +696,12 @@ sNewHeapChunk(
         heapChunkBytes = K2OS_RAMHEAP_CHUNK_MIN;
 
     chunkBase = 0;
-    if (!K2OS_VirtPagesAlloc(&chunkBase, heapChunkBytes / K2_VA32_MEMPAGE_BYTES, 0, K2OS_PAGEATTR_NOACCESS))
+    if (!K2OS_VirtPagesAlloc(&chunkBase, heapChunkBytes / K2_VA32_MEMPAGE_BYTES, 0, K2OS_MEMPAGE_ATTR_NONE))
     {
         return K2OS_ThreadGetStatus();
     }
 
-    if (!K2OS_VirtPagesCommit(chunkBase, heapChunkInit / K2_VA32_MEMPAGE_BYTES, K2OS_PAGEATTR_READWRITE))
+    if (!K2OS_VirtPagesCommit(chunkBase, heapChunkInit / K2_VA32_MEMPAGE_BYTES, K2OS_MEMPAGE_ATTR_READWRITE))
     {
         stat = K2OS_ThreadGetStatus();
         K2OS_VirtPagesFree(chunkBase);

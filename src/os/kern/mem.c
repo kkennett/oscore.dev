@@ -111,7 +111,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
 
     do {
         virtAddr = 0;
-        if (!K2OS_VirtPagesAlloc(&virtAddr, aPageCount, 0, K2OS_PAGEATTR_NOACCESS))
+        if (!K2OS_VirtPagesAlloc(&virtAddr, aPageCount, 0, 0))
             break;
         K2_ASSERT(virtAddr != 0);
 
@@ -149,11 +149,6 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
 
                     case KernPhys_Disp_Cached:
                         if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WB_CAP) == 0)
-                            pageCount = 0;
-                        break;
-
-                    case KernPhys_Disp_Cached_WriteCombine:
-                        if ((pTreeNode->mUserVal & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
                             pageCount = 0;
                         break;
 
@@ -366,8 +361,7 @@ void KernMem_Start(void)
     tempSeg.Hdr.mRefCount = 1;
     K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
     tempSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
-    tempSeg.mAccessAttr = K2OS_PAGEATTR_READWRITE;
-    tempSeg.mSegType = KernSeg_HeapTracking;
+    tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_HEAP_TRACK;
     tempSeg.SegTreeNode.mUserVal = pCurThread->mWorkVirt;
     
     pHeapTrack = (K2OSKERN_HEAPTRACKPAGE *)pCurThread->mWorkVirt; // !not mapped yet!
@@ -525,11 +519,6 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
                     pPhysPage = NULL;
                 break;
 
-            case KernPhys_Disp_Cached_WriteCombine:
-                if ((pPhysPage->mFlags & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
-                    pPhysPage = NULL;
-                break;
-
             default:
                 K2_ASSERT(0);
                 break;
@@ -629,11 +618,6 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
                     pPhysPage = NULL;
                 break;
 
-            case KernPhys_Disp_Cached_WriteCombine:
-                if ((pPhysPage->mFlags & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
-                    pPhysPage = NULL;
-                break;
-
             default:
                 K2_ASSERT(0);
                 break;
@@ -722,11 +706,6 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
 
         case KernPhys_Disp_Cached:
             if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WB_CAP) == 0)
-                nodeCount = 0;
-            break;
-
-        case KernPhys_Disp_Cached_WriteCombine:
-            if ((pTreeNode->mUserVal & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
                 nodeCount = 0;
             break;
 
@@ -832,11 +811,6 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
 
         case KernPhys_Disp_Cached:
             if ((pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_PROP_WB_CAP) == 0)
-                nodeCount = 0;
-            break;
-
-        case KernPhys_Disp_Cached_WriteCombine:
-            if ((pTreeNode->mUserVal & (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP)) != (K2OSKERN_PHYSTRACK_PROP_WB_CAP | K2OSKERN_PHYSTRACK_PROP_WC_CAP))
                 nodeCount = 0;
             break;
 
@@ -968,7 +942,7 @@ static void sCleanPage(UINT32 aPhysPage)
     //
     K2OSKERN_SetIntr(FALSE);
 
-    KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_CLEANERPAGE_BASE, aPhysPage, K2OS_VIRTMAPTYPE_KERN_WRITETHRU_CACHED);
+    KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_CLEANERPAGE_BASE, aPhysPage, K2OS_MAPTYPE_KERN_WRITETHRU_CACHED);
 
     K2MEM_Zero((void *)K2OS_KVA_CLEANERPAGE_BASE, K2_VA32_MEMPAGE_BYTES);
 
@@ -1003,7 +977,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_
     K2_ASSERT(apSegSrc->mPagesBytes > 0);
     K2_ASSERT((apSegSrc->mPagesBytes & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
     pageCount = apSegSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
-    K2_ASSERT(apSegSrc->mSegType < KernSegType_Count);
+    K2_ASSERT((apSegSrc->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) < K2OS_SEG_ATTR_TYPE_COUNT);
     K2_ASSERT(apSegSrc->SegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE);
     K2_ASSERT((apSegSrc->SegTreeNode.mUserVal & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
     virtAddr = apSegSrc->SegTreeNode.mUserVal;
@@ -1107,7 +1081,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_
         //
         // no memory to map.  access attribute should be no access
         //
-        K2_ASSERT(apSegSrc->mAccessAttr == K2OS_PAGEATTR_NOACCESS);
+        K2_ASSERT((apSegSrc->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_MASK) == 0);
         K2_ASSERT(apSegTarget == NULL);
     }
     else
@@ -1123,7 +1097,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_
         // pages that need cleaning must either be cleaned before they are mapped if the map type
         // is not writeable.  otherwise they can be cleaned when they are mapped in
         //
-        if (apSegSrc->mAccessAttr & K2OS_PAGEATTR_READWRITE)
+        if (apSegSrc->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
         {
             //
             // can clean pages as we map them at their target location
@@ -1159,8 +1133,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_
 
                 K2OSKERN_SeqIntrUnlock(&gData.SysPageListsLock, intrDisp);
 
-                K2_ASSERT(0); // fix map type
-                KernMap_MakeOnePage(pCurThread->mpProc->mVirtMapKVA, workAddr, workPhys, 0);
+                KernMap_MakeOnePage(pCurThread->mpProc->mVirtMapKVA, workAddr, workPhys, apSegSrc->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_MASK);
 
                 workAddr += K2_VA32_MEMPAGE_BYTES;
             } while (--pageCount);

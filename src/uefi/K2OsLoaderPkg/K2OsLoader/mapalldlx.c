@@ -33,11 +33,11 @@
 
 static UINTN const sgSegToMapType[DlxSeg_Reloc] =
 {
-    K2OS_VIRTMAPTYPE_NONE,        // DlxSeg_Info
-    K2OS_VIRTMAPTYPE_KERN_TEXT,   // DlxSeg_Text
-    K2OS_VIRTMAPTYPE_KERN_READ,   // DlxSeg_Read
-    K2OS_VIRTMAPTYPE_KERN_DATA,   // DlxSeg_Data
-    K2OS_VIRTMAPTYPE_KERN_READ    // DlxSeg_Sym
+    0,                        // DlxSeg_Info
+    K2OS_MAPTYPE_KERN_TEXT,   // DlxSeg_Text
+    K2OS_MAPTYPE_KERN_READ,   // DlxSeg_Read
+    K2OS_MAPTYPE_KERN_DATA,   // DlxSeg_Data
+    K2OS_MAPTYPE_KERN_READ    // DlxSeg_Sym
 };
 
 static
@@ -55,7 +55,7 @@ sMapOneFile(
     EFIDLX *    pDlx;
 
     // node page contains DLXINFO
-    status = K2VMAP32_MapPage(&gData.Map, apFile->mPageAddr_Virt, (UINT32)apFile->mPageAddr_Phys, K2OS_VIRTMAPTYPE_KERN_DATA);
+    status = K2VMAP32_MapPage(&gData.Map, apFile->mPageAddr_Virt, (UINT32)apFile->mPageAddr_Phys, K2OS_MAPTYPE_KERN_DATA);
     if (K2STAT_IS_ERROR(status))
     {
         K2Printf(L"*** MapPage for node page addr 0x%08X failed\n", apFile->mPageAddr_Virt);

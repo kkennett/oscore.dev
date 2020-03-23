@@ -60,8 +60,8 @@ K2VMAP32_Dump(
     }
     else
     {
-        pdeFlagPresent = K2VMAP32_PDE_FLAG_PRESENT;
-        pteFlagPresent = K2VMAP32_PTE_FLAG_PRESENT;
+        pdeFlagPresent = K2VMAP32_FLAG_PRESENT;
+        pteFlagPresent = K2VMAP32_FLAG_PRESENT;
     }
 
     pdeIx = aStartVirt / K2_VA32_PAGETABLE_MAP_BYTES;
@@ -76,7 +76,7 @@ K2VMAP32_Dump(
         {
             afDump(TRUE, pdeIx * K2_VA32_PAGETABLE_MAP_BYTES, pde);
 
-            pPT = (UINT32 *)(pde & K2VMAP32_PDE_PTPHYS_MASK);
+            pPT = (UINT32 *)(pde & K2VMAP32_PAGEPHYS_MASK);
 
             do
             {

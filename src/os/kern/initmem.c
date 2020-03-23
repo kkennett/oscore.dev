@@ -729,7 +729,7 @@ static BOOL sCheckPhysPageOnList(UINT32 aPhysAddr, KernPageList aList)
     return (pLink == NULL) ? FALSE : TRUE;
 }
 
-static BOOL sCheckPteRange(UINT32 aVirtAddr, UINT32 aPageCount, UINT32 aAccessAttr, KernPageList aList)
+static BOOL sCheckPteRange(UINT32 aVirtAddr, UINT32 aPageCount, UINT32 aMapAttr, KernPageList aList)
 {
     UINT32 *    pPTE;
     UINT32      pte;
@@ -739,7 +739,7 @@ static BOOL sCheckPteRange(UINT32 aVirtAddr, UINT32 aPageCount, UINT32 aAccessAt
     {
         pte = *pPTE;
         K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) != 0);
-        if (!KernArch_VerifyPteKernAccessAttr(pte, aAccessAttr))
+        if (!KernArch_VerifyPteKernAccessAttr(pte, aMapAttr))
         {
             K2_ASSERT(0);
         }
@@ -760,13 +760,13 @@ static void sInitMapDlxSegments(K2OSKERN_OBJ_DLX *apDlxObj)
     K2OSKERN_VMNODE *       pNode;
     KernPageList            pageList;
 
-    sCheckPteRange(apDlxObj->mPageAddr, 1, K2OS_ACCESS_ATTR_DATA, KernPageList_Non_KData);
+    sCheckPteRange(apDlxObj->mPageAddr, 1, K2OS_MAPTYPE_KERN_DATA, KernPageList_Non_KData);
 
     for (ix = 0; ix < DlxSeg_Count; ix++)
     {
         pDlxPartSeg = &apDlxObj->SegObj[ix];
 
-        if (pDlxPartSeg->mSegType == KernSeg_DlxPart)
+        if ((pDlxPartSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) == K2OS_SEG_ATTR_TYPE_DLX_PART)
         {
             K2_ASSERT(pDlxPartSeg->Info.DlxPart.DlxSegmentInfo.mLinkAddr != 0);
             K2_ASSERT(pDlxPartSeg->Info.DlxPart.DlxSegmentInfo.mMemActualBytes != 0);
@@ -774,12 +774,12 @@ static void sInitMapDlxSegments(K2OSKERN_OBJ_DLX *apDlxObj)
             stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, pDlxPartSeg->Info.DlxPart.DlxSegmentInfo.mLinkAddr, pagesBytes, (K2HEAP_NODE **)&pNode);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
             pNode->mpSegment = pDlxPartSeg;
-            K2_ASSERT((pDlxPartSeg->mAccessAttr & K2OS_ACCESS_ATTR_ANY) != 0);
-            if (pDlxPartSeg->mAccessAttr & K2OS_ACCESS_ATTR_X)
+            K2_ASSERT((pDlxPartSeg->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_MASK) != 0);
+            if (pDlxPartSeg->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_EXEC)
             {
                 pageList = KernPageList_Non_KText;
             }
-            else if (pDlxPartSeg->mAccessAttr & K2OS_ACCESS_ATTR_W)
+            else if (pDlxPartSeg->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
             {
                 pageList = KernPageList_Non_KData;
             }
@@ -790,7 +790,7 @@ static void sInitMapDlxSegments(K2OSKERN_OBJ_DLX *apDlxObj)
             sCheckPteRange(
                 pDlxPartSeg->Info.DlxPart.DlxSegmentInfo.mLinkAddr,
                 pagesBytes / K2_VA32_MEMPAGE_BYTES, 
-                pDlxPartSeg->mAccessAttr, pageList
+                pDlxPartSeg->mSegAndMemPageAttr, pageList
             );
 
             pDlxPartSeg->Hdr.mObjType = K2OS_Obj_Segment;
@@ -802,7 +802,7 @@ static void sInitMapDlxSegments(K2OSKERN_OBJ_DLX *apDlxObj)
         }
         else
         {
-            K2_ASSERT(pDlxPartSeg->mSegType == KernSeg_Unused);
+            K2_ASSERT((pDlxPartSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) == 0);
         }
     }
 }
@@ -857,19 +857,19 @@ static void sAddEfiRuntimeMappings(void)
             {
                 pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_EFI_RUN_TEXT;
                 list = KernPageList_Non_KText;
-                attr = K2OS_ACCESS_ATTR_TEXT;
+                attr = K2OS_MAPTYPE_KERN_TEXT;
             }
             else if (desc.Type == K2EFI_MEMTYPE_MappedIO)
             {
                 pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_EFI_MAPPED_IO;
                 list = KernPageList_DeviceU;
-                attr = K2OS_ACCESS_ATTR_DATA;
+                attr = K2OS_MAPTYPE_KERN_DEVICEIO;
             }
             else
             {
                 pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_EFI_RUN_DATA;
                 list = KernPageList_Non_KData;
-                attr = K2OS_ACCESS_ATTR_DATA;
+                attr = K2OS_MAPTYPE_KERN_DATA;
             }
 
             sCheckPteRange(K2HEAP_NodeAddr(&pNode->HeapNode), desc.NumberOfPages, attr, list);
@@ -1074,21 +1074,20 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_COREPAGES;
-    sCheckPteRange(K2OS_KVA_COREPAGES_BASE, gData.mCpuCount, K2OS_ACCESS_ATTR_DATA, KernPageList_KOver);
+    sCheckPteRange(K2OS_KVA_COREPAGES_BASE, gData.mCpuCount, K2OS_MAPTYPE_KERN_DATA, KernPageList_KOver);
     sCheckPteRangeUnmapped(K2OS_KVA_COREPAGES_BASE + (gData.mCpuCount * K2_VA32_MEMPAGE_BYTES), K2OS_MAX_CPU_COUNT - gData.mCpuCount);
 
     gpProc0->SegObjPrimaryThreadStack.Hdr.mObjType = K2OS_Obj_Segment;
     gpProc0->SegObjPrimaryThreadStack.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc0->SegObjPrimaryThreadStack.Hdr.mRefCount = 0xFFFFFFFF;
-    gpProc0->SegObjPrimaryThreadStack.mAccessAttr = K2OS_ACCESS_ATTR_DATA;
-    gpProc0->SegObjPrimaryThreadStack.mSegType = KernSeg_ThreadStack;
+    gpProc0->SegObjPrimaryThreadStack.mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_PROCESS | K2OS_MAPTYPE_KERN_DATA;
     gpProc0->SegObjPrimaryThreadStack.Info.ThreadStack.mpThread = NULL;
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_THREAD0_STACK_LOW_GUARD, K2OS_KVA_THREAD0_AREA_HIGH - K2OS_KVA_THREAD0_STACK_LOW_GUARD, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->mpSegment = &gpProc0->SegObjPrimaryThreadStack;
-    K2_ASSERT(pNode->mpSegment->mAccessAttr == K2OS_ACCESS_ATTR_DATA);
+    K2_ASSERT((pNode->mpSegment->mSegAndMemPageAttr & (K2OS_SEG_ATTR_TYPE_MASK | K2OS_MEMPAGE_ATTR_MASK)) == (K2OS_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA));
     K2_ASSERT(pNode->NonSeg.mType == K2OSKERN_VMNODE_TYPE_SEGMENT);
-    sCheckPteRange(K2OS_KVA_THREAD0_AREA_LOW, K2OS_KVA_THREAD0_PHYS_BYTES / K2_VA32_MEMPAGE_BYTES, K2OS_ACCESS_ATTR_DATA, KernPageList_Proc);
+    sCheckPteRange(K2OS_KVA_THREAD0_AREA_LOW, K2OS_KVA_THREAD0_PHYS_BYTES / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPageList_Proc);
     K2_ASSERT(((*((UINT32 *)K2OS_KVA_TO_PTE_ADDR(K2OS_KVA_THREAD0_STACK_LOW_GUARD))) & K2OSKERN_PTE_PRESENT_BIT) == 0);
     sCheckPteRangeUnmapped(K2OS_KVA_THREAD0_STACK_LOW_GUARD, 1);
     *((UINT32 *)K2OS_KVA_TO_PTE_ADDR(K2OS_KVA_THREAD0_STACK_LOW_GUARD)) = K2OSKERN_PTE_NP_STACK_GUARD;
@@ -1114,15 +1113,14 @@ static void sInit_BeforeVirt(void)
     gpProc0->SegObjSelf.Hdr.mObjType = K2OS_Obj_Segment;
     gpProc0->SegObjSelf.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc0->SegObjSelf.Hdr.mRefCount = 0xFFFFFFFF;
-    gpProc0->SegObjSelf.mAccessAttr = K2OS_ACCESS_ATTR_DATA;
-    gpProc0->SegObjSelf.mSegType = KernSeg_Process;
+    gpProc0->SegObjSelf.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_PROCESS;
     gpProc0->SegObjSelf.Info.Process.mpProc = gpProc0;
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->mpSegment = &gpProc0->SegObjSelf;
-    K2_ASSERT(pNode->mpSegment->mAccessAttr == K2OS_ACCESS_ATTR_DATA);
+    K2_ASSERT((pNode->mpSegment->mSegAndMemPageAttr & (K2OS_SEG_ATTR_TYPE_MASK | K2OS_MEMPAGE_ATTR_MASK)) == (K2OS_SEG_ATTR_TYPE_PROCESS | K2OS_MAPTYPE_KERN_DATA));
     K2_ASSERT(pNode->NonSeg.mType == K2OSKERN_VMNODE_TYPE_SEGMENT);
-    sCheckPteRange(K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_ACCESS_ATTR_DATA, KernPageList_Proc);
+    sCheckPteRange(K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPageList_Proc);
     gpProc0->SegObjSelf.SegTreeNode.mUserVal = K2OS_KVA_PROC0_BASE;
     gpProc0->SegObjSelf.mPagesBytes = K2OS_KVA_PROC0_SIZE;
     K2TREE_Insert(&gData.KernSegTree, gpProc0->SegObjSelf.SegTreeNode.mUserVal, &gpProc0->SegObjSelf.SegTreeNode);
@@ -1131,7 +1129,7 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_TRANSTAB;
-    sCheckPteRange(K2OS_KVA_TRANSTAB_BASE, K2_VA32_TRANSTAB_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_ACCESS_ATTR_DATA, KernPageList_Paging);
+    sCheckPteRange(K2OS_KVA_TRANSTAB_BASE, K2_VA32_TRANSTAB_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPageList_Paging);
     // IA32 one page, must be mapped to transtab base
     // A32 four pages, first must be mapped to transtab base
     // all pages must be on KernPageList_Paging
@@ -1150,19 +1148,19 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_EFIMAP;
-    sCheckPteRange(K2OS_KVA_EFIMAP_BASE, K2OS_KVA_EFIMAP_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_ACCESS_ATTR_DATA, KernPageList_KOver);
+    sCheckPteRange(K2OS_KVA_EFIMAP_BASE, K2OS_KVA_EFIMAP_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPageList_KOver);
 
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_PTPAGECOUNT_BASE, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_PTPAGECOUNT;
-    sCheckPteRange(K2OS_KVA_PTPAGECOUNT_BASE, 1, K2OS_ACCESS_ATTR_DATA, KernPageList_Paging);
+    sCheckPteRange(K2OS_KVA_PTPAGECOUNT_BASE, 1, K2OS_MAPTYPE_KERN_DATA, KernPageList_Paging);
 
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_LOADERPAGE_BASE, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_LOADER;
-    sCheckPteRange(K2OS_KVA_LOADERPAGE_BASE, 1, K2OS_ACCESS_ATTR_DATA, KernPageList_KOver);
+    sCheckPteRange(K2OS_KVA_LOADERPAGE_BASE, 1, K2OS_MAPTYPE_KERN_DATA, KernPageList_KOver);
 
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_CLEANERPAGE_BASE, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
@@ -1174,7 +1172,7 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_FW_TABLES;
-    sCheckPteRange(gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount, K2OS_ACCESS_ATTR_DATA, KernPageList_Non_KData);
+    sCheckPteRange(gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount, K2OS_MAPTYPE_KERN_DATA, KernPageList_Non_KData);
 
     if (gData.mpShared->LoadInfo.mDebugPageVirt != 0)
     {

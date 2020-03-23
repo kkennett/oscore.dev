@@ -66,15 +66,6 @@
 //------------------------------------------------------------------------
 //
 
-#define K2OS_ACCESS_ATTR_X      PF_X    // from elf32
-#define K2OS_ACCESS_ATTR_W      PF_W
-#define K2OS_ACCESS_ATTR_R      PF_R
-
-#define K2OS_ACCESS_ATTR_TEXT   (PF_R | PF_X)
-#define K2OS_ACCESS_ATTR_READ   PF_R
-#define K2OS_ACCESS_ATTR_DATA   (PF_R | PF_W)
-#define K2OS_ACCESS_ATTR_ANY    (PF_X | PF_W | PF_R)
-
 #define K2OS_TIMEOUT_INFINITE   ((UINT32)-1)
 
 //

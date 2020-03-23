@@ -290,9 +290,9 @@ K2OsLoaderEntryPoint (
                                     gData.LoadInfo.mDebugPageVirt = gData.LoadInfo.mKernArenaLow;
                                     gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
 #if K2_TARGET_ARCH_IS_ARM
-                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);
 #else
-                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_MAPTYPE_KERN_DEVICEIO);
 #endif
                                     //                        K2Printf(L"DebugPageVirt = 0x%08X\n", gData.LoadInfo.mDebugPageVirt);
                                     if (K2STAT_IS_ERROR(k2Stat))

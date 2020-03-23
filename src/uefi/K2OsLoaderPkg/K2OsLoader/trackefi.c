@@ -67,7 +67,7 @@ sSetupToTrackOneDescriptor(
         gData.LoadInfo.mKernArenaHigh = virtTrackWorkPage;
 //        K2Printf(L" %08X-%08X", virtTrackWorkPage, virtTrackWorkPage + areaSize - 1);
         efiPhysAddr = apDesc->PhysicalStart;
-        mapType = (apDesc->Type == EfiRuntimeServicesCode) ? K2OS_VIRTMAPTYPE_KERN_TEXT : K2OS_VIRTMAPTYPE_KERN_DATA;
+        mapType = (apDesc->Type == EfiRuntimeServicesCode) ? K2OS_MAPTYPE_KERN_TEXT : K2OS_MAPTYPE_KERN_DATA;
         do
         {
 //            K2Printf(L"Map runtime type %d page %08X\n", mapType, virtTrackWorkPage);
@@ -104,7 +104,7 @@ sSetupToTrackOneDescriptor(
                 return K2STAT_ERROR_OUT_OF_MEMORY;
             }
             K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-            status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, (UINT32)efiPhysAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+            status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, (UINT32)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
             if (K2STAT_IS_ERROR(status))
             {
                 K2Printf(L"*** Error %08X mapping page for tracking\n", status);
@@ -157,13 +157,13 @@ sSetupPhysTrackZero(
             if (!createdLargePTZero)
             {
 //                K2Printf(L"  Create large PTZero\n");
-                status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys, K2OS_VIRTMAPTYPE_KERN_READ);
+                status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys, K2OS_MAPTYPE_KERN_READ);
                 if (K2STAT_IS_ERROR(status))
                     return status;
 
                 pde = K2VMAP32_ReadPDE(&gData.Map, ixPDE);
                 K2_ASSERT(pde != 0);
-                largePTZeroPhys = pde & K2VMAP32_PDE_PTPHYS_MASK;
+                largePTZeroPhys = pde & K2VMAP32_PAGEPHYS_MASK;
 //                K2Printf(L"PTZero = %08X\n", largePTZeroPhys);
 
                 pPT = (UINT32 *)largePTZeroPhys;
@@ -180,10 +180,10 @@ sSetupPhysTrackZero(
                 K2VMAP32_VirtToPTE(&gData.Map, virtPT, &pdeFault, &pteFault);
                 K2_ASSERT(!pdeFault);
                 K2_ASSERT(pteFault);
-                status = K2VMAP32_MapPage(&gData.Map, virtPT, largePTZeroPhys, K2OS_VIRTMAPTYPE_KERN_PAGETABLE);
+                status = K2VMAP32_MapPage(&gData.Map, virtPT, largePTZeroPhys, K2OS_MAPTYPE_KERN_PAGETABLE);
                 if (K2STAT_IS_ERROR(status))
                     return status;
-                K2VMAP32_WritePDE(&gData.Map, ixPDE, largePTZeroPhys | K2VMAP32_PDE_FLAG_PRESENT);
+                K2VMAP32_WritePDE(&gData.Map, ixPDE, largePTZeroPhys | K2VMAP32_FLAG_PRESENT);
             }
             virtTrackWorkPage += K2_VA32_PAGETABLE_MAP_BYTES;
         }
@@ -191,7 +191,7 @@ sSetupPhysTrackZero(
         {
             if (pteFault)
             {
-                status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys, K2OS_VIRTMAPTYPE_KERN_READ);
+                status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys, K2OS_MAPTYPE_KERN_READ);
                 if (K2STAT_IS_ERROR(status))
                     return status;
             }
@@ -242,7 +242,7 @@ sTrackOneDescriptor(
             v2pOffset = K2VMAP32_VirtToPTE(&gData.Map, virtTrackWork, &pdeFault, &pteFault);
             K2_ASSERT(pdeFault == FALSE);
             K2_ASSERT(pteFault == FALSE);
-            K2_ASSERT(((v2pOffset & K2VMAP32_PTE_MAPTYPE_MASK) >> K2VMAP32_PTE_MAPTYPE_SHL) == K2OS_VIRTMAPTYPE_KERN_DATA);
+            K2_ASSERT((v2pOffset & K2OS_MAPTYPE_KERN_DATA) == K2OS_MAPTYPE_KERN_DATA);
 
             v2pOffset &= K2_VA32_PAGEFRAME_MASK;
 
@@ -353,7 +353,7 @@ sFindTransitionPage(
                 efiStatus = gBS->AllocatePages(AllocateAddress, K2OS_EFIMEMTYPE_TRANSITION, 1, &efiPhysAddr);
                 if (efiStatus == EFI_SUCCESS)
                 {
-                    status = K2VMAP32_MapPage(&gData.Map, (UINT32)virtAddr, (UINT32)virtAddr, K2OS_VIRTMAPTYPE_KERN_TRANSITION);
+                    status = K2VMAP32_MapPage(&gData.Map, (UINT32)virtAddr, (UINT32)virtAddr, K2OS_MAPTYPE_KERN_TRANSITION);
                     if (!K2STAT_IS_ERROR(status))
                     {
 //                        K2Printf(L"Direct-Mapped Transition Page at 0x%08X\n", virtAddr);

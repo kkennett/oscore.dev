@@ -54,7 +54,7 @@ UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAd
 {
     UINT32* pPTE;
 
-    K2_ASSERT(aMapType < K2OS_VIRTMAPTYPE_COUNT);
+    aMapType &= K2OS_MEMPAGE_ATTR_MASK;
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
 

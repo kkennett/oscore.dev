@@ -349,7 +349,7 @@ K2STAT Loader_AssembleAcpi(void)
 
     for (outIx = 0; outIx < gData.LoadInfo.mFwTabPageCount; outIx++)
     {
-        stat = K2VMAP32_MapPage(&gData.Map, virtMapAddr, physMapAddr, K2OS_VIRTMAPTYPE_KERN_DATA);
+        stat = K2VMAP32_MapPage(&gData.Map, virtMapAddr, physMapAddr, K2OS_MAPTYPE_KERN_DATA);
         if (K2STAT_IS_ERROR(stat))
         {
             K2Printf(L"*** MapPage for acpi vaddr %08X failed\n", virtMapAddr);
