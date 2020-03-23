@@ -178,7 +178,7 @@ K2VMAP32_MapPage(
     K2VMAP32_CONTEXT *  apContext,
     UINT32              aVirtAddr,
     UINT32              aPhysAddr,
-    UINT32              aMapType
+    UINT32              aPageMapAttr
     )
 {
     UINT32      entry;
@@ -191,7 +191,7 @@ K2VMAP32_MapPage(
     if (apContext->mFlags & K2VMAP32_FLAG_REALIZED)
         return K2STAT_ERROR_API_ORDER;
 
-    if ((aMapType & K2OS_MEMPAGE_ATTR_MASK) == K2OS_MEMPAGE_ATTR_NONE)
+    if ((aPageMapAttr & K2OS_MEMPAGE_ATTR_MASK) == K2OS_MEMPAGE_ATTR_NONE)
         return K2STAT_ERROR_BAD_ARGUMENT;
 
     ixEntry = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
@@ -217,7 +217,7 @@ K2VMAP32_MapPage(
         else
             physPT = aPhysAddr;
 
-        entry = physPT | K2VMAP32_FLAG_PRESENT;
+        entry = physPT | K2OS_MAPTYPE_KERN_PAGEDIR | K2VMAP32_FLAG_PRESENT;
 
         K2VMAP32_WritePDE(apContext, ixEntry, entry);
     }
@@ -228,7 +228,7 @@ K2VMAP32_MapPage(
     if (((*pPTE) & K2VMAP32_FLAG_PRESENT) != 0)
         return K2STAT_ERROR_BAD_ARGUMENT;
 
-    *pPTE = (aPhysAddr & K2VMAP32_PAGEPHYS_MASK) | aMapType | K2VMAP32_FLAG_PRESENT;
+    *pPTE = (aPhysAddr & K2VMAP32_PAGEPHYS_MASK) | aPageMapAttr | K2VMAP32_FLAG_PRESENT;
 
     return 0;
 }
@@ -316,7 +316,7 @@ K2VMAP32_RealizeArchMappings(
     UINT32      ixPTE;
     UINT32 *    pPT;
     UINT32      pte;
-    UINT32      mapType;
+    UINT32      mapAttr;
     UINT32      pteProto;
 
     if (apContext->mFlags & K2VMAP32_FLAG_REALIZED)
@@ -347,9 +347,9 @@ K2VMAP32_RealizeArchMappings(
                 pte = pPT[ixPTE];
                 if (pte & K2VMAP32_FLAG_PRESENT)
                 {
-                    mapType = pte & K2VMAP32_MAPTYPE_MASK;
+                    mapAttr = pte & K2VMAP32_MAPTYPE_MASK;
                     
-                    if (mapType & K2OS_MEMPAGE_ATTR_GUARD)
+                    if (mapAttr & K2OS_MEMPAGE_ATTR_GUARD)
                     {
                         // mark as not present
                         pte = 0;
@@ -359,19 +359,19 @@ K2VMAP32_RealizeArchMappings(
                         pte = (pte & K2VMAP32_PAGEPHYS_MASK) | pteProto;
 
 #if K2_TARGET_ARCH_IS_ARM
-                        if (!(mapType & K2OS_MEMPAGE_ATTR_EXEC))
+                        if (!(mapAttr & K2OS_MEMPAGE_ATTR_EXEC))
                         {
                             pte |= A32_PTE_EXEC_NEVER;
                         }
 
-                        if (mapType & K2OS_MEMPAGE_ATTR_DEVICEIO)
+                        if (mapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO)
                         {
                             if (apContext->mFlags & K2VMAP32_FLAG_MULTIPROC)
                                 pte |= A32_MMU_PTE_REGIONTYPE_SHAREABLE_DEVICE;
                             else
                                 pte |= A32_MMU_PTE_REGIONTYPE_NONSHAREABLE_DEVICE;
                         }
-                        else if (mapType & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+                        else if (mapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
                         {
                             pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
                         }
@@ -380,32 +380,32 @@ K2VMAP32_RealizeArchMappings(
                             pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
                         }
 
-                        if (!(mapType & K2OS_MEMPAGE_ATTR_KERNEL))
+                        if (!(mapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
                         {
                             pte |= A32_PTE_NOT_GLOBAL;
-                            if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
+                            if (mapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_RW;
                             else
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_RO;
                         }
                         else
                         {
-                            if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
+                            if (mapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE;
                             else
                                 pte |= A32_MMU_PTE_PERMIT_KERN_RO_USER_NONE;
                         }
 #else
-                        if (mapType & K2OS_MEMPAGE_ATTR_WRITEABLE)
+                        if (mapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
                             pte |= X32_PTE_WRITEABLE;
 
-                        if (mapType & K2OS_MEMPAGE_ATTR_UNCACHED)
+                        if (mapAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
                             pte |= X32_PTE_CACHEDISABLE;
 
-                        if (mapType & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+                        if (mapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
                             pte |= X32_PTE_WRITETHROUGH;
  
-                        if (!(mapType & K2OS_MEMPAGE_ATTR_KERNEL))
+                        if (!(mapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
                             pte |= X32_PTE_USER;
                         else
                             pte |= X32_PTE_GLOBAL;
