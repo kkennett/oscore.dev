@@ -626,7 +626,7 @@ K2STAT sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aIn
                 allocSize = K2_ROUNDUP(pOut->Info.SegInfo[segIx].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
                 if (allocSize > 0)
                 {
-                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.LoadInfo.mKernArenaLow);
+//                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.LoadInfo.mKernArenaLow);
                     pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.LoadInfo.mKernArenaLow;
                     gData.LoadInfo.mKernArenaLow += allocSize;
                 }

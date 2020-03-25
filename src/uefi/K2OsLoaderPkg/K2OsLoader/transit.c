@@ -33,16 +33,6 @@
 
 void Loader_Arch_Transition(void);
 
-#if 0
-static void sDump(BOOL aIsPT, UINT32 aVirtAddr, UINT32 aPTE)
-{
-    if (aIsPT)
-        K2Printf(L"%08X : %08X\n", aVirtAddr, aPTE);
-    else if ((aPTE & K2_VA32_PAGEFRAME_MASK) != gData.LoadInfo.mZeroPagePhys)
-        K2Printf(L"  %08X : 0x%08X\n", aVirtAddr, aPTE);
-}
-#endif
-
 void Loader_TransitionToKernel(void)
 {
     K2STAT      status;
@@ -53,9 +43,6 @@ void Loader_TransitionToKernel(void)
     // AS DOING SO WILL ALLOCATE MEMORY WHICH WILL ALTER
     // THE MEMORY MAP
     //
-//    K2VMAP32_Dump(&gData.Map, sDump, 0, 0xFFFFE000);
-//    while (1);
-
     do
     {
         efiStatus = gBS->ExitBootServices(gData.mLoaderImageHandle, gData.mMemMapKey);

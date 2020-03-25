@@ -156,7 +156,7 @@ sSetupPhysTrackZero(
             // entire 4MB area needs to be set to zeros
             if (!createdLargePTZero)
             {
-//                K2Printf(L"  Create large PTZero\n");
+//                K2Printf(L"  Create large PTZero - map %08X to %08X\n", virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys);
                 status = K2VMAP32_MapPage(&gData.Map, virtTrackWorkPage, gData.LoadInfo.mZeroPagePhys, K2OS_MAPTYPE_KERN_READ);
                 if (K2STAT_IS_ERROR(status))
                     return status;
@@ -164,7 +164,7 @@ sSetupPhysTrackZero(
                 pde = K2VMAP32_ReadPDE(&gData.Map, ixPDE);
                 K2_ASSERT(pde != 0);
                 largePTZeroPhys = pde & K2VMAP32_PAGEPHYS_MASK;
-//                K2Printf(L"PTZero = %08X\n", largePTZeroPhys);
+//                K2Printf(L"LargePTZeroPhys = %08X\n", largePTZeroPhys);
 
                 pPT = (UINT32 *)largePTZeroPhys;
                 for (ixPTE = 1; ixPTE < K2_VA32_ENTRIES_PER_PAGETABLE; ixPTE++)
@@ -183,9 +183,26 @@ sSetupPhysTrackZero(
                 status = K2VMAP32_MapPage(&gData.Map, virtPT, largePTZeroPhys, K2OS_MAPTYPE_KERN_PAGETABLE);
                 if (K2STAT_IS_ERROR(status))
                     return status;
-                K2VMAP32_WritePDE(&gData.Map, ixPDE, largePTZeroPhys | K2VMAP32_FLAG_PRESENT);
+                K2VMAP32_VirtToPTE(&gData.Map, virtPT, &pdeFault, &pteFault);
+                K2_ASSERT(!pdeFault);
+                K2_ASSERT(!pteFault);
+
+                K2VMAP32_WritePDE(&gData.Map, ixPDE, largePTZeroPhys | K2OS_MAPTYPE_KERN_PAGEDIR | K2VMAP32_FLAG_PRESENT);
+
+                K2VMAP32_VirtToPTE(&gData.Map, virtTrackWorkPage, &pdeFault, &pteFault);
+                K2_ASSERT(!pdeFault);
+                K2_ASSERT(!pteFault);
             }
-            virtTrackWorkPage += K2_VA32_PAGETABLE_MAP_BYTES;
+
+            K2VMAP32_VirtToPTE(&gData.Map, virtTrackWorkPage, &pdeFault, &pteFault);
+            if ((pdeFault) || (pteFault))
+            {
+                K2Printf(L"LargeZero map failed 0x%08X -- %d,%d\n", virtTrackWorkPage, pdeFault, pteFault);
+                K2_ASSERT(0);
+            }
+
+//            virtTrackWorkPage += K2_VA32_PAGETABLE_MAP_BYTES;
+            virtTrackWorkPage += K2_VA32_MEMPAGE_BYTES;
         }
         else
         {
