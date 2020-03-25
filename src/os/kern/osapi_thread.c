@@ -36,6 +36,8 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnId(void)
 {
     K2OSKERN_OBJ_THREAD *pThisThread;
 
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     return pThisThread->Env.mId;
@@ -45,6 +47,8 @@ K2STAT K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void)
 {
     K2OSKERN_OBJ_THREAD *pThisThread;
 
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     return pThisThread->Env.mLastStatus;
@@ -53,6 +57,9 @@ K2STAT K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void)
 void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus)
 {
     K2OSKERN_OBJ_THREAD *pThisThread;
+
+    if (gData.mKernInitStage < KernInitStage_Threaded)
+        return;
 
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
@@ -67,6 +74,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadAllocLocal(UINT32 *apRetSlotId)
     UINT32                  slotBit;
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2OSKERN_OBJ_PROCESS *  pThisProc;
+
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
 
     do {
         if (NULL == apRetSlotId)
@@ -119,6 +128,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
     K2OSKERN_OBJ_PROCESS *  pThisProc;
     K2LIST_LINK *           pLink;
     K2OSKERN_OBJ_THREAD *   pOtherThread;
+
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
 
     do {
         if (aSlotId >= 32)
@@ -187,6 +198,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetLocal(UINT32 aSlotId, UINT32 aValue)
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2OSKERN_OBJ_PROCESS *  pThisProc;
 
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+
     do {
         if (aSlotId >= 32)
         {
@@ -238,6 +251,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetV
     BOOL                    ok;
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2OSKERN_OBJ_PROCESS *  pThisProc;
+
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
 
     do {
         if (aSlotId >= 32)

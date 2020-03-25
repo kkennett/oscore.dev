@@ -36,13 +36,13 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
 {
     K2OSKERN_PHYSTRACK_PAGE *   pTrack;
     UINT32                      pte;
-    KernPageList                onList = KernPageList_Error;
+    KernPhysPageList                onList = KernPhysPageList_Error;
 
     if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO))
     {
         pTrack = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
         K2_ASSERT(!(pTrack->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG));
-        onList = (KernPageList)K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(pTrack->mFlags);
+        onList = (KernPhysPageList)K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(pTrack->mFlags);
     }
 
     if (aPageMapAttr & K2OS_MEMPAGE_ATTR_GUARD)
@@ -68,7 +68,7 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
 
     if (aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO)
     {
-        if (onList != KernPageList_DeviceU)
+        if (onList != KernPhysPageList_DeviceU)
         {
             K2OSKERN_Debug("--DeviceMap unknown 0x%08X (not on phys track list)\n", aPhysAddr);
         }
@@ -84,7 +84,7 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     }
     else if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
     {
-        K2_ASSERT(onList == KernPageList_DeviceC);
+        K2_ASSERT(onList == KernPhysPageList_DeviceC);
         K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP);
         pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
     }
@@ -96,11 +96,11 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
             {
                 if (aPageMapAttr & K2OS_MEMPAGE_ATTR_TRANSITION)
                 {
-                    K2_ASSERT(onList == KernPageList_Trans);
+                    K2_ASSERT(onList == KernPhysPageList_Trans);
                 }
                 else
                 {
-                    K2_ASSERT(onList == KernPageList_Paging);
+                    K2_ASSERT(onList == KernPhysPageList_Paging);
                 }
                 if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP)
                     pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
