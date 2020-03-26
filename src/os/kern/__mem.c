@@ -120,7 +120,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
 
             intrDisp = K2OSKERN_SeqIntrLock(&gData.SysPageListsLock);
             do {
-                pTreeNode = K2TREE_FindOrAfter(&gData.FreePhysTree, (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL));
+                pTreeNode = K2TREE_FindOrAfter(&gData.FreePhysTree, (aPageCount << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL));
                 if (pTreeNode == NULL)
                 {
                     break;
@@ -129,7 +129,7 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
                 do {
                     K2_ASSERT(pTreeNode->mUserVal & K2OSKERN_PHYSTRACK_FREE_FLAG);
 
-                    pageCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+                    pageCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
                     K2_ASSERT(pageCount >= aPageCount);
 
                     switch (aDisp)
@@ -207,8 +207,8 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
                     //
                     // re-add tree node that comes before allocation, and align-up 
                     //
-                    pTreeNode->mUserVal &= ~K2OSKERN_PHYSTRACK_FREE_COUNT_MASK;
-                    pTreeNode->mUserVal |= (alignIndex - pageIndex) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+                    pTreeNode->mUserVal &= ~K2OSKERN_PHYSTRACK_PAGE_COUNT_MASK;
+                    pTreeNode->mUserVal |= (alignIndex - pageIndex) << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
 
                     K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
 
@@ -227,14 +227,14 @@ K2OSKERN_OBJ_SEGMENT * KernMem_PhysBuf_AllocSegment(UINT32 aPageCount, KernPhys_
                     pTreeNode += aPageCount;
 
                     pTreeNode->mUserVal = (pTrackFree->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) |
-                        ((pageCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) |
+                        ((pageCount - aPageCount) << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) |
                         K2OSKERN_PHYSTRACK_FREE_FLAG;
 
                     K2TREE_Insert(&gData.FreePhysTree, pTreeNode->mUserVal, pTreeNode);
                 }
 
-                pTrackFree->mFlags &= ~(K2OSKERN_PHYSTRACK_FREE_COUNT_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG);
-                pTrackFree->mFlags |= (aPageCount << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL) | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
+                pTrackFree->mFlags &= ~(K2OSKERN_PHYSTRACK_PAGE_COUNT_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG);
+                pTrackFree->mFlags |= (aPageCount << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG;
             } while (0);
 
             K2OSKERN_SeqIntrUnlock(&gData.SysPageListsLock, intrDisp);
@@ -298,7 +298,7 @@ static void sDumpAll(void)
     do {
         flags = pTreeNode->mUserVal;
         K2_ASSERT(flags & K2OSKERN_PHYSTRACK_FREE_FLAG);
-        pageCount = flags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+        pageCount = flags >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
         K2OSKERN_Debug("  %08X - %8d Pages (%08X bytes) Flags %03X\n",
             K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTreeNode),
             pageCount,
@@ -688,7 +688,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
     pTreeNode = K2TREE_FirstNode(&gData.FreePhysTree);
     chunkLeft = aPageCount;
     do {
-        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
         switch (aDisp)
         {
         case KernPhys_Disp_Uncached:
@@ -793,7 +793,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
     do {
         pNextNode = K2TREE_NextNode(&gData.FreePhysTree, pTreeNode);
 
-        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
         switch (aDisp)
         {
         case KernPhys_Disp_Uncached:
@@ -835,7 +835,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
                 pLeftOver->mUserVal = 
                     flags | 
                     K2OSKERN_PHYSTRACK_FREE_FLAG | 
-                    ((nodeCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL);
+                    ((nodeCount - aPageCount) << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL);
                 K2TREE_Insert(&gData.FreePhysTree, pLeftOver->mUserVal, pLeftOver);
                 takePages = nodeCount;
             }

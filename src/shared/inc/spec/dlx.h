@@ -182,6 +182,14 @@ DLX_Acquire(
 );
 
 K2STAT
+DLX_GetIdent(
+    DLX *           apDlx,
+    char *          apNameBuf,
+    UINT32          aNameBufLen,
+    K2_GUID128  *   apRetID
+);
+
+K2STAT
 DLX_AddRef(
     DLX *   apDlx
 );

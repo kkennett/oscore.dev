@@ -148,11 +148,12 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     return pte;
 }
 
-void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
+UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32          transBase;
     A32_TRANSTBL *  pTrans;
     A32_TTBEQUAD *  pQuad;
+    UINT32 *        pPTE;
     UINT32          pte;
 
     K2_ASSERT(apProc != NULL);
@@ -173,7 +174,7 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
     if (pQuad->Quad[0].PTBits.mPresent == 0)
     {
         *apRetPtPresent = FALSE;
-        return;
+        return NULL;
     }
 
     *apRetPtPresent = TRUE;
@@ -181,7 +182,7 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
-        *apRetPte = pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+        pPTE = ((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
 
         *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_KERNEL;
     }
@@ -192,12 +193,12 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
         // we just use the kernel va map base as that is the same thing.
         //
         if (apProc == gpProc0)
-            pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+            pPTE = ((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
         else
-            pte = *((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
-
-        *apRetPte = pte;
+            pPTE = ((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
     }
+
+    *apRetPte = pte = *pPTE;
 
     pte &= A32_MMU_PTE_PERMIT_MASK;
 
@@ -216,6 +217,8 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
             *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_WRITEABLE;
         }
     }
+
+    return pPTE;
 }
 
 BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)

@@ -62,10 +62,11 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     return pte;
 }
 
-void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
+UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32      transBase;
     UINT32 *    pPDE;
+    UINT32 *    pPTE;
     UINT32      pte;
 
     K2_ASSERT(apProc != NULL);
@@ -84,14 +85,14 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
     if (!((*pPDE) & X32_PDE_PRESENT))
     {
         *apRetPtPresent = FALSE;
-        return;
+        return NULL;
     }
 
     *apRetPtPresent = TRUE;
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
-        pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+        pPTE = ((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
     }
     else
     {
@@ -100,12 +101,12 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
         // we just use the kernel va map base as that is the same thing.
         //
         if (apProc == gpProc0)
-            pte = *((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
+            pPTE = ((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
         else
-            pte = *((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
+            pPTE = ((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
     }
 
-    *apRetPte = pte;
+    *apRetPte = pte = *pPTE;
 
     if (pte & X32_PTE_WRITEABLE)
     {
@@ -124,6 +125,8 @@ void KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *ap
 
     if (pte & X32_PTE_USER)
         *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_KERNEL;
+
+    return pPTE;
 }
 
 BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)

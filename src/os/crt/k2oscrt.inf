@@ -142,6 +142,7 @@ K2MEM_Compare
 # DLX
 #
 DLX_Acquire
+DLX_GetIdent
 DLX_AddRef
 DLX_Release
 DLX_FindExport

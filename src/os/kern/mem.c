@@ -32,6 +32,57 @@
 
 #include "kern.h"
 
+
+#if 0
+#define K2OSKERN_VMNODE_TYPE_SEGMENT    0       // MUST BE TYPE ZERO
+#define K2OSKERN_VMNODE_TYPE_RESERVED   1
+#define K2OSKERN_VMNODE_TYPE_UNKNOWN    2
+#define K2OSKERN_VMNODE_TYPE_SPARE      3
+
+#define K2OSKERN_VMNODE_RESERVED_ERROR          0
+#define K2OSKERN_VMNODE_RESERVED_PUBLICAPI      1
+#define K2OSKERN_VMNODE_RESERVED_ARCHSPEC       2
+#define K2OSKERN_VMNODE_RESERVED_COREPAGES      3
+#define K2OSKERN_VMNODE_RESERVED_VAMAP          4
+#define K2OSKERN_VMNODE_RESERVED_PHYSTRACK      5
+#define K2OSKERN_VMNODE_RESERVED_TRANSTAB       6
+#define K2OSKERN_VMNODE_RESERVED_TRANSTAB_HOLE  7
+#define K2OSKERN_VMNODE_RESERVED_EFIMAP         8
+#define K2OSKERN_VMNODE_RESERVED_PTPAGECOUNT    9
+#define K2OSKERN_VMNODE_RESERVED_LOADER         10
+#define K2OSKERN_VMNODE_RESERVED_DLX_CRT        11
+#define K2OSKERN_VMNODE_RESERVED_DLX_KERN       12
+#define K2OSKERN_VMNODE_RESERVED_DLX_HAL        13
+#define K2OSKERN_VMNODE_RESERVED_EFI_RUN_TEXT   14
+#define K2OSKERN_VMNODE_RESERVED_EFI_RUN_DATA   15
+#define K2OSKERN_VMNODE_RESERVED_DEBUG          16
+#define K2OSKERN_VMNODE_RESERVED_FW_TABLES      17
+#define K2OSKERN_VMNODE_RESERVED_UNKNOWN        18
+#define K2OSKERN_VMNODE_RESERVED_EFI_MAPPED_IO  19
+#define K2OSKERN_VMNODE_RESERVED_DLX_ACPI       20
+#define K2OSKERN_VMNODE_RESERVED_CORECLEARPAGES 21
+
+typedef struct _K2OSKERN_VMNODE_NONSEG K2OSKERN_VMNODE_NONSEG;
+struct _K2OSKERN_VMNODE_NONSEG
+{
+    UINT32  mType : 2;      // 0 means segment and the mpSegment pointer will be valid
+    UINT32  mNodeInfo : 30;     // depends on value of mNodeIsNotSegment;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_VMNODE_NONSEG) == sizeof(UINT32));
+
+typedef struct _K2OSKERN_VMNODE K2OSKERN_VMNODE;
+struct _K2OSKERN_VMNODE
+{
+    K2HEAP_NODE     HeapNode;
+    union {
+        K2OSKERN_OBJ_SEGMENT *  mpSegment;
+        K2OSKERN_VMNODE_NONSEG  NonSeg;
+    };
+};
+#endif
+
+#define MAX_DLX_NAME_LEN    64
+
 static
 void
 sDumpHeapNode(
@@ -39,43 +90,237 @@ sDumpHeapNode(
     K2HEAP_NODE *   apNode
 )
 {
-    K2OSKERN_Debug(
-        "  %08X %08X %s\n",
-        apNode->AddrTreeNode.mUserVal,
-        apNode->SizeTreeNode.mUserVal,
-        K2HEAP_NodeIsFree(apNode) ? "FREE" : "USED"
-    );
+    K2OSKERN_VMNODE *       pVmNode;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    UINT32                  nodeType;
+    char const *            pStr;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
+    char                    dlxName[MAX_DLX_NAME_LEN];
+    K2STAT                  stat;
+
+    if (K2HEAP_NodeIsFree(apNode))
+    {
+        K2OSKERN_Debug(
+            "  %08X %08X FREE\n",
+            apNode->AddrTreeNode.mUserVal,
+            apNode->SizeTreeNode.mUserVal
+        );
+    }
+    else
+    {
+        pVmNode = K2_GET_CONTAINER(K2OSKERN_VMNODE, apNode, HeapNode);
+        nodeType = pVmNode->NonSeg.mType;
+
+        if (nodeType != K2OSKERN_VMNODE_TYPE_SEGMENT)
+        {
+            if (nodeType == K2OSKERN_VMNODE_TYPE_RESERVED)
+            {
+                switch (pVmNode->NonSeg.mNodeInfo)
+                {
+                case K2OSKERN_VMNODE_RESERVED_ERROR:
+                    pStr = "ERROR!";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_PUBLICAPI:
+                    pStr = "PUBLICAPI";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_ARCHSPEC:
+                    pStr = "ARCHSPEC";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_COREPAGES:
+                    pStr = "COREPAGES";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_VAMAP:
+                    pStr = "VAMAP";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_PHYSTRACK:
+                    pStr = "PHYSTRACK";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_TRANSTAB:
+                    pStr = "TRANSTAB";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_TRANSTAB_HOLE:
+                    pStr = "TRANSTAB_HOLE";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_EFIMAP:
+                    pStr = "EFIMAP";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_PTPAGECOUNT:
+                    pStr = "PTPAGECOUNT";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_LOADER:
+                    pStr = "LOADER";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_EFI_RUN_TEXT:
+                    pStr = "EFI_RUN_TEXT";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_EFI_RUN_DATA:
+                    pStr = "EFI_RUN_DATA";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_DEBUG:
+                    pStr = "DEBUG";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_FW_TABLES:
+                    pStr = "FW_TABLES";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_UNKNOWN:
+                    pStr = "UNKNOWN";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_EFI_MAPPED_IO:
+                    pStr = "EFI_MAPPED_IO";
+                    break;
+                case K2OSKERN_VMNODE_RESERVED_CORECLEARPAGES:
+                    pStr = "CORECLEARPAGES";
+                    break;
+                default:
+                    pStr = "******ERROR";
+                    break;
+                }
+            }
+            else
+            {
+                pStr = "******UNKNOWN!";
+            }
+            K2OSKERN_Debug(
+                "  %08X %08X NONSEG(%d) %s\n",
+                apNode->AddrTreeNode.mUserVal,
+                apNode->SizeTreeNode.mUserVal,
+                pVmNode->NonSeg.mType,
+                pStr
+            );
+        }
+        else
+        {
+            pSeg = pVmNode->mpSegment;
+            K2_ASSERT(pSeg != NULL);
+            if ((pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) == K2OS_SEG_ATTR_TYPE_DLX_PART)
+            {
+                pDlxObj = pSeg->Info.DlxPart.mpDlxObj;
+                stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat));
+                K2OSKERN_Debug(
+                    "  %08X %08X SEGMENT %08X attr(%08X) DLX_PART %s SegIndex %d\n",
+                    apNode->AddrTreeNode.mUserVal,
+                    apNode->SizeTreeNode.mUserVal,
+                    pSeg, pSeg->mSegAndMemPageAttr,
+                    dlxName, pSeg->Info.DlxPart.mSegmentIndex
+                );
+            }
+            else if ((pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) == K2OS_SEG_ATTR_TYPE_DLX_PAGE)
+            {
+                pDlxObj = pSeg->Info.DlxPage.mpDlxObj;
+                stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat));
+                K2OSKERN_Debug(
+                    "  %08X %08X SEGMENT %08X attr(%08X) DLX_PAGE %s\n",
+                    apNode->AddrTreeNode.mUserVal,
+                    apNode->SizeTreeNode.mUserVal,
+                    pSeg, pSeg->mSegAndMemPageAttr,
+                    dlxName
+                );
+            }
+            else
+            {
+                switch (pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK)
+                {
+                case K2OS_SEG_ATTR_TYPE_PROCESS:
+                    pStr = "PROCESS";
+                    break;
+                case K2OS_SEG_ATTR_TYPE_THREAD:
+                    pStr = "THREAD";
+                    break;
+                case K2OS_SEG_ATTR_TYPE_HEAP_TRACK:
+                    pStr = "HEAP_TRACK";
+                    break;
+                case K2OS_SEG_ATTR_TYPE_USER:
+                    pStr = "USER";
+                    break;
+                case K2OS_SEG_ATTR_TYPE_DEVMAP:
+                    pStr = "DEVMAP";
+                    break;
+                case K2OS_SEG_ATTR_TYPE_PHYSBUF:
+                    pStr = "PHYSBUF";
+                    break;
+                default:
+                    pStr = "UNKNOWN!";
+                }
+                K2OSKERN_Debug(
+                    "  %08X %08X SEGMENT %08X attr(%08X) %s\n",
+                    apNode->AddrTreeNode.mUserVal,
+                    apNode->SizeTreeNode.mUserVal,
+                    pSeg, pSeg->mSegAndMemPageAttr, pStr
+                );
+            }
+        }
+    }
 }
 
 static void sDumpAll(void)
 {
-    K2TREE_NODE *           pTreeNode;
-    UINT32                  flags;
-    UINT32                  pageCount;
-    BOOL                    intrDisp;
-    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2TREE_NODE *               pTreeNode;
+    UINT32                      flags;
+    UINT32                      pageCount;
+    BOOL                        intrDisp;
+    K2OSKERN_OBJ_SEGMENT *      pSeg;
+    K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+    UINT32                      left;
 
-    K2OSKERN_Debug("\n\nPhysical Free Memory, sorted by size:\n");
+    K2OSKERN_Debug("\n\nPhysical Memory:\n");
 
+    left = K2_VA32_PAGEFRAMES_FOR_4G;
+    pPhysPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(0);
     intrDisp = K2OSKERN_SeqIntrLock(&gData.PhysMemSeqLock);
-    pTreeNode = K2TREE_FirstNode(&gData.PhysFreeTree);
-    K2_ASSERT(pTreeNode != NULL);
     do {
-        flags = pTreeNode->mUserVal;
-        K2_ASSERT(flags & K2OSKERN_PHYSTRACK_FREE_FLAG);
-        pageCount = flags >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
-        K2OSKERN_Debug("  %08X - %8d Pages (%08X bytes) Flags %03X\n",
-            K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTreeNode),
-            pageCount,
-            pageCount * K2_VA32_MEMPAGE_BYTES,
-            flags & K2OSKERN_PHYSTRACK_PROP_MASK);
-        pTreeNode = K2TREE_NextNode(&gData.PhysFreeTree, pTreeNode);
-    } while (pTreeNode != NULL);
+        flags = pPhysPage->mFlags;
+        if (flags & K2OSKERN_PHYSTRACK_FREE_FLAG)
+        {
+            pageCount = flags >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
+            K2OSKERN_Debug("  FREE   %08X - %8d Pages (%08X bytes) Flags %08X\n",
+                K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage),
+                pageCount,
+                pageCount * K2_VA32_MEMPAGE_BYTES,
+                flags);
+            pPhysPage += pageCount;
+            K2_ASSERT(pageCount <= left);
+            left -= pageCount;
+        }
+        else if (flags != 0)
+        {
+            if (flags & K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG)
+            {
+                pageCount = flags >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
+                K2OSKERN_Debug("  CONTIG %08X - %8d Pages (%08X bytes) Flags %08X\n",
+                    K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage),
+                    pageCount,
+                    pageCount * K2_VA32_MEMPAGE_BYTES,
+                    flags);
+                pPhysPage += pageCount;
+                K2_ASSERT(pageCount <= left);
+                left -= pageCount;
+            }
+            else
+            {
+                K2OSKERN_Debug("  PAGE   %08X - Owner %08X, List %2d Flags %08X\n",
+                    K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage),
+                    pPhysPage->mpOwnerObject,
+                    (flags & K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL,
+                    flags);
+                pPhysPage++;
+                left--;
+            }
+        }
+        else
+        {
+            //
+            // not populated with trackable memory
+            //
+            pPhysPage++;
+            left--;
+        }
+    } while (left > 0);
 
     K2OSKERN_SeqIntrUnlock(&gData.PhysMemSeqLock, intrDisp);
 
-
-    K2OSKERN_Debug("\nVirtual Memory, sorted by address:\n");
+    K2OSKERN_Debug("\nVirtual Memory:\n");
 
     intrDisp = K2OS_CritSecEnter(&gData.KernVirtHeapSec);
     K2_ASSERT(intrDisp);
@@ -566,7 +811,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
     pTreeNode = K2TREE_FirstNode(&gData.PhysFreeTree);
     chunkLeft = aPageCount;
     do {
-        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
         switch (aDisp)
         {
         case KernPhys_Disp_Uncached:
@@ -671,7 +916,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
     do {
         pNextNode = K2TREE_NextNode(&gData.PhysFreeTree, pTreeNode);
 
-        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_FREE_COUNT_SHL;
+        nodeCount = pTreeNode->mUserVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
         switch (aDisp)
         {
         case KernPhys_Disp_Uncached:
@@ -713,7 +958,7 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
                 pLeftOver->mUserVal =
                     flags |
                     K2OSKERN_PHYSTRACK_FREE_FLAG |
-                    ((nodeCount - aPageCount) << K2OSKERN_PHYSTRACK_FREE_COUNT_SHL);
+                    ((nodeCount - aPageCount) << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL);
                 K2TREE_Insert(&gData.PhysFreeTree, pLeftOver->mUserVal, pLeftOver);
                 takePages = nodeCount;
             }
@@ -754,8 +999,6 @@ K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aF
     } while (pTreeNode != NULL);
 
     K2OSKERN_SeqIntrUnlock(&gData.PhysMemSeqLock, intrDisp);
-
-        sDumpAll();
 
     return K2STAT_NO_ERROR;
 }
