@@ -76,7 +76,14 @@ sInitBuiltInDlx(
             apDlxObj->SegObj[ix].Info.DlxPart.mpDlxObj = apDlxObj;
         }
     }
-    apDlxObj->mPageAddr = pageAddr;
+
+    apDlxObj->PageSeg.Hdr.mObjType = K2OS_Obj_Segment;
+    apDlxObj->PageSeg.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
+    apDlxObj->PageSeg.Hdr.mRefCount = 0xFFFFFFFF;
+    apDlxObj->PageSeg.SegTreeNode.mUserVal = pageAddr;
+    apDlxObj->PageSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
+    apDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_DLX_PAGE;
+    apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
 }
 
 void KernInit_DlxHost(void)

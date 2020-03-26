@@ -321,7 +321,8 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 #define K2OS_SEG_ATTR_TYPE_USER         0x00050000
 #define K2OS_SEG_ATTR_TYPE_DEVMAP       0x00060000
 #define K2OS_SEG_ATTR_TYPE_PHYSBUF      0x00070000
-#define K2OS_SEG_ATTR_TYPE_COUNT        0x00080000
+#define K2OS_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
+#define K2OS_SEG_ATTR_TYPE_COUNT        0x00090000
 #define K2OS_SEG_ATTR_TYPE_MASK         0x000F0000
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -362,9 +363,16 @@ struct _K2OSKERN_SEGMENT_INFO_USER
     K2OSKERN_OBJ_PROCESS *  mpProc;
 };
 
+typedef struct _K2OSKERN_SEGMENT_INFO_DLX_PAGE K2OSKERN_SEGMENT_INFO_DLX_PAGE;
+struct _K2OSKERN_SEGMENT_INFO_DLX_PAGE
+{
+    K2OSKERN_OBJ_DLX *      mpDlxObj;
+};
+
 typedef union _K2OSKERN_SEGMENT_INFO K2OSKERN_SEGMENT_INFO;
 union _K2OSKERN_SEGMENT_INFO
 {
+    K2OSKERN_SEGMENT_INFO_DLX_PAGE      DlxPage;
     K2OSKERN_SEGMENT_INFO_DLX_PART      DlxPart;
     K2OSKERN_SEGMENT_INFO_PROCESS       Process;
     K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;
@@ -388,7 +396,7 @@ struct _K2OSKERN_OBJ_DLX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
     DLX *                   mpDlx;
-    UINT32                  mPageAddr;
+    K2OSKERN_OBJ_SEGMENT    PageSeg;
     K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
 };
 
@@ -411,6 +419,7 @@ struct _K2OSKERN_OBJ_PROCESS
     K2OS_CRITSEC            TlsMaskSec;
     UINT32                  mTlsMask;
 
+    K2OSKERN_SEQLOCK        SegTreeSeqLock;
     K2TREE_ANCHOR           SegTree;
 };
 
@@ -451,7 +460,9 @@ struct _K2OSKERN_OBJ_THREAD
     K2LIST_ANCHOR               WorkPages_Clean;
     K2LIST_ANCHOR               WorkPtPages_Dirty;
     K2LIST_ANCHOR               WorkPtPages_Clean;
-    UINT32                      mWorkVirt;
+    UINT32                      mWorkVirt_Range;
+    UINT32                      mWorkVirt_PageCount;
+    UINT32                      mWorkMapAddr;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPage;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPtPage;
 
@@ -615,12 +626,12 @@ enum _KernPhys_Disp
 typedef struct _K2OSKERN_HEAPTRACKPAGE K2OSKERN_HEAPTRACKPAGE;
 
 #define TRACK_BYTES     (K2_VA32_MEMPAGE_BYTES - (sizeof(K2OSKERN_OBJ_SEGMENT) + sizeof(K2OSKERN_HEAPTRACKPAGE *)))
-#define TRACK_PER_PAGE  (TRACK_BYTES / sizeof(K2HEAP_NODE))
+#define TRACK_PER_PAGE  (TRACK_BYTES / sizeof(K2OSKERN_VMNODE))
 
 struct _K2OSKERN_HEAPTRACKPAGE
 {
     K2OSKERN_OBJ_SEGMENT        SegObj;
-    K2OSKERN_HEAPTRACKPAGE *    mpNext;
+    K2OSKERN_HEAPTRACKPAGE *    mpNextPage;
     UINT8                       TrackSpace[TRACK_BYTES];
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_HEAPTRACKPAGE) == K2_VA32_MEMPAGE_BYTES);

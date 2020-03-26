@@ -748,9 +748,17 @@ static void sInitMapDlxSegments(K2OSKERN_OBJ_DLX *apDlxObj)
     UINT32                  pagesBytes;
     K2OSKERN_OBJ_SEGMENT *  pDlxPartSeg;
     K2OSKERN_VMNODE *       pNode;
-    KernPhysPageList            pageList;
+    KernPhysPageList        pageList;
 
-    sCheckPteRange(apDlxObj->mPageAddr, 1, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Non_KData);
+    K2_ASSERT(apDlxObj->PageSeg.Hdr.mObjType == K2OS_Obj_Segment);
+    K2_ASSERT(apDlxObj->PageSeg.Hdr.mObjType = K2OS_Obj_Segment);
+    K2_ASSERT(apDlxObj->PageSeg.Hdr.mObjFlags == K2OSKERN_OBJ_FLAG_PERMANENT);
+    K2_ASSERT(apDlxObj->PageSeg.Hdr.mRefCount == 0xFFFFFFFF);
+    K2_ASSERT(apDlxObj->PageSeg.mPagesBytes == K2_VA32_MEMPAGE_BYTES);
+    K2_ASSERT(apDlxObj->PageSeg.mSegAndMemPageAttr == (K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_DLX_PAGE));
+    K2_ASSERT(apDlxObj->PageSeg.Info.DlxPage.mpDlxObj == apDlxObj);
+    sCheckPteRange(apDlxObj->PageSeg.SegTreeNode.mUserVal, 1, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Non_KData);
+    K2TREE_Insert(&gpProc0->SegTree, apDlxObj->PageSeg.SegTreeNode.mUserVal, &apDlxObj->PageSeg.SegTreeNode);
 
     for (ix = 0; ix < DlxSeg_Count; ix++)
     {
@@ -1058,6 +1066,7 @@ static void sInit_BeforeVirt(void)
 
     K2OSKERN_SeqIntrInit(&gData.KernVirtMapLock);
 
+    K2OSKERN_SeqIntrInit(&gpProc0->SegTreeSeqLock);
     K2TREE_Init(&gpProc0->SegTree, sUserValCompare);
 
     //
@@ -1103,7 +1112,7 @@ static void sInit_BeforeVirt(void)
     gpProc0->SegObjPrimaryThreadStack.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc0->SegObjPrimaryThreadStack.Hdr.mRefCount = 0xFFFFFFFF;
     gpProc0->SegObjPrimaryThreadStack.mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
-    gpProc0->SegObjPrimaryThreadStack.Info.ThreadStack.mpThread = NULL;
+    gpProc0->SegObjPrimaryThreadStack.Info.ThreadStack.mpThread = gpThread0;
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_THREAD0_STACK_LOW_GUARD, K2OS_KVA_THREAD0_AREA_HIGH - K2OS_KVA_THREAD0_STACK_LOW_GUARD, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->mpSegment = &gpProc0->SegObjPrimaryThreadStack;
@@ -1131,21 +1140,6 @@ static void sInit_BeforeVirt(void)
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_PHYSTRACK;
     sVerifyPhysTrack();
-
-    gpProc0->SegObjSelf.Hdr.mObjType = K2OS_Obj_Segment;
-    gpProc0->SegObjSelf.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
-    gpProc0->SegObjSelf.Hdr.mRefCount = 0xFFFFFFFF;
-    gpProc0->SegObjSelf.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_PROCESS;
-    gpProc0->SegObjSelf.Info.Process.mpProc = gpProc0;
-    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE, (K2HEAP_NODE **)&pNode);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-    pNode->mpSegment = &gpProc0->SegObjSelf;
-    K2_ASSERT((pNode->mpSegment->mSegAndMemPageAttr & (K2OS_SEG_ATTR_TYPE_MASK | K2OS_MEMPAGE_ATTR_MASK)) == (K2OS_SEG_ATTR_TYPE_PROCESS | K2OS_MAPTYPE_KERN_DATA));
-    K2_ASSERT(pNode->NonSeg.mType == K2OSKERN_VMNODE_TYPE_SEGMENT);
-    sCheckPteRange(K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Proc);
-    gpProc0->SegObjSelf.SegTreeNode.mUserVal = K2OS_KVA_PROC0_BASE;
-    gpProc0->SegObjSelf.mPagesBytes = K2OS_KVA_PROC0_SIZE;
-    K2TREE_Insert(&gpProc0->SegTree, gpProc0->SegObjSelf.SegTreeNode.mUserVal, &gpProc0->SegObjSelf.SegTreeNode);
 
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_TRANSTAB_BASE, K2_VA32_TRANSTAB_SIZE, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
@@ -1184,6 +1178,21 @@ static void sInit_BeforeVirt(void)
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_LOADER;
     sCheckPteRange(K2OS_KVA_LOADERPAGE_BASE, 1, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_KOver);
 
+    gpProc0->SegObjSelf.Hdr.mObjType = K2OS_Obj_Segment;
+    gpProc0->SegObjSelf.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
+    gpProc0->SegObjSelf.Hdr.mRefCount = 0xFFFFFFFF;
+    gpProc0->SegObjSelf.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_PROCESS;
+    gpProc0->SegObjSelf.Info.Process.mpProc = gpProc0;
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pNode->mpSegment = &gpProc0->SegObjSelf;
+    K2_ASSERT((pNode->mpSegment->mSegAndMemPageAttr & (K2OS_SEG_ATTR_TYPE_MASK | K2OS_MEMPAGE_ATTR_MASK)) == (K2OS_SEG_ATTR_TYPE_PROCESS | K2OS_MAPTYPE_KERN_DATA));
+    K2_ASSERT(pNode->NonSeg.mType == K2OSKERN_VMNODE_TYPE_SEGMENT);
+    sCheckPteRange(K2OS_KVA_PROC0_BASE, K2OS_KVA_PROC0_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Proc);
+    gpProc0->SegObjSelf.SegTreeNode.mUserVal = K2OS_KVA_PROC0_BASE;
+    gpProc0->SegObjSelf.mPagesBytes = K2OS_KVA_PROC0_SIZE;
+    K2TREE_Insert(&gpProc0->SegTree, gpProc0->SegObjSelf.SegTreeNode.mUserVal, &gpProc0->SegObjSelf.SegTreeNode);
+
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
@@ -1202,25 +1211,25 @@ static void sInit_BeforeVirt(void)
     //
     // now do already-loaded DLX
     //
-    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxCrt.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxCrt.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_CRT;
     sInitMapDlxSegments(&gData.DlxCrt);
 
-    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxHal.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxHal.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_HAL;
     sInitMapDlxSegments(&gData.DlxHal);
 
-    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxAcpi.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxAcpi.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_ACPI;
     sInitMapDlxSegments(&gData.DlxAcpi);
 
-    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gpProc0->PrimaryModule.mPageAddr, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gpProc0->PrimaryModule.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_DLX_KERN;

@@ -99,7 +99,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
         {
             K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
             K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
-            K2_ASSERT(pCurThread->mWorkVirt == 0);
+            K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
+            K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
         }
 
     } while (0);
