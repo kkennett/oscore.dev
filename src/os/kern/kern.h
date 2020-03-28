@@ -421,6 +421,8 @@ struct _K2OSKERN_OBJ_PROCESS
 
     K2OSKERN_SEQLOCK        SegTreeSeqLock;
     K2TREE_ANCHOR           SegTree;
+
+    K2LIST_LINK             ProcListLink;
 };
 
 #define gpProc0 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC0_BASE)
@@ -462,7 +464,9 @@ struct _K2OSKERN_OBJ_THREAD
     K2LIST_ANCHOR               WorkPtPages_Clean;
     UINT32                      mWorkVirt_Range;
     UINT32                      mWorkVirt_PageCount;
+
     UINT32                      mWorkMapAddr;
+    UINT32                      mWorkMapAttr;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPage;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPtPage;
 
@@ -536,10 +540,13 @@ enum _KernPhysPageList
 
     KernPhysPageList_Count,         //  17
 
-    KernPhysPageList_Thread_Dirty  = 0x1C,      // temporarily on thread dirty list
-    KernPhysPageList_Thread_Clean  = 0x1D,      // temporarily on thread clean list
-    KernPhysPageList_Thread_PtDirty =0x1E,      // temporarily on thread pagetable dirty list
-    KernPhysPageList_Thread_PtClean =0x1F,      // temporarily on thread pagetable clean list
+    KernPhysPageList_Thread_Working = 26,     // temporarily set as thread working page
+    KernPhysPageList_Thread_PtWorking = 27,   // temporarily set as thread pt working page
+    KernPhysPageList_Thread_Dirty  = 28,      // temporarily on thread dirty list
+    KernPhysPageList_Thread_Clean  = 29,      // temporarily on thread clean list
+    KernPhysPageList_Thread_PtDirty =30,      // temporarily on thread pagetable dirty list
+    KernPhysPageList_Thread_PtClean =31,      // temporarily on thread pagetable clean list
+    // 31 is max
 };
 
 K2_STATIC_ASSERT((K2OSKERN_PHYSTRACK_PAGE_LIST_MASK >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) >= KernPhysPageList_Count);
@@ -664,6 +671,8 @@ struct _KERN_DATA
     UINT32                              mCpuCount;
     KernInitStage                       mKernInitStage;
     INT32 volatile                      mCoresInPanic;
+    K2OSKERN_SEQLOCK                    ProcListSeqLock;
+    K2LIST_ANCHOR                       ProcList;
 
     //
     // physical memory (PHYSTRACK)
@@ -751,6 +760,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ
 // these return virtual address of PTE changed
 UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapType);
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr);
+void   KernMap_FromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList);
 
 /* --------------------------------------------------------------------------------- */
 

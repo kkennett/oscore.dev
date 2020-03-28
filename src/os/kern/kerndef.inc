@@ -64,10 +64,12 @@
 /* --------------------------------------------------------------------------------- */
 
 #if K2_TARGET_ARCH_IS_ARM
-#define K2OSKERN_PTE_PRESENT_BIT            0x00000002
+#define K2OSKERN_PDE_PRESENT_BIT            A32_TTBE_PT_PRESENT
+#define K2OSKERN_PTE_PRESENT_BIT            A32_PTE_PRESENT
 #define K2OSKERN_PTE_NP_BIT                 0x00000001
 #else
-#define K2OSKERN_PTE_PRESENT_BIT            0x00000001
+#define K2OSKERN_PDE_PRESENT_BIT            X32_PDE_PRESENT
+#define K2OSKERN_PTE_PRESENT_BIT            X32_PTE_PRESENT
 #define K2OSKERN_PTE_NP_BIT                 0x00000002
 #endif
 #define K2OSKERN_PTE_NP_TYPE_MASK           0x0000000C

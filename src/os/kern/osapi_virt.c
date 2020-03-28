@@ -45,6 +45,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     useAddr = *apAddr;
     K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
 
+    K2OSKERN_Debug("vpa va\n");
     stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
     if (K2STAT_IS_ERROR(stat))
     {
@@ -53,6 +54,11 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     }
 
     do {
+        // 
+        // can't allocate from heap in here, because if it is a heap expansion it will recurse
+        // and continue to recurse trying to get an allocation to expand the heap
+        //
+
         pSeg = K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SEGMENT));
         if (pSeg == NULL)
             return FALSE;

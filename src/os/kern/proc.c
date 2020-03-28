@@ -61,6 +61,7 @@ static void sInit_AtDlxEntry(void)
 #error !!!Unsupported Architecture
 #endif
     K2LIST_Init(&gpProc0->ThreadList);
+    K2LIST_AddAtTail(&gData.ProcList, &gpProc0->ProcListLink);
 }
 
 static void sInit_Threaded(void)

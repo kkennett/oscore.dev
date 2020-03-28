@@ -64,6 +64,9 @@ dlx_entry(
 
     gData.mCpuCount = gData.mpShared->LoadInfo.mCpuCoreCount;
 
+    K2OSKERN_SeqIntrInit(&gData.ProcListSeqLock);
+    K2LIST_Init(&gData.ProcList);
+
     gData.mpShared->FuncTab.Exec = KernExec;
 
     gData.mpShared->FuncTab.Debug = K2OSKERN_Debug;

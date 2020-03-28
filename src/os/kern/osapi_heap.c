@@ -44,8 +44,10 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
         stat = K2STAT_ERROR_NOT_READY;
     else
     {
+        K2OSKERN_Debug("+RamHeap_Alloc(%d)\n", aByteCount);
         ptr = NULL;
         stat = K2OS_RAMHEAP_Alloc(&gData.RamHeap, aByteCount, TRUE, &ptr);
+        K2OSKERN_Debug("-RamHeap_Alloc(%d)\n", aByteCount);
     }
 
     if (K2STAT_IS_ERROR(stat))
