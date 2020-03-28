@@ -515,6 +515,8 @@ K2HEAP_AddFreeSpaceNode(
     }
 
     pHeapNode = apHeap->mfAcquireNode(apHeap);
+    if (pHeapNode == NULL)
+        return K2STAT_ERROR_OUT_OF_RESOURCES;
 
     pHeapNode->AddrTreeNode.mUserVal = aStart;
     pHeapNode->SizeTreeNode.mUserVal = aSize;
