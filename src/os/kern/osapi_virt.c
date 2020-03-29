@@ -45,75 +45,77 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     useAddr = *apAddr;
     K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
 
-    K2OSKERN_Debug("vpa va\n");
-    stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
+    pSeg = NULL;
+    stat = KernMem_SegAlloc(&pSeg);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
         return FALSE;
     }
+    K2_ASSERT(pSeg != NULL);
 
     do {
-        // 
-        // can't allocate from heap in here, because if it is a heap expansion it will recurse
-        // and continue to recurse trying to get an allocation to expand the heap
-        //
+        stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
+        if (K2STAT_IS_ERROR(stat))
+            break;
 
-        pSeg = K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SEGMENT));
-        if (pSeg == NULL)
-            return FALSE;
+        do {
+            pCurThread = K2OSKERN_CURRENT_THREAD;
 
-        pCurThread = K2OSKERN_CURRENT_THREAD;
+            K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+            pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+            pSeg->Hdr.mRefCount = 1;
+            K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+            pSeg->mPagesBytes = aPageCount * K2_VA32_MEMPAGE_BYTES;
+            pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_USER | aPageAttrFlags;
+            pSeg->Info.User.mpProc = pCurThread->mpProc;
+            pSeg->SegTreeNode.mUserVal = useAddr;
 
-        K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
-        pSeg->Hdr.mObjType = K2OS_Obj_Segment;
-        pSeg->Hdr.mRefCount = 1;
-        K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
-        pSeg->mPagesBytes = aPageCount * K2_VA32_MEMPAGE_BYTES;
-        pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_USER | aPageAttrFlags;
-        pSeg->Info.User.mpProc = pCurThread->mpProc;
-        pSeg->SegTreeNode.mUserVal = useAddr;
-
-        if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
-        {
-            stat = KernMem_PhysAllocToThread(aPageCount, aPageAttrFlags, FALSE);
-            if (!K2STAT_IS_ERROR(stat))
+            if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
-                K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount >= aPageCount);
-
-                stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
-
-                if (K2STAT_IS_ERROR(stat))
+                stat = KernMem_PhysAllocToThread(aPageCount, aPageAttrFlags, FALSE);
+                if (!K2STAT_IS_ERROR(stat))
                 {
-                    KernMem_PhysFreeFromThread();
+                    K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount >= aPageCount);
+
+                    stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+
+                    if (K2STAT_IS_ERROR(stat))
+                    {
+                        KernMem_PhysFreeFromThread();
+                    }
                 }
             }
-        }
-        else
-        {
-            K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
-            K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+            else
+            {
+                K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+                K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
 
-            stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
-        }
+                stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+            }
 
-        if (!K2STAT_IS_ERROR(stat))
+            if (!K2STAT_IS_ERROR(stat))
+            {
+                K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+                K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+                K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
+                K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
+            }
+
+        } while (0);
+
+        if (K2STAT_IS_ERROR(stat))
         {
-            K2OS_HeapFree(pSeg);
-        }
-        else
-        {
-            K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
-            K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
-            K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
-            K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
+            KernMem_VirtFreeFromThread();
+            K2OS_ThreadSetStatus(stat);
+            return FALSE;
         }
 
     } while (0);
 
     if (K2STAT_IS_ERROR(stat))
     {
-        KernMem_VirtFreeFromThread();
+        KernMem_SegFree(pSeg);
         K2OS_ThreadSetStatus(stat);
         return FALSE;
     }

@@ -322,7 +322,8 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 #define K2OS_SEG_ATTR_TYPE_DEVMAP       0x00060000
 #define K2OS_SEG_ATTR_TYPE_PHYSBUF      0x00070000
 #define K2OS_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
-#define K2OS_SEG_ATTR_TYPE_COUNT        0x00090000
+#define K2OS_SEG_ATTR_TYPE_SEG_SLAB     0x00090000
+#define K2OS_SEG_ATTR_TYPE_COUNT        0x000A0000
 #define K2OS_SEG_ATTR_TYPE_MASK         0x000F0000
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
@@ -641,6 +642,22 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_HEAPTRACKPAGE) == K2_VA32_MEMPAGE_BYTES);
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OSKERN_SEGSLAB K2OSKERN_SEGSLAB;
+#define SEGSTORE_SLAB_OVERHEAD  (sizeof(K2OSKERN_OBJ_SEGMENT) + sizeof(UINT64) + sizeof(K2OSKERN_SEGSLAB *))
+#define SEGSTORE_OBJ_BYTES      (K2_VA32_MEMPAGE_BYTES - SEGSTORE_SLAB_OVERHEAD)
+#define SEGSTORE_OBJ_COUNT      (SEGSTORE_OBJ_BYTES / sizeof(K2OSKERN_OBJ_SEGMENT))
+K2_STATIC_ASSERT(SEGSTORE_OBJ_COUNT < 64);
+struct _K2OSKERN_SEGSLAB
+{
+    K2OSKERN_OBJ_SEGMENT    This;                       // must be entry 0
+    UINT8                   SegStore[SEGSTORE_OBJ_BYTES];   // must be right after This for alignment
+    K2OSKERN_SEGSLAB *      mpNextSlab;
+    UINT64                  mUseMask;                    // bit 0 always set
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_SEGSLAB) == K2_VA32_MEMPAGE_BYTES);
+
+/* --------------------------------------------------------------------------------- */
+
 typedef enum _KernInitStage KernInitStage;
 enum _KernInitStage
 {
@@ -695,6 +712,14 @@ struct _KERN_DATA
     K2LIST_ANCHOR                       HeapTrackFreeList;  // list of free ramheap tracking structures
     K2OSKERN_HEAPTRACKPAGE *            mpTrackPages;       // list of ramheap tracking structure pages
     K2OSKERN_HEAPTRACKPAGE *            mpNextTrackPage;    // free ramheap tracking structure page, all ready to go
+
+    //
+    // segment object slabs
+    //
+    K2OS_CRITSEC                        SegSec;    
+    K2LIST_ANCHOR                       SegFreeList;
+    K2OSKERN_SEGSLAB *                  mpSegSlabs;
+
 
     // dlxsupp.c - 
     K2OSKERN_OBJ_DLX                    DlxCrt;
@@ -752,6 +777,9 @@ void   KernMem_VirtFreeFromThread(void);
 
 K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aForPageTables);
 void   KernMem_PhysFreeFromThread(void);
+
+K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg);
+K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg);
 
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
