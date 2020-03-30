@@ -139,52 +139,18 @@ BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)
     return (aPTE & X32_PTE_WRITEABLE) ? FALSE : TRUE;
 }
 
-void KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT)
-{
-    K2_ASSERT(0);
-}
-
-void KernArch_BreakMapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)
+void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)
 {
     UINT32      virtAddrPT;
-    UINT32      transBase;
     UINT32 *    pPDE;
     UINT32 *    pPTE;
     UINT32      pdePTAddr;
 
-    K2_ASSERT(apProc != NULL);
-
-    //
-    // this may get called before proc0 is set up. so if we are called with proc 0
-    // we just use the transtab base as that is the same thing.
-    //
-    if (apProc == gpProc0)
-        transBase = K2OS_KVA_TRANSTAB_BASE;
-    else
-        transBase = (apProc->mTransTableKVA & K2_VA32_PAGEFRAME_MASK);
-
-    pPDE = ((UINT32 *)transBase) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
+    pPDE = ((UINT32 *)K2OS_KVA_TRANSTAB_BASE) + (gData.mpShared->LoadInfo.mTransitionPageAddr / K2_VA32_PAGETABLE_MAP_BYTES);
     pdePTAddr = (*pPDE) & K2_VA32_PAGEFRAME_MASK;
     *pPDE = 0;
 
-    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-    {
-        virtAddrPT = K2OS_KVA_TO_PT_ADDR(aVirtAddr);
-    }
-    else
-    {
-        //
-        // this may get called before proc0 is set up. so if we are called with proc 0
-        // we just use the kernel va map base as that is the same thing.
-        //
-        if (apProc == gpProc0)
-            virtAddrPT = K2_VA32_TO_PT_ADDR(K2OS_KVA_KERNVAMAP_BASE, aVirtAddr);
-        else
-            virtAddrPT = K2_VA32_TO_PT_ADDR(apProc->mVirtMapKVA, aVirtAddr);
-    }
-
-    K2_ASSERT(virtAddrPT >= K2OS_KVA_KERN_BASE);
-    *apRetVirtAddrPT = virtAddrPT;
+    *apRetVirtAddrPT = virtAddrPT = K2OS_KVA_TO_PT_ADDR(gData.mpShared->LoadInfo.mTransitionPageAddr);
 
     pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtAddrPT);
     *apRetPhysAddrPT = (*pPTE) & K2_VA32_PAGEFRAME_MASK;

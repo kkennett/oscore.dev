@@ -32,7 +32,8 @@
 
 #include "kern.h"
 
-void KernSched_Exec_ThreadWait(void)
+BOOL KernSched_Exec_ThreadWait(void)
 {
     K2_ASSERT(0);
+    return FALSE;  // if something changes scheduling-wise, return true
 }

@@ -67,6 +67,7 @@ typedef union  _K2OSKERN_SCHED_ITEM_ARGS    K2OSKERN_SCHED_ITEM_ARGS;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
 
 typedef struct _K2OSKERN_CRITSEC            K2OSKERN_CRITSEC;
@@ -93,7 +94,7 @@ enum _KernCpuCoreEventType
     KernCpuCoreEvent_SchedTimerFired,
     KernCpuCoreEvent_Ici_Wakeup,
     KernCpuCoreEvent_Ici_Stop,
-    KernCpuCoreEvent_Ici_TlbInvPage,
+    KernCpuCoreEvent_Ici_TlbInv,
     KernCpuCoreEvent_Ici_PageDirUpdate,
     KernCpuCoreEvent_Ici_Panic,
     KernCpuCoreEvent_Ici_Debug,
@@ -180,6 +181,8 @@ enum _KernSchedItemType
     KernSchedItem_ThreadWait,
     KernSchedItem_Contended_Critsec,
     KernSchedItem_Destroy_Critsec,
+    KernSchedItem_PurgePT,
+    KernSchedItem_InvalidateTlb,
     // more here
     KernSchedItemType_Count
 };
@@ -229,6 +232,12 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC
     BOOL  mEntering;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT
+{
+    UINT32  mPtIndex;
+    UINT32  mPtPhysOut;
+};
+
 struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB
 {
     K2OSKERN_OBJ_PROCESS *  mpProc;
@@ -241,6 +250,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        ThreadWait;      
     K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  ContendedCritSec;
+    K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           PurgePt;
     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     InvalidateTlb;
 };
 
@@ -291,6 +301,13 @@ struct _K2OSKERN_SCHED
     
     K2OSKERN_SCHED_ITEM *           mpActiveItem;
     K2OSKERN_OBJ_THREAD *           mpActiveItemThread;
+
+    K2OSKERN_OBJ_PROCESS *          mpTlbInvProc;
+    UINT32                          mTlbInv1_Base;
+    UINT32                          mTlbInv1_PageCount;
+    UINT32                          mTlbInv2_Base;
+    UINT32                          mTlbInv2_PageCount;
+    INT32 volatile                  mTlbCores;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -470,6 +487,10 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                      mWorkMapAttr;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPage;
     K2OSKERN_PHYSTRACK_PAGE *   mpWorkPtPage;
+
+    BOOL                        mTlbFlushNeeded;
+    UINT32                      mTlbFlushBase;
+    UINT32                      mTlbFlushPages;
 
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
 };
@@ -786,16 +807,16 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ
 /* --------------------------------------------------------------------------------- */
 
 // these return virtual address of PTE changed
-UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapType);
+void   KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapAttr);
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr);
-void   KernMap_FromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList);
+
+void   KernMap_MakeOnePageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList);
+void   KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPageOwner, KernPhysPageList aMatchList);
 
 /* --------------------------------------------------------------------------------- */
 
 UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
-void    KernArch_MapPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINT32 aPageMapAttr);
-void    KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT);
-void    KernArch_BreakMapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
+void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 BOOL    KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aMustHaveAttr);
 UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr);
@@ -825,12 +846,22 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 void KernSched_AddCurrentCore(void);
 void KernSched_Check(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_CallFromThread(K2OSKERN_CPUCORE *apThisCore);
-void KernSched_Exec_ThreadExit(void);
-void KernSched_Exec_ThreadWait(void);
-void KernSched_Exec_Contended_CritSec(void);
-void KernSched_Exec_EnterDebug(void);
+
+typedef BOOL(*KernSched_pf_Handler)(void);
+
+BOOL KernSched_Exec_ThreadExit(void);
+BOOL KernSched_Exec_ThreadWait(void);
+BOOL KernSched_Exec_Contended_CritSec(void);
+BOOL KernSched_Exec_EnterDebug(void);
+BOOL KernSched_Exec_Destroy_CritSec(void);
+BOOL KernSched_Exec_PurgePT(void);
+BOOL KernSched_Exec_InvalidateTlb(void);
+
 BOOL KernSched_TimePassedUntil(UINT64 aTimeNow);
+
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_TlbInvalidateAcrossCores(void);
+void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 

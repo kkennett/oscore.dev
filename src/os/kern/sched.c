@@ -34,7 +34,7 @@
 
 static
 const
-K2_pf_VOID
+KernSched_pf_Handler
 sgSchedHandlers[KernSchedItemType_Count] =
 {
     NULL,                               // KernSchedItem_Invalid
@@ -42,7 +42,11 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_EnterDebug,          // KernSchedItem_EnterDebug
     KernSched_Exec_ThreadExit,          // KernSchedItem_ThreadExit
     KernSched_Exec_ThreadWait,          // KernSchedItem_ThreadWait
-    KernSched_Exec_Contended_CritSec    // KernSchedItem_Contended_Critsec
+    KernSched_Exec_Contended_CritSec,   // KernSchedItem_Contended_Critsec
+    KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
+    KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
+    KernSched_Exec_InvalidateTlb        // KernSchedItem_InvalidateTlb
+
 };
 
 static K2OSKERN_SCHED_ITEM * sgpItemList;
@@ -234,18 +238,16 @@ static BOOL sExecItems(void)
 {
     K2OSKERN_SCHED_ITEM *   pPendNew;
     UINT64                  timeNow;
-    BOOL                    executedSomething;
-    BOOL                    timeExecutedSomething;
+    BOOL                    changedSomething;
+    BOOL                    subChangedSomething;
 
-    executedSomething = FALSE;
+    changedSomething = FALSE;
 
     do
     {
         pPendNew = (K2OSKERN_SCHED_ITEM *)K2ATOMIC_Exchange((volatile UINT32 *)&gData.Sched.mpPendingItemListHead, 0);
         if (pPendNew == NULL)
             break;
-
-        executedSomething = TRUE;
 
         sInsertToItemList(pPendNew);
 
@@ -287,7 +289,9 @@ static BOOL sExecItems(void)
 
                 K2_ASSERT(sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType] != NULL);
 
-                sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType]();
+                subChangedSomething= sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType]();
+                if (!changedSomething)
+                    changedSomething = subChangedSomething;
 
                 gData.Sched.mpActiveItemThread = NULL;
             }
@@ -301,12 +305,12 @@ static BOOL sExecItems(void)
     timeNow = K2OS_SysUpTimeMs();
     if (timeNow > gData.Sched.mAbsTimeMs)
     {
-        timeExecutedSomething = KernSched_TimePassedUntil(timeNow);
-        if (!executedSomething)
-            executedSomething = timeExecutedSomething;
+        subChangedSomething = KernSched_TimePassedUntil(timeNow);
+        if (!changedSomething)
+            changedSomething = subChangedSomething;
     }
 
-    return executedSomething;
+    return changedSomething;
 }
 
 void KernSched_Exec(void)
@@ -314,21 +318,23 @@ void KernSched_Exec(void)
     K2LIST_LINK *           pLink;
     K2OSKERN_CPUCORE *      pCpuCore;
     K2OSKERN_OBJ_THREAD *   pThread;
-    BOOL                    work;
+    BOOL                    somethingChanged;
 
     /* execute any scheduler items queued and give debugger a chance to run */
     sgpItemList = sgpItemListEnd = NULL;
     do {
-        work = sExecItems();
+        somethingChanged = sExecItems();
 
         if (!gData.mDebuggerActive)
             break;
 
-        work = KernDebug_Service(work);
-    } while (work);
+        somethingChanged = KernDebug_Service(somethingChanged);
+
+    } while (somethingChanged);
 
     /* put threads onto cores */
-    sScheduleThreadsToCores();
+    if (somethingChanged)
+        sScheduleThreadsToCores();
 
     /* release cores that are due to run something they are not running */
     pLink = gData.Sched.CpuCorePrioList.mpHead;

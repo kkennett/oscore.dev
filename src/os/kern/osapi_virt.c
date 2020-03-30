@@ -54,6 +54,10 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     }
     K2_ASSERT(pSeg != NULL);
 
+    KernMem_SegFree(pSeg);
+    K2OSKERN_Debug("Intentional Hang\n");
+    while (1);
+
     do {
         stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
         if (K2STAT_IS_ERROR(stat))

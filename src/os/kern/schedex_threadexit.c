@@ -32,11 +32,14 @@
 
 #include "kern.h"
 
-void KernSched_Exec_ThreadExit(void)
+BOOL KernSched_Exec_ThreadExit(void)
 {
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadExit);
 
     K2OSKERN_Debug("SCHED:Thread(%d) EXIT\n", gData.Sched.mpActiveItemThread->Env.mId);
 
     K2_ASSERT(0);
+
+    return FALSE;  // if something changes scheduling-wise, return true
+
 }

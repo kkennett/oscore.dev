@@ -32,7 +32,14 @@
 
 #include "kern.h"
 
-void KernSched_Exec_Contended_CritSec(void)
+BOOL KernSched_Exec_Contended_CritSec(void)
 {
     K2_ASSERT(0);
+    return FALSE; // if something changes scheduling-wise, return true
+}
+
+BOOL KernSched_Exec_Destroy_CritSec(void)
+{
+    K2_ASSERT(0);
+    return FALSE; // if something changes scheduling-wise, return true
 }

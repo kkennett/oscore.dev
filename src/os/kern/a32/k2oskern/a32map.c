@@ -241,34 +241,17 @@ BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)
     return !flag;
 }
 
-void KernArch_MapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddrPT)
-{
-    K2_ASSERT(0);
-}
-
-void KernArch_BreakMapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)
+void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)
 {
     UINT32          virtAddrPT;
-    UINT32          transBase;
     A32_TRANSTBL *  pTrans;
     A32_TTBEQUAD *  pQuad;
     UINT32 *        pPTE;
     UINT32          pdePTAddr;
 
-    K2_ASSERT(apProc != NULL);
+    pTrans = (A32_TRANSTBL *)K2OS_KVA_TRANSTAB_BASE;
 
-    //
-    // this may get called before proc0 is set up. so if we are called with proc 0
-    // we just use the transtab base as that is the same thing.
-    //
-    if (apProc == gpProc0)
-        transBase = K2OS_KVA_TRANSTAB_BASE;
-    else
-        transBase = (apProc->mTransTableKVA & K2_VA32_PAGEFRAME_MASK);
-
-    pTrans = (A32_TRANSTBL *)transBase;
-
-    pQuad = &pTrans->QuadEntry[aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES];
+    pQuad = &pTrans->QuadEntry[gData.mpShared->LoadInfo.mTransitionPageAddr / K2_VA32_PAGETABLE_MAP_BYTES];
 
     K2_ASSERT(pQuad->Quad[0].PTBits.mPresent != 0);
 
@@ -279,24 +262,7 @@ void KernArch_BreakMapPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, 
     pQuad->Quad[2].mAsUINT32 = 0;
     pQuad->Quad[3].mAsUINT32 = 0;
 
-    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-    {
-        virtAddrPT = K2OS_KVA_TO_PT_ADDR(aVirtAddr);
-    }
-    else
-    {
-        //
-        // this may get called before proc0 is set up. so if we are called with proc 0
-        // we just use the kernel va map base as that is the same thing.
-        //
-        if (apProc == gpProc0)
-            virtAddrPT = K2_VA32_TO_PT_ADDR(K2OS_KVA_KERNVAMAP_BASE, aVirtAddr);
-        else
-            virtAddrPT = K2_VA32_TO_PT_ADDR(apProc->mVirtMapKVA, aVirtAddr);
-    }
-
-    K2_ASSERT(virtAddrPT >= K2OS_KVA_KERN_BASE);
-    *apRetVirtAddrPT = virtAddrPT;
+    *apRetVirtAddrPT = virtAddrPT = K2OS_KVA_TO_PT_ADDR(gData.mpShared->LoadInfo.mTransitionPageAddr);
 
     pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtAddrPT);
     *apRetPhysAddrPT = (*pPTE) & K2_VA32_PAGEFRAME_MASK;

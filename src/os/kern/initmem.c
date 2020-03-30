@@ -220,7 +220,7 @@ static void sRemoveTransitionPage(void)
         //
         // pagetable for transition page is now empty and should be unmapped
         //
-        KernArch_BreakMapPageTable(gpProc0, transPageAddr, &virtPT, &physPT);
+        KernArch_BreakMapTransitionPageTable(&virtPT, &physPT);
 
         KernArch_InvalidateTlbPageOnThisCore(virtPT);
 

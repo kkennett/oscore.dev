@@ -50,9 +50,10 @@ static UINT32 * sGetPTE(UINT32 aVirtMapBase, UINT32 aVirtAddr)
     return pPTE;
 }
 
-UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINT32 aPageMapAttr)
+void KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINT32 aPageMapAttr)
 {
-    UINT32* pPTE;
+    UINT32 *    pPTE;
+    UINT32 *    pPageCount;
 
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
@@ -60,25 +61,49 @@ UINT32 KernMap_MakeOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAd
 
     *pPTE = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
 
-    K2_CpuWriteBarrier();
+    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
+    {
+        pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
+    }
+    else
+    {
+        K2_ASSERT(0);
+    }
+    (*pPageCount)++;
+    K2_ASSERT((*pPageCount) <= 1024);
 
-    return (UINT32)pPTE;
+    K2_CpuWriteBarrier();
 }
 
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr)
 {
-    UINT32* pPTE;
+    UINT32 *    pPTE;
+    UINT32 *    pPageCount;
+    UINT32      result;
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
 
+    result = ((*pPTE) & K2_VA32_PAGEFRAME_MASK);
+
     *pPTE = 0;
+
+    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
+    {
+        pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
+    }
+    else
+    {
+        K2_ASSERT(0);
+    }
+    K2_ASSERT((*pPageCount) > 0);
+    (*pPageCount)--;
 
     K2_CpuWriteBarrier();
 
-    return (UINT32)pPTE;
+    return result;
 }
 
-void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
+void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
 {
     UINT32 *                pPDE;
     UINT32 *                pPTE;
@@ -90,25 +115,24 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
     UINT32                  physPageAddr;
     UINT32                  ptIndex;
     BOOL                    usedPT;
+    UINT32 *                pPtPageCount;
 
     K2LIST_LINK *           pListLink;
     K2OSKERN_OBJ_PROCESS *  pProc;
 
     virtAddr = apCurThread->mWorkMapAddr;
-    K2OSKERN_Debug("map - v%08X\n", virtAddr);
 
     ptIndex = virtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
-    K2OSKERN_Debug("map - ptIndex %d\n", ptIndex);
 
     virtPT = K2OS_KVA_TO_PT_ADDR(virtAddr);
-    K2OSKERN_Debug("map - virtPT %08X\n", virtPT);
 
 #if K2_TARGET_ARCH_IS_ARM
     pPDE = (((UINT32 *)K2OS_KVA_TRANSTAB_BASE) + ((ptIndex & 0x3FF) * 4));
 #else
-    pPDE = (((UINT32 *)K2OS_KVA_TRANSTAB_BASE) + (ptIndex & 0x3FF));;
+    pPDE = (((UINT32 *)K2OS_KVA_TRANSTAB_BASE) + (ptIndex & 0x3FF));
 #endif
-    K2OSKERN_Debug("map - pPDE %08X\n", pPDE);
+
+    pPtPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
 
     disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
 
@@ -119,10 +143,11 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
         //
         lockStatus = FALSE;
         usedPT = FALSE;
+        K2_ASSERT(pPtPageCount[ptIndex] != 0);
     }
     else
     {
-        K2OSKERN_Debug("map - PDE NOT PRESENT\n");
+        K2_ASSERT(pPtPageCount[ptIndex] == 0);
 
         K2_ASSERT(apCurThread->mpWorkPtPage != NULL);
 
@@ -141,10 +166,8 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
         // map the pagetable page
         //
         pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtPT);
-        K2OSKERN_Debug("map - ptpte at %08X\n", pPTE);
         K2_ASSERT(((*pPTE) & K2OSKERN_PTE_PRESENT_BIT) == 0);
         physPageAddr = K2OS_PHYSTRACK_TO_PHYS32(((UINT32)apCurThread->mpWorkPtPage));
-        K2OSKERN_Debug("map - ptphys is %08X\n", physPageAddr);
         KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, virtPT, physPageAddr, K2OS_MAPTYPE_KERN_PAGETABLE);
 
 #if K2_TARGET_ARCH_IS_ARM
@@ -165,7 +188,6 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
             pde |= X32_PDE_CACHEDISABLE;
         if (K2OS_MAPTYPE_KERN_PAGEDIR & K2OS_MEMPAGE_ATTR_WRITE_THRU)
             pde |= X32_PDE_WRITETHROUGH;
-        K2OSKERN_Debug("map - new PDE is %08X\n", pde);
 
         pListLink = gData.ProcList.mpHead;
         K2_ASSERT(pListLink != NULL);
@@ -173,7 +195,6 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
             pProc = K2_GET_CONTAINER(K2OSKERN_OBJ_PROCESS, pListLink, ProcListLink);
 
             pPDE = (((UINT32 *)pProc->mTransTableKVA) + (ptIndex & 0x3FF));
-            K2OSKERN_Debug("map - proc %d PDE at 0x%08X\n", pProc->mId, pPDE);
 
             K2_ASSERT(((*pPDE) & K2OSKERN_PDE_PRESENT_BIT) == 0);
 
@@ -185,10 +206,9 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
     }
 
     //
-    // pagetable exists. just map the page appropriately
+    // pagetable now exists. just map the page appropriately
     //
     pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtAddr);
-    K2OSKERN_Debug("map - page pte at %08X\n", pPTE);
     K2_ASSERT(((*pPTE) & K2OSKERN_PTE_PRESENT_BIT) == 0);
     if (apCurThread->mpWorkPage != NULL)
     {
@@ -196,6 +216,7 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
     }
     else
         physPageAddr = 0;
+
     KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, physPageAddr, apCurThread->mWorkMapAttr);
 
     if (lockStatus)
@@ -220,7 +241,6 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
         lockStatus = TRUE;
 
         // move phys pt page onto system tracking list
-        K2OSKERN_Debug("map - move pagetable page to paging list\n");
         apCurThread->mpWorkPtPage->mpOwnerObject = NULL;
         K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_Paging], &apCurThread->mpWorkPtPage->ListLink);
         apCurThread->mpWorkPtPage = NULL;
@@ -233,7 +253,6 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
             disp = K2OSKERN_SeqIntrLock(&gData.PhysMemSeqLock);
             lockStatus = TRUE;
         }
-        K2OSKERN_Debug("map - move page to list %d\n", aTargetList);
         apCurThread->mpWorkPage->mpOwnerObject = apPhysPageOwner;
         apCurThread->mpWorkPage->mFlags = (apCurThread->mpWorkPage->mFlags & ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) | (aTargetList << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
         K2LIST_AddAtTail(&gData.PhysPageList[aTargetList], &apCurThread->mpWorkPage->ListLink);
@@ -244,12 +263,12 @@ void KernMap_KernFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOw
         K2OSKERN_SeqIntrUnlock(&gData.PhysMemSeqLock, disp);
 }
 
-void KernMap_UserFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
+void KernMap_MakeOneUserPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
 {
     K2_ASSERT(0);
 }
 
-void KernMap_FromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
+void KernMap_MakeOnePageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList)
 {
     K2_ASSERT(apCurThread->mWorkMapAddr != 0);
 
@@ -269,13 +288,120 @@ void KernMap_FromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner,
     if (apCurThread->mWorkMapAddr >= K2OS_KVA_KERN_BASE)
     {
         K2_ASSERT((apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_KERNEL) != 0);
-        KernMap_KernFromThread(apCurThread, apPhysPageOwner, aTargetList);
+        KernMap_MakeOneKernPageFromThread(apCurThread, apPhysPageOwner, aTargetList);
     }
     else
     {
         K2_ASSERT((apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_KERNEL) == 0);
-        KernMap_UserFromThread(apCurThread, apPhysPageOwner, aTargetList);
+        KernMap_MakeOneUserPageFromThread(apCurThread, apPhysPageOwner, aTargetList);
     }
 }
 
+void KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPhysPageOwner, KernPhysPageList aMatchList)
+{
+    UINT32 *    pPtPageCount;
+    UINT32      ptIndex;
+    UINT32      virtAddr;
+    BOOL        disp;
+    UINT32 *    pPTE;
+    UINT32      physPageAddr;
+    BOOL        emptyPt;
+
+    pPtPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
+
+    virtAddr = apCurThread->mWorkMapAddr;
+
+    ptIndex = virtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+
+    pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtAddr);
+
+    if (0 == ((*pPTE) & K2OSKERN_PTE_PRESENT_BIT))
+    {
+        K2_ASSERT((*pPTE) & K2OSKERN_PTE_NP_BIT);
+        K2_ASSERT(apMatchPhysPageOwner == NULL);
+        K2_ASSERT(aMatchList == KernPhysPageList_Error);
+        physPageAddr = KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr);
+        K2_ASSERT(physPageAddr == 0);
+    }
+    else
+    {
+        physPageAddr = KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr);
+        apCurThread->mpWorkPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(physPageAddr);
+        K2_ASSERT(apCurThread->mpWorkPage->mpOwnerObject == apMatchPhysPageOwner);
+        K2_ASSERT(((apCurThread->mpWorkPage->mFlags & K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) == aMatchList);
+    }
+
+    emptyPt = (pPtPageCount[ptIndex] == 0) ? TRUE : FALSE;
+    if (emptyPt)
+    {
+        //
+        // ensure PT is clean
+        //
+        K2_ASSERT(0 != K2MEM_VerifyZero((void *)K2OS_KVA_TO_PT_ADDR(virtAddr), K2_VA32_MEMPAGE_BYTES));
+#if K2_TARGET_ARCH_IS_ARM
+        //
+        // do not have to go into scheduler to unmap a pagetable or flush the TLB
+        //
+
+        set apCurThread->mpWorkPtPage
+
+        apCurThread->mTlbFlushNeeded = FALSE;
+        apCurThread->mTlbFlushBase = 0;
+        apCurThread->mTlbFlushPages = 0;
+#endif
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+
+#if K2_TARGET_ARCH_IS_INTEL
+    if (emptyPt)
+    {
+        //
+        // try to unmap the pagetable and flush the TLB here via the scheduler
+        //
+        apCurThread->Sched.Item.mSchedItemType = KernSchedItem_PurgePT;
+        apCurThread->Sched.Item.Args.PurgePt.mPtIndex = ptIndex;
+        KernArch_ThreadCallSched();
+        apCurThread->mpWorkPtPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(apCurThread->Sched.Item.Args.PurgePt.mPtPhysOut);
+        apCurThread->mTlbFlushNeeded = FALSE;
+        apCurThread->mTlbFlushBase = 0;
+        apCurThread->mTlbFlushPages = 0;
+    }
+#endif
+
+    if (emptyPt)
+    {
+        K2_ASSERT(apCurThread->mpWorkPtPage != NULL);
+    }
+}
+
+void KernMap_BreakOneUserPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPhysPageOwner, KernPhysPageList aMatchList)
+{
+    K2_ASSERT(0);
+}
+
+void KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPhysPageOwner, KernPhysPageList aMatchList)
+{
+    K2_ASSERT(apCurThread->mpWorkPage == NULL);
+    K2_ASSERT(apCurThread->mpWorkPtPage == NULL);
+
+    K2_ASSERT(apCurThread->mWorkMapAddr != 0);
+
+    if (apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_GUARD)
+    {
+        K2_ASSERT(apMatchPhysPageOwner == NULL);
+        K2_ASSERT(aMatchList == KernPhysPageList_Error);
+    }
+
+    if (apCurThread->mWorkMapAddr >= K2OS_KVA_KERN_BASE)
+    {
+        KernMap_BreakOneKernPageToThread(apCurThread, apMatchPhysPageOwner, aMatchList);
+    }
+    else
+    {
+        KernMap_BreakOneUserPageToThread(apCurThread, apMatchPhysPageOwner, aMatchList);
+    }
+}
 

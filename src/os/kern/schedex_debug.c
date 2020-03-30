@@ -32,11 +32,13 @@
 
 #include "kern.h"
 
-void KernSched_Exec_EnterDebug(void)
+BOOL KernSched_Exec_EnterDebug(void)
 {
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_EnterDebug);
 
     K2OSKERN_Debug("SCHED:EnterDebug(%d)\n", gData.Sched.mpActiveItemThread->Env.mId);
 
     K2_ASSERT(0);
+
+    return FALSE; // if something changes scheduling-wise, return true
 }

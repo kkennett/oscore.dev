@@ -87,8 +87,8 @@ sProcessOneCpuCoreEvent(
     case KernCpuCoreEvent_Ici_Stop:
         K2_ASSERT(0);
         break;
-    case KernCpuCoreEvent_Ici_TlbInvPage:
-        K2_ASSERT(0);
+    case KernCpuCoreEvent_Ici_TlbInv:
+        KernSched_PerCpuTlbInvEvent(apThisCore);
         break;
     case KernCpuCoreEvent_Ici_PageDirUpdate:
         K2_ASSERT(0);
