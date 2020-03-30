@@ -42,6 +42,9 @@ BOOL KernSched_Exec_PurgePT(void)
     UINT32                  physPtAddr;
     UINT32                  virtAddrInPtRange;
     K2OSKERN_OBJ_PROCESS *  pUseProc;
+    K2OSKERN_OBJ_PROCESS *  pScan;
+    K2LIST_LINK *           pListLink;
+    BOOL                    kernSpace;
 
     pPtPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
 
@@ -49,7 +52,9 @@ BOOL KernSched_Exec_PurgePT(void)
 
     virtAddrInPtRange = ptIndex * K2_VA32_PAGETABLE_MAP_BYTES;
 
-    if ((ptIndex >= K2_VA32_PAGEFRAMES_FOR_2G))
+    kernSpace = (ptIndex >= K2_VA32_PAGEFRAMES_FOR_2G) ? TRUE : FALSE;
+
+    if (kernSpace)
     {
         //
         // pagetable maps somewhere in kernel space
@@ -63,12 +68,6 @@ BOOL KernSched_Exec_PurgePT(void)
         //
         pUseProc = gData.Sched.mpActiveItemThread->mpProc;
     }
-
-#if K2_TARGET_ARCH_IS_ARM
-    pPDE = (((UINT32 *)pUseProc->mTransTableKVA) + ((ptIndex & 0x3FF) * 4));
-#else
-    pPDE = (((UINT32 *)pUseProc->mTransTableKVA) + (ptIndex & 0x3FF));
-#endif
 
     virtPtAddr = K2_VA32_TO_PT_ADDR(pUseProc->mVirtMapKVA, virtAddrInPtRange);
 
@@ -91,14 +90,54 @@ BOOL KernSched_Exec_PurgePT(void)
 
         gData.Sched.mpActiveItemThread->Sched.Item.Args.PurgePt.mPtPhysOut = physPtAddr;
 
-        K2_ASSERT(((*pPDE) & K2_VA32_PAGEFRAME_MASK) == physPtAddr);
+        if (kernSpace)
+        {
+            //
+            // remove from kernel space in all process' page directories
+            //
 
-        *pPDE = 0;
+            //
+            // do not have to lock proc list as we are the scheduler and we are not changing 
+            // it and the scheduler is the only thing that can change it. Threads may
+            // lock it to scan it, as we are doing here, but this code does not have to lock.
+            //
+            pListLink = gData.ProcList.mpHead;
+            K2_ASSERT(pListLink != NULL);
+            do {
+                pScan = K2_GET_CONTAINER(K2OSKERN_OBJ_PROCESS, pListLink, ProcListLink);
 #if K2_TARGET_ARCH_IS_ARM
-        pPDE[1] = 0;
-        pPDE[2] = 0;
-        pPDE[3] = 0;
+                pPDE = (((UINT32 *)pScan->mTransTableKVA) + ((ptIndex & 0x3FF) * 4));
+#else
+                pPDE = (((UINT32 *)pScan->mTransTableKVA) + (ptIndex & 0x3FF));
 #endif
+                K2_ASSERT(((*pPDE) & K2_VA32_PAGEFRAME_MASK) == physPtAddr);
+                *pPDE = 0;
+#if K2_TARGET_ARCH_IS_ARM
+                pPDE[1] = 0;
+                pPDE[2] = 0;
+                pPDE[3] = 0;
+#endif
+                pListLink = pListLink->mpNext;
+            } while (pListLink != NULL);
+        }
+        else
+        {
+            //
+            // just remove from user space in this process
+            //
+#if K2_TARGET_ARCH_IS_ARM
+            pPDE = (((UINT32 *)pUseProc->mTransTableKVA) + ((ptIndex & 0x3FF) * 4));
+#else
+            pPDE = (((UINT32 *)pUseProc->mTransTableKVA) + (ptIndex & 0x3FF));
+#endif
+            K2_ASSERT(((*pPDE) & K2_VA32_PAGEFRAME_MASK) == physPtAddr);
+            *pPDE = 0;
+#if K2_TARGET_ARCH_IS_ARM
+            pPDE[1] = 0;
+            pPDE[2] = 0;
+            pPDE[3] = 0;
+#endif
+        }
 
     } while (0);
 

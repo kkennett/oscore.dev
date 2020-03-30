@@ -54,18 +54,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     }
     K2_ASSERT(pSeg != NULL);
 
-    KernMem_SegFree(pSeg);
-    K2OSKERN_Debug("Intentional Hang\n");
-    while (1);
-
     do {
-        stat = KernMem_VirtAllocToThread(useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
+        pCurThread = K2OSKERN_CURRENT_THREAD;
+
+        stat = KernMem_VirtAllocToThread(pCurThread, useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
         if (K2STAT_IS_ERROR(stat))
             break;
 
         do {
-            pCurThread = K2OSKERN_CURRENT_THREAD;
-
             K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
             pSeg->Hdr.mObjType = K2OS_Obj_Segment;
             pSeg->Hdr.mRefCount = 1;
@@ -77,16 +73,16 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
             if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
-                stat = KernMem_PhysAllocToThread(aPageCount, aPageAttrFlags, FALSE);
+                stat = KernMem_PhysAllocToThread(pCurThread, aPageCount, aPageAttrFlags, FALSE);
                 if (!K2STAT_IS_ERROR(stat))
                 {
                     K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount >= aPageCount);
 
-                    stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+                    stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
 
                     if (K2STAT_IS_ERROR(stat))
                     {
-                        KernMem_PhysFreeFromThread();
+                        KernMem_PhysFreeFromThread(pCurThread);
                     }
                 }
             }
@@ -95,7 +91,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
                 K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
                 K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
 
-                stat = KernMem_CreateSegmentFromThread(pSeg, NULL);
+                stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
             }
 
             if (!K2STAT_IS_ERROR(stat))
@@ -110,7 +106,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
         if (K2STAT_IS_ERROR(stat))
         {
-            KernMem_VirtFreeFromThread();
+            KernMem_VirtFreeFromThread(pCurThread);
             K2OS_ThreadSetStatus(stat);
             return FALSE;
         }

@@ -793,16 +793,16 @@ void   KernMem_Start(void);
 
 UINT32 KernMem_CountPT(UINT32 aVirtAddr, UINT32 aPageCount);
 
-K2STAT KernMem_VirtAllocToThread(UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
-void   KernMem_VirtFreeFromThread(void);
+K2STAT KernMem_VirtAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
+void   KernMem_VirtFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 
-K2STAT KernMem_PhysAllocToThread(UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aForPageTables);
-void   KernMem_PhysFreeFromThread(void);
+K2STAT KernMem_PhysAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aForPageTables);
+void   KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 
 K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg);
 K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg);
 
-K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
+K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
 /* --------------------------------------------------------------------------------- */
 

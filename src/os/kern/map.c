@@ -344,8 +344,9 @@ void KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *ap
         //
         // do not have to go into scheduler to unmap a pagetable or flush the TLB
         //
+        K2_ASSERT(0);
 
-        set apCurThread->mpWorkPtPage
+        // set apCurThread->mpWorkPtPage
 
         apCurThread->mTlbFlushNeeded = FALSE;
         apCurThread->mTlbFlushBase = 0;
