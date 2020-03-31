@@ -45,9 +45,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     K2_ASSERT(apAddr != NULL);
     useAddr = *apAddr;
 
-    if (useAddr == 0)
-        useAddr = 0xC0000000;
-
     K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
 
     pSeg = NULL;
