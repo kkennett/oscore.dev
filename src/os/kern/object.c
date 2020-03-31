@@ -32,14 +32,303 @@
 
 #include "kern.h"
 
-INT32 KernObj_AddRef(K2OSKERN_OBJ_HEADER *apHdr)
+static void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
-    K2_ASSERT(0);
-    return 0;
+    switch (apObjHdr->mObjType)
+    {
+    case K2OS_Obj_Name:
+        KernName_Dispose((K2OSKERN_OBJ_NAME *)apObjHdr);
+        break;
+    default:
+        K2_ASSERT(0);
+        break;
+    }
 }
 
-INT32 KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr)
+K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetActual)
 {
-    K2_ASSERT(0);
-    return 0;
+    K2STAT          stat;
+    UINT32          disp;
+    K2TREE_NODE *   pObjTreeNode;
+    K2TREE_NODE *   pNameTreeNode;
+
+    K2_ASSERT(apNewName != NULL);
+    K2_ASSERT(apNewName->Hdr.mRefCount > 0);
+    K2_ASSERT(apNewName->Hdr.mObjType == K2OS_Obj_Name);
+    K2_ASSERT(apNewName->Hdr.mpName == NULL);
+
+    K2_ASSERT(appRetActual != NULL);
+    *appRetActual = NULL;
+
+    K2LIST_Init(&apNewName->Hdr.WaitingThreadsPrioList);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
+
+    pObjTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apNewName);
+    if (pObjTreeNode == NULL)
+    {
+        //
+        // object itself is not already known, which means we find it or add it
+        //
+
+        pNameTreeNode = K2TREE_Find(&gData.NameTree, (UINT32)(apNewName->NameBuffer));
+        if (pNameTreeNode != NULL)
+        {
+            //
+            // same name already exists.  get a pointer to it and addref it
+            //
+            *appRetActual = K2_GET_CONTAINER(K2OSKERN_OBJ_NAME, pNameTreeNode, NameTreeNode);
+            (*appRetActual)->Hdr.mRefCount++;
+
+            stat = K2STAT_ALREADY_EXISTS;   // this is not an error, it is a status
+        }
+        else
+        {
+            //
+            // name did not exist, so add it and the new object to the respective trees.
+            //
+            apNewName->NameTreeNode.mUserVal = (UINT32)apNewName->NameBuffer;
+            K2TREE_Insert(&gData.NameTree, apNewName->NameTreeNode.mUserVal, &apNewName->NameTreeNode);
+
+            apNewName->Hdr.ObjTreeNode.mUserVal = (UINT32)&apNewName->Hdr;
+            K2TREE_Insert(&gData.ObjTree, (UINT32)&apNewName->Hdr, &apNewName->Hdr.ObjTreeNode);
+
+            *appRetActual = apNewName;
+
+            stat = K2STAT_NO_ERROR;
+        }
+    }
+    else
+    {
+        stat = K2STAT_ERROR_ALREADY_EXISTS;
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
+
+    return stat;
 }
+
+K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
+{
+    K2STAT          stat;
+    UINT32          disp;
+    K2TREE_NODE *   pObjTreeNode;
+
+    K2_ASSERT(apObjHdr != NULL);
+    K2_ASSERT(apObjHdr->mRefCount > 0);
+    K2_ASSERT(apObjHdr->mObjType != K2OS_Obj_None);
+    K2_ASSERT(apObjHdr->mObjType != K2OS_Obj_Name);
+    K2_ASSERT(apObjHdr->mpName == NULL);
+
+    if (apObjName != NULL)
+    {
+        K2_ASSERT(apObjName->Hdr.mObjType == K2OS_Obj_Name);
+        K2_ASSERT(apObjName->Hdr.mpName == NULL);
+
+        K2OS_CritSecEnter(&apObjName->OwnerSec);
+
+        if (apObjName->mpObject != NULL)
+        {
+            stat = K2STAT_ERROR_ALREADY_EXISTS;
+        }
+        else
+        {
+            stat = KernObj_AddRef(&apObjName->Hdr);
+        }
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_CritSecLeave(&apObjName->OwnerSec);
+            return stat;
+        }
+    }
+
+    //
+    // if object is being named, then the name has been addref'd and
+    // the name owner sec is locked here
+    //
+
+    K2LIST_Init(&apObjHdr->WaitingThreadsPrioList);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
+
+    pObjTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
+
+    if (pObjTreeNode == NULL)
+    {
+        stat = K2STAT_NO_ERROR;
+
+        if (apObjName != NULL)
+        {
+            apObjHdr->mpName = apObjName;
+            apObjName->mpObject = apObjHdr;
+        }
+
+        apObjHdr->ObjTreeNode.mUserVal = (UINT32)apObjHdr;
+        K2TREE_Insert(&gData.ObjTree, (UINT32)apObjHdr, &apObjHdr->ObjTreeNode);
+    }
+    else
+    {
+        stat = K2STAT_ERROR_ALREADY_EXISTS;
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        if (apObjName != NULL)
+        {
+            KernObj_Release(&apObjName->Hdr);
+        }
+    }
+
+    if (apObjName != NULL)
+    {
+        KernEvent_Set(&apObjName->Event_IsOwned);
+
+        K2OS_CritSecLeave(&apObjName->OwnerSec);
+    }
+
+    return stat;
+}
+
+K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr)
+{
+    BOOL            disp;
+    K2TREE_NODE *   pTreeNode;
+
+    K2_ASSERT(apObjHdr != NULL);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
+
+    if (pTreeNode != NULL)
+    {
+        K2ATOMIC_Inc(&apObjHdr->mRefCount);
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
+
+    if (pTreeNode == NULL)
+        return K2STAT_ERROR_NOT_FOUND;
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
+{
+    UINT32              disp;
+    K2STAT              stat;
+    K2TREE_NODE *       pTreeNode;
+    BOOL                refDecToZero;
+    BOOL                nameRelease;
+    K2OSKERN_OBJ_NAME * pName;
+
+    K2_ASSERT(apObjHdr != NULL);
+
+    nameRelease = FALSE;
+    refDecToZero = FALSE;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
+
+    if (pTreeNode != NULL)
+    {
+        if (apObjHdr->mRefCount == 1)
+        {
+            if (apObjHdr->mpName != NULL)
+            {
+                //
+                // need to disconnect from name first
+                //
+                nameRelease = TRUE;
+                pName = apObjHdr->mpName;
+                apObjHdr->mpName = NULL;
+            }
+            else
+            {
+                apObjHdr->mRefCount = 0;
+                K2_CpuWriteBarrier();
+                K2TREE_Remove(&gData.ObjTree, &apObjHdr->ObjTreeNode);
+                if (apObjHdr->mObjType == K2OS_Obj_Name)
+                {
+                    K2TREE_Remove(&gData.NameTree, &((K2OSKERN_OBJ_NAME *)apObjHdr)->NameTreeNode);
+                }
+                refDecToZero = TRUE;
+            }
+        }
+        else
+        {
+            apObjHdr->mRefCount--;
+            K2_CpuWriteBarrier();
+            apObjHdr = NULL;
+        }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
+
+    //
+    // apObjHdr object may be GONE here if we were not the last release
+    //
+
+    if (pTreeNode == NULL)
+    {
+        return K2STAT_ERROR_NOT_FOUND;
+    }
+
+    if (apObjHdr == NULL)
+    {
+        //
+        // object was found but this WAS NOT the last release
+        //
+        return K2STAT_NO_ERROR;
+    }
+
+    //
+    // object was found and this *was* the last release at the point of the call.
+    // see if we need to disconnect from the name.  if we do then we need to 
+    // reassess object disposition after that operation since somebody else may
+    // have been able to addref to this object through the name before we had
+    // a chance to disconnect from the name.
+    //
+    if (nameRelease)
+    {
+        K2_ASSERT(!refDecToZero);
+
+        K2_ASSERT(pName->mpObject == apObjHdr);
+
+        K2OS_CritSecEnter(&pName->OwnerSec);
+
+        pName->mpObject = NULL;
+
+        KernEvent_Reset(&pName->Event_IsOwned);
+
+        K2OS_CritSecLeave(&pName->OwnerSec);
+
+        stat = KernObj_Release(&pName->Hdr);
+
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+        disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
+
+        if (apObjHdr->mRefCount == 1)
+        {
+            apObjHdr->mRefCount = 0;
+            K2_CpuWriteBarrier();
+            K2TREE_Remove(&gData.ObjTree, &apObjHdr->ObjTreeNode);
+            refDecToZero = TRUE;
+        }
+
+        K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
+    }
+
+    if (refDecToZero)
+    {
+        sObjectDispose(apObjHdr);
+    }
+
+    return K2STAT_NO_ERROR;
+}
+

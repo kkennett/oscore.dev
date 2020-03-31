@@ -29,51 +29,18 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include <lib/k2tree.h>
 
-static
-int
-sDefaultCompare(
-    UINT32          aKey,
-    K2TREE_NODE *   apNode
-)
+#include "kern.h"
+
+K2STAT KernEvent_Set(K2OSKERN_OBJ_EVENT *apEvtObj)
 {
-    if (aKey > apNode->mUserVal)
-        return 1;
-    if (aKey == apNode->mUserVal)
-        return 0;
-    return -1;
+    K2_ASSERT(0);
+    return K2STAT_ERROR_NOT_IMPL;
 }
 
-void 
-K2TREE_Init(
-    K2TREE_ANCHOR *             apAnchor,
-    K2TREE_pfCompareKeyToNode   afCompareKeyToNode
-)
+K2STAT KernEvent_Reset(K2OSKERN_OBJ_EVENT *apEvtObj)
 {
-    K2TREE_NODE * pNode;
-
-    K2_ASSERT(apAnchor != NULL);
-
-    if (afCompareKeyToNode == NULL)
-        afCompareKeyToNode = sDefaultCompare;
-
-    pNode = &apAnchor->NilNode;
-    K2TREE_NODE_SETPARENT(pNode, pNode);
-    pNode->mpLeftChild = pNode;
-    pNode->mpRightChild = pNode;
-    K2TREE_NODE_SETBLACK(pNode);
-    pNode->mUserVal = 0;
-
-    pNode = &apAnchor->RootNode;
-    K2TREE_NODE_SETPARENT(pNode, &apAnchor->NilNode);
-    pNode->mpLeftChild = &apAnchor->NilNode;
-    pNode->mpRightChild = &apAnchor->NilNode;
-    K2TREE_NODE_SETBLACK(pNode);
-    pNode->mUserVal = 0;
-
-    apAnchor->mNodeCount = 0;
-
-    apAnchor->mfCompareKeyToNode = afCompareKeyToNode;
+    K2_ASSERT(0);
+    return K2STAT_ERROR_NOT_IMPL;
 }
 

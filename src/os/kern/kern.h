@@ -160,12 +160,15 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_COREPAGE) == K2_VA32_MEMPAGE_BYTES);
 /* --------------------------------------------------------------------------------- */
 
 #define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
+#define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
 
 struct _K2OSKERN_OBJ_HEADER
 {
     K2OS_ObjectType     mObjType;
     UINT32              mObjFlags;
     INT32 volatile      mRefCount;
+    K2TREE_NODE         ObjTreeNode;
+    K2OSKERN_OBJ_NAME * mpName;
     K2LIST_ANCHOR       WaitingThreadsPrioList;
 };
 
@@ -519,21 +522,23 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_THREAD_PAGE) == K2_VA32_MEMPAGE_BYTES);
 
 /* --------------------------------------------------------------------------------- */
 
-struct _K2OSKERN_OBJ_NAME
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-    char                    NameBuffer[K2OS_NAME_MAX_LEN];
-    K2OSKERN_OBJ_PROCESS *  mpOwnerProc;
-    K2OSKERN_OBJ_HEADER *   mpNamedObject;
-};
-
-/* --------------------------------------------------------------------------------- */
-
 struct _K2OSKERN_OBJ_EVENT
 {
     K2OSKERN_OBJ_HEADER     Hdr;
     BOOL                    mIsAutoReset;
     BOOL                    mIsSignaled;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+struct _K2OSKERN_OBJ_NAME
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+    K2TREE_NODE             NameTreeNode;
+    char                    NameBuffer[K2OS_NAME_MAX_LEN + 1];
+    K2OS_CRITSEC            OwnerSec;
+    K2OSKERN_OBJ_HEADER *   mpObject;
+    K2OSKERN_OBJ_EVENT      Event_IsOwned;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -754,6 +759,11 @@ struct _KERN_DATA
     // debugger
     BOOL                                mDebuggerActive;
 
+    // objects and name
+    K2OSKERN_SEQLOCK                    ObjTreeSeqLock;
+    K2TREE_ANCHOR                       ObjTree;
+    K2TREE_ANCHOR                       NameTree;
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                              mA32VectorPagePhys;
@@ -903,8 +913,19 @@ void KernIntr_Exception(UINT32 aExceptionCode);
 
 /* --------------------------------------------------------------------------------- */
 
-INT32 KernObj_AddRef(K2OSKERN_OBJ_HEADER *apHdr);
-INT32 KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
+K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetActual);
+K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName);
+K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apHdr);
+K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
+
+/* --------------------------------------------------------------------------------- */
+
+void   KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj);
+
+/* --------------------------------------------------------------------------------- */
+
+K2STAT KernEvent_Set(K2OSKERN_OBJ_EVENT *apEvtObj);
+K2STAT KernEvent_Reset(K2OSKERN_OBJ_EVENT *apEvtObj);
 
 /* --------------------------------------------------------------------------------- */
 

@@ -47,6 +47,22 @@ KERN_DATA gData;
 //
 void KernInit_Stage(KernInitStage aStage);
 
+static
+int
+sNameCompare(
+    UINT32          aKey,
+    K2TREE_NODE *   apNode
+    )
+{
+    K2OSKERN_OBJ_NAME *pNameObj;
+
+    K2_ASSERT(aKey != 0);
+
+    pNameObj = K2_GET_CONTAINER(K2OSKERN_OBJ_NAME, apNode, NameTreeNode);
+
+    return K2ASC_CompInsLen((char const *)aKey, pNameObj->NameBuffer, K2OS_NAME_MAX_LEN + 1);
+}
+
 K2STAT 
 K2_CALLCONV_REGS 
 dlx_entry(
@@ -101,6 +117,12 @@ dlx_entry(
     gData.mpShared->FuncTab.ExTrap_Mount = KernEx_TrapMount;
     gData.mpShared->FuncTab.ExTrap_Dismount = KernEx_TrapDismount;
     gData.mpShared->FuncTab.RaiseException = KernEx_RaiseException;
+
+    K2OSKERN_SeqIntrInit(&gData.ObjTreeSeqLock);
+
+    K2TREE_Init(&gData.ObjTree, NULL);
+
+    K2TREE_Init(&gData.NameTree, sNameCompare);
 
     KernInit_Stage(KernInitStage_dlx_entry);
 

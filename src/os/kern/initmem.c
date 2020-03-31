@@ -635,21 +635,6 @@ sInitPhysTrack(
 #endif
 }
 
-static
-int
-sUserValCompare(
-    UINT32          aKey,
-    K2TREE_NODE *   apNode
-)
-{
-    if (aKey > apNode->mUserVal)
-        return 1;
-    if (aKey == apNode->mUserVal)
-        return 0;
-    return -1;
-}
-
-
 #define INIT_HEAP_NODE_COUNT    64
 
 static K2OSKERN_VMNODE  sgInitHeapNodes[INIT_HEAP_NODE_COUNT];
@@ -1081,7 +1066,7 @@ static void sInit_BeforeVirt(void)
     // physical memory (PHYSTRACK)
     //
     K2OSKERN_SeqIntrInit(&gData.PhysMemSeqLock);
-    K2TREE_Init(&gData.PhysFreeTree, sUserValCompare);
+    K2TREE_Init(&gData.PhysFreeTree, NULL);
     for (ix = 0; ix < KernPhysPageList_Count; ix++)
     {
         K2LIST_Init(&gData.PhysPageList[ix]);
@@ -1105,7 +1090,7 @@ static void sInit_BeforeVirt(void)
     K2OSKERN_SeqIntrInit(&gData.KernVirtMapLock);
 
     K2OSKERN_SeqIntrInit(&gpProc0->SegTreeSeqLock);
-    K2TREE_Init(&gpProc0->SegTree, sUserValCompare);
+    K2TREE_Init(&gpProc0->SegTree, NULL);
 
     //
     // init physical stuff first

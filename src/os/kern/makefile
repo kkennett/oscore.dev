@@ -63,6 +63,8 @@ SOURCES += map.c
 SOURCES += intr.c
 SOURCES += mem.c
 SOURCES += object.c
+SOURCES += name.c
+SOURCES += event.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 
