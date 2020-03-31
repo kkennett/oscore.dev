@@ -406,3 +406,8 @@ void KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatc
     }
 }
 
+BOOL KernMap_SegRangeNotMapped(K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount)
+{
+    K2_ASSERT(0);
+    return FALSE;
+}

@@ -813,6 +813,8 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr);
 void   KernMap_MakeOnePageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList);
 void   KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPageOwner, KernPhysPageList aMatchList);
 
+BOOL   KernMap_SegRangeNotMapped(K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount);
+
 /* --------------------------------------------------------------------------------- */
 
 UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
@@ -898,6 +900,11 @@ void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_
 void KernIntr_RecvIrq(K2OSKERN_CPUCORE *apThisCore, UINT32 aIrqNum);
 void KernIntr_RecvIci(K2OSKERN_CPUCORE *apThisCore, UINT32 aSendingCoreIx); 
 void KernIntr_Exception(UINT32 aExceptionCode);
+
+/* --------------------------------------------------------------------------------- */
+
+INT32 KernObj_AddRef(K2OSKERN_OBJ_HEADER *apHdr);
+INT32 KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
 
 /* --------------------------------------------------------------------------------- */
 
