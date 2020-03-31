@@ -197,7 +197,7 @@ void sInit_BeforeHal_InitIntr(void)
         //
         physBase = (UINT32)gpA32Kern_MADT_GICD->PhysicalBaseAddress;
 
-        KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_UP_GICD_PAGE_VIRT, physBase & K2_VA32_PAGEFRAME_MASK, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+        KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_UP_GICD_PAGE_VIRT, physBase & K2_VA32_PAGEFRAME_MASK, K2OS_VIRTMAPTYPE_KERN_DEVICE);
 
         gA32Kern_GICDAddr = A32KERN_UP_GICD_PAGE_VIRT | (physBase & K2_VA32_MEMPAGE_OFFSET_MASK);
 
@@ -209,7 +209,7 @@ void sInit_BeforeHal_InitIntr(void)
             //
             // gicc is on different page than gicd
             //
-            KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_UP_GICC_PAGE_VIRT, physBase & K2_VA32_PAGEFRAME_MASK, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+            KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_UP_GICC_PAGE_VIRT, physBase & K2_VA32_PAGEFRAME_MASK, K2OS_VIRTMAPTYPE_KERN_DEVICE);
             gA32Kern_GICCAddr = A32KERN_UP_GICC_PAGE_VIRT | (physBase & K2_VA32_MEMPAGE_OFFSET_MASK);
         }
         else
@@ -239,7 +239,7 @@ void sInit_BeforeHal_InitIntr(void)
         physBase = physCBAR;
         left = A32_PERIPH_PAGES;
         do {
-            KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, virtBase, physBase, K2OS_VIRTMAPTYPE_KERN_DEVICE);
+            KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, virtBase, physBase, K2OS_VIRTMAPTYPE_KERN_DEVICE);
             virtBase += K2_VA32_MEMPAGE_BYTES;
             physBase += K2_VA32_MEMPAGE_BYTES;
         } while (--left);
@@ -282,7 +282,7 @@ static void sInit_BeforeLaunchCores(void)
     //
     K2_ASSERT(A32_HIGH_VECTORS_ADDRESS == K2OS_KVA_ARCHSPEC_BASE);
 
-    KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_VIRTMAPTYPE_KERN_DATA);
+    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_VIRTMAPTYPE_KERN_DATA);
 
     val32 = K2OS_KVA_ARCHSPEC_BASE + 8;  /* actual PC at point of jump */
     pOut = (UINT32 *)K2OS_KVA_ARCHSPEC_BASE;
@@ -333,7 +333,7 @@ static void sInit_BeforeLaunchCores(void)
     //
     // re-make the mapping as code
     //
-    KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_VIRTMAPTYPE_KERN_TEXT);
+    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_VIRTMAPTYPE_KERN_TEXT);
 
     //
     // turn on high vectors 

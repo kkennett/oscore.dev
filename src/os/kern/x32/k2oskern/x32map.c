@@ -37,9 +37,6 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     K2OSKERN_PHYSTRACK_PAGE *   pTrack;
     UINT32                      pte;
 
-    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_GUARD)
-        return K2OSKERN_PTE_NP_STACK_GUARD;
-
     pTrack = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
     K2_ASSERT(!(pTrack->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG));
 

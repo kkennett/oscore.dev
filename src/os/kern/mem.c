@@ -1174,7 +1174,7 @@ static void sCleanPage(UINT32 aPhysPage)
 
     virtAddr = K2OS_KVA_CORECLEARPAGES_BASE + (pThisCore->mCoreIx * K2_VA32_MEMPAGE_BYTES);
 
-    KernMap_MakeOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, aPhysPage, K2OS_MAPTYPE_KERN_WRITETHRU_CACHED);
+    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, aPhysPage, K2OS_MAPTYPE_KERN_WRITETHRU_CACHED);
 
     K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
 
@@ -1185,84 +1185,13 @@ static void sCleanPage(UINT32 aPhysPage)
     K2OSKERN_SetIntr(disp);
 }
 
-K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_OBJ_SEGMENT *apDst)
+static KernPhysPageList sGetSegTargetPageList(K2OSKERN_OBJ_SEGMENT *apSegSrc)
 {
-    UINT32                      pageCount;
-    UINT32                      virtAddr;
-    UINT32                      needPT;
-    K2STAT                      stat;
-    UINT32                      segType;
-    BOOL                        disp;
-    BOOL                        cleanAfter;
-    BOOL                        lockStatus;
-    UINT32                      targetPageList;
-    K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+    UINT32              segType;
+    KernPhysPageList    targetPageList;
 
-    K2_ASSERT(apSegSrc != NULL);
-    K2_ASSERT(apSegSrc->Hdr.mObjType == K2OS_Obj_Segment);
-    K2_ASSERT(apSegSrc->Hdr.mRefCount > 0);
-    K2_ASSERT(apSegSrc->mPagesBytes > 0);
-    K2_ASSERT((apSegSrc->mPagesBytes & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
-    pageCount = apSegSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
     segType = (apSegSrc->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK);
     K2_ASSERT(segType < K2OS_SEG_ATTR_TYPE_COUNT);
-    K2_ASSERT((apSegSrc->SegTreeNode.mUserVal & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
-    virtAddr = apSegSrc->SegTreeNode.mUserVal;
-
-    //
-    // get pagetable pages we may need when mapping the segment
-    //
-    needPT = KernMem_CountPT(virtAddr, pageCount);
-
-    //
-    // pull pages that can be used as pagetables to thread
-    //
-    stat = KernMem_PhysAllocToThread(apCurThread, needPT, KernPhys_Disp_Cached_WriteThrough, TRUE);
-    if (K2STAT_IS_ERROR(stat))
-        return stat;
-
-    //
-    // cannot fail from this point forward
-    //
-
-    if (apCurThread->WorkPtPages_Dirty.mNodeCount > 0)
-    {
-        //
-        // clean the pagetable pages - these need to be clean before we start using them
-        // otherwise there will be garbage in them mapping stuff randomly before they are
-        // initialized
-        //
-        do {
-            pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Dirty.mpHead, ListLink);
-            K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG) == 0);
-
-            sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
-
-            disp = K2OSKERN_SetIntr(FALSE);
-
-            K2LIST_Remove(&apCurThread->WorkPtPages_Dirty, &pPhysPage->ListLink);
-            pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
-            pPhysPage->mFlags |= (KernPhysPageList_Thread_PtClean << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
-            K2LIST_AddAtTail(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
-
-            K2OSKERN_SetIntr(disp);
-        } while (apCurThread->WorkPtPages_Dirty.mNodeCount > 0);
-    }
-
-    K2_ASSERT(apCurThread->WorkPtPages_Clean.mNodeCount == needPT);
-
-    //
-    // load first pagetable page into mapper args
-    //
-    disp = K2OSKERN_SetIntr(FALSE);
-
-    pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Clean.mpHead, ListLink);
-    K2LIST_Remove(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
-    pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
-    pPhysPage->mFlags |= (KernPhysPageList_Thread_PtWorking << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
-    apCurThread->mpWorkPtPage = pPhysPage;
-
-    K2OSKERN_SetIntr(disp);
 
     switch (segType)
     {
@@ -1332,13 +1261,96 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
     default:
         K2_ASSERT(0);
     }
+    
+    return targetPageList;
+}
+
+K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSegSrc, K2OSKERN_OBJ_SEGMENT *apDst)
+{
+    UINT32                      pageCount;
+    UINT32                      virtAddr;
+    UINT32                      needPT;
+    K2STAT                      stat;
+    UINT32                      segType;
+    BOOL                        disp;
+    BOOL                        cleanAfter;
+    BOOL                        lockStatus;
+    UINT32                      targetPageList;
+    K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+
+    K2_ASSERT(apSegSrc != NULL);
+    K2_ASSERT(apSegSrc->Hdr.mObjType == K2OS_Obj_Segment);
+    K2_ASSERT(apSegSrc->Hdr.mRefCount > 0);
+    K2_ASSERT(apSegSrc->mPagesBytes > 0);
+    K2_ASSERT((apSegSrc->mPagesBytes & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+    pageCount = apSegSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+    segType = (apSegSrc->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK);
+    K2_ASSERT(segType < K2OS_SEG_ATTR_TYPE_COUNT);
+    K2_ASSERT((apSegSrc->SegTreeNode.mUserVal & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+    
+    virtAddr = apSegSrc->SegTreeNode.mUserVal;
+
+    //
+    // get pagetable pages we may need when mapping the segment
+    //
+    needPT = KernMem_CountPT(virtAddr, pageCount);
+
+    //
+    // pull pages that can be used as pagetables to thread
+    //
+    stat = KernMem_PhysAllocToThread(apCurThread, needPT, KernPhys_Disp_Cached_WriteThrough, TRUE);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    //
+    // cannot fail from this point forward
+    //
+
+    if (apCurThread->WorkPtPages_Dirty.mNodeCount > 0)
+    {
+        //
+        // clean the pagetable pages - these need to be clean before we start using them
+        // otherwise there will be garbage in them mapping stuff randomly before they are
+        // initialized
+        //
+        do {
+            pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Dirty.mpHead, ListLink);
+            K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG) == 0);
+
+            sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
+
+            disp = K2OSKERN_SetIntr(FALSE);
+
+            K2LIST_Remove(&apCurThread->WorkPtPages_Dirty, &pPhysPage->ListLink);
+            pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
+            pPhysPage->mFlags |= (KernPhysPageList_Thread_PtClean << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
+            K2LIST_AddAtTail(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
+
+            K2OSKERN_SetIntr(disp);
+        } while (apCurThread->WorkPtPages_Dirty.mNodeCount > 0);
+    }
+
+    K2_ASSERT(apCurThread->WorkPtPages_Clean.mNodeCount == needPT);
+
+    //
+    // load first pagetable page into mapper args
+    //
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Clean.mpHead, ListLink);
+    K2LIST_Remove(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
+    pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
+    pPhysPage->mFlags |= (KernPhysPageList_Thread_PtWorking << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
+    apCurThread->mpWorkPtPage = pPhysPage;
+
+    K2OSKERN_SetIntr(disp);
 
     //
     // if this is a thread segment then the first page in the range is a guard page
     //
     if (segType == K2OS_SEG_ATTR_TYPE_THREAD)
     {
-        apCurThread->mWorkMapAttr = K2OS_MEMPAGE_ATTR_GUARD | K2OS_MEMPAGE_ATTR_KERNEL;
+        apCurThread->mWorkMapAttr = K2OSKERN_PTE_NP_TYPE_GUARD | K2OSKERN_PTE_NP_BIT;
         apCurThread->mWorkMapAddr = virtAddr;
         apCurThread->mpWorkPage = NULL;
         KernMap_MakeOnePageFromThread(apCurThread, NULL, KernPhysPageList_Error);
@@ -1348,11 +1360,20 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
         K2_ASSERT(pageCount > 0);
     }
 
-    apCurThread->mWorkMapAttr = apSegSrc->mSegAndMemPageAttr;
+    if ((apCurThread->WorkPages_Clean.mNodeCount > 0) || (apCurThread->WorkPages_Dirty.mNodeCount > 0))
+    {
+        apCurThread->mWorkMapAttr = apSegSrc->mSegAndMemPageAttr;
+        cleanAfter = (apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE) ? TRUE : FALSE;
+        targetPageList = sGetSegTargetPageList(apSegSrc);
+    }
+    else
+    {
+        apCurThread->mWorkMapAttr = K2OSKERN_PTE_NP_TYPE_NOT_COMMITTED | K2OSKERN_PTE_NP_BIT;
+        cleanAfter = FALSE;
+        targetPageList = KernPhysPageList_Error;
+    }
 
     lockStatus = FALSE;
-
-    cleanAfter = (apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE) ? TRUE : FALSE;
 
     do {
         apCurThread->mWorkMapAddr = virtAddr;
@@ -1422,13 +1443,14 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
             lockStatus = FALSE;
         }
 
-        if (apCurThread->mpWorkPage != NULL)
+        //
+        // this always gets called because we are either mapping PTs only or PT + PG
+        //
+        KernMap_MakeOnePageFromThread(apCurThread, apDst, targetPageList);
+
+        if (cleanAfter)
         {
-            KernMap_MakeOnePageFromThread(apCurThread, apDst, targetPageList);
-            if (cleanAfter)
-            {
-                K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
-            }
+            K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
         }
 
         virtAddr += K2_VA32_MEMPAGE_BYTES;
@@ -1474,7 +1496,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
         K2OSKERN_SetIntr(disp);
     }
-    
+
     //
     // latch the segment into the segment tree
     //
@@ -1739,6 +1761,77 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
 
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags)
 {
-    K2_ASSERT(0);
-    return K2STAT_ERROR_NOT_IMPL;
+    BOOL                        disp;
+    BOOL                        cleanAfter;
+    UINT32                      virtAddr;
+    UINT32                      segPageCount;
+    K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+
+    segPageCount = apSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+
+    K2_ASSERT(aSegOffset < segPageCount);
+    K2_ASSERT(aPageCount <= segPageCount);
+    K2_ASSERT((segPageCount - aSegOffset) >= aPageCount);
+    K2_ASSERT(aPageCount <= (apCurThread->WorkPages_Dirty.mNodeCount + apCurThread->WorkPages_Clean.mNodeCount));
+    K2_ASSERT(apCurThread->mpWorkPage == NULL);
+
+    virtAddr = apSrc->SegTreeNode.mUserVal + (aSegOffset * K2_VA32_MEMPAGE_BYTES);
+
+    if (virtAddr >= K2OS_KVA_KERN_BASE)
+    {
+        aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;
+    }
+    else
+    {
+        aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
+    }
+
+    apCurThread->mWorkMapAttr = aPageAttrFlags;
+
+    cleanAfter = (apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE) ? TRUE : FALSE;
+
+    do {
+        apCurThread->mWorkMapAddr = virtAddr;
+
+        //
+        // load a page
+        //
+        if (apCurThread->WorkPages_Clean.mNodeCount > 0)
+        {
+            disp = K2OSKERN_SetIntr(FALSE);
+            pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPages_Clean.mpHead, ListLink);
+            K2LIST_Remove(&apCurThread->WorkPages_Clean, &pPhysPage->ListLink);
+        }
+        else
+        {
+            //
+            // clean a dirty page if the page will not be mapped as writeable
+            //
+            pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPages_Dirty.mpHead, ListLink);
+
+            if (!cleanAfter)
+            {
+                sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
+            }
+
+            disp = K2OSKERN_SetIntr(FALSE);
+            K2LIST_Remove(&apCurThread->WorkPages_Dirty, &pPhysPage->ListLink);
+        }
+
+        pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
+        pPhysPage->mFlags |= (KernPhysPageList_Thread_Working << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
+        apCurThread->mpWorkPage = pPhysPage;
+
+        K2OSKERN_SetIntr(disp);
+
+        KernMap_MakeOnePageFromThread(apCurThread, apSrc, sGetSegTargetPageList(apSrc));
+        if (cleanAfter)
+        {
+            K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
+        }
+
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--aPageCount > 0);
+
+    return K2STAT_NO_ERROR;
 }

@@ -379,7 +379,7 @@ K2VMAP32_RealizeArchMappings(
                     {
                         mapAttr = pte & K2VMAP32_MAPTYPE_MASK;
 
-                        if (mapAttr & K2OS_MEMPAGE_ATTR_GUARD)
+                        if (mapAttr & K2OS_MEMPAGE_ATTR_SPEC_NP)
                         {
                             // mark as not present
                             pte = 0;

@@ -288,14 +288,14 @@ void KernArch_LaunchCores(void)
         // 
         // map the AP processors' startup page directory so we can write to it.
         //
-        KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
         pPageDir = (X32_PAGEDIR *)K2OSKERN_X32_AP_PAGEDIR_KVA;
         K2MEM_Zero(pPageDir, K2_VA32_MEMPAGE_BYTES);
 
         //
         // map the AP processors' startup page table so we can write to it.
         //
-        KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
         pPageTable = (X32_PAGETABLE *)K2OSKERN_X32_AP_PAGETABLE_KVA;
         K2MEM_Zero(pPageTable, K2_VA32_MEMPAGE_BYTES);
 
@@ -315,7 +315,7 @@ void KernArch_LaunchCores(void)
         //
         // map the transition page.  AP startup code is hardwired to work at this address
         //
-        KernMap_MakeOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
         
         //
         // put the transition page into the AP processors' pagetable

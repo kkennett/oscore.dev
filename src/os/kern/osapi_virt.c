@@ -44,6 +44,10 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
     K2_ASSERT(apAddr != NULL);
     useAddr = *apAddr;
+
+    if (useAddr == 0)
+        useAddr = 0xC0000000;
+
     K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
 
     pSeg = NULL;
@@ -67,10 +71,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
             pSeg->Hdr.mObjType = K2OS_Obj_Segment;
             pSeg->Hdr.mRefCount = 1;
             K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+            pSeg->SegTreeNode.mUserVal = pCurThread->mWorkVirt_Range;
             pSeg->mPagesBytes = pCurThread->mWorkVirt_PageCount * K2_VA32_MEMPAGE_BYTES;
+            if (pSeg->SegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
+                aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;
+            else
+                aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
             pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_USER | aPageAttrFlags;
             pSeg->Info.User.mpProc = pCurThread->mpProc;
-            pSeg->SegTreeNode.mUserVal = pCurThread->mWorkVirt_Range;
 
             if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
@@ -235,8 +243,18 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         return FALSE;
     }
 
-    K2OSKERN_Debug("Commit %d pages at page offset %d within segment starting at 0x%08X that has %d pages in it.\n",
-        aPageCount, segOffset, pSeg->SegTreeNode.mUserVal, segPageCount);
+    if ((pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) != K2OS_SEG_ATTR_TYPE_USER)
+        aPageAttrFlags = pSeg->mSegAndMemPageAttr;
+    
+    if (pSeg->SegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
+        aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;
+    else
+        aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
+
+    aPageAttrFlags &= K2OS_MEMPAGE_ATTR_MASK;
+
+//    K2OSKERN_Debug("Commit %d pages at page offset %d within segment starting at 0x%08X that has %d pages in it.\n",
+//        aPageCount, segOffset, pSeg->SegTreeNode.mUserVal, segPageCount);
 
     do {
         //

@@ -39,6 +39,7 @@ K2LIST_Remove(
 {
     K2_ASSERT(apAnchor != NULL);
     K2_ASSERT(apNode != NULL);
+    K2_ASSERT(apAnchor->mNodeCount > 0);
 
     if (apNode->mpPrev)
         apNode->mpPrev->mpNext = apNode->mpNext;
