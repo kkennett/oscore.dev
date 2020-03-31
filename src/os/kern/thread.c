@@ -125,8 +125,9 @@ void KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread)
 
 static void sInit_BeforeVirt(void)
 {
-    K2OSKERN_OBJ_THREAD *pThread;
-    K2OSKERN_THREAD_PAGE *pThreadPage;
+    K2OSKERN_OBJ_THREAD *   pThread;
+    K2OSKERN_THREAD_PAGE *  pThreadPage;
+    K2STAT                  stat;
 
     //
     // proc is initialized at dlx entry
@@ -137,7 +138,7 @@ static void sInit_BeforeVirt(void)
     K2LIST_AddAtTail(&gpProc0->ThreadList, &pThread->ProcThreadListLink);
     pThread->Hdr.mObjType = K2OS_Obj_Thread;
     pThread->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
-    pThread->Hdr.mRefCount = 0xFFFFFFFF;
+    pThread->Hdr.mRefCount = 0x7FFFFFFF;
     pThread->mpProc = gpProc0;
     pThread->mpStackSeg = &gpProc0->SegObjPrimaryThreadStack;
     pThread->Env.mId = 1;
@@ -154,6 +155,9 @@ static void sInit_BeforeVirt(void)
 
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);
+
+    stat = KernObj_Add(&pThread->Hdr, NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
 void KernInit_Thread(void)

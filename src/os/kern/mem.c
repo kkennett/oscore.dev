@@ -1490,6 +1490,8 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
         K2TREE_Insert(&apCurThread->mpProc->SegTree, apSegSrc->SegTreeNode.mUserVal, &apSegSrc->SegTreeNode);
         K2OSKERN_SeqIntrUnlock(&apCurThread->mpProc->SegTreeSeqLock, disp);
     }
+    stat = KernObj_Add(&apSegSrc->Hdr, NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     //
     // clean up

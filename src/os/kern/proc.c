@@ -47,10 +47,12 @@ void KernProc_Dump(K2OSKERN_OBJ_PROCESS *apProc)
 
 static void sInit_AtDlxEntry(void)
 {
+    K2STAT stat;
+
     K2MEM_Zero(gpProc0, sizeof(K2OSKERN_OBJ_PROCESS));
     gpProc0->Hdr.mObjType = K2OS_Obj_Process;
     gpProc0->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
-    gpProc0->Hdr.mRefCount = 0xFFFFFFFF;
+    gpProc0->Hdr.mRefCount = 0x7FFFFFFF;
     gpProc0->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
     gpProc0->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
 #if K2_TARGET_ARCH_IS_ARM
@@ -62,6 +64,8 @@ static void sInit_AtDlxEntry(void)
 #endif
     K2LIST_Init(&gpProc0->ThreadList);
     K2LIST_AddAtTail(&gData.ProcList, &gpProc0->ProcListLink);
+    stat = KernObj_Add(&gpProc0->Hdr, NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
 static void sInit_Threaded(void)

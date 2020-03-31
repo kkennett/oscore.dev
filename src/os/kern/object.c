@@ -120,6 +120,11 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
     K2_ASSERT(apObjHdr->mObjType != K2OS_Obj_Name);
     K2_ASSERT(apObjHdr->mpName == NULL);
 
+    if (apObjHdr->mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT)
+    {
+        K2_ASSERT(apObjHdr->mRefCount = 0x7FFFFFFF);
+    }
+
     if (apObjName != NULL)
     {
         K2_ASSERT(apObjName->Hdr.mObjType == K2OS_Obj_Name);
@@ -203,7 +208,7 @@ K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
 
-    if (pTreeNode != NULL)
+    if ((pTreeNode != NULL) && (!(apObjHdr->mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT)))
     {
         K2ATOMIC_Inc(&apObjHdr->mRefCount);
     }
@@ -236,35 +241,40 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     if (pTreeNode != NULL)
     {
-        if (apObjHdr->mRefCount == 1)
+        if (!(apObjHdr->mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT))
         {
-            if (apObjHdr->mpName != NULL)
+            if (apObjHdr->mRefCount == 1)
             {
-                //
-                // need to disconnect from name first
-                //
-                nameRelease = TRUE;
-                pName = apObjHdr->mpName;
-                apObjHdr->mpName = NULL;
+                if (apObjHdr->mpName != NULL)
+                {
+                    //
+                    // need to disconnect from name first
+                    //
+                    nameRelease = TRUE;
+                    pName = apObjHdr->mpName;
+                    apObjHdr->mpName = NULL;
+                }
+                else
+                {
+                    apObjHdr->mRefCount = 0;
+                    K2_CpuWriteBarrier();
+                    K2TREE_Remove(&gData.ObjTree, &apObjHdr->ObjTreeNode);
+                    if (apObjHdr->mObjType == K2OS_Obj_Name)
+                    {
+                        K2TREE_Remove(&gData.NameTree, &((K2OSKERN_OBJ_NAME *)apObjHdr)->NameTreeNode);
+                    }
+                    refDecToZero = TRUE;
+                }
             }
             else
             {
-                apObjHdr->mRefCount = 0;
+                apObjHdr->mRefCount--;
                 K2_CpuWriteBarrier();
-                K2TREE_Remove(&gData.ObjTree, &apObjHdr->ObjTreeNode);
-                if (apObjHdr->mObjType == K2OS_Obj_Name)
-                {
-                    K2TREE_Remove(&gData.NameTree, &((K2OSKERN_OBJ_NAME *)apObjHdr)->NameTreeNode);
-                }
-                refDecToZero = TRUE;
+                apObjHdr = NULL;
             }
         }
         else
-        {
-            apObjHdr->mRefCount--;
-            K2_CpuWriteBarrier();
             apObjHdr = NULL;
-        }
     }
 
     K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
@@ -281,7 +291,7 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
     if (apObjHdr == NULL)
     {
         //
-        // object was found but this WAS NOT the last release
+        // object was found but this WAS NOT the last release, or object is permanent
         //
         return K2STAT_NO_ERROR;
     }
