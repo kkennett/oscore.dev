@@ -38,6 +38,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
     UINT32                  useAddr;
     K2OSKERN_OBJ_SEGMENT *  pSeg;
     K2OSKERN_OBJ_THREAD *   pCurThread;
+    KernPhys_Disp           physDisp;
 
     aPageAttrFlags &= K2OS_MEMPAGE_ATTR_MASK;
 
@@ -73,7 +74,20 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
             if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
-                stat = KernMem_PhysAllocToThread(pCurThread, aPageCount, aPageAttrFlags, FALSE);
+                if (aPageAttrFlags & K2OS_MEMPAGE_ATTR_UNCACHED)
+                {
+                    physDisp = KernPhys_Disp_Uncached;
+                }
+                else if ((aPageAttrFlags & (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU)) == (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU))
+                {
+                    physDisp = KernPhys_Disp_Cached_WriteThrough;
+                }
+                else
+                {
+                    physDisp = KernPhys_Disp_Cached;
+                }
+
+                stat = KernMem_PhysAllocToThread(pCurThread, aPageCount, physDisp, FALSE);
                 if (!K2STAT_IS_ERROR(stat))
                 {
                     K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount >= aPageCount);
@@ -134,6 +148,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
     UINT32                  segOffset;
     BOOL                    disp;
     K2STAT                  stat;
+    KernPhys_Disp           physDisp;
 
     pCurThread = K2OSKERN_CURRENT_THREAD;
 
@@ -227,23 +242,30 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         //
         // range must not already be mapped
         //
-        if (!KernMap_SegRangeNotMapped(pSeg, segOffset, aPageCount))
+        if (!KernMap_SegRangeNotMapped(pCurThread, pSeg, segOffset, aPageCount))
         {
             stat = K2STAT_ERROR_ALREADY_MAPPED;
             break;
         }
 
-        stat = KernMem_PhysAllocToThread(pCurThread, aPageCount, aPageAttrFlags, FALSE);
+        if (aPageAttrFlags & K2OS_MEMPAGE_ATTR_UNCACHED)
+        {
+            physDisp = KernPhys_Disp_Uncached;
+        }
+        else if ((aPageAttrFlags & (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU)) == (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU))
+        {
+            physDisp = KernPhys_Disp_Cached_WriteThrough;
+        }
+        else
+        {
+            physDisp = KernPhys_Disp_Cached;
+        }
+
+        stat = KernMem_PhysAllocToThread(pCurThread, aPageCount, physDisp, FALSE);
         if (K2STAT_IS_ERROR(stat))
             break;
 
-        do {
-
-
-
-
-        } while (0);
-
+        stat = KernMem_MapSegPagesFromThread(pCurThread, pSeg, segOffset, aPageCount, aPageAttrFlags);
         if (K2STAT_IS_ERROR(stat))
         {
             KernMem_PhysFreeFromThread(pCurThread);

@@ -547,7 +547,7 @@ sInitPhysTrack(
         if ((!(pDesc->Attribute & K2EFI_MEMORYFLAG_RUNTIME)) &&
             (pDesc->Type == K2EFI_MEMTYPE_Conventional))
         {
-            memProp |= K2OSKERN_PHYSTRACK_FREE_FLAG;
+            memProp |= K2OSKERN_PHYSTRACK_UNALLOC_FLAG;
             //
             // tree node userval and PHYSTRACK_FREE.mFlags are in same location 
             //
@@ -593,7 +593,7 @@ sInitPhysTrack(
     entCount = K2_VA32_PAGEFRAMES_FOR_4G;
     pTrackPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(0);
     do {
-        if (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG)
+        if (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG)
         {
             pageCount = (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_PAGE_COUNT_MASK) >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
             K2_ASSERT(pageCount > 0);
@@ -601,13 +601,13 @@ sInitPhysTrack(
             //
             // all other pages in the range should have identical properties and a zero pagecount
             //
-            memProp = (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) | K2OSKERN_PHYSTRACK_FREE_FLAG;
+            memProp = (pTrackPage->mFlags & K2OSKERN_PHYSTRACK_PROP_MASK) | K2OSKERN_PHYSTRACK_UNALLOC_FLAG;
             pTrackPage++;
             entCount--;
             if (--pageCount > 0)
             {
                 do {
-                    K2_ASSERT((pTrackPage->mFlags & (K2OSKERN_PHYSTRACK_PROP_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG)) == memProp);
+                    K2_ASSERT((pTrackPage->mFlags & (K2OSKERN_PHYSTRACK_PROP_MASK | K2OSKERN_PHYSTRACK_UNALLOC_FLAG | K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG)) == memProp);
                     pTrackPage++;
                     --entCount;
                 } while (--pageCount);
@@ -758,7 +758,7 @@ static void sAddSegmentToTree(K2OSKERN_OBJ_SEGMENT *apSeg)
         K2_ASSERT(ptPresent);
         K2_ASSERT(pte & K2OSKERN_PTE_PRESENT_BIT);
         pPhysPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(pte & K2_VA32_PAGEFRAME_MASK);
-        K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG) == 0);
+        K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG) == 0);
         pPhysPage->mpOwnerObject = (void *)apSeg;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--pageCount);

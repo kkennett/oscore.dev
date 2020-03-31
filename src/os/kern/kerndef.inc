@@ -37,7 +37,7 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OSKERN_PHYSTRACK_FREE_FLAG                0x00000001
+#define K2OSKERN_PHYSTRACK_UNALLOC_FLAG             0x00000001
 #define K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG        0x00000002
 
 #define K2OSKERN_PHYSTRACK_PROP_MASK                0x00000FFE

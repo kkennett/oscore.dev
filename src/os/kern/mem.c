@@ -223,10 +223,10 @@ static void sDumpPhys(void)
     intrDisp = K2OSKERN_SeqIntrLock(&gData.PhysMemSeqLock);
     do {
         flags = pPhysPage->mFlags;
-        if (flags & K2OSKERN_PHYSTRACK_FREE_FLAG)
+        if (flags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG)
         {
             pageCount = flags >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL;
-            K2OSKERN_Debug("  FREE   %08X - %8d Pages (%08X bytes) Flags %08X\n",
+            K2OSKERN_Debug("  UNALOC %08X - %8d Pages (%08X bytes) Flags %08X\n",
                 K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage),
                 pageCount,
                 pageCount * K2_VA32_MEMPAGE_BYTES,
@@ -715,7 +715,7 @@ K2STAT KernMem_PhysAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aPageC
             if (pPhysPage != NULL)
             {
                 K2LIST_Remove(pList, &pPhysPage->ListLink);
-                pPhysPage->mFlags &= ~(K2OSKERN_PHYSTRACK_PAGE_LIST_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG);
+                pPhysPage->mFlags &= ~(K2OSKERN_PHYSTRACK_PAGE_LIST_MASK | K2OSKERN_PHYSTRACK_UNALLOC_FLAG);
 
                 if (aForPageTables)
                 {
@@ -814,7 +814,7 @@ K2STAT KernMem_PhysAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aPageC
             if (pPhysPage != NULL)
             {
                 K2LIST_Remove(pList, &pPhysPage->ListLink);
-                pPhysPage->mFlags &= ~(K2OSKERN_PHYSTRACK_PAGE_LIST_MASK | K2OSKERN_PHYSTRACK_FREE_FLAG);
+                pPhysPage->mFlags &= ~(K2OSKERN_PHYSTRACK_PAGE_LIST_MASK | K2OSKERN_PHYSTRACK_UNALLOC_FLAG);
 
                 if (aForPageTables)
                 {
@@ -1025,7 +1025,7 @@ K2STAT KernMem_PhysAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aPageC
 
                 pLeftOver->mUserVal =
                     flags |
-                    K2OSKERN_PHYSTRACK_FREE_FLAG |
+                    K2OSKERN_PHYSTRACK_UNALLOC_FLAG |
                     ((nodeCount - aPageCount) << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL);
                 K2TREE_Insert(&gData.PhysFreeTree, pLeftOver->mUserVal, pLeftOver);
                 takePages = aPageCount;
@@ -1234,7 +1234,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
         //
         do {
             pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Dirty.mpHead, ListLink);
-            K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_FREE_FLAG) == 0);
+            K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG) == 0);
 
             sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
 
@@ -1733,4 +1733,10 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
     K2_ASSERT(ok);
 
     return K2STAT_NO_ERROR;
+}
+
+K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags)
+{
+    K2_ASSERT(0);
+    return K2STAT_ERROR_NOT_IMPL;
 }
