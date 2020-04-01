@@ -65,6 +65,7 @@ SOURCES += mem.c
 SOURCES += object.c
 SOURCES += name.c
 SOURCES += event.c
+SOURCES += token.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 
@@ -82,7 +83,6 @@ SOURCES += osapi_sem.c
 SOURCES += osapi_sys.c 
 SOURCES += osapi_thread.c 
 SOURCES += osapi_time.c 
-SOURCES += osapi_token.c 
 SOURCES += osapi_virt.c 
 
 include $(K2_ROOT)/src/shared/build/post.make

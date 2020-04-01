@@ -423,6 +423,45 @@ struct _K2OSKERN_OBJ_DLX
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OSKERN_TOKEN_INUSE K2OSKERN_TOKEN_INUSE;
+struct _K2OSKERN_TOKEN_INUSE
+{
+    K2OSKERN_OBJ_HEADER *   mpObjHdr;
+    UINT32                  mTokValue;
+};
+
+typedef union _K2OSKERN_TOKEN K2OSKERN_TOKEN;
+union _K2OSKERN_TOKEN
+{
+    K2OSKERN_TOKEN_INUSE    InUse;
+    K2LIST_LINK             FreeLink;
+};
+
+K2_STATIC_ASSERT(sizeof(K2OSKERN_TOKEN) == sizeof(K2LIST_LINK));
+#define K2OSKERN_TOKENS_PER_PAGE   (K2_VA32_MEMPAGE_BYTES / sizeof(K2OSKERN_TOKEN))
+
+typedef struct _K2OSKERN_TOKEN_PAGE_HDR K2OSKERN_TOKEN_PAGE_HDR;
+struct _K2OSKERN_TOKEN_PAGE_HDR
+{
+    UINT32 mPageIndex;     // index of this page in the process sparse token page array
+    UINT32 mInUseCount;    // count of tokens in this page that are in use
+};
+
+typedef union _K2OSKERN_TOKEN_PAGE K2OSKERN_TOKEN_PAGE;
+union _K2OSKERN_TOKEN_PAGE
+{
+    K2OSKERN_TOKEN_PAGE_HDR    Hdr;
+    K2OSKERN_TOKEN             Tokens[K2OSKERN_TOKENS_PER_PAGE];
+};
+
+#define K2OSKERN_TOKEN_SALT_MASK       0xFFF00000
+#define K2OSKERN_TOKEN_SALT_DEC        0x00100000
+#define K2OSKERN_TOKEN_MAX_VALUE       0x000FFFFF
+
+#define K2OSKERN_MAX_TOKENS_PER_PROC   ((K2OSKERN_TOKEN_MAX_VALUE + 1) / sizeof(K2OSKERN_TOKENS_PER_PAGE))
+
+K2_STATIC_ASSERT(sizeof(K2OSKERN_TOKEN_PAGE) == K2_VA32_MEMPAGE_BYTES);
+
 struct _K2OSKERN_OBJ_PROCESS
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -442,6 +481,13 @@ struct _K2OSKERN_OBJ_PROCESS
 
     K2OSKERN_SEQLOCK        SegTreeSeqLock;
     K2TREE_ANCHOR           SegTree;
+
+    K2OSKERN_SEQLOCK        TokSeqLock;
+    K2OSKERN_TOKEN_PAGE **  mppTokPages;
+    UINT32                  mTokPageCount;
+    K2LIST_ANCHOR           TokFreeList;
+    UINT32                  mTokSalt;
+    UINT32                  mTokCount;
 
     K2LIST_LINK             ProcListLink;
 };
@@ -696,8 +742,9 @@ enum _KernInitStage
     KernInitStage_After_Hal,
     KernInitStage_Before_Launch_Cores,
 
-// should be last entry
     KernInitStage_Threaded,
+    KernInitStage_MemReady,
+    // should be last entry
     KernInitStage_Count
 };
 

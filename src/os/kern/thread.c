@@ -64,6 +64,8 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
         KernInit_Stage(initStage);
     }
 
+    K2OSKERN_Debug("Reached end of InitStage\n");
+
     //
     // kernel init finished.  init core stuff that needs threads
     //

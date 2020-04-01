@@ -40,7 +40,7 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_HeapAlloc(UINT32 aByteCount)
     if (aByteCount == 0)
         return NULL;
 
-    if (gData.mKernInitStage < KernInitStage_Threaded)
+    if (gData.mKernInitStage < KernInitStage_MemReady)
         stat = K2STAT_ERROR_NOT_READY;
     else
     {
@@ -68,7 +68,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapFree(void *aPtr)
     K2STAT  stat;
     BOOL    result;
 
-    if (gData.mKernInitStage < KernInitStage_Threaded)
+    if (gData.mKernInitStage < KernInitStage_MemReady)
         stat = K2STAT_ERROR_NOT_READY;
     else
     {
@@ -89,7 +89,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_HeapGetState(K2OS_HEAP_STATE *apRetState)
     K2OS_RAMHEAP_STATE  heapState;
     UINT32              largestFree;
 
-    if (gData.mKernInitStage < KernInitStage_Threaded)
+    if (gData.mKernInitStage < KernInitStage_MemReady)
         stat = K2STAT_ERROR_NOT_READY;
     else
     {

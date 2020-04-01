@@ -32,13 +32,13 @@
 
 #include "kern.h"
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCounts, K2OS_TOKEN *apRetSemaphoreToken)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCounts, K2OS_TOKEN *apRetSemaphoreToken)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;
 }
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;

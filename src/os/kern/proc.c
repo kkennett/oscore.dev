@@ -62,6 +62,9 @@ static void sInit_AtDlxEntry(void)
 #else
 #error !!!Unsupported Architecture
 #endif
+
+    K2OSKERN_SeqIntrInit(&gpProc0->TokSeqLock);
+
     K2LIST_Init(&gpProc0->ThreadList);
     K2LIST_AddAtTail(&gData.ProcList, &gpProc0->ProcListLink);
     stat = KernObj_Add(&gpProc0->Hdr, NULL);
@@ -72,6 +75,29 @@ static void sInit_Threaded(void)
 {
     K2OS_CritSecInit(&gpProc0->ThreadListSec);
     K2OS_CritSecInit(&gpProc0->TlsMaskSec);
+}
+
+static void sInit_MemReady(void)
+{
+    K2OSKERN_TOKEN_PAGE *   pTokPage;
+    UINT32                  ix;
+
+    gpProc0->mppTokPages = (K2OSKERN_TOKEN_PAGE **)K2OS_HeapAlloc(sizeof(K2OSKERN_TOKEN_PAGE *));
+    K2_ASSERT(gpProc0->mppTokPages != NULL);
+
+    pTokPage = (K2OSKERN_TOKEN_PAGE *)(K2OS_KVA_PROC0_BASE + K2_VA32_MEMPAGE_BYTES);
+
+    gpProc0->mppTokPages[0] = pTokPage;
+    gpProc0->mTokPageCount = 1;
+
+    pTokPage->Hdr.mPageIndex = 0;
+    pTokPage->Hdr.mInUseCount = 1;  // this will prevent the page from ever going away as the inUseCount will never be zero
+    for (ix = 1; ix < K2OSKERN_TOKENS_PER_PAGE; ix++)
+    {
+        K2LIST_AddAtTail(&gpProc0->TokFreeList, &pTokPage->Tokens[ix].FreeLink);
+    }
+    gpProc0->mTokSalt = K2OSKERN_TOKEN_SALT_MASK;
+    gpProc0->mTokCount = 0;
 }
 
 void KernInit_Process(void)
@@ -85,6 +111,9 @@ void KernInit_Process(void)
     case KernInitStage_Threaded:
         sInit_Threaded();
         break;
+
+    case KernInitStage_MemReady:
+        sInit_MemReady();
 
     default:
         break;
