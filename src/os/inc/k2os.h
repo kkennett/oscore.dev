@@ -209,15 +209,13 @@ void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds);
 #define K2OS_TIMEOUT_INFINITE   ((UINT32)-1)
 
 #define K2OS_WAIT_MAX_TOKENS    64
-#define K2OS_WAIT_TIMEOUT       ((UINT32)-2)
-#define K2OS_WAIT_ERROR         ((UINT32)-1)
 #define K2OS_WAIT_SIGNALLED_0   0
 #define K2OS_WAIT_ABANDONED_0   K2OS_WAIT_MAX_TOKENS
 #define K2OS_WAIT_SUCCEEDED(x)  ((K2OS_WAIT_SIGNALLED_0 <= (x)) && ((x) < K2OS_WAIT_ABANDONED_0))
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs);
+UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs);
 UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAny(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs);
+UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs);
 
 //
 //------------------------------------------------------------------------
@@ -265,7 +263,7 @@ BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 
 //
 
 BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCounts, K2OS_TOKEN *apRetSemaphoreToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 *apRetNewCount);
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount);
 
 //
 //------------------------------------------------------------------------

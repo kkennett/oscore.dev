@@ -4,12 +4,14 @@ ACPI_STATUS
 AcpiOsInitialize(
     void)
 {
-    return ACPI_FAILURE(1);
+    K2OSKERN_Debug("AcpiOsInitialize()\n");
+    return AE_OK;
 }
 
 ACPI_STATUS
 AcpiOsTerminate(
     void)
 {
-    return ACPI_FAILURE(1);
+    K2OSKERN_Debug("AcpiOsTerminate()\n");
+    return AE_OK;
 }

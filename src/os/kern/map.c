@@ -440,14 +440,17 @@ BOOL KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SE
 {
     BOOL    disp;
     UINT32 *pPTE;
-    UINT32 pte;
-    UINT32 segPageCount;
+    UINT32  pte;
+    UINT32  segPageCount;
+    UINT32  virtAddr;
 
     segPageCount = (apSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES);
 
     K2_ASSERT((aPageOffset + aPageCount) <= segPageCount);
 
-    pPTE = (UINT32 *)K2_VA32_TO_PTE_ADDR(apCurThread->mpProc->mVirtMapKVA, apSeg->SegTreeNode.mUserVal);
+    virtAddr = apSeg->SegTreeNode.mUserVal + (aPageOffset * K2_VA32_MEMPAGE_BYTES);
+
+    pPTE = (UINT32 *)K2_VA32_TO_PTE_ADDR(apCurThread->mpProc->mVirtMapKVA, virtAddr);
 
     disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
 
@@ -456,10 +459,11 @@ BOOL KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SE
         if ((0 == (pte & K2OSKERN_PTE_NP_BIT)) ||
             (0 != (pte & K2OSKERN_PTE_PRESENT_BIT)))
         {
-            K2OSKERN_Debug("Check SegRangeNotMapped - starting %d of %d, page at %d left is %08X\n", aPageOffset, segPageCount, aPageCount, pte);
+            K2OSKERN_Debug("Check SegRangeNotMapped - ERROR %08X pte %08X\n", virtAddr, pte);
             break;
         }
         pPTE++;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--aPageCount);
 
     K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);

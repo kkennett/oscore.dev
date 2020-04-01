@@ -463,11 +463,8 @@ sPushBreak(
     //
     // push the break in the node
     //
-    if (!K2OS_VirtPagesCommit(apChunk->mBreak, aPushAmount, K2OS_MEMPAGE_ATTR_READWRITE))
+    if (!K2OS_VirtPagesCommit(apChunk->mBreak, aPushAmount / K2_VA32_MEMPAGE_BYTES, K2OS_MEMPAGE_ATTR_READWRITE))
     {
-        //
-        // should never happen in K2OS because of pool fill on initial alloc
-        //
         return K2OS_ThreadGetStatus();
     }
 
