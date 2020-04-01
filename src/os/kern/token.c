@@ -66,9 +66,9 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
     newTokenPageListLen = 0;
     ppOldTokenPageList = NULL;
     do {
-        disp = K2OSKERN_SpinLock(&pCurProcess->TokenSpinLock, FALSE);
+        disp = K2OSKERN_SeqIntrLock(&pCurProcess->TokSeqLock);
 
-        if (aObjCount <= pCurProcess->FreeTokenList.mNodeCount)
+        if (aObjCount <= pCurProcess->TokFreeList.mNodeCount)
         {
             //
             // do not need to increase the token list size
@@ -91,7 +91,7 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
             ppNewTokenPageList[pCurProcess->mTokPageCount] = pNewTokenPage;
             for (value = 1; value < K2OSKERN_TOKENS_PER_PAGE; value++)
             {
-                K2LIST_AddAtTail(&pCurProcess->FreeTokenList, &pNewTokenPage->Tokens[value].FreeLink);
+                K2LIST_AddAtTail(&pCurProcess->TokFreeList, &pNewTokenPage->Tokens[value].FreeLink);
             }
             pNewTokenPage = NULL;
             ppOldTokenPageList = pCurProcess->mppTokPages;
@@ -104,7 +104,7 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
         // we need more tokens and don't have resources for them (yet)
         //
 
-        K2OSKERN_SpinUnlock(&pCurProcess->TokenSpinLock, disp);
+        K2OSKERN_SeqIntrUnlock(&pCurProcess->TokSeqLock, disp);
 
         if (pNewTokenPage != NULL)
         {
@@ -112,24 +112,24 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
             // somebody beat us to it to expand the token list but we still
             // do not have enough.  we need to expand it again
             //
-            K2OSAPI_HeapFree(ppNewTokenPageList);
+            K2OS_HeapFree(ppNewTokenPageList);
             ppNewTokenPageList = NULL;
-            K2OSAPI_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
-            K2OSAPI_VirtPagesFree((UINT32)pNewTokenPage);
+            K2OS_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
+            K2OS_VirtPagesFree((UINT32)pNewTokenPage);
             pNewTokenPage = NULL;
         }
 
         newTokenPageListLen = pCurProcess->mTokPageCount + 1;
 
-        ok = K2OSAPI_HeapAlloc(sizeof(K2OSKERN_TOKEN_PAGE *) * newTokenPageListLen, (void **)&ppNewTokenPageList);
-        if (!ok)
-            return K2OSAPI_ThreadGetStatus();
+        ppNewTokenPageList = (K2OSKERN_TOKEN_PAGE **)K2OS_HeapAlloc(sizeof(K2OSKERN_TOKEN_PAGE *) * newTokenPageListLen);
+        if (NULL == ppNewTokenPageList)
+            return K2OS_ThreadGetStatus();
 
-        ok = K2OSAPI_VirtPagesAlloc((UINT32 *)&pNewTokenPage, 1, K2OS_VIRTALLOCFLAG_ALSO_COMMIT, K2OS_VIRTCOMMIT_READWRITE);
+        ok = K2OS_VirtPagesAlloc((UINT32 *)&pNewTokenPage, 1, K2OS_VIRTALLOCFLAG_ALSO_COMMIT, K2OS_MEMPAGE_ATTR_READWRITE);
         if (!ok)
         {
-            stat = K2OSAPI_ThreadGetStatus();
-            K2OSAPI_HeapFree(ppNewTokenPageList);
+            stat = K2OS_ThreadGetStatus();
+            K2OS_HeapFree(ppNewTokenPageList);
             return stat;
         }
         pNewTokenPage->Hdr.mInUseCount = 0;
@@ -141,11 +141,11 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
     // cannot fail from this point forward
     //
 
-    K2_ASSERT(aObjCount <= pCurProcess->FreeTokenList.mNodeCount);
+    K2_ASSERT(aObjCount <= pCurProcess->TokFreeList.mNodeCount);
 
     do {
-        pListLink = pCurProcess->FreeTokenList.mpHead;
-        K2LIST_Remove(&pCurProcess->FreeTokenList, pListLink);
+        pListLink = pCurProcess->TokFreeList.mpHead;
+        K2LIST_Remove(&pCurProcess->TokFreeList, pListLink);
         pToken = K2_GET_CONTAINER(K2OSKERN_TOKEN, pListLink, FreeLink);
 
         //
@@ -174,11 +174,11 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
         apRetTokens++;
     } while (--aObjCount);
 
-    K2OSKERN_SpinUnlock(&pCurProcess->TokenSpinLock, disp);
+    K2OSKERN_SeqIntrUnlock(&pCurProcess->TokSeqLock, disp);
 
     if (ppOldTokenPageList != NULL)
     {
-        ok = K2OSAPI_HeapFree(ppOldTokenPageList);
+        ok = K2OS_HeapFree(ppOldTokenPageList);
         K2_ASSERT(ok);
     }
 
@@ -187,9 +187,9 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
         //
         // it turned out we didn't need to expand the token list
         //
-        ok = K2OSAPI_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
+        ok = K2OS_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
         K2_ASSERT(ok);
-        ok = K2OSAPI_VirtPagesFree((UINT32)pNewTokenPage);
+        ok = K2OS_VirtPagesFree((UINT32)pNewTokenPage);
         K2_ASSERT(ok);
     }
 
@@ -198,15 +198,15 @@ K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TO
 
 K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs)
 {
-    K2STAT              stat;
-    K2OSKERN_OBJ_PROCESS * pCurProcess;
-    K2OSKERN_OBJ_THREAD *  pThisThread;
-    UINT32              ix;
-    UINT32              tokenPageIndex;
-    UINT32              tokValue;
-    K2OSKERN_TOKEN_PAGE *  pTokenPage;
-    K2OSKERN_TOKEN *       pToken;
-    UINT32              disp;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_PROCESS *  pCurProcess;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    UINT32                  ix;
+    UINT32                  tokenPageIndex;
+    UINT32                  tokValue;
+    K2OSKERN_TOKEN_PAGE *   pTokenPage;
+    K2OSKERN_TOKEN *        pToken;
+    UINT32                  disp;
 
     K2_ASSERT(aTokenCount > 0);
     K2_ASSERT(apTokens != NULL);
@@ -219,7 +219,7 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
 
     stat = K2STAT_NO_ERROR;
 
-    disp = K2OSKERN_SpinLock(&pCurProcess->TokenSpinLock, TRUE);
+    disp = K2OSKERN_SeqIntrLock(&pCurProcess->TokSeqLock);
 
     for (ix = 0; ix < aTokenCount; ix++)
     {
@@ -253,7 +253,7 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
             break;
         }
 
-        stat = K2OSKERN_ObjectAddRef(pToken->InUse.mpObjHdr);
+        stat = KernObj_AddRef(pToken->InUse.mpObjHdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
         *appRetObjHdrs = pToken->InUse.mpObjHdr;
@@ -262,7 +262,7 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
         apTokens++;
     }
 
-    K2OSKERN_SpinUnlock(&pCurProcess->TokenSpinLock, disp);
+    K2OSKERN_SeqIntrUnlock(&pCurProcess->TokSeqLock, disp);
 
     if (ix < aTokenCount)
     {
@@ -275,7 +275,7 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
             do {
                 ix--;
                 appRetObjHdrs--;
-                K2OSKERN_ObjectRelease(*appRetObjHdrs);
+                KernObj_Release(*appRetObjHdrs);
             } while (ix > 0);
         }
     }
@@ -305,7 +305,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
 
     stat = K2STAT_NO_ERROR;
 
-    disp = K2OSKERN_SpinLock(&pCurProcess->TokenSpinLock, FALSE);
+    disp = K2OSKERN_SeqIntrLock(&pCurProcess->TokSeqLock);
 
     do {
         tokValue = (UINT32)aToken;
@@ -345,17 +345,17 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
         //
         // this will destroy the token value
         //
-        K2LIST_AddAtTail(&pCurProcess->FreeTokenList, &pToken->FreeLink);
+        K2LIST_AddAtTail(&pCurProcess->TokFreeList, &pToken->FreeLink);
 
         pTokenPage->Hdr.mInUseCount--;
 
     } while (0);
 
-    K2OSKERN_SpinUnlock(&pCurProcess->TokenSpinLock, disp);
+    K2OSKERN_SeqIntrUnlock(&pCurProcess->TokSeqLock, disp);
 
     if (!K2STAT_IS_ERROR(stat))
     {
-        stat = K2OSKERN_ObjectRelease(pObjHdr);
+        stat = KernObj_Release(pObjHdr);
     }
 
     return stat;
