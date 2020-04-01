@@ -248,5 +248,13 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 //------------------------------------------------------------------------
 //
 
+#define K2OS_SYSPROP_ID_KERN_FWTABLES_PHYS_ADDR     0x80000000
+#define K2OS_SYSPROP_ID_KERN_FWTABLES_VIRT_ADDR     0x80000001
+#define K2OS_SYSPROP_ID_KERN_FWTABLES_BYTES         0x80000002
+
+//
+//------------------------------------------------------------------------
+//
+
 
 #endif // __K2OSKERN_H

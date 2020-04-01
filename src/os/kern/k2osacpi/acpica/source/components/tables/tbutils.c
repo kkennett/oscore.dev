@@ -381,6 +381,8 @@ AcpiTbGetRootTableEntry (
  *
  ******************************************************************************/
 
+UINT32 K2OSKERN_Debug(char const *apFormat, ...);
+
 ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiTbParseRootTable (
     ACPI_PHYSICAL_ADDRESS   RsdpAddress)
@@ -428,7 +430,6 @@ AcpiTbParseRootTable (
     else
     {
         /* Root table is an RSDT (32-bit physical addresses) */
-
         Address = (ACPI_PHYSICAL_ADDRESS) Rsdp->RsdtPhysicalAddress;
         TableEntrySize = ACPI_RSDT_ENTRY_SIZE;
     }

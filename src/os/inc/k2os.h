@@ -43,6 +43,8 @@ UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo);
 typedef UINT64 (K2_CALLCONV_REGS *K2OS_pf_SysUpTimeMs)(void);
 UINT64  K2_CALLCONV_REGS         K2OS_SysUpTimeMs(void);
 
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SysGetProperty(UINT32 aPropertyId, void *apRetValue, UINT32 aValueBufferBytes);
+
 //
 //------------------------------------------------------------------------
 //

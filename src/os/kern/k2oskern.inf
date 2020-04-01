@@ -58,6 +58,7 @@ K2OSKERN_Esc
 #
 K2OS_SysGetInfo
 K2OS_SysUpTimeMs
+K2OS_SysGetProperty
 K2OS_DebugPrint
 K2OS_DebugPresent
 K2OS_DebugBreak

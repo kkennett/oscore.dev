@@ -37,6 +37,7 @@ ID {3AE2D7D1-AA81-4360-B927-602D4F0E5F1B}
 [Code]
 K2OS_SysGetInfo
 K2OS_SysUpTimeMs
+K2OS_SysGetProperty
 K2OS_DebugPrint
 K2OS_DebugPresent
 K2OS_DebugBreak

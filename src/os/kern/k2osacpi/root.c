@@ -4,7 +4,12 @@ ACPI_PHYSICAL_ADDRESS
 AcpiOsGetRootPointer(
     void)
 {
-    K2_ASSERT(0);
-    return 0;
+    BOOL    ok;
+    UINT32  addr;
+
+    ok = K2OS_SysGetProperty(K2OS_SYSPROP_ID_KERN_FWTABLES_PHYS_ADDR, &addr, sizeof(UINT32));
+    K2_ASSERT(ok);
+
+    return (ACPI_PHYSICAL_ADDRESS)addr;
 }
 

@@ -38,3 +38,29 @@ UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo)
     return FALSE;
 }
 
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_SysGetProperty(UINT32 aPropertyId, void *apRetValue, UINT32 aValueBufferBytes)
+{
+    switch (aPropertyId)
+    {
+    case K2OS_SYSPROP_ID_KERN_FWTABLES_PHYS_ADDR:
+        K2_ASSERT(aValueBufferBytes >= sizeof(UINT32));
+        *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwTabPagesPhys;
+        return TRUE;
+
+    case K2OS_SYSPROP_ID_KERN_FWTABLES_VIRT_ADDR:
+        K2_ASSERT(aValueBufferBytes >= sizeof(UINT32));
+        *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwTabPagesVirt;
+        return TRUE;
+
+    case K2OS_SYSPROP_ID_KERN_FWTABLES_BYTES:
+        K2_ASSERT(aValueBufferBytes >= sizeof(UINT32));
+        *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES;
+        return TRUE;
+
+    default:
+        K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+        break;
+    }
+
+    return FALSE;
+}

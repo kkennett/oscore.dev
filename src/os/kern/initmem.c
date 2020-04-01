@@ -1223,7 +1223,7 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_FW_TABLES;
-    sCheckPteRange(gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Non_KData);
+    sCheckPteRange(gData.mpShared->LoadInfo.mFwTabPagesVirt, gData.mpShared->LoadInfo.mFwTabPageCount, K2OS_MAPTYPE_KERN_READ, KernPhysPageList_Non_KData);
 
     if (gData.mpShared->LoadInfo.mDebugPageVirt != 0)
     {
