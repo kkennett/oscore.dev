@@ -80,6 +80,7 @@ typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
 typedef struct _K2OSKERN_OBJ_EVENT          K2OSKERN_OBJ_EVENT;
 typedef struct _K2OSKERN_OBJ_NAME           K2OSKERN_OBJ_NAME;
 typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
+typedef struct _K2OSKERN_OBJ_SEM            K2OSKERN_OBJ_SEM;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -577,6 +578,15 @@ struct _K2OSKERN_OBJ_EVENT
 
 /* --------------------------------------------------------------------------------- */
 
+struct _K2OSKERN_OBJ_SEM
+{
+    K2OSKERN_OBJ_HEADER Hdr;
+    UINT32              mMaxCount;
+    UINT32              mInitCount;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 struct _K2OSKERN_OBJ_NAME
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -976,11 +986,18 @@ void   KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj);
 
 K2STAT KernEvent_Set(K2OSKERN_OBJ_EVENT *apEvtObj);
 K2STAT KernEvent_Reset(K2OSKERN_OBJ_EVENT *apEvtObj);
+void   KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj);
 
 /* --------------------------------------------------------------------------------- */
 
 K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
 K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
+
+/* --------------------------------------------------------------------------------- */
+
+K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32 aMaxCount, UINT32 aInitCount);
+K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewCount);
+void   KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem);
 
 /* --------------------------------------------------------------------------------- */
 

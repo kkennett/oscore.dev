@@ -1,7 +1,5 @@
 #include "k2osacpi.h"
 
-UINT32 K2OSKERN_Debug(char const *pFormat, ...);
-
 ACPI_STATUS
 AcpiOsCreateSemaphore(
     UINT32                  MaxUnits,
@@ -10,14 +8,13 @@ AcpiOsCreateSemaphore(
 {
     K2OS_TOKEN tokSem;
 
-    K2OSKERN_Debug("OsCreateSemaphore()\n");
     if (!K2OS_SemaphoreCreate(NULL, MaxUnits, InitialUnits, &tokSem))
     {
         K2_ASSERT(0);
         return AE_ERROR;
     }
 
-    *OutHandle = (ACPI_SEMAPHORE)tokSem;
+    *OutHandle = tokSem;
 
     return AE_OK;
 }
@@ -26,8 +23,7 @@ ACPI_STATUS
 AcpiOsDeleteSemaphore(
     ACPI_SEMAPHORE          Handle)
 {
-    K2OSKERN_Debug("OsDeleteSemaphore()\n");
-    if (!K2OS_TokenDestroy((K2OS_TOKEN)Handle))
+    if (!K2OS_TokenDestroy(Handle))
     {
         K2_ASSERT(0);
         return AE_ERROR;
@@ -62,7 +58,7 @@ AcpiOsWaitSemaphore(
     took = 0;
     snapTime = K2OS_SysUpTimeMs();
     do {
-        waitResult = K2OS_ThreadWaitOne((K2OS_TOKEN)Handle, k2Timeout);
+        waitResult = K2OS_ThreadWaitOne(Handle, k2Timeout);
         if (waitResult != K2OS_WAIT_SIGNALLED_0)
         {
             break;
@@ -88,7 +84,7 @@ AcpiOsWaitSemaphore(
     {
         if (took > 0)
         {
-            ok = K2OS_SemaphoreRelease((K2OS_TOKEN)Handle, took, NULL);
+            ok = K2OS_SemaphoreRelease(Handle, took, &took);
             K2_ASSERT(ok);
         }
         return AE_ERROR;
@@ -102,13 +98,14 @@ AcpiOsSignalSemaphore(
     ACPI_SEMAPHORE          Handle,
     UINT32                  Units)
 {
-    BOOL ok;
+    BOOL    ok;
+    UINT32  newCount;
 
     K2_ASSERT(Units > 0);
 
     K2OSKERN_Debug("OsSignalSemaphore()\n");
 
-    ok = K2OS_SemaphoreRelease((K2OS_TOKEN)Handle, Units, NULL);
+    ok = K2OS_SemaphoreRelease(Handle, Units, &newCount);
     K2_ASSERT(ok);
 
     return AE_OK;

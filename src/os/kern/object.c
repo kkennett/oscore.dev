@@ -39,6 +39,12 @@ static void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Name:
         KernName_Dispose((K2OSKERN_OBJ_NAME *)apObjHdr);
         break;
+    case K2OS_Obj_Event:
+        KernEvent_Dispose((K2OSKERN_OBJ_EVENT *)apObjHdr);
+        break;
+    case K2OS_Obj_Semaphore:
+        KernSem_Dispose((K2OSKERN_OBJ_SEM *)apObjHdr);
+        break;
     default:
         K2_ASSERT(0);
         break;

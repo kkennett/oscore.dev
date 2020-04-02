@@ -285,15 +285,15 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
 {
-    K2STAT              stat;
-    K2OSKERN_OBJ_PROCESS * pCurProcess;
-    K2OSKERN_OBJ_THREAD *  pThisThread;
-    UINT32              tokValue;
-    UINT32              tokenPageIndex;
-    K2OSKERN_TOKEN_PAGE *  pTokenPage;
-    K2OSKERN_TOKEN *       pToken;
-    K2OSKERN_OBJ_HEADER *  pObjHdr;
-    UINT32              disp;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_PROCESS *  pCurProcess;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    UINT32                  tokValue;
+    UINT32                  tokenPageIndex;
+    K2OSKERN_TOKEN_PAGE *   pTokenPage;
+    K2OSKERN_TOKEN *        pToken;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    UINT32                  disp;
 
     //
     // must release the object referred to

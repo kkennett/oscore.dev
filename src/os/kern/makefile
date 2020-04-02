@@ -66,6 +66,7 @@ SOURCES += object.c
 SOURCES += name.c
 SOURCES += event.c
 SOURCES += token.c
+SOURCES += sem.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 

@@ -44,3 +44,8 @@ K2STAT KernEvent_Reset(K2OSKERN_OBJ_EVENT *apEvtObj)
     return K2STAT_ERROR_NOT_IMPL;
 }
 
+void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj)
+{
+    K2_ASSERT(0);
+}
+

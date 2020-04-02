@@ -43,6 +43,7 @@ SOURCES += thread.c
 SOURCES += timer.c
 SOURCES += sleep.c 
 SOURCES += pciconfig.c
+SOURCES += mutex.c
 
 #
 # ACPICA SOURCES
