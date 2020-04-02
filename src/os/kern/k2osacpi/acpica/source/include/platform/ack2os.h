@@ -11,7 +11,4 @@
 
 #define ACPI_SEMAPHORE          K2OS_TOKEN
 
-#define ACPI_MUTEX_TYPE         ACPI_OSL_MUTEX
-#define ACPI_MUTEX              K2OS_TOKEN
-
 #endif /* __ACK2OS_H__ */

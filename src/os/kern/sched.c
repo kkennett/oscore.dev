@@ -45,7 +45,8 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_Contended_CritSec,   // KernSchedItem_Contended_Critsec
     KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
-    KernSched_Exec_InvalidateTlb        // KernSchedItem_InvalidateTlb
+    KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
+    KernSched_Exec_ReleaseSem           // KernSchedItem_ReleaseSem
 
 };
 
@@ -460,7 +461,7 @@ sQueueSchedItem(
     K2ATOMIC_Inc((INT32 volatile *)&gData.Sched.mReq);
 }
 
-void KernSched_CallFromThread(K2OSKERN_CPUCORE *apThisCore)
+void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore)
 {
     K2OSKERN_OBJ_THREAD *   pThread;
     UINT64                  absTime;

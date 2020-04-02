@@ -6,15 +6,11 @@ AcpiOsCreateSemaphore(
     UINT32                  InitialUnits,
     ACPI_SEMAPHORE          *OutHandle)
 {
-    K2OS_TOKEN tokSem;
-
-    if (!K2OS_SemaphoreCreate(NULL, MaxUnits, InitialUnits, &tokSem))
+    if (!K2OS_SemaphoreCreate(NULL, MaxUnits, InitialUnits, OutHandle))
     {
         K2_ASSERT(0);
         return AE_ERROR;
     }
-
-    *OutHandle = tokSem;
 
     return AE_OK;
 }

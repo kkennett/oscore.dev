@@ -48,7 +48,7 @@ BOOL KernSched_Exec_PurgePT(void)
 
     pPtPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
 
-    ptIndex = gData.Sched.mpActiveItemThread->Sched.Item.Args.PurgePt.mPtIndex;
+    ptIndex = gData.Sched.mpActiveItem->Args.PurgePt.mPtIndex;
 
     virtAddrInPtRange = ptIndex * K2_VA32_PAGETABLE_MAP_BYTES;
 
@@ -80,15 +80,15 @@ BOOL KernSched_Exec_PurgePT(void)
     do {
         if (pPtPageCount[ptIndex] != 0)
         {
-            gData.Sched.mpActiveItemThread->Sched.Item.mResult = K2STAT_ERROR_IN_USE;
+            gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_IN_USE;
             break;
         }
 
-        gData.Sched.mpActiveItemThread->Sched.Item.mResult = K2STAT_NO_ERROR;
+        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 
         physPtAddr = KernMap_BreakOnePage(pUseProc->mVirtMapKVA, virtPtAddr);
 
-        gData.Sched.mpActiveItemThread->Sched.Item.Args.PurgePt.mPtPhysOut = physPtAddr;
+        gData.Sched.mpActiveItem->Args.PurgePt.mPtPhysOut = physPtAddr;
 
         if (kernSpace)
         {

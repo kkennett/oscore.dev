@@ -32,6 +32,13 @@
 
 #include "kern.h"
 
+//
+// The state of a semaphore object is signaled when its count is greater than zero and nonsignaled when its count is equal to zero.
+//
+// waiting for a semaphore waits until the count can be decreased by one
+// releasing the semaphore increases the count by a particular amount
+//
+
 K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32 aMaxCount, UINT32 aInitCount)
 {
     K2STAT stat;
@@ -52,7 +59,7 @@ K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32
     apSem->Hdr.mpName = NULL;
     apSem->Hdr.mRefCount = 1;
     K2LIST_Init(&apSem->Hdr.WaitingThreadsPrioList);
-    apSem->mInitCount = aInitCount;
+    apSem->mCurCount = aInitCount;
     apSem->mMaxCount = aMaxCount;
 
     stat = KernObj_Add(&apSem->Hdr, apName);
@@ -67,21 +74,41 @@ K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32
 
 K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewCount)
 {
-    K2STAT  stat;
-    K2STAT  stat2;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+
+    if (aCount == 0)
+        return K2STAT_ERROR_BAD_ARGUMENT;
+
+    if (apRetNewCount != NULL)
+        *apRetNewCount = (UINT32)-1;
 
     K2_ASSERT(apSem != NULL);
 
     stat = KernObj_AddRef(&apSem->Hdr);
     if (K2STAT_IS_ERROR(stat))
         return stat;
+    
+    do {
+        if (apSem->mCurCount + aCount > apSem->mMaxCount)
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
 
-    //
-    // call into scheduler to release
-    //
-    K2OSKERN_Debug("KernSem_Release() - not implemented\n");
-    stat = K2STAT_NO_ERROR;
+        pCurThread = K2OSKERN_CURRENT_THREAD;
+        pCurThread->Sched.Item.mSchedItemType = KernSchedItem_ReleaseSem;
+        pCurThread->Sched.Item.Args.ReleaseSem.mpSem = apSem;
+        pCurThread->Sched.Item.Args.ReleaseSem.mCount = aCount;
+        KernArch_ThreadCallSched();
+        stat = pCurThread->Sched.Item.mResult;
+        if ((!K2STAT_IS_ERROR(stat)) && (apRetNewCount != NULL))
+        {
+            *apRetNewCount = pCurThread->Sched.Item.Args.ReleaseSem.mRetNewCount;
+        }
 
+    } while (0);
 
     stat2 = KernObj_Release(&apSem->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));

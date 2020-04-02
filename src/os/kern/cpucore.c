@@ -74,7 +74,7 @@ sProcessOneCpuCoreEvent(
     switch (aEventType)
     {
     case KernCpuCoreEvent_SchedulerCall:
-        KernSched_CallFromThread(apThisCore);
+        KernSched_RespondToCallFromThread(apThisCore);
         break;
     case KernCpuCoreEvent_SchedTimerFired:
         KernSched_TimerFired(apThisCore);

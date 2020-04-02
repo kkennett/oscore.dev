@@ -97,9 +97,9 @@ void KernSched_TlbInvalidateAcrossCores(void)
 
 BOOL KernSched_Exec_InvalidateTlb(void)
 {
-    gData.Sched.mpTlbInvProc = gData.Sched.mpActiveItemThread->Sched.Item.Args.InvalidateTlb.mpProc;
-    gData.Sched.mTlbInv1_Base = gData.Sched.mpActiveItemThread->Sched.Item.Args.InvalidateTlb.mVirtAddr;
-    gData.Sched.mTlbInv1_PageCount = gData.Sched.mpActiveItemThread->Sched.Item.Args.InvalidateTlb.mPageCount;
+    gData.Sched.mpTlbInvProc = gData.Sched.mpActiveItem->Args.InvalidateTlb.mpProc;
+    gData.Sched.mTlbInv1_Base = gData.Sched.mpActiveItem->Args.InvalidateTlb.mVirtAddr;
+    gData.Sched.mTlbInv1_PageCount = gData.Sched.mpActiveItem->Args.InvalidateTlb.mPageCount;
     gData.Sched.mTlbInv2_PageCount = 0;
 
     KernSched_TlbInvalidateAcrossCores();

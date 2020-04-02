@@ -69,6 +69,7 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM        K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM;
 
 typedef struct _K2OSKERN_CRITSEC            K2OSKERN_CRITSEC;
 
@@ -187,6 +188,7 @@ enum _KernSchedItemType
     KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
+    KernSchedItem_ReleaseSem,
     // more here
     KernSchedItemType_Count
 };
@@ -249,6 +251,13 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB
     UINT32                  mPageCount;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM
+{
+    K2OSKERN_OBJ_SEM *  mpSem;
+    UINT32              mCount;
+    UINT32              mRetNewCount;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -256,6 +265,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  ContendedCritSec;
     K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           PurgePt;
     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     InvalidateTlb;
+    K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM        ReleaseSem;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -582,7 +592,7 @@ struct _K2OSKERN_OBJ_SEM
 {
     K2OSKERN_OBJ_HEADER Hdr;
     UINT32              mMaxCount;
-    UINT32              mInitCount;
+    UINT32              mCurCount;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -917,7 +927,7 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 
 void KernSched_AddCurrentCore(void);
 void KernSched_Check(K2OSKERN_CPUCORE *apThisCore);
-void KernSched_CallFromThread(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore);
 
 typedef BOOL(*KernSched_pf_Handler)(void);
 
@@ -928,6 +938,7 @@ BOOL KernSched_Exec_EnterDebug(void);
 BOOL KernSched_Exec_Destroy_CritSec(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
+BOOL KernSched_Exec_ReleaseSem(void);
 
 BOOL KernSched_TimePassedUntil(UINT64 aTimeNow);
 

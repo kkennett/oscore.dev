@@ -58,6 +58,7 @@ SOURCES += schedex_critsec.c
 SOURCES += schedex_debug.c
 SOURCES += schedex_invtlb.c
 SOURCES += schedex_purgept.c
+SOURCES += schedex_sem.c
 SOURCES += sched_time.c
 SOURCES += map.c
 SOURCES += intr.c
