@@ -32,24 +32,23 @@
 
 #include "kern.h"
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCount, K2OS_TOKEN *apRetSemaphoreToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCount)
 {
     K2STAT                  stat;
+    K2STAT                  stat2;
     K2OSKERN_OBJ_NAME *     pNameObj;
     K2OSKERN_OBJ_SEM *      pSemObj;
     K2OSKERN_OBJ_HEADER *   pObjHdr;
     K2OS_TOKEN              tokSem;
 
-    if ((apRetSemaphoreToken == NULL) ||
-        (aMaxCount == 0) ||
+    if ((aMaxCount == 0) ||
         (aInitCount > aMaxCount))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return FALSE;
+        return NULL;
     }
 
     tokSem = NULL;
-    *apRetSemaphoreToken = NULL;
 
     pNameObj = NULL;
     if (aNameToken != NULL)
@@ -66,7 +65,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32
         if (K2STAT_IS_ERROR(stat))
         {
             K2OS_ThreadSetStatus(stat);
-            return FALSE;
+            return NULL;
         }
     }
 
@@ -85,11 +84,15 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32
             break;
         }
 
+        //
+        // creating a token will ***NOT*** add a reference
+        //
         pObjHdr = &pSemObj->Hdr;
         stat = KernTok_Create(1, &pObjHdr, &tokSem);
         if (K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pSemObj->Hdr);
+            stat2 = KernObj_Release(&pSemObj->Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
 
     } while (0);
@@ -103,12 +106,10 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
-        return FALSE;
+        return NULL;
     }
 
-    *apRetSemaphoreToken = tokSem;
-
-    return TRUE;
+    return tokSem;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount)
@@ -150,3 +151,75 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, 
     return TRUE;
 }
 
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreAcquireByName(K2OS_TOKEN aNameToken)
+{
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    BOOL                    ok;
+    K2OSKERN_OBJ_HEADER *   pRefObj;
+    K2OSKERN_OBJ_NAME *     pNameObj;
+    K2OS_TOKEN              tokSem;
+
+    if (aNameToken == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return NULL;
+    }
+
+    tokSem = NULL;
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pNameObj->Hdr.mObjType == K2OS_Obj_Name)
+        {
+            ok = K2OS_CritSecEnter(&pNameObj->OwnerSec);
+            K2_ASSERT(ok);
+
+            pRefObj = pNameObj->mpObject;
+            if (pRefObj != NULL)
+            {
+                if (pRefObj->mObjType == K2OS_Obj_Semaphore)
+                {
+                    stat2 = KernObj_AddRef(pRefObj);
+                    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+                }
+                else
+                {
+                    pRefObj = NULL;
+                }
+            }
+
+            ok = K2OS_CritSecLeave(&pNameObj->OwnerSec);
+            K2_ASSERT(ok);
+
+            if (pRefObj != NULL)
+            {
+                //
+                // creating a token will ***NOT*** add a reference
+                //
+                stat = KernTok_Create(1, &pRefObj, &tokSem);
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    stat2 = KernObj_Release(pRefObj);
+                    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+                }
+            }
+            else
+                stat = K2STAT_ERROR_BAD_ARGUMENT;
+        }
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+
+        stat2 = KernObj_Release(&pNameObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokSem;
+}

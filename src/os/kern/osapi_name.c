@@ -32,10 +32,10 @@
 
 #include "kern.h"
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName, K2OS_TOKEN *apRetNameToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRetName, UINT32 aBufferBytes)
@@ -44,9 +44,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRet
     return FALSE;
 }
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken, K2OS_TOKEN *apRetNameToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 

@@ -32,9 +32,14 @@
 
 #include "kern.h"
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic, K2OS_TOKEN *apRetAlarmToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmAcquireByName(K2OS_TOKEN aNameToken)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return NULL;
+}

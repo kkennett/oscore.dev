@@ -36,7 +36,6 @@
 ID {010FF1BB-C4A1-45D3-BC7B-1B252C07A9F4}
 
 [Code]
-
 #
 # Kernel-Only exports
 #
@@ -74,6 +73,8 @@ K2OS_CritSecDone
 K2OS_NameDefine
 K2OS_NameString
 K2OS_NameAcquire
+K2OS_ThreadAcquireByName
+K2OS_ThreadAcquireById
 K2OS_ThreadGetOwnId
 K2OS_ThreadGetStatus
 K2OS_ThreadSetStatus
@@ -84,7 +85,6 @@ K2OS_ThreadGetLocal
 K2OS_ThreadCreate
 K2OS_ThreadGetInfo
 K2OS_ThreadGetOwnInfo
-K2OS_ThreadAcquire
 K2OS_ThreadPause
 K2OS_ThreadResume
 K2OS_ThreadExit
@@ -99,18 +99,24 @@ K2OS_ThreadWaitOne
 K2OS_ThreadWaitAny
 K2OS_ThreadWaitAll
 K2OS_ProcessCreate
+K2OS_ProcessAcquireByName
+K2OS_ProcessAcquireById
 K2OS_ProcessGetId
 K2OS_ProcessGetOwnId
-# K2OS_ProcessExit
+#K2OS_ProcessExit
 K2OS_ProcessGetImageInfo
 K2OS_ProcessGetOwnImageInfo
 K2OS_EventCreate
+K2OS_EventAcquireByName
 K2OS_EventSet
 K2OS_EventReset
 K2OS_AlarmCreate
+K2OS_AlarmAcquireByName
 K2OS_SemaphoreCreate
+K2OS_SemaphoreAcquireByName
 K2OS_SemaphoreRelease
 K2OS_RwLockCreate
+K2OS_RwLockAcquireByName
 K2OS_RwLockCreateRequest
 K2OS_MailslotCreate
 K2OS_MailslotSetBlock

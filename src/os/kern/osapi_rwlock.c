@@ -32,15 +32,20 @@
 
 #include "kern.h"
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN *apRetRwLockToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite, K2OS_TOKEN *apRetRwLockRequestToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockAcquireByName(K2OS_TOKEN aNameToken)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return NULL;
+}

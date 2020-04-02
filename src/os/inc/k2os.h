@@ -116,9 +116,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec);
 //
 #define K2OS_NAME_MAX_LEN   47
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName, K2OS_TOKEN *apRetNameToken);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRetName, UINT32 aBufferBytes);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken, K2OS_TOKEN *apRetNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRetName, UINT32 aBufferBytes);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken);
 
 //
 //------------------------------------------------------------------------
@@ -173,38 +173,39 @@ struct _K2OS_THREADINFO
     K2OS_THREADCREATE   CreateInfo;
 };
 
-UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnId(void);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId);
 
-K2STAT K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void);
-void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus);
+UINT32      K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnId(void);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadAllocLocal(UINT32 *apRetSlotId);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetLocal(UINT32 aSlotId, UINT32 aValue);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetValue);
+K2STAT      K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetStatus(void);
+void        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetStatus(K2STAT aStatus);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate, K2OS_TOKEN *apRetThreadToken);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadAllocLocal(UINT32 *apRetSlotId);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetLocal(UINT32 aSlotId, UINT32 aValue);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetValue);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_THREADINFO *apRetInfo);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquire(UINT32 aThreadId, K2OS_TOKEN *apRetThreadToken);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_THREADINFO *apRetInfo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadPause(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount, UINT32 aTimeoutMs);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadPause(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount, UINT32 aTimeoutMs);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount);
 
-void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aForcedExitCode);
+void        K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aForcedExitCode);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR const *apAttr);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR *apRetAttr);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR const *apAttr);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR *apRetAttr);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apInfo);
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetInfo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apInfo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetInfo);
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetPauseLock(BOOL aSetLock);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetPauseLock(BOOL aSetLock);
 
-void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds);
+void        K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds);
 
 #define K2OS_TIMEOUT_INFINITE   ((UINT32)-1)
 
@@ -225,8 +226,7 @@ typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
 struct _K2OS_PROCESSCREATE
 {
     UINT32              mStructBytes;
-    UINT32              mThreadStackPages;
-    UINT32              mThreadReserved;
+    void *              mpThreadArg;
     K2OS_THREADATTR     ThreadAttr;
 };
 
@@ -237,40 +237,55 @@ struct _K2OS_IMAGEINFO
     UINT32  mLocator;
 };
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_TOKEN *apRetProcessToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
-UINT32  K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
-void    K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
+typedef struct _K2OS_PROCESS_CREATED K2OS_PROCESS_CREATED;
+struct _K2OS_PROCESS_CREATED
+{
+    UINT32      mProcessId;
+    K2OS_TOKEN  mTokProcess;
+    UINT32      mThreadId;
+    K2OS_TOKEN  mTokThread;
+};
+
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireByName(K2OS_TOKEN aNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireById(UINT32 aProcessId);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
+UINT32      K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
+void        K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
 
 //
 //------------------------------------------------------------------------
 //
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset, K2OS_TOKEN *apRetEventToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken);
 
 //
 //------------------------------------------------------------------------
 //
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic, K2OS_TOKEN *apRetAlarmToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmAcquireByName(K2OS_TOKEN aNameToken);
 
 //
 //------------------------------------------------------------------------
 //
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCounts, K2OS_TOKEN *apRetSemaphoreToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCount);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreAcquireByName(K2OS_TOKEN aNameToken);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount);
 
 //
 //------------------------------------------------------------------------
 //
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN *apRetRwLockToken);
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite, K2OS_TOKEN *apRetRwLockRequestToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockAcquireByName(K2OS_TOKEN aNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite);
 
 //
 //------------------------------------------------------------------------
@@ -288,8 +303,8 @@ struct _K2OS_MSGIO
 K2_STATIC_ASSERT(sizeof(K2OS_MSGIO) == (8 * sizeof(UINT32)));
 
 #define K2OS_MAX_NUM_SLOT_MAILBOXES     K2OS_WAIT_MAX_TOKENS
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UINT32 aMailboxCount, K2OS_TOKEN const *apTokMailboxes, BOOL aInitBlocked, K2OS_TOKEN *apRetTokMailslot);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailslotSetBlock(K2OS_TOKEN aTokMailslot, BOOL aBlock);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UINT32 aMailboxCount, K2OS_TOKEN const *apTokMailboxes, BOOL aInitBlocked);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MailslotSetBlock(K2OS_TOKEN aTokMailslot, BOOL aBlock);
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(UINT32 aMailboxCount, K2OS_TOKEN *apRetTokMailboxes);
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGIO *apRetMsgIo, UINT32 *apRetRequestId);

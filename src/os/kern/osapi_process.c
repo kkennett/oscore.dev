@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_TOKEN *apRetProcessToken)
+BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;
@@ -46,8 +46,11 @@ BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UIN
 
 UINT32  K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
+    return pCurThread->mpProc->mId;
 }
 
 BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo)
@@ -62,4 +65,15 @@ BOOL    K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apR
     return FALSE;
 }
 
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireByName(K2OS_TOKEN aNameToken)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return NULL;
+}
+
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireById(UINT32 aProcessId)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return NULL;
+}
 

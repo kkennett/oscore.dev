@@ -32,10 +32,10 @@
 
 #include "kern.h"
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset, K2OS_TOKEN *apRetEventToken)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return NULL;
 }
 
 BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken)
@@ -50,4 +50,8 @@ BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken)
     return FALSE;
 }
 
-
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return NULL;
+}
