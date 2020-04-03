@@ -7,7 +7,7 @@ AcpiOsReadPort(
     UINT32                  Width)
 {
 #if K2_TARGET_ARCH_IS_INTEL
-    K2OSKERN_Debug("IoRead%d(%04X)\n", Width, Address);
+//    K2OSKERN_Debug("IoRead%d(%04X)\n", Width, Address);
     if (Width == 8)
         *Value = X32_IoRead8((UINT16)Address);
     else if (Width == 16)
@@ -32,7 +32,7 @@ AcpiOsWritePort(
     UINT32                  Width)
 {
 #if K2_TARGET_ARCH_IS_INTEL
-    K2OSKERN_Debug("IoWrite%d(%04X, %08X)\n", Width, Address, Value);
+//    K2OSKERN_Debug("IoWrite%d(%04X, %08X)\n", Width, Address, Value);
     if (Width == 8)
         X32_IoWrite8((UINT8)Value,(UINT16)Address);
     else if (Width == 16)

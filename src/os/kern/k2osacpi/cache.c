@@ -4,7 +4,7 @@ typedef struct _CACHE_HDR CACHE_HDR;
 struct _CACHE_HDR
 {
     char *          mpCacheName;
-    UINT32          mObjectSize;
+    UINT32          mObjectBytes;
     UINT32          mMaxDepth;
     K2OS_CRITSEC    CritSec;
     K2LIST_ANCHOR   FreeList;
@@ -22,7 +22,7 @@ static void sInitCache(CACHE_HDR *apCache)
     pListLink = (K2LIST_LINK *)&apCache->CacheData;
     do {
         K2LIST_AddAtTail(&apCache->FreeList, pListLink);
-        pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + apCache->mObjectSize);
+        pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + apCache->mObjectBytes);
     } while (--MaxDepth);
 }
 
@@ -34,13 +34,22 @@ AcpiOsCreateCache(
     ACPI_CACHE_T            **ReturnCache)
 {
     CACHE_HDR *     pRet;
+    UINT32          objectBytes;
     UINT32          cacheBytes;
     BOOL            ok;
 
     K2_ASSERT(ObjectSize > 0);
     K2_ASSERT(MaxDepth > 0);
-    
-    cacheBytes = (((UINT32)ObjectSize) * ((UINT32)MaxDepth)) + sizeof(CACHE_HDR) - 4;
+
+//    K2OSKERN_Debug("AcpiOsCreateCache(\"%s\", %d, %d)\n", CacheName, ObjectSize, MaxDepth);
+
+    objectBytes = ObjectSize;
+    if (objectBytes < sizeof(K2LIST_LINK))
+        objectBytes = sizeof(K2LIST_LINK);
+    else
+        objectBytes = (ObjectSize + 3) & ~3;
+   
+    cacheBytes = (objectBytes * ((UINT32)MaxDepth)) + sizeof(CACHE_HDR) - 4;
 
     pRet = (CACHE_HDR *)K2OS_HeapAlloc(cacheBytes);
     if (pRet == NULL)
@@ -51,13 +60,7 @@ AcpiOsCreateCache(
     K2MEM_Zero(pRet, cacheBytes);
 
     pRet->mpCacheName = CacheName;
-    
-    pRet->mObjectSize = ObjectSize;
-    if (pRet->mObjectSize < sizeof(K2LIST_LINK))
-        pRet->mObjectSize = sizeof(K2LIST_LINK);
-    else
-        pRet->mObjectSize = (pRet->mObjectSize + 3) & ~3;
-
+    pRet->mObjectBytes = objectBytes;
     pRet->mMaxDepth = MaxDepth;
 
     ok = K2OS_CritSecInit(&pRet->CritSec);
@@ -78,6 +81,9 @@ AcpiOsDeleteCache(
     CACHE_HDR * pCache;
 
     pCache = (CACHE_HDR *)Cache;
+
+//    K2OSKERN_Debug("AcpiOsDeleteCache(\"%s\")\n", pCache->mpCacheName);
+
     ok = K2OS_CritSecDone(&pCache->CritSec);
     K2_ASSERT(ok);
 
@@ -97,6 +103,8 @@ AcpiOsPurgeCache(
     CACHE_HDR *     pCache;
 
     pCache = (CACHE_HDR *)Cache;
+
+//    K2OSKERN_Debug("AcpiOsPurgeCache(\"%s\")\n", pCache->mpCacheName);
 
     ok = K2OS_CritSecEnter(&pCache->CritSec);
     K2_ASSERT(ok);
@@ -122,13 +130,18 @@ AcpiOsAcquireObject(
     ok = K2OS_CritSecEnter(&pCache->CritSec);
     K2_ASSERT(ok);
 
+//    K2OSKERN_Debug("AcpiOsAcquireObject(\"%s\"; %d left)\n", pCache->mpCacheName, pCache->FreeList.mNodeCount);
+
     if (pCache->FreeList.mNodeCount > 0)
     {
         pListLink = pCache->FreeList.mpHead;
         K2LIST_Remove(&pCache->FreeList, pListLink);
     }
     else
+    {
+        K2OSKERN_Debug("-------------EMPTY CACHE(%s)-----------\n", pCache->mpCacheName);
         pListLink = NULL;
+    }
 
     ok = K2OS_CritSecLeave(&pCache->CritSec);
     K2_ASSERT(ok);
@@ -147,9 +160,10 @@ AcpiOsReleaseObject(
     pCache = (CACHE_HDR *)Cache;
 
     // assert Object is inside range of cache memory and on an object boundary
-
     ok = K2OS_CritSecEnter(&pCache->CritSec);
     K2_ASSERT(ok);
+
+//    K2OSKERN_Debug("AcpiOsReleaseObject(\"%s\", %d left before)\n", pCache->mpCacheName, pCache->FreeList.mNodeCount);
 
     K2_ASSERT(pCache->FreeList.mNodeCount < pCache->mMaxDepth);
 

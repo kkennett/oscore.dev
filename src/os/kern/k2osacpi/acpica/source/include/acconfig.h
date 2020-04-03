@@ -178,14 +178,14 @@
  * code that will not execute the _OSI method unless _OS matches the string
  * below. Therefore, change this string at your own risk.
  */
-#define ACPI_OS_NAME                    "Microsoft Windows NT"
+#define ACPI_OS_NAME                    "K2OS"
 
 /* Maximum objects in the various object caches */
 
 #define ACPI_MAX_STATE_CACHE_DEPTH      96          /* State objects */
 #define ACPI_MAX_PARSE_CACHE_DEPTH      96          /* Parse tree objects */
 #define ACPI_MAX_EXTPARSE_CACHE_DEPTH   96          /* Parse tree objects */
-#define ACPI_MAX_OBJECT_CACHE_DEPTH     96          /* Interpreter operand objects */
+#define ACPI_MAX_OBJECT_CACHE_DEPTH     128         /* Interpreter operand objects */
 #define ACPI_MAX_NAMESPACE_CACHE_DEPTH  96          /* Namespace objects */
 #define ACPI_MAX_COMMENT_CACHE_DEPTH    96          /* Comments for the -ca option */
 
@@ -194,7 +194,7 @@
  * table checksum is incorrect?
  */
 #ifndef ACPI_CHECKSUM_ABORT
-#define ACPI_CHECKSUM_ABORT             FALSE
+#define ACPI_CHECKSUM_ABORT             TRUE
 #endif
 
 /*

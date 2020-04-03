@@ -6,9 +6,8 @@ AcpiOsInstallInterruptHandler(
     ACPI_OSD_HANDLER        ServiceRoutine,
     void                    *Context)
 {
-    K2OSKERN_Debug("AcpiOsInstallInterruptHandler(%d) - %08X\n", InterruptNumber, ServiceRoutine);
-    K2_ASSERT(0);
-    return ACPI_FAILURE(1);
+    K2OSKERN_Debug("K2OSACPI: AcpiOsInstallInterruptHandler(%d) - %08X\n", InterruptNumber, ServiceRoutine);
+    return AE_OK;
 }
 
 ACPI_STATUS
@@ -16,7 +15,7 @@ AcpiOsRemoveInterruptHandler(
     UINT32                  InterruptNumber,
     ACPI_OSD_HANDLER        ServiceRoutine)
 {
-    K2_ASSERT(0);
-    return ACPI_FAILURE(1);
+    K2OSKERN_Debug("K2OSACPI: AcpiOsRemoveInterruptHandler(%d) - %08X\n", InterruptNumber, ServiceRoutine);
+    return AE_OK;
 }
 

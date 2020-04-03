@@ -82,20 +82,13 @@ dlx_entry(
     Status = sInstallHandlers();
     K2_ASSERT(!ACPI_FAILURE(Status));
 
-    /* Initialize the ACPI hardware */
     Status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(Status));
 
-#if 0
-    /* Create the ACPI namespace from ACPI tables */
-
     Status = AcpiLoadTables();
-    if (ACPI_FAILURE(Status))
-    {
-        ACPI_EXCEPTION((AE_INFO, Status, "While loading ACPI tables"));
-        return (Status);
-    }
+    K2_ASSERT(!ACPI_FAILURE(Status));
 
+#if 0
     /* Complete the ACPI namespace object initialization */
 
     Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
