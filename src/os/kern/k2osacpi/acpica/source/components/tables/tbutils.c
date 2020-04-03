@@ -381,8 +381,6 @@ AcpiTbGetRootTableEntry (
  *
  ******************************************************************************/
 
-UINT32 K2OSKERN_Debug(char const *apFormat, ...);
-
 ACPI_STATUS ACPI_INIT_FUNCTION
 AcpiTbParseRootTable (
     ACPI_PHYSICAL_ADDRESS   RsdpAddress)
@@ -403,7 +401,6 @@ AcpiTbParseRootTable (
 
 
     /* Map the entire RSDP and extract the address of the RSDT or XSDT */
-
     Rsdp = AcpiOsMapMemory (RsdpAddress, sizeof (ACPI_TABLE_RSDP));
     if (!Rsdp)
     {
@@ -500,6 +497,7 @@ AcpiTbParseRootTable (
             goto NextTable;
         }
 
+        K2OSKERN_Debug("AcpiTbParseRootTable\n");
         Status = AcpiTbInstallStandardTable (Address,
             ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE, &TableIndex);
 

@@ -58,7 +58,12 @@ BOOL KernSched_Exec_SemRelease(void)
         // we need to release threads that are waiting, up to 'relCount' of them.
         //
         K2_ASSERT(0);
+        gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_UNKNOWN;
         result = TRUE;
+    }
+    else
+    {
+        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
     }
 
     pSem->mCurCount += relCount;

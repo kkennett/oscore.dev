@@ -284,6 +284,7 @@ AcpiTbAcquireTable (
     {
     case ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL:
 
+        K2OSKERN_Debug("AcpiTbAcquireTable\n");
         Table = AcpiOsMapMemory (TableDesc->Address, TableDesc->Length);
         break;
 
@@ -384,6 +385,7 @@ AcpiTbAcquireTempTable (
 
         /* Get the length of the full table from the header */
 
+        K2OSKERN_Debug("AcpiTbAcquireTempTable\n");
         TableHeader = AcpiOsMapMemory (Address, sizeof (ACPI_TABLE_HEADER));
         if (!TableHeader)
         {
@@ -1251,7 +1253,7 @@ AcpiTbInstallAndLoadTable (
 
 
     /* Install the table and load it into the namespace */
-
+    K2OSKERN_Debug("AcpiTbInstallAndLoadTable\n");
     Status = AcpiTbInstallStandardTable (Address, Flags, TRUE,
         Override, &i);
     if (ACPI_FAILURE (Status))

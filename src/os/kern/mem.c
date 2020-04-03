@@ -397,6 +397,7 @@ void KernMem_Start(void)
         pTreeNode = K2TREE_NextNode(&gpProc0->SegTree, pTreeNode);
     } while (pTreeNode != NULL);
 
+    sDumpPhys();
 //    sDumpAll();
 
     //

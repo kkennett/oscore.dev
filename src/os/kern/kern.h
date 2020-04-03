@@ -239,7 +239,6 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT
 {
     UINT32                      mTimeoutMs;
     K2OSKERN_SCHED_MACROWAIT *  mpMacroWait;
-    UINT32                      mMacroResult;   // index in macro that caused thread release
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC

@@ -483,7 +483,7 @@ AcpiTbParseFadt (
     AcpiTbPutTable (FadtDesc);
 
     /* Obtain the DSDT and FACS tables via their addresses within the FADT */
-
+    K2OSKERN_Debug("AcpiTbParseFadt\n");
     AcpiTbInstallStandardTable (
         (ACPI_PHYSICAL_ADDRESS) AcpiGbl_FADT.XDsdt,
         ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE,
@@ -495,13 +495,15 @@ AcpiTbParseFadt (
     {
         if (AcpiGbl_FADT.Facs)
         {
+            K2OSKERN_Debug("AcpiTbParseFadt2\n");Facs
             AcpiTbInstallStandardTable (
-                (ACPI_PHYSICAL_ADDRESS) AcpiGbl_FADT.Facs,
+                (ACPI_PHYSICAL_ADDRESS) AcpiGbl_FADT.,
                 ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE,
                 &AcpiGbl_FacsIndex);
         }
         if (AcpiGbl_FADT.XFacs)
         {
+            K2OSKERN_Debug("AcpiTbParseFadt3\n");
             AcpiTbInstallStandardTable (
                 (ACPI_PHYSICAL_ADDRESS) AcpiGbl_FADT.XFacs,
                 ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE,

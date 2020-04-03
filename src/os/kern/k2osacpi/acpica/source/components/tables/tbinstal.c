@@ -258,7 +258,7 @@ AcpiTbInstallStandardTable (
 
 
     /* Acquire a temporary table descriptor for validation */
-
+    K2OSKERN_Debug("AcpiTbInstallStandardTable\n");
     Status = AcpiTbAcquireTempTable (&NewTableDesc, Address, Flags);
     if (ACPI_FAILURE (Status))
     {
@@ -368,6 +368,7 @@ AcpiTbOverrideTable (
     Status = AcpiOsTableOverride (OldTableDesc->Pointer, &Table);
     if (ACPI_SUCCESS (Status) && Table)
     {
+        K2OSKERN_Debug("AcpiTbOverrideTable\n");
         AcpiTbAcquireTempTable (&NewTableDesc, ACPI_PTR_TO_PHYSADDR (Table),
             ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL);
         ACPI_ERROR_ONLY (OverrideType = "Logical");
@@ -380,6 +381,7 @@ AcpiTbOverrideTable (
         &Address, &Length);
     if (ACPI_SUCCESS (Status) && Address && Length)
     {
+        K2OSKERN_Debug("AcpiTbOverrideTable2\n");
         AcpiTbAcquireTempTable (&NewTableDesc, Address,
             ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL);
         ACPI_ERROR_ONLY (OverrideType = "Physical");
