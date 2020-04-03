@@ -297,7 +297,6 @@ AcpiExSystemMemorySpaceHandler (
 
         /* Create a new mapping starting at the address given */
 
-        K2OSKERN_Debug("AcpiExSystemMemorySpaceHandler\n");
         MemInfo->MappedLogicalAddress = AcpiOsMapMemory (Address, MapLength);
         if (!MemInfo->MappedLogicalAddress)
         {

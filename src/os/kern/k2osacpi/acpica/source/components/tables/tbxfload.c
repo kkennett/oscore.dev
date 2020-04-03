@@ -436,7 +436,6 @@ AcpiInstallTable (
         Flags = ACPI_TABLE_ORIGIN_EXTERNAL_VIRTUAL;
     }
 
-    K2OSKERN_Debug("AcpiInstallTable\n");
     Status = AcpiTbInstallStandardTable (Address, Flags,
         FALSE, FALSE, &TableIndex);
 

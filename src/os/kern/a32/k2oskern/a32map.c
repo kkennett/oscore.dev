@@ -218,11 +218,13 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL
     return pPTE;
 }
 
-BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)
+BOOL KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)
 {
     BOOL flag;
 
     aPTE &= A32_MMU_PTE_PERMIT_MASK;
+
+    K2_ASSERT(0);  // verify deviceio, kernel, writeable, write-through, etc.
 
     flag = ((aPTE == A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE) ||
         (aPTE == A32_MMU_PTE_PERMIT_KERN_RW_USER_RO) ||

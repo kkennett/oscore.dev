@@ -122,6 +122,9 @@ sDumpHeapNode(
                 case K2OSKERN_VMNODE_RESERVED_CORECLEARPAGES:
                     pStr = "CORECLEARPAGES";
                     break;
+                case K2OSKERN_VMNODE_RESERVED_FACS:
+                    pStr = "FACS";
+                    break;
                 default:
                     pStr = "******ERROR";
                     break;
@@ -397,7 +400,6 @@ void KernMem_Start(void)
         pTreeNode = K2TREE_NextNode(&gpProc0->SegTree, pTreeNode);
     } while (pTreeNode != NULL);
 
-    sDumpPhys();
 //    sDumpAll();
 
     //

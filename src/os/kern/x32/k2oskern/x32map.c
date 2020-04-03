@@ -126,14 +126,32 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL
     return pPTE;
 }
 
-BOOL KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aAttr)
+BOOL KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aAttr)
 {
+    if (aAttr & K2OS_MEMPAGE_ATTR_KERNEL)
+    {
+        if (0 != (aPTE & X32_PTE_USER))
+            return FALSE;
+    }
+
     if (aAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
     {
-        return (aPTE & X32_PTE_WRITEABLE) ? TRUE : FALSE;
+        if (0 == (aPTE & X32_PTE_WRITEABLE))
+            return FALSE;
     }
-    // must not be writeable
-    return (aPTE & X32_PTE_WRITEABLE) ? FALSE : TRUE;
+
+    if (aAttr & (K2OS_MEMPAGE_ATTR_UNCACHED | K2OS_MEMPAGE_ATTR_DEVICEIO))
+    {
+        if (0 == (aPTE & X32_PTE_CACHEDISABLE))
+            return FALSE;
+    }
+    else if (aAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+    {
+        if (0 == (aPTE & X32_PTE_WRITETHROUGH))
+            return FALSE;
+    }
+
+    return TRUE;
 }
 
 void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)

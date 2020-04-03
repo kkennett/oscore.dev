@@ -45,8 +45,6 @@ AcpiOsWaitSemaphore(
 
     K2_ASSERT(Units > 0);
 
-    K2OSKERN_Debug("OsWaitSemaphore()\n");
-
     if (Timeout == ACPI_WAIT_FOREVER)
         k2Timeout = K2OS_TIMEOUT_INFINITE;
     else
@@ -99,8 +97,6 @@ AcpiOsSignalSemaphore(
     UINT32  newCount;
 
     K2_ASSERT(Units > 0);
-
-    K2OSKERN_Debug("OsSignalSemaphore()\n");
 
     ok = K2OS_SemaphoreRelease(Handle, Units, &newCount);
     K2_ASSERT(ok);

@@ -100,8 +100,8 @@ struct _K2OS_UEFI_LOADINFO
     UINT32                  mMarker;
     K2EFI_SYSTEM_TABLE *    mpEFIST;
     DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
-    UINTN                   mKernArenaLow;
-    UINTN                   mKernArenaHigh;
+    UINT32                  mKernArenaLow;
+    UINT32                  mKernArenaHigh;
     DLX *                   mpDlxCrt;
     UINT32                  mTransBasePhys;
     UINT32                  mZeroPagePhys;
@@ -114,6 +114,8 @@ struct _K2OS_UEFI_LOADINFO
     UINT32                  mFwTabPagesPhys;
     UINT32                  mFwTabPagesVirt;
     UINT32                  mFwTabPageCount;
+    UINT32                  mFwFacsPhys;
+    UINT32                  mFwXFacsPhys;
     K2OS_CPUINFO            CpuInfo[K2OS_MAX_CPU_COUNT];
 };
 K2_STATIC_ASSERT(sizeof(K2OS_UEFI_LOADINFO) < (K2_VA32_MEMPAGE_BYTES / 2));

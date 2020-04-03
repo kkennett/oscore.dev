@@ -184,33 +184,63 @@ K2STAT Loader_AssembleAcpi(void)
     //
     // check if the FACS exists
     //
-    if ((pFADT->FirmwareCtrl != 0) ||
-        (pFADT->XFirmwareCtrl != 0))
+    if (pFADT->FirmwareCtrl != 0)
     {
         pHdr = (EFI_ACPI_SDT_HEADER *)pFADT->FirmwareCtrl;
-        if (pHdr == NULL)
-            pHdr = ((EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->FirmwareCtrl);
         if (pHdr->Signature != FACS_SIGNATURE)
         {
             K2Printf(L"*** table at FACS address does not have a valid signature.\n");
             return K2STAT_ERROR_UNKNOWN;
         }
-//        K2Printf(L"    ACPI.FACS is at physical 0x%08X\n", pHdr);
+        gData.LoadInfo.mFwFacsPhys = ((UINT32)pHdr) & K2_VA32_PAGEFRAME_MASK;
+        stat = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_FACS_BASE, gData.LoadInfo.mFwFacsPhys, K2OS_MAPTYPE_KERN_DEVICEIO);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"*** MapPage for acpi FACS vaddr %08X failed\n", K2OS_KVA_FACS_BASE);
+            return stat;
+        }
     }
     else
     {
-//        K2Printf(L"!!! FADT.FirmwareCtrl and .XFirmwareCtrl are both zero.\n");
+        gData.LoadInfo.mFwFacsPhys = 0;
     }
 
     //
-    // space for DSDT
+    // check if the XFACS exists.  they can both exist and if they both do we need to map them both
     //
-    if ((pFADT->Dsdt != 0) ||
-        (pFADT->XDsdt != 0))
+    if (pFADT->XFirmwareCtrl != 0)
+    {
+        pHdr = ((EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XFirmwareCtrl);
+        if (pHdr->Signature != FACS_SIGNATURE)
+        {
+            K2Printf(L"*** table at xFACS address does not have a valid signature.\n");
+            return K2STAT_ERROR_UNKNOWN;
+        }
+        gData.LoadInfo.mFwXFacsPhys = ((UINT32)pHdr) & K2_VA32_PAGEFRAME_MASK;
+        if (gData.LoadInfo.mFwXFacsPhys != gData.LoadInfo.mFwFacsPhys)
+        {
+            //
+            // not on the same page as facs
+            //
+            stat = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_XFACS_BASE, gData.LoadInfo.mFwXFacsPhys, K2OS_MAPTYPE_KERN_DEVICEIO);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                K2Printf(L"*** MapPage for acpi FACS vaddr %08X failed\n", K2OS_KVA_XFACS_BASE);
+                return stat;
+            }
+        }
+    }
+    else
+    {
+        gData.LoadInfo.mFwXFacsPhys = 0;
+    }
+
+    //
+    // space for DSDT and xDSDT
+    //
+    if (pFADT->Dsdt != 0)
     {
         pHdr = (EFI_ACPI_SDT_HEADER *)pFADT->Dsdt;
-        if (pHdr == NULL)
-            pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
         if (pHdr->Signature != DSDT_SIGNATURE)
         {
             K2Printf(L"*** table at DSDT address does not have a valid signature.\n");
@@ -219,9 +249,25 @@ K2STAT Loader_AssembleAcpi(void)
         totalTableSize += pHdr->Length;
         totalTableSize = K2_ROUNDUP(totalTableSize, sizeof(UINT32));
     }
+
+    if (pFADT->XDsdt != 0)
+    {
+        pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
+        if (pHdr->Signature != DSDT_SIGNATURE)
+        {
+            K2Printf(L"*** table at XDSDT address does not have a valid signature.\n");
+            return K2STAT_ERROR_UNKNOWN;
+        }
+        totalTableSize += pHdr->Length;
+        totalTableSize = K2_ROUNDUP(totalTableSize, sizeof(UINT32));
+    }
     else
     {
-        K2Printf(L"!!! FADT.Dsdt and .XDsdt are both zero!\n");
+        if (pFADT->Dsdt == 0)
+        {
+            K2Printf(L"*** No DSDT or xDSDT\n");
+            return K2STAT_ERROR_UNKNOWN;
+        }
     }
 
     //
@@ -309,12 +355,9 @@ K2STAT Loader_AssembleAcpi(void)
         }
     }
 
-    if ((pFADT->Dsdt != 0) ||
-        (pFADT->XDsdt != 0))
+    if (pFADT->Dsdt != 0)
     {
         pHdr = (EFI_ACPI_SDT_HEADER *)pFADT->Dsdt;
-        if (pHdr == NULL)
-            pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
         K2MEM_Copy((UINT8 *)outAddr, pHdr, pHdr->Length);
 //        K2Printf(L"    %c%c%c%c from 0x%08X to 0x%08X for 0x%08X\n",
 //            pHdr->Signature & 0xFF,
@@ -323,15 +366,24 @@ K2STAT Loader_AssembleAcpi(void)
 //            (pHdr->Signature >> 24) & 0xFF,
 //            pHdr, outAddr, pHdr->Length);
         pFADT->Dsdt = outAddr;
+        outAddr += pHdr->Length;
+        outAddr = K2_ROUNDUP(outAddr, sizeof(UINT32));
+    }
+
+    if (pFADT->XDsdt != 0)
+    {
+        pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
+        K2MEM_Copy((UINT8 *)outAddr, pHdr, pHdr->Length);
+        //        K2Printf(L"    %c%c%c%c from 0x%08X to 0x%08X for 0x%08X\n",
+        //            pHdr->Signature & 0xFF,
+        //            (pHdr->Signature >> 8) & 0xFF,
+        //            (pHdr->Signature >> 16) & 0xFF,
+        //            (pHdr->Signature >> 24) & 0xFF,
+        //            pHdr, outAddr, pHdr->Length);
         pFADT->XDsdt = outAddr;
         outAddr += pHdr->Length;
         outAddr = K2_ROUNDUP(outAddr, sizeof(UINT32));
     }
-    else
-    {
-        K2Printf(L"!!! FADT.Dsdt and .XDsdt are both zero!\n");
-    }
-
 
     if ((outAddr - gData.LoadInfo.mFwTabPagesPhys) != totalTableSize)
     {

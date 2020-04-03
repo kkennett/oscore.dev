@@ -418,7 +418,6 @@ AcpiGetTableHeader (
                     ACPI_TABLE_ORIGIN_MASK) ==
                 ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL)
             {
-                K2OSKERN_Debug("AcpiGetTableHeader\n");
                 Header = AcpiOsMapMemory (
                     AcpiGbl_RootTableList.Tables[i].Address,
                     sizeof (ACPI_TABLE_HEADER));

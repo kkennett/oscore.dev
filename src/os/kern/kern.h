@@ -711,6 +711,8 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
 #define K2OSKERN_VMNODE_RESERVED_UNKNOWN            15
 #define K2OSKERN_VMNODE_RESERVED_EFI_MAPPED_IO      16
 #define K2OSKERN_VMNODE_RESERVED_CORECLEARPAGES     17
+#define K2OSKERN_VMNODE_RESERVED_FACS               18
+#define K2OSKERN_VMNODE_RESERVED_XFACS              19
 
 typedef struct _K2OSKERN_VMNODE_NONSEG K2OSKERN_VMNODE_NONSEG;
 struct _K2OSKERN_VMNODE_NONSEG
@@ -923,7 +925,7 @@ BOOL   KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_
 UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
 void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
-BOOL    KernArch_VerifyPteKernAccessAttr(UINT32 aPTE, UINT32 aMustHaveAttr);
+BOOL    KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMustHaveAttr);
 UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr);
 void    KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread, UINT32 aUserModeStackPtr);
 void    KernArch_LaunchCores(void);

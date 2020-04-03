@@ -57,6 +57,16 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SysGetProperty(UINT32 aPropertyId, void *apRe
         *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES;
         return TRUE;
 
+    case K2OS_SYSPROP_ID_KERN_FWFACS_PHYS_ADDR:
+        K2_ASSERT(aValueBufferBytes >= sizeof(UINT32));
+        *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwFacsPhys;
+        return TRUE;
+
+    case K2OS_SYSPROP_ID_KERN_XFWFACS_PHYS_ADDR:
+        K2_ASSERT(aValueBufferBytes >= sizeof(UINT32));
+        *((UINT32 *)apRetValue) = gData.mpShared->LoadInfo.mFwXFacsPhys;
+        return TRUE;
+
     default:
         K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
         break;

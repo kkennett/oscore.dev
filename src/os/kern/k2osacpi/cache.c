@@ -45,7 +45,6 @@ AcpiOsCreateCache(
     pRet = (CACHE_HDR *)K2OS_HeapAlloc(cacheBytes);
     if (pRet == NULL)
     {
-        K2OSKERN_Debug("Cache alloc failed\n");
         return AE_ERROR;
     }
 

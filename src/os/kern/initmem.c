@@ -714,7 +714,7 @@ static BOOL sCheckPteRange(UINT32 aVirtAddr, UINT32 aPageCount, UINT32 aMapAttr,
     {
         pte = *pPTE;
         K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) != 0);
-        if (!KernArch_VerifyPteKernAccessAttr(pte, aMapAttr))
+        if (!KernArch_VerifyPteKernHasAccessAttr(pte, aMapAttr))
         {
             K2_ASSERT(0);
         }
@@ -845,15 +845,45 @@ static BOOL sCheckPteRangeUnmapped(UINT32 aVirtAddr, UINT32 aPageCount)
         {
             K2OSKERN_Debug("%08X should be unmapped but PTE  is %08X\n", aVirtAddr, pte);
             K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) == 0);
+            return FALSE;
         }
         if (pte & K2OSKERN_PTE_NP_BIT)
         {
             K2OSKERN_Debug("%08X should be unmapped but PTE2 is %08X\n", aVirtAddr, pte);
             K2_ASSERT((pte & K2OSKERN_PTE_NP_BIT) == 0);
+            return FALSE;
         }
         pPTE++;
         aVirtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--aPageCount);
+    return TRUE;
+}
+
+static BOOL sCheckPteRangeDeviceMapped(UINT32 aVirtAddr, UINT32 aPageCount)
+{
+    UINT32 *    pPTE;
+    UINT32      pte;
+
+    pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(aVirtAddr);
+    do
+    {
+        pte = *pPTE;
+        if (!(pte & K2OSKERN_PTE_PRESENT_BIT))
+        {
+            K2OSKERN_Debug("%08X should be mapped but PTE is %08X\n", aVirtAddr, pte);
+            K2_ASSERT(0);
+            return FALSE;
+        }
+        if (!KernArch_VerifyPteKernHasAccessAttr(pte, K2OS_MEMPAGE_ATTR_DEVICEIO))
+        {
+            K2OSKERN_Debug("%08X should be device mapped but PTE is %08X\n", aVirtAddr, pte);
+            K2_ASSERT(0);
+            return FALSE;
+        }
+        pPTE++;
+        aVirtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--aPageCount);
+
     return TRUE;
 }
 
@@ -1114,6 +1144,33 @@ static void sInit_BeforeVirt(void)
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_PUBLICAPI;
     sCheckPteRangeUnmapped(K2OS_KVA_PUBLICAPI_BASE, K2OS_KVA_PUBLICAPI_SIZE / K2_VA32_MEMPAGE_BYTES);
+
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_FACS_BASE, K2OS_KVA_FACS_SIZE, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
+    pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_FACS;
+    if (gData.mpShared->LoadInfo.mFwFacsPhys != 0)
+    {
+        sCheckPteRangeDeviceMapped(K2OS_KVA_FACS_BASE, K2OS_KVA_FACS_SIZE / K2_VA32_MEMPAGE_BYTES);
+    }
+    else
+    {
+        sCheckPteRangeUnmapped(K2OS_KVA_FACS_BASE, K2OS_KVA_FACS_SIZE / K2_VA32_MEMPAGE_BYTES);
+    }
+
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_XFACS_BASE, K2OS_KVA_XFACS_SIZE, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
+    pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_XFACS;
+    if ((gData.mpShared->LoadInfo.mFwXFacsPhys != gData.mpShared->LoadInfo.mFwFacsPhys) &&
+        (gData.mpShared->LoadInfo.mFwXFacsPhys != 0))
+    {
+        sCheckPteRangeDeviceMapped(K2OS_KVA_XFACS_BASE, K2OS_KVA_XFACS_SIZE / K2_VA32_MEMPAGE_BYTES);
+    }
+    else
+    {
+        sCheckPteRangeUnmapped(K2OS_KVA_XFACS_BASE, K2OS_KVA_XFACS_SIZE / K2_VA32_MEMPAGE_BYTES);
+    }
 
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_ARCHSPEC_BASE, K2OS_KVA_ARCHSPEC_SIZE, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));

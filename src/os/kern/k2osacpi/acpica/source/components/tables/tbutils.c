@@ -497,7 +497,6 @@ AcpiTbParseRootTable (
             goto NextTable;
         }
 
-        K2OSKERN_Debug("AcpiTbParseRootTable\n");
         Status = AcpiTbInstallStandardTable (Address,
             ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE, &TableIndex);
 
