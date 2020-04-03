@@ -6,6 +6,7 @@ AcpiOsInstallInterruptHandler(
     ACPI_OSD_HANDLER        ServiceRoutine,
     void                    *Context)
 {
+    K2OSKERN_Debug("AcpiOsInstallInterruptHandler(%d) - %08X\n", InterruptNumber, ServiceRoutine);
     K2_ASSERT(0);
     return ACPI_FAILURE(1);
 }

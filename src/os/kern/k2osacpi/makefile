@@ -229,5 +229,13 @@ SOURCES += acpica/source/components/utilities/utxferror.c
 SOURCES += acpica/source/components/utilities/utxfinit.c
 SOURCES += acpica/source/components/utilities/utxfmutex.c
 
+ifeq ($(K2_ARCH),X32)
+SOURCE_LIBS += @shared/lib/k2archx32
+endif
+
+ifeq ($(K2_ARCH),A32)
+SOURCE_LIBS += @shared/lib/k2archa32
+endif
+
 include $(K2_ROOT)/src/shared/build/post.make
 
