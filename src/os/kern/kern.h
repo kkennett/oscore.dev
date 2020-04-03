@@ -69,7 +69,7 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM        K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
 
 typedef struct _K2OSKERN_CRITSEC            K2OSKERN_CRITSEC;
 
@@ -85,6 +85,17 @@ typedef struct _K2OSKERN_OBJ_SEM            K2OSKERN_OBJ_SEM;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
+
+typedef union _K2OSKERN_OBJ_WAITABLE K2OSKERN_OBJ_WAITABLE;
+union _K2OSKERN_OBJ_WAITABLE
+{
+    K2OSKERN_OBJ_HEADER *   mpHdr;
+    K2OSKERN_OBJ_PROCESS *  mpProc;
+    K2OSKERN_OBJ_EVENT *    mpEvent;
+    K2OSKERN_OBJ_NAME *     mpName;
+    K2OSKERN_OBJ_THREAD *   mpThread;
+    K2OSKERN_OBJ_SEM *      mpSem;
+};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -188,7 +199,7 @@ enum _KernSchedItemType
     KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
-    KernSchedItem_ReleaseSem,
+    KernSchedItem_SemRelease,
     // more here
     KernSchedItemType_Count
 };
@@ -207,7 +218,7 @@ struct _K2OSKERN_SCHED_WAITENTRY
     UINT8                   mUnused1;
     UINT16                  mStickyPulseStatus;
     K2LIST_LINK             WaitPrioListLink;
-    K2OSKERN_OBJ_HEADER *   mpObj;
+    K2OSKERN_OBJ_WAITABLE   mWaitObj;
 };
 
 struct _K2OSKERN_SCHED_MACROWAIT
@@ -251,7 +262,7 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB
     UINT32                  mPageCount;
 };
 
-struct _K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM
+struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE
 {
     K2OSKERN_OBJ_SEM *  mpSem;
     UINT32              mCount;
@@ -265,7 +276,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  ContendedCritSec;
     K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           PurgePt;
     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     InvalidateTlb;
-    K2OSKERN_SCHED_ITEM_ARGS_RELEASE_SEM        ReleaseSem;
+    K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        SemRelease;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -283,7 +294,6 @@ struct _K2OSKERN_SCHED_ITEM
 typedef struct _K2OSKERN_SCHED_THREAD K2OSKERN_SCHED_THREAD;
 struct _K2OSKERN_SCHED_THREAD
 {
-    K2OS_ThreadState    mState;
     UINT32              mBasePrio;
     UINT64              mLastAbsTimeMs;
     UINT32              mQuantumLeft;
@@ -472,9 +482,24 @@ union _K2OSKERN_TOKEN_PAGE
 
 K2_STATIC_ASSERT(sizeof(K2OSKERN_TOKEN_PAGE) == K2_VA32_MEMPAGE_BYTES);
 
+typedef enum _KernProcState KernProcState;
+enum _KernProcState
+{
+    KernProcState_Invalid = 0,
+    KernProcState_Init,
+    KernProcState_Exec,
+    KernProcState_Stopped,
+    KernProcState_Dying,
+    KernProcState_Done, // signaled
+    KernProcState_Purge,
+    //this one goes last
+    KernProcState_Count
+};
+
 struct _K2OSKERN_OBJ_PROCESS
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+    KernProcState           mState;
     UINT32                  mId;
     UINT32                  mTransTableKVA;     // VIRT of root trans table
     UINT32                  mTransTableRegVal;  // PHYS(+) of root trans table
@@ -939,7 +964,7 @@ BOOL KernSched_Exec_EnterDebug(void);
 BOOL KernSched_Exec_Destroy_CritSec(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
-BOOL KernSched_Exec_ReleaseSem(void);
+BOOL KernSched_Exec_SemRelease(void);
 
 BOOL KernSched_TimePassedUntil(UINT64 aTimeNow);
 

@@ -98,14 +98,14 @@ K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewC
         }
 
         pCurThread = K2OSKERN_CURRENT_THREAD;
-        pCurThread->Sched.Item.mSchedItemType = KernSchedItem_ReleaseSem;
-        pCurThread->Sched.Item.Args.ReleaseSem.mpSem = apSem;
-        pCurThread->Sched.Item.Args.ReleaseSem.mCount = aCount;
+        pCurThread->Sched.Item.mSchedItemType = KernSchedItem_SemRelease;
+        pCurThread->Sched.Item.Args.SemRelease.mpSem = apSem;
+        pCurThread->Sched.Item.Args.SemRelease.mCount = aCount;
         KernArch_ThreadCallSched();
         stat = pCurThread->Sched.Item.mResult;
         if ((!K2STAT_IS_ERROR(stat)) && (apRetNewCount != NULL))
         {
-            *apRetNewCount = pCurThread->Sched.Item.Args.ReleaseSem.mRetNewCount;
+            *apRetNewCount = pCurThread->Sched.Item.Args.SemRelease.mRetNewCount;
         }
 
     } while (0);

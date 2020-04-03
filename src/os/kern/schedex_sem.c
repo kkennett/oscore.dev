@@ -32,18 +32,18 @@
 
 #include "kern.h"
 
-BOOL KernSched_Exec_ReleaseSem(void)
+BOOL KernSched_Exec_SemRelease(void)
 {
     BOOL                result;
     K2OSKERN_OBJ_SEM *  pSem;
     UINT32              relCount;
 
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ReleaseSem);
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_SemRelease);
 
-    pSem = gData.Sched.mpActiveItem->Args.ReleaseSem.mpSem;
-    relCount = gData.Sched.mpActiveItem->Args.ReleaseSem.mCount;
+    pSem = gData.Sched.mpActiveItem->Args.SemRelease.mpSem;
+    relCount = gData.Sched.mpActiveItem->Args.SemRelease.mCount;
 
-    K2OSKERN_Debug("SCHED:ReleaseSem(%08X,%d)\n", pSem, relCount);
+    K2OSKERN_Debug("SCHED:SemRelease(%08X,%d)\n", pSem, relCount);
 
     result = FALSE;
 

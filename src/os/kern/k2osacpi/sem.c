@@ -6,7 +6,8 @@ AcpiOsCreateSemaphore(
     UINT32                  InitialUnits,
     ACPI_SEMAPHORE          *OutHandle)
 {
-    if (!K2OS_SemaphoreCreate(NULL, MaxUnits, InitialUnits, OutHandle))
+    *OutHandle = K2OS_SemaphoreCreate(NULL, MaxUnits, InitialUnits);
+    if ((*OutHandle) == NULL)
     {
         K2_ASSERT(0);
         return AE_ERROR;

@@ -145,7 +145,7 @@ static void sInit_BeforeVirt(void)
     pThread->mpStackSeg = &gpProc0->SegObjPrimaryThreadStack;
     pThread->Env.mId = 1;
     pThread->mIsKernelThread = TRUE;
-    pThread->Sched.mState = K2OS_THREAD_STATE_INIT;
+    pThread->Info.mState = K2OS_Thread_Init;
     pThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;

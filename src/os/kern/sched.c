@@ -46,7 +46,7 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
     KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
-    KernSched_Exec_ReleaseSem           // KernSchedItem_ReleaseSem
+    KernSched_Exec_SemRelease           // KernSchedItem_SemRelease
 
 };
 
@@ -137,7 +137,7 @@ void KernSched_AddCurrentCore(void)
     pThisCore->Sched.mActivePrio = pThread->Sched.mActivePrio;
     KernSched_InsertCore(pThisCore, TRUE);
 
-    pThread->Sched.mState = K2OS_Thread_Running;
+    pThread->Info.mState = K2OS_Thread_Running;
     pThisCore->mpActiveThread = pThread;
     K2_CpuWriteBarrier();
 }
@@ -349,7 +349,7 @@ void KernSched_Exec(void)
             pThread = pCpuCore->Sched.mpRunThread;
             if (pThread != NULL)
             {
-                K2_ASSERT(pThread->Sched.mState == K2OS_Thread_Running);
+                K2_ASSERT(pThread->Info.mState == K2OS_Thread_Running);
 
                 pCpuCore->mpActiveThread = pThread;
                 K2_CpuWriteBarrier();

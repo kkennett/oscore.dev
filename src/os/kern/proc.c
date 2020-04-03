@@ -63,6 +63,8 @@ static void sInit_AtDlxEntry(void)
 #error !!!Unsupported Architecture
 #endif
 
+    gpProc0->mState = KernProcState_Init;
+
     K2OSKERN_SeqIntrInit(&gpProc0->TokSeqLock);
 
     K2LIST_Init(&gpProc0->ThreadList);
@@ -99,6 +101,8 @@ static void sInit_MemReady(void)
     }
     gpProc0->mTokSalt = K2OSKERN_TOKEN_SALT_MASK;
     gpProc0->mTokCount = 0;
+
+    gpProc0->mState = KernProcState_Exec;
 }
 
 void KernInit_Process(void)
