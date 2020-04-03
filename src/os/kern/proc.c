@@ -73,7 +73,8 @@ static void sInit_AtDlxEntry(void)
 
 static void sInit_Threaded(void)
 {
-    K2OS_CritSecInit(&gpProc0->ThreadListSec);
+    K2OSKERN_SeqIntrInit(&gpProc0->ThreadListSeqLock);
+
     K2OS_CritSecInit(&gpProc0->TlsMaskSec);
 }
 

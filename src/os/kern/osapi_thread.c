@@ -149,8 +149,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
             break;
         }
 
-        ok = K2OS_CritSecEnter(&pThisProc->ThreadListSec);
-        K2_ASSERT(ok);
         ok = K2OS_CritSecEnter(&pThisProc->TlsMaskSec);
         K2_ASSERT(ok);
 
@@ -166,6 +164,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
             //
             // clear value in slots in all threads for the process
             //
+            ok = K2OSKERN_SeqIntrLock(&pThisProc->ThreadListSeqLock);
             pLink = pThisProc->ThreadList.mpHead;
             K2_ASSERT(pLink != NULL);
             do {
@@ -173,11 +172,10 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadFreeLocal(UINT32 aSlotId)
                 pOtherThread->Env.mTlsValue[aSlotId] = 0;
                 pLink = pLink->mpNext;
             } while (pLink != NULL);
+            K2OSKERN_SeqIntrUnlock(&pThisProc->ThreadListSeqLock, ok);
         }
 
         ok = K2OS_CritSecLeave(&pThisProc->TlsMaskSec);
-        K2_ASSERT(ok);
-        ok = K2OS_CritSecLeave(&pThisProc->ThreadListSec);
         K2_ASSERT(ok);
 
     } while (0);
@@ -297,69 +295,403 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetLocal(UINT32 aSlotId, UINT32 *apRetV
     return result;
 }
 
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_THREADINFO *apRetInfo)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_THREAD *   pThreadObj;
+
+    if (aThreadToken == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    if (apRetInfo == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    if (apRetInfo->mStructBytes < sizeof(K2OS_THREADINFO))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_TOO_SMALL);
+        return FALSE;
+    }
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
+        {
+            K2MEM_Copy(apRetInfo, &pThreadObj->Info, sizeof(K2OS_THREADINFO));
+        }
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+
+        stat2 = KernObj_Release(&pThreadObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_THREADINFO *apRetInfo)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
+    K2OSKERN_OBJ_THREAD * pThisThread;
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
+    if (apRetInfo == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadPause(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount, UINT32 aTimeoutMs)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
+    if (apRetInfo->mStructBytes < sizeof(K2OS_THREADINFO))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_TOO_SMALL);
+        return FALSE;
+    }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    K2MEM_Copy(apRetInfo, &pThisThread->Info, sizeof(K2OS_THREADINFO));
+
+    return TRUE;
 }
 
 void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    K2OSKERN_OBJ_THREAD * pThisThread;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Info.mExitCode = aExitCode;
+
+    K2OSKERN_Debug("Thread(%d) calling scheduler for exit with Code %08X\n", pThisThread->Env.mId, pThisThread->Info.mExitCode);
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadExit;
+    pThisThread->Sched.Item.Args.ThreadExit.mNormal = FALSE;
+
+    KernArch_ThreadCallSched();
+
+    //
+    // should never return from exitthread call
+    //
+
+    K2OSKERN_Panic("Thread %d resumed after exit trap!\n", pThisThread->Env.mId);
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aForcedExitCode)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aForcedExitCode)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_THREAD *   pThreadObj;
+
+    if (aThreadToken == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
+        {
+            stat = KernThread_Kill(pThreadObj, aForcedExitCode);
+        }
+        else
+        {
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        }
+
+        stat2 = KernObj_Release(&pThreadObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR const *apAttr)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_THREAD *   pThreadObj;
+    K2OS_THREADATTR         newAttr;
+
+    if (aThreadToken == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    if (apAttr == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Copy(&newAttr, apAttr, sizeof(K2OS_THREADATTR));
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
+        {
+            if (newAttr.mFieldMask & K2OS_THREADATTR_PRIORITY)
+            {
+                if (newAttr.mPriority == pThreadObj->Sched.mBasePrio)
+                    newAttr.mFieldMask &= ~K2OS_THREADATTR_PRIORITY;
+            }
+
+            if (newAttr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK)
+            {
+                if (newAttr.mPriority == pThreadObj->Sched.Attr.mAffinityMask)
+                    newAttr.mFieldMask &= ~K2OS_THREADATTR_AFFINITYMASK;
+            }
+
+            if (newAttr.mFieldMask & K2OS_THREADATTR_QUANTUM)
+            {
+                if (newAttr.mPriority == pThreadObj->Sched.Attr.mQuantum)
+                    newAttr.mFieldMask &= ~K2OS_THREADATTR_QUANTUM;
+            }
+
+            if ((newAttr.mFieldMask & K2OS_THREADATTR_VALID_MASK) == 0)
+                stat = K2STAT_NO_ERROR;
+            else
+            {
+                stat = KernThread_SetAttr(pThreadObj, &newAttr);
+            }
+        }
+        else
+        {
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        }
+
+        stat2 = KernObj_Release(&pThreadObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR *apRetAttr)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_THREAD *   pThreadObj;
+    K2OS_THREADATTR         curAttr;
+
+    if (aThreadToken == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    if (apRetAttr == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Zero(apRetAttr, sizeof(K2OS_THREADATTR));
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
+        {
+            K2MEM_Copy(&curAttr, &pThreadObj->Sched.Attr, sizeof(K2OS_THREADATTR));
+            curAttr.mPriority = pThreadObj->Sched.mBasePrio;
+            curAttr.mFieldMask = K2OS_THREADATTR_VALID_MASK;
+        }
+        else
+        {
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        }
+
+        stat2 = KernObj_Release(&pThreadObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    K2MEM_Copy(apRetAttr, &curAttr, sizeof(curAttr));
+
+    return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apInfo)
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apAttr)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OS_THREADATTR         newAttr;
+    
+    if (apAttr == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    K2MEM_Copy(&newAttr, apAttr, sizeof(K2OS_THREADATTR));
+
+    if (newAttr.mFieldMask & K2OS_THREADATTR_PRIORITY)
+    {
+        if (newAttr.mPriority == pThisThread->Sched.mBasePrio)
+            newAttr.mFieldMask &= ~K2OS_THREADATTR_PRIORITY;
+    }
+
+    if (newAttr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK)
+    {
+        if (newAttr.mPriority == pThisThread->Sched.Attr.mAffinityMask)
+            newAttr.mFieldMask &= ~K2OS_THREADATTR_AFFINITYMASK;
+    }
+
+    if (newAttr.mFieldMask & K2OS_THREADATTR_QUANTUM)
+    {
+        if (newAttr.mPriority == pThisThread->Sched.Attr.mQuantum)
+            newAttr.mFieldMask &= ~K2OS_THREADATTR_QUANTUM;
+    }
+
+    if ((newAttr.mFieldMask & K2OS_THREADATTR_VALID_MASK) == 0)
+    {
+        stat = K2STAT_NO_ERROR;
+    }
+    else
+    {
+        stat = KernThread_SetAttr(pThisThread, &newAttr);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetInfo)
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetAttr)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+
+    if (apRetAttr == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    K2MEM_Copy(apRetAttr, &pThisThread->Sched.Attr, sizeof(K2OS_THREADATTR));
+
+    apRetAttr->mPriority = pThisThread->Sched.mBasePrio;
+    apRetAttr->mFieldMask = K2OS_THREADATTR_VALID_MASK;
+
+    return TRUE;
+}
+
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken)
+{
+    return KernTok_CreateFromNamedObject(aNameToken, K2OS_Obj_Thread);
+}
+
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
+{
+    BOOL                    disp;
+    K2LIST_LINK *           pProcScan;
+    K2OSKERN_OBJ_PROCESS *  pProcess;
+    K2LIST_LINK *           pThreadScan;
+    K2OSKERN_OBJ_THREAD *   pThread;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_HEADER *   pRefObj;
+    K2OS_TOKEN              tokThread;
+
+    if (aThreadId == 0)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return NULL;
+    }
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
+
+    pProcScan = gData.ProcList.mpHead;
+    K2_ASSERT(pProcScan != NULL);
+
+    do {
+        pProcess = K2_GET_CONTAINER(K2OSKERN_OBJ_PROCESS, pProcScan, ProcListLink);
+
+        K2OSKERN_SeqIntrLock(&pProcess->ThreadListSeqLock);
+        
+        pThreadScan = pProcess->ThreadList.mpHead;
+
+        while (pThreadScan != NULL)
+        {
+            pThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, pThreadScan, ProcThreadListLink);
+            if (pThread->Env.mId == aThreadId)
+            {
+                stat = KernObj_AddRef(&pThread->Hdr);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat));
+                break;
+            }
+
+            pThreadScan = pThreadScan->mpNext;
+        }
+
+        K2OSKERN_SeqIntrUnlock(&pProcess->ThreadListSeqLock, FALSE);
+
+        if (pThreadScan != NULL)
+            break;
+
+        pProcScan = pProcScan->mpNext;
+    } while (pProcScan != NULL);
+
+    K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
+
+    if (pThreadScan == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_FOUND);
+        return NULL;
+    }
+
+    //
+    // creating a token will ***NOT*** add a reference
+    //
+    pRefObj = &pThread->Hdr;
+    stat = KernTok_Create(1, &pRefObj, &tokThread);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        stat = KernObj_Release(pRefObj);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokThread;
 }
 
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetPauseLock(BOOL aSetLock)
@@ -367,6 +699,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetPauseLock(BOOL aSetLock)
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;
 }
+
 
 void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
 {
@@ -391,14 +724,21 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKE
     return K2STAT_ERROR_TIMEOUT;
 }
 
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken)
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadPause(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount, UINT32 aTimeoutMs)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT32 *apRetPauseCount)
+{
+    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    return FALSE;
+}
+
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return NULL;
 }
 
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
-}

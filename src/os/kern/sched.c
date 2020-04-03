@@ -123,9 +123,10 @@ void KernSched_AddCurrentCore(void)
     //
     pThread = gpThread0;
     pThread->Sched.mBasePrio = K2OS_THREADPRIO_NORMAL;
-    pThread->Sched.mActivePrio = K2OS_THREADPRIO_NORMAL;
-    pThread->Sched.mAffinity = (1 << gData.mCpuCount) - 1;
-    pThread->Sched.mRechargeQuantum = K2OS_THREAD_DEFAULT_QUANTUM;
+    pThread->Sched.Attr.mPriority = K2OS_THREADPRIO_NORMAL;
+    pThread->Sched.Attr.mAffinityMask = (1 << gData.mCpuCount) - 1;
+    pThread->Sched.Attr.mQuantum = K2OS_THREAD_DEFAULT_QUANTUM;
+    pThread->Sched.Attr.mFieldMask = K2OS_THREADATTR_VALID_MASK;
     pThread->Sched.mQuantumLeft = K2OS_THREAD_DEFAULT_QUANTUM;
     K2LIST_Init(&pThread->Sched.OwnedCritSecList);
 

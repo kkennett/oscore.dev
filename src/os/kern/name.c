@@ -36,3 +36,4 @@ void KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj)
 {
     K2_ASSERT(0);
 }
+

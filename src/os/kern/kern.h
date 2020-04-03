@@ -285,10 +285,9 @@ struct _K2OSKERN_SCHED_THREAD
 {
     K2OS_ThreadState    mState;
     UINT32              mBasePrio;
-    UINT32              mAffinity;
     UINT64              mLastAbsTimeMs;
-    UINT32              mRechargeQuantum;
     UINT32              mQuantumLeft;
+    K2OS_THREADATTR     Attr;       // current priority, affinity mask, quantum
     K2OSKERN_SCHED_ITEM Item;
     K2OSKERN_CRITSEC *  mpActionSec;
     UINT32              mActivePrio;
@@ -484,7 +483,7 @@ struct _K2OSKERN_OBJ_PROCESS
     K2OSKERN_OBJ_SEGMENT    SegObjPrimaryThreadStack;
     K2OSKERN_OBJ_DLX        PrimaryModule;
 
-    K2OS_CRITSEC            ThreadListSec;
+    K2OSKERN_SEQLOCK        ThreadListSeqLock;
     K2LIST_ANCHOR           ThreadList;
 
     K2OS_CRITSEC            TlsMaskSec;
@@ -920,8 +919,10 @@ void    KernProc_Dump(K2OSKERN_OBJ_PROCESS *apProc);
 
 /* --------------------------------------------------------------------------------- */
 
-void                  KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
-void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
+void                     KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
+void    K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
+K2STAT                   KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
+K2STAT                   KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -991,7 +992,7 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
 
 /* --------------------------------------------------------------------------------- */
 
-void   KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj);
+void        KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1001,8 +1002,9 @@ void   KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj);
 
 /* --------------------------------------------------------------------------------- */
 
-K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
-K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
+K2STAT      KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
+K2STAT      KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
+K2OS_TOKEN  KernTok_CreateFromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType);
 
 /* --------------------------------------------------------------------------------- */
 

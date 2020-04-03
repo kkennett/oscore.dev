@@ -197,3 +197,17 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread)
 
     K2OSKERN_Panic("Thread %d resumed after exit trap!\n", apThisThread->Env.mId);
 }
+
+
+K2STAT KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode)
+{
+    K2_ASSERT(0);
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr)
+{
+    K2_ASSERT(0);
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
