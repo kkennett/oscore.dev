@@ -249,8 +249,7 @@ K2STAT Loader_AssembleAcpi(void)
         totalTableSize += pHdr->Length;
         totalTableSize = K2_ROUNDUP(totalTableSize, sizeof(UINT32));
     }
-
-    if (pFADT->XDsdt != 0)
+    else if (pFADT->XDsdt != 0)
     {
         pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
         if (pHdr->Signature != DSDT_SIGNATURE)
@@ -263,11 +262,8 @@ K2STAT Loader_AssembleAcpi(void)
     }
     else
     {
-        if (pFADT->Dsdt == 0)
-        {
-            K2Printf(L"*** No DSDT or xDSDT\n");
-            return K2STAT_ERROR_UNKNOWN;
-        }
+        K2Printf(L"*** No DSDT or xDSDT\n");
+        return K2STAT_ERROR_UNKNOWN;
     }
 
     //
@@ -366,11 +362,10 @@ K2STAT Loader_AssembleAcpi(void)
 //            (pHdr->Signature >> 24) & 0xFF,
 //            pHdr, outAddr, pHdr->Length);
         pFADT->Dsdt = outAddr;
+        pFADT->XDsdt = 0;
         outAddr += pHdr->Length;
         outAddr = K2_ROUNDUP(outAddr, sizeof(UINT32));
-    }
-
-    if (pFADT->XDsdt != 0)
+    } else if (pFADT->XDsdt != 0)
     {
         pHdr = (EFI_ACPI_SDT_HEADER *)(UINTN)pFADT->XDsdt;
         K2MEM_Copy((UINT8 *)outAddr, pHdr, pHdr->Length);
@@ -380,6 +375,7 @@ K2STAT Loader_AssembleAcpi(void)
         //            (pHdr->Signature >> 16) & 0xFF,
         //            (pHdr->Signature >> 24) & 0xFF,
         //            pHdr, outAddr, pHdr->Length);
+        pFADT->Dsdt = 0;
         pFADT->XDsdt = outAddr;
         outAddr += pHdr->Length;
         outAddr = K2_ROUNDUP(outAddr, sizeof(UINT32));
