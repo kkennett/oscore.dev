@@ -38,6 +38,92 @@ static char const * const sgpSegName[3] =
     ".data"
 };
 
+void
+DLX_AddrToName(
+    DLX *   apDlx,
+    UINT32  aAddr,
+    UINT32  aSegHint,
+    char *  apRetNameBuffer,
+    UINT32  aBufferLen
+)
+{
+    UINT32                  segIx;
+    UINT32                  segStart;
+    UINT32                  segEnd;
+    char const *            pBaseName;
+    UINT32                  baseAddr;
+    K2TREE_ANCHOR *         pAnchor;
+    K2TREE_NODE *           pTreeNode;
+    K2DLX_SYMTREE_NODE *    pSymTreeNode;
+
+    if (aBufferLen == 0)
+        return;
+
+    if (aSegHint == 0)
+    {
+        for (segIx = DlxSeg_Text; segIx <= DlxSeg_Data; segIx++)
+        {
+            segStart = apDlx->SegAlloc.Segment[segIx].mLinkAddr;
+            segEnd = segStart + apDlx->mpInfo->SegInfo[segIx].mMemActualBytes;
+            if ((aAddr >= segStart) && (aAddr < segEnd))
+            {
+                break;
+            }
+        }
+        if (segIx > DlxSeg_Data)
+        {
+            if (aBufferLen > 1)
+            {
+                apRetNameBuffer[0] = '?';
+                apRetNameBuffer[1] = 0;
+            }
+            else
+                apRetNameBuffer[0] = 0;
+            return;
+        }
+    }
+    else
+        segIx = aSegHint;
+
+    baseAddr = 0;
+
+    if (apDlx->mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS)
+    {
+        // find the closest matching symbol in the segment and set baseAddr and pBaseName
+        pAnchor = &apDlx->SymTree[segIx - DlxSeg_Text];
+        pTreeNode = K2TREE_FindOrAfter(pAnchor, aAddr);
+        if (pTreeNode != NULL)
+        {
+            if (pTreeNode->mUserVal != aAddr)
+                pTreeNode = K2TREE_PrevNode(pAnchor, pTreeNode);
+            if (pTreeNode != NULL)
+            {
+                pSymTreeNode = K2_GET_CONTAINER(K2DLX_SYMTREE_NODE, pTreeNode, TreeNode);
+                baseAddr = pSymTreeNode->TreeNode.mUserVal;
+                pBaseName = pSymTreeNode->mpSymName;
+            }
+        }
+    }
+
+    if (baseAddr == 0)
+    {
+        pBaseName = sgpSegName[segIx - DlxSeg_Text];
+        baseAddr = apDlx->SegAlloc.Segment[segIx].mLinkAddr;
+    }
+
+    aAddr -= baseAddr;
+    if (aAddr == 0)
+    {
+        K2ASC_PrintfLen(apRetNameBuffer, aBufferLen, "%.*s|%s",
+            apDlx->mIntNameLen, apDlx->mpIntName, pBaseName);
+    }
+    else
+    {
+        K2ASC_PrintfLen(apRetNameBuffer, aBufferLen, "%.*s|%s+0x%X",
+            apDlx->mIntNameLen, apDlx->mpIntName, pBaseName, aAddr - baseAddr);
+    }
+}
+
 K2STAT
 DLX_FindAddrName(
     UINT32  aAddr,
@@ -45,14 +131,9 @@ DLX_FindAddrName(
     UINT32  aBufferLen
 )
 {
-    DLX *                   pDlx;
-    UINT32                  segIx;
-    K2STAT                  status;
-    char const *            pBaseName;
-    UINT32                  baseAddr;
-    K2TREE_ANCHOR *         pAnchor;
-    K2TREE_NODE *           pTreeNode;
-    K2DLX_SYMTREE_NODE *    pSymTreeNode;
+    DLX *   pDlx;
+    UINT32  segIx;
+    K2STAT  status;
 
     if ((apRetNameBuffer == NULL) ||
         (aBufferLen == 0))
@@ -66,47 +147,7 @@ DLX_FindAddrName(
         return status;
     }
 
-    do
-    {
-        baseAddr = 0;
-
-        if (pDlx->mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS)
-        {
-            // find the closest matching symbol in the segment and set baseAddr and pBaseName
-            pAnchor = &pDlx->SymTree[segIx - DlxSeg_Text];
-            pTreeNode = K2TREE_FindOrAfter(pAnchor, aAddr);
-            if (pTreeNode != NULL)
-            {
-                if (pTreeNode->mUserVal != aAddr)
-                    pTreeNode = K2TREE_PrevNode(pAnchor, pTreeNode);
-                if (pTreeNode != NULL)
-                {
-                    pSymTreeNode = K2_GET_CONTAINER(K2DLX_SYMTREE_NODE, pTreeNode, TreeNode);
-                    baseAddr = pSymTreeNode->TreeNode.mUserVal;
-                    pBaseName = pSymTreeNode->mpSymName;
-                }
-            }
-        }
-
-        if (baseAddr == 0)
-        {
-            pBaseName = sgpSegName[segIx - DlxSeg_Text];
-            baseAddr = pDlx->SegAlloc.Segment[segIx].mLinkAddr;
-        }
-
-        aAddr -= baseAddr;
-        if (aAddr == 0)
-        {
-            K2ASC_PrintfLen(apRetNameBuffer, aBufferLen, "%.*s|%s",
-                pDlx->mIntNameLen, pDlx->mpIntName, pBaseName);
-        }
-        else
-        {
-            K2ASC_PrintfLen(apRetNameBuffer, aBufferLen, "%.*s|%s+0x%X",
-                pDlx->mIntNameLen, pDlx->mpIntName, pBaseName, aAddr - baseAddr);
-        }
-
-    } while (0);
+    DLX_AddrToName(pDlx, aAddr, segIx, apRetNameBuffer, aBufferLen);
 
     DLX_Release(pDlx);
 

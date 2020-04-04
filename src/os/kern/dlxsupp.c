@@ -164,3 +164,133 @@ K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile)
     return K2STAT_ERROR_NOT_IMPL;
 }
 
+#define MAX_DLX_NAME_LEN    32
+
+UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen)
+{
+    BOOL                    disp;
+    K2TREE_NODE *           pTreeNode;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
+    char const *            pStockStr;
+    UINT32                  symAddr;
+    char                    dlxName[MAX_DLX_NAME_LEN];
+
+    if (aAddr >= K2OS_KVA_KERN_BASE)
+        apCurProc = gpProc0;
+
+    disp = K2OSKERN_SeqIntrLock(&apCurProc->SegTreeSeqLock);
+
+    pTreeNode = K2TREE_FindOrAfter(&apCurProc->SegTree, aAddr);
+    if (pTreeNode == NULL)
+    {
+        pTreeNode = K2TREE_LastNode(&apCurProc->SegTree);
+        pTreeNode = K2TREE_PrevNode(&apCurProc->SegTree, pTreeNode);
+        if (pTreeNode != NULL)
+        {
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+            K2_ASSERT(pSeg->SegTreeNode.mUserVal < aAddr);
+        }
+        else
+        {
+            K2_ASSERT(apCurProc->SegTree.mNodeCount == 0);
+            pSeg = NULL;
+        }
+    }
+    else
+    {
+        if (pTreeNode->mUserVal != aAddr)
+        {
+            pTreeNode = K2TREE_PrevNode(&apCurProc->SegTree, pTreeNode);
+            if (pTreeNode != NULL)
+            {
+                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+                K2_ASSERT(pSeg->SegTreeNode.mUserVal < aAddr);
+            }
+            else
+            {
+                pSeg = NULL;
+            }
+        }
+        else
+        {
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+        }
+    }
+
+    if (pSeg != NULL)
+    {
+        stat = KernObj_AddRef(&pSeg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        symAddr = aAddr;
+    }
+
+    K2OSKERN_SeqIntrUnlock(&apCurProc->SegTreeSeqLock, disp);
+
+    symAddr = pSeg->SegTreeNode.mUserVal;
+
+    if (pSeg != NULL)
+    {
+        pStockStr = NULL;
+
+        //
+        // what type of segment is this?
+        //
+        switch (pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK)
+        {
+        case K2OS_SEG_ATTR_TYPE_DLX_PART:
+            pDlxObj = pSeg->Info.DlxPart.mpDlxObj;
+            K2_ASSERT(pDlxObj != NULL);
+            stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat));
+            K2_ASSERT(&pDlxObj->SegObj[pSeg->Info.DlxPart.mSegmentIndex] == pSeg);
+            DLX_AddrToName(pDlxObj->mpDlx, aAddr, pSeg->Info.DlxPart.mSegmentIndex, apRetSymName, aRetSymNameBufLen);
+            break;
+        case K2OS_SEG_ATTR_TYPE_PROCESS:
+            pStockStr = "PROCESS_AREA";
+            break;
+        case K2OS_SEG_ATTR_TYPE_THREAD:
+            pStockStr = "THREAD_STACK";
+            break;
+        case K2OS_SEG_ATTR_TYPE_HEAP_TRACK:
+            pStockStr = "HEAP_TRACK";
+            break;
+        case K2OS_SEG_ATTR_TYPE_USER:
+            pStockStr = "USER_VIRTALLOC";
+            break;
+        case K2OS_SEG_ATTR_TYPE_DEVMAP:
+            pStockStr = "DEVICEMAP";
+            break;
+        case K2OS_SEG_ATTR_TYPE_PHYSBUF:
+            pStockStr = "PHYSBUF";
+            break;
+        case K2OS_SEG_ATTR_TYPE_DLX_PAGE:
+            pStockStr = "DLX_PAGE";
+            break;
+        case K2OS_SEG_ATTR_TYPE_SEG_SLAB:
+            pStockStr = "SEG_SLAB";
+            break;
+
+        default:
+            K2_ASSERT(0);
+            break;
+        }
+
+        if (pStockStr != NULL)
+        {
+            K2ASC_CopyLen(apRetSymName, pStockStr, aRetSymNameBufLen - 1);
+        }
+
+        apRetSymName[aRetSymNameBufLen - 1] = 0;
+
+        KernObj_Release(&pSeg->Hdr);
+    }
+    else
+    {
+        if (aRetSymNameBufLen > 0)
+            apRetSymName[0] = 0;
+    }
+
+    return symAddr;
+}

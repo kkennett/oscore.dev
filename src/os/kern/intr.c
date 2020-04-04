@@ -45,14 +45,6 @@ void KernIntr_RecvIci(K2OSKERN_CPUCORE *apThisCore, UINT32 aSendingCoreIx)
     K2_ASSERT(0);
 }
 
-void KernIntr_Exception(UINT32 aExceptionCode)
-{
-    //
-    // in interrupt context on core
-    //
-    K2_ASSERT(0);
-}
-
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent)
 {
     K2OSKERN_CPUCORE_EVENT *    pNext;

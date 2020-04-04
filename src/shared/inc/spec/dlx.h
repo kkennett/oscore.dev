@@ -221,6 +221,15 @@ DLX_FindAddrName(
     UINT32  aBufferLen
 );
 
+void
+DLX_AddrToName(
+    DLX *   apDlx,
+    UINT32  aAddr,
+    UINT32  aSegHint,
+    char *  apRetNameBuffer,
+    UINT32  aBufferLen
+);
+
 #define K2STAT_MAKE_DLX_ERROR(x)                    K2STAT_MAKE_ERROR(K2STAT_FACILITY_DLX, (x))
 
 #define K2STAT_DLX_ERROR_FILE_CORRUPTED             K2STAT_MAKE_DLX_ERROR(1)

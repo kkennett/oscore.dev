@@ -19,7 +19,7 @@ static void sInitCache(CACHE_HDR *apCache)
     MaxDepth = apCache->mMaxDepth;
 
     K2LIST_Init(&apCache->FreeList);
-    pListLink = (K2LIST_LINK *)&apCache->CacheData;
+    pListLink = (K2LIST_LINK *)&apCache->CacheData[0];
     do {
         K2LIST_AddAtTail(&apCache->FreeList, pListLink);
         pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + apCache->mObjectBytes);
@@ -124,18 +124,40 @@ AcpiOsAcquireObject(
     BOOL            ok;
     CACHE_HDR *     pCache;
     K2LIST_LINK *   pListLink;
+    UINT32          base;
+    UINT32          offset;
 
     pCache = (CACHE_HDR *)Cache;
+
+    K2OSKERN_Debug("++Acquire(%s)\n", pCache->mpCacheName);
+
+    base = (UINT32)&pCache->CacheData[0];
 
     ok = K2OS_CritSecEnter(&pCache->CritSec);
     K2_ASSERT(ok);
 
-//    K2OSKERN_Debug("AcpiOsAcquireObject(\"%s\"; %d left)\n", pCache->mpCacheName, pCache->FreeList.mNodeCount);
-
     if (pCache->FreeList.mNodeCount > 0)
     {
         pListLink = pCache->FreeList.mpHead;
+
+        offset = ((UINT32)pListLink) - base;
+        K2_ASSERT((offset % pCache->mObjectBytes) == 0);
+        K2_ASSERT((offset / pCache->mObjectBytes) < pCache->mMaxDepth);
+
+        K2OSKERN_Debug("Remove (%08X,%08X, %d)\n", pCache, &pCache->FreeList, pCache->FreeList.mNodeCount);
+        K2OSKERN_Debug("  h,t:r = %08X, %08X : %08X\n", pCache->FreeList.mpHead, pCache->FreeList.mpTail, pListLink);
+        K2OSKERN_Debug("  r:p,n = %08X, %08X\n", pListLink->mpPrev, pListLink->mpNext);
+
         K2LIST_Remove(&pCache->FreeList, pListLink);
+
+        K2OSKERN_Debug("Removed(%08X,%08X, %d)\n", pCache, &pCache->FreeList, pCache->FreeList.mNodeCount);
+        K2OSKERN_Debug("  h,t:r = %08X, %08X : %08X\n", pCache->FreeList.mpHead, pCache->FreeList.mpTail, pListLink);
+        K2OSKERN_Debug("  r:p,n = %08X, %08X\n", pListLink->mpPrev, pListLink->mpNext);
+
+        //
+        // verify link is no longer on the free list
+        //
+
     }
     else
     {
@@ -145,6 +167,8 @@ AcpiOsAcquireObject(
 
     ok = K2OS_CritSecLeave(&pCache->CritSec);
     K2_ASSERT(ok);
+
+    K2OSKERN_Debug("--\n");
 
     return (UINT8 *)pListLink;
 }
@@ -156,8 +180,21 @@ AcpiOsReleaseObject(
 {
     BOOL            ok;
     CACHE_HDR *     pCache;
+    UINT32          base;
+    UINT32          offset;
+    K2LIST_LINK *   pListLink;
 
     pCache = (CACHE_HDR *)Cache;
+
+    K2OSKERN_Debug("++Release(%s)\n", pCache->mpCacheName);
+
+    base = (UINT32)&pCache->CacheData[0];
+
+    pListLink = (K2LIST_LINK *)Object;
+
+    offset = ((UINT32)pListLink) - base;
+    K2_ASSERT((offset % pCache->mObjectBytes) == 0);
+    K2_ASSERT((offset / pCache->mObjectBytes) < pCache->mMaxDepth);
 
     // assert Object is inside range of cache memory and on an object boundary
     ok = K2OS_CritSecEnter(&pCache->CritSec);
@@ -167,10 +204,18 @@ AcpiOsReleaseObject(
 
     K2_ASSERT(pCache->FreeList.mNodeCount < pCache->mMaxDepth);
 
-    K2LIST_AddAtTail(&pCache->FreeList, (K2LIST_LINK *)Object);
+    K2OSKERN_Debug("AddAtTail(%08X,%08X, %d)\n", pCache, &pCache->FreeList, pCache->FreeList.mNodeCount);
+    K2OSKERN_Debug("  h,t:r = %08X, %08X : %08X\n", pCache->FreeList.mpHead, pCache->FreeList.mpTail, pListLink);
+    K2OSKERN_Debug("  r:p,n = %08X, %08X\n", pListLink->mpPrev, pListLink->mpNext);
+
+    K2LIST_AddAtTail(&pCache->FreeList, pListLink);
+
+    K2OSKERN_Debug("Added\n");
 
     ok = K2OS_CritSecLeave(&pCache->CritSec);
     K2_ASSERT(ok);
+
+    K2OSKERN_Debug("--\n");
 
     return AE_OK;
 }

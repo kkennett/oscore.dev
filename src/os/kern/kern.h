@@ -576,6 +576,8 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                      mTlbFlushPages;
 
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
+    K2_EXCEPTION_TRAP *         mpUserExTrapStack;
+
 };
 
 #define K2OSKERN_THREAD_KERNSTACK_BYTECOUNT (K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_OBJ_THREAD))
@@ -888,6 +890,7 @@ BOOL   KernDlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
 K2STAT KernDlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
 K2STAT KernDlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
 K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile);
+UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1007,7 +1010,6 @@ void KernInit_CpuCore(void);
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
 void KernIntr_RecvIrq(K2OSKERN_CPUCORE *apThisCore, UINT32 aIrqNum);
 void KernIntr_RecvIci(K2OSKERN_CPUCORE *apThisCore, UINT32 aSendingCoreIx); 
-void KernIntr_Exception(UINT32 aExceptionCode);
 
 /* --------------------------------------------------------------------------------- */
 

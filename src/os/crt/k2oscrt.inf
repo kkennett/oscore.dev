@@ -148,6 +148,7 @@ DLX_Release
 DLX_FindExport
 DLX_AcquireContaining
 DLX_FindAddrName
+DLX_AddrToName
 
 #
 # K2OSBASE

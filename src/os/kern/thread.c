@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-static void sStartAcpi(void)
+void KernAcpi_Start(void)
 {
     DLX_pf_ENTRYPOINT   acpiEntryPoint;
     K2STAT              stat;
@@ -74,7 +74,7 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     //
     // find and call entrypoint for acpi dlx
     //
-    sStartAcpi();
+    KernAcpi_Start();
 
     //
     // main Thread0 actions can commence here

@@ -32,6 +32,173 @@
 
 #include "x32kern.h"
 
+#define SYM_NAME_MAX_LEN    80
+
+static char sgSymDump[SYM_NAME_MAX_LEN * K2OS_MAX_CPU_COUNT];
+
+static
+void 
+sEmitSymbolName(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aAddr
+)
+{
+    KernDlx_FindClosestSymbol(apThisCore->mpActiveProc, aAddr, &sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN], SYM_NAME_MAX_LEN);
+    if (sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN] == 0)
+    {
+        K2OSKERN_Debug("?(%08X)", aAddr);
+        return;
+    }
+    K2OSKERN_Debug("%s", &sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN]);
+}
+
+static
+void 
+sX32Kern_DumpStackTrace(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32 aEIP, 
+    UINT32 aEBP, 
+    UINT32 aESP
+)
+{
+    UINT32 *pBackPtr;
+
+    K2OSKERN_Debug("StackTrace:\n");
+    K2OSKERN_Debug("------------------\n");
+    K2OSKERN_Debug("ESP       %08X\n", aESP);
+    K2OSKERN_Debug("EIP       %08X ", aEIP);
+    sEmitSymbolName(apThisCore, aEIP);
+    K2OSKERN_Debug("\n");
+
+    K2OSKERN_Debug("%08X ", aEBP);
+    if (aEBP == 0)
+    {
+        K2OSKERN_Debug("\n");
+        return;
+    }
+    pBackPtr = (UINT32 *)aEBP;
+    K2OSKERN_Debug("%08X ", pBackPtr[1]);
+    sEmitSymbolName(apThisCore, pBackPtr[1]);
+    K2OSKERN_Debug("\n");
+
+    do {
+        pBackPtr = (UINT32 *)pBackPtr[0];
+        K2OSKERN_Debug("%08X ", pBackPtr);
+        if (pBackPtr == NULL)
+        {
+            K2OSKERN_Debug("\n");
+            return;
+        }
+        K2OSKERN_Debug("%08X ", pBackPtr[1]);
+        sEmitSymbolName(apThisCore, pBackPtr[1]);
+        K2OSKERN_Debug("\n");
+    } while (1);
+}
+
+static
+void sX32Kern_sDumpCommonExceptionContext(
+    X32_EXCEPTION_CONTEXT *apContext
+)
+{
+    K2OSKERN_Debug("ErrCode 0x%08X\n", apContext->Exception_ErrorCode);
+    K2OSKERN_Debug("IntNum  0x%08X\n", apContext->Exception_IntNum);
+    K2OSKERN_Debug("EAX     0x%08X\n", apContext->REGS.EAX);
+    K2OSKERN_Debug("ECX     0x%08X\n", apContext->REGS.ECX);
+    K2OSKERN_Debug("EDX     0x%08X\n", apContext->REGS.EDX);
+    K2OSKERN_Debug("EBX     0x%08X\n", apContext->REGS.EBX);
+    K2OSKERN_Debug("ESP     0x%08X\n", apContext->REGS.ESP_Before_PushA);
+    K2OSKERN_Debug("EBP     0x%08X\n", apContext->REGS.EBP);
+    K2OSKERN_Debug("ESI     0x%08X\n", apContext->REGS.ESI);
+    K2OSKERN_Debug("EDI     0x%08X\n", apContext->REGS.EDI);
+    K2OSKERN_Debug("DS      0x%08X\n", apContext->DS);
+}
+
+static
+void sX32Kern_DumpUserModeExceptionContext(
+    X32_EXCEPTION_CONTEXT *apContext
+)
+{
+    K2OSKERN_Debug("------------------\n");
+    K2OSKERN_Debug("UserMode Exception Context @ 0x%08X\n", apContext);
+    sX32Kern_sDumpCommonExceptionContext(apContext);
+    K2OSKERN_Debug("EIP     0x%08X\n", apContext->UserMode.EIP);
+    K2OSKERN_Debug("CS      0x%08X\n", apContext->UserMode.CS);
+    K2OSKERN_Debug("EFLAGS  0x%08X\n", apContext->UserMode.EFLAGS);
+    K2OSKERN_Debug("U-ESP   0x%08X\n", apContext->UserMode.ESP);
+    K2OSKERN_Debug("SS      0x%08X\n", apContext->UserMode.SS);
+}
+
+static
+void sX32Kern_DumpKernelModeExceptionContext(
+    UINT32                  aCoreIx, 
+    X32_EXCEPTION_CONTEXT * apContext
+)
+{
+    K2OSKERN_Debug("------------------\n");
+    K2OSKERN_Debug("Core    %d\n", aCoreIx);
+    sX32Kern_sDumpCommonExceptionContext(apContext);
+    K2OSKERN_Debug("EIP     0x%08X\n", apContext->KernelMode.EIP);
+    K2OSKERN_Debug("CS      0x%08X\n", apContext->KernelMode.CS);
+    K2OSKERN_Debug("EFLAGS  0x%08X\n", apContext->KernelMode.EFLAGS);
+    K2OSKERN_Debug("------------------\n");
+}
+
+static 
+BOOL 
+sX32Kern_Exception(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apCurThread,
+    X32_EXCEPTION_CONTEXT *     apContext
+)
+{
+    K2_EXCEPTION_TRAP *pExTrap;
+
+    if (apCurThread == NULL)
+    {
+        sX32Kern_DumpKernelModeExceptionContext(apThisCore->mCoreIx, apContext);
+        sX32Kern_DumpStackTrace(
+            apThisCore,
+            apContext->KernelMode.EIP,
+            apContext->REGS.EBP,
+            ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
+        K2OSKERN_Panic("Exception %d in Monitor\n", apContext->Exception_IntNum);
+    }
+
+    K2OSKERN_Debug("Exception %d in %s Mode while running Thread %d, Context @ 0x%08X\n",
+        apContext->Exception_IntNum,
+        apCurThread->mIsInKernelMode ? "Kernel" : "User",
+        apCurThread->Info.mThreadId,
+        apContext);
+
+    if (apCurThread->mIsInKernelMode)
+    {
+        pExTrap = apCurThread->mpKernExTrapStack;
+        if (pExTrap == NULL)
+        {
+            sX32Kern_DumpKernelModeExceptionContext(apThisCore->mCoreIx, apContext);
+            sX32Kern_DumpStackTrace(
+                apThisCore,
+                apContext->KernelMode.EIP,
+                apContext->REGS.EBP,
+                ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
+            K2OSKERN_Panic("Untrapped Exception\n");
+        }
+    }
+    else
+    {
+        K2_ASSERT(0);
+    }
+
+    //
+    // there is a mounted trap record for this thread in this mode
+    //
+    K2_ASSERT(0);
+
+    return TRUE;
+}
+
+static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
+
 void
 X32Kern_InterruptHandler(
     X32_EXCEPTION_CONTEXT aContext
@@ -42,9 +209,19 @@ X32Kern_InterruptHandler(
     KernCpuCoreEventType                eventType;
     K2OSKERN_OBJ_THREAD *               pActiveThread;
     BOOL                                enterMonitor;
+    BOOL                                threadFaulted;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
     enterMonitor = FALSE;
+
+    if (sgInIntr[pThisCore->mCoreIx])
+    {
+        K2OSKERN_Panic("Recursive exception or interrupt\n");
+        while (1);
+    }
+    sgInIntr[pThisCore->mCoreIx] = TRUE;
+
+    pActiveThread = pThisCore->mpActiveThread;
 
     if (aContext.Exception_IntNum >= X32KERN_INTR_ICI_BASE)
     {
@@ -94,13 +271,13 @@ X32Kern_InterruptHandler(
     }
     else
     {
-        K2OSKERN_Debug("Exception %d on Core %d, errorcode %d\n", aContext.Exception_IntNum, pThisCore->mCoreIx, aContext.Exception_ErrorCode);
-        KernIntr_Exception(aContext.Exception_IntNum);
+        threadFaulted = sX32Kern_Exception(pThisCore, pActiveThread, &aContext);
+        if (threadFaulted)
+            enterMonitor = TRUE;
     }
 
     if (enterMonitor)
     {
-        pActiveThread = pThisCore->mpActiveThread;
         if (pActiveThread != NULL)
         {
             pActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
@@ -108,7 +285,11 @@ X32Kern_InterruptHandler(
 
         pThisCore->mIsInMonitor = TRUE;
 
+        sgInIntr[pThisCore->mCoreIx] = FALSE;
+
         X32Kern_EnterMonitor(pThisCore->TSS.mESP0);
     }
+
+    sgInIntr[pThisCore->mCoreIx] = FALSE;
 }
 

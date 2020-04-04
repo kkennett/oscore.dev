@@ -167,7 +167,7 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     K2_CpuWriteBarrier();
 
     stackPtr = pTSS->mESP0;
-    stackPtr -= SIZEOF_X32_KERNELMODE_EXCEPTION_CONTEXT;
+    stackPtr -= X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT;
     pInitCtx = (X32_EXCEPTION_CONTEXT *)stackPtr;
     pInitCtx->DS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
     pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_IntNum;
