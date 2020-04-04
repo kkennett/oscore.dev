@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -34,4 +34,3 @@ DefinitionBlock ("", "SSDT", 2, "Intel", "_SSDT_01", 0x00000001)
     }
     Name (PKG1, Package () {0x0, 0x1, 0x2, 0x3})
 }
-

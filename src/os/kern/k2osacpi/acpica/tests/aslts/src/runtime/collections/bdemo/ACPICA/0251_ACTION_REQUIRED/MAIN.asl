@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -85,7 +85,7 @@ DefinitionBlock(
 	 *	in case of Threads command
 	 *	the arguments passed to method are:
 	 *
-	 * arg0 - total number of threads created by Threads commmand
+	 * arg0 - total number of threads created by Threads command
 	 * arg1 - ID of the current thread
 	 * arg2 - index of the current thread (0, 1, 2 ... )
 	 */

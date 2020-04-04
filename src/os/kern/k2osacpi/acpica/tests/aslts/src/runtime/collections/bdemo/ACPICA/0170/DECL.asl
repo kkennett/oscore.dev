@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -52,9 +52,9 @@
             {
                 ERR (__METHOD__, ZFFF, __LINE__, 0x00, 0x00, Local1, Local0)
             }
-            ElseIf ((BF90 != 0x2B))
+            ElseIf ((BF90 != Buffer(){0x2B}))
             {
-                ERR (__METHOD__, ZFFF, __LINE__, 0x00, 0x00, BF90, 0x2B)
+                ERR (__METHOD__, ZFFF, __LINE__, 0x00, 0x00, BF90, Buffer(){0x2B})
             }
         }
     }

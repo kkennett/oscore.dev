@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -258,6 +258,7 @@ AcpiTbInstallStandardTable (
 
 
     /* Acquire a temporary table descriptor for validation */
+
     Status = AcpiTbAcquireTempTable (&NewTableDesc, Address, Flags);
     if (ACPI_FAILURE (Status))
     {
@@ -273,7 +274,7 @@ AcpiTbInstallStandardTable (
      */
     if (!Reload &&
         AcpiGbl_DisableSsdtTableInstall &&
-        ACPI_COMPARE_NAME (&NewTableDesc.Signature, ACPI_SIG_SSDT))
+        ACPI_COMPARE_NAMESEG (&NewTableDesc.Signature, ACPI_SIG_SSDT))
     {
         ACPI_INFO ((
             "Ignoring installation of %4.4s at %8.8X%8.8X",

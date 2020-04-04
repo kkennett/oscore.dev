@@ -13,6 +13,7 @@ TEST_CASES=
 TEST_MODES=
 REBUILD_TOOLS=yes
 BINCOMPONLY=no
+DATATABLEONLY=no
 EXECONLY=no
 
 usage() {
@@ -25,6 +26,7 @@ usage() {
 	echo "  -u:	Do not force rebuilding of ACPICA utilities (acpiexec, iasl)"
 	echo "  -e:     Perform the execution of aml files and omit binary comparison of regular aml and disassembled aml file."
 	echo "  -b:     Only perform binary comparison of regular aml and disasssembled aml file"
+	echo "  -d:     Only execute data table compiler/disassembler test"
 	echo ""
 
 	echo "Available test modes:"
@@ -116,6 +118,29 @@ build_acpi_tools() {
 	cd $restore_dir
 }
 
+# Run a simple compiler test.
+# This test does the following:
+# 1 generate all sample tables in the compiler
+# 2 compile all tables (.asl -> .aml)
+# 3 disassembles all tables (.aml -> .dsl)
+# 4 recompiles all all tables (.dsl -> recomp.aml)
+# 5 runs binary comparison between .aml and recomp.aml
+run_compiler_template_test()
+{
+	pushd templates
+
+	rm -f *.asl *.aml *.dsl
+
+	$ASL -T all 2> /dev/null
+	for filename in *.asl
+	do
+		make -s NAME=$(basename "$filename" .asl)
+	done
+
+	rm -f *.asl *.aml *.dsl
+	popd
+}
+
 
 # Compile and run the ASLTS suite
 run_aslts() {
@@ -123,6 +148,14 @@ run_aslts() {
 	# Remove a previous version of the AML test code
 	version=`$ASL | grep version | awk '{print $5}'`
 	rm -rf $ASLTSDIR/tmp/aml/$version
+
+	# run templates test
+
+	run_compiler_template_test
+
+	if [ "x$DATATABLEONLY" = "xyes" ]; then
+		return 0
+	fi;
 
 	if [ "x$TEST_MODES" = "x" ]; then
 		TEST_MODES="n32 n64 o32 o64"
@@ -162,7 +195,7 @@ RESET_SETTINGS
 INIT_ALL_AVAILABLE_CASES
 INIT_ALL_AVAILABLE_MODES
 
-while getopts "c:m:ueb" opt
+while getopts "c:m:uebd" opt
 do
 	case $opt in
 	b)
@@ -177,6 +210,10 @@ do
 		else
 			TEST_CASES="$OPTARG $TEST_CASES"
 		fi
+	;;
+	d)
+		DATATABLEONLY=yes
+		echo "Running only data table test"
 	;;
 	e)
 		EXECONLY=yes
@@ -204,4 +241,3 @@ shift $(($OPTIND - 1))
 
 build_acpi_tools
 run_aslts
-

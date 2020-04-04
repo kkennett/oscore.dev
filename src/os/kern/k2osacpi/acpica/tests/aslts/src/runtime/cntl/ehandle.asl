@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -811,11 +811,11 @@
      * arg0 - diagnostic message
      * arg1 -
      *   zero means:
-     *        - check that only one exception has arisen (curent number is equal to 1)
+     *        - check that only one exception has arisen (current number is equal to 1)
      *        - check that opcode is equal to that specified by arg2
      *   non-zero means:
      *        - check that the number of exception arisen is not less than 1
-     *          (curent number is equal to 1 or greater)
+     *          (current number is equal to 1 or greater)
      *     1:   check that the first opcode is equal to that specified by arg2
      *     2:   check that the last opcode is equal to that specified by arg2
      *

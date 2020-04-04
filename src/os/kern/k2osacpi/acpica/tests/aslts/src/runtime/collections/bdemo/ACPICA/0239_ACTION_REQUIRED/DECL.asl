@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -36,7 +36,7 @@
  *   Run this in a slack mode (use AcpiExec -s <this_demo>)
  *   by the Threads debug operation on more than one thread
  *   (use <Threads 2 1 main> command). In this case the example
- *   causes crash of AcpiExec for any exception occured during
+ *   causes crash of AcpiExec for any exception occurred during
  *   execution of methods (m000, m001).
  */
 

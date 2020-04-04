@@ -1,5 +1,5 @@
         /*
-         * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+         * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
          * All rights reserved.
          *
          * Redistribution and use in source and binary forms, with or without modification,
@@ -25,7 +25,7 @@
          * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
          * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
          */
-        If (STTT ("Result Object proccessing in CopyObject()", TCLC, 0x0F, W011))
+        If (STTT ("Result Object processing in CopyObject()", TCLC, 0x0F, W011))
         {
             RES1 ()
         }

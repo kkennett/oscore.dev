@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -122,7 +122,7 @@ Method(m002)
 	ToBCD(Local0, Local2)
 
 
-	// These dont cause the effect:
+	// These don't cause the effect:
 	// Divide(1, Local1, Local2)
 	// Divide(1, Local1, Local7, Local2)
 	// Store(SizeOf(d9Z0), Local2)

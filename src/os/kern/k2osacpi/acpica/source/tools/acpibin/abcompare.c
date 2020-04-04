@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -537,7 +537,11 @@ AbCompareAmlFiles (
     printf ("Compare offset: %u\n", AbGbl_CompareOffset);
     if (AbGbl_CompareOffset)
     {
-        fseek (File2, AbGbl_CompareOffset, SEEK_CUR);
+        if (fseek (File2, AbGbl_CompareOffset, SEEK_CUR))
+        {
+            printf ("Seek error on file %s\n", File2Path);
+            goto Exit2;
+        }
     }
 
     Actual1 = fread (&Char1, 1, 1, File1);
@@ -615,7 +619,7 @@ AbGetFile (
 {
     FILE                    *File;
     UINT32                  Size;
-    char                    *Buffer = NULL;
+    char                    *DataBuffer = NULL;
     size_t                  Actual;
 
 
@@ -639,8 +643,8 @@ AbGetFile (
 
     /* Allocate a buffer for the entire file */
 
-    Buffer = calloc (Size, 1);
-    if (!Buffer)
+    DataBuffer = calloc (Size, 1);
+    if (!DataBuffer)
     {
         printf ("Could not allocate buffer of size %u\n", Size);
         goto ErrorExit;
@@ -648,12 +652,12 @@ AbGetFile (
 
     /* Read the entire file */
 
-    Actual = fread (Buffer, 1, Size, File);
+    Actual = fread (DataBuffer, 1, Size, File);
     if (Actual != Size)
     {
         printf ("Could not read the input file %s\n", Filename);
-        free (Buffer);
-        Buffer = NULL;
+        free (DataBuffer);
+        DataBuffer = NULL;
         goto ErrorExit;
     }
 
@@ -661,7 +665,7 @@ AbGetFile (
 
 ErrorExit:
     fclose (File);
-    return (Buffer);
+    return (DataBuffer);
 }
 
 

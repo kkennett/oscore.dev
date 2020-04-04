@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -967,7 +967,7 @@ fseek (
  * FUNCTION:    AcpiEfiArgify
  *
  * PARAMETERS:  String              - Pointer to command line argument strings
- *                                    which are seperated with spaces
+ *                                    which are separated with spaces
  *              ArgcPtr             - Return number of the arguments
  *              ArgvPtr             - Return vector of the arguments
  *

@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -30,7 +30,7 @@
      */
     /*
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
-     SEE: shouls be a few updated
+     SEE: should be a few updated
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!
      */
     /* The test for ASL-Events to be run on a single invocation only */

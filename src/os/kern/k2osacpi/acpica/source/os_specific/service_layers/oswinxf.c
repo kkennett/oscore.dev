@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -173,7 +173,7 @@
 
 
 UINT64                      TimerFrequency;
-char                        TableName[ACPI_NAME_SIZE + 1];
+char                        TableName[ACPI_NAMESEG_SIZE + 1];
 
 #define ACPI_OS_DEBUG_TIMEOUT   30000 /* 30 seconds */
 
@@ -458,7 +458,7 @@ AcpiOsGetTimer (
     {
         /* Convert milliseconds to 100 nanosecond ticks */
 
-        return ((UINT64) GetTickCount() * ACPI_100NSEC_PER_MSEC);
+        return (GetTickCount64() * ACPI_100NSEC_PER_MSEC);
     }
 }
 

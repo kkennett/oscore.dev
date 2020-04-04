@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -26,7 +26,7 @@
      * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      */
     /*
-     * The test strategies to be managed and controled by the
+     * The test strategies to be managed and controlled by the
      * Control Thread and fulfilled by the Slave Threads (Slaves).
      */
     Name (Z152, 0x98)

@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -168,6 +168,10 @@ static void
 AeTestSleepData (
     void);
 
+static void
+AeGlobalAddressRangeCheck(
+    void);
+
 
 /******************************************************************************
  *
@@ -186,6 +190,7 @@ AeMiscellaneousTests (
     ACPI_STATUS             Status;
     ACPI_STATISTICS         Stats;
     ACPI_HANDLE             Handle;
+    UINT32                  TableIndex;
 
 #if (!ACPI_REDUCED_HARDWARE)
     UINT32                  Temp;
@@ -214,18 +219,15 @@ AeMiscellaneousTests (
 
         /* Load and unload SSDT4 */
 
-        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt4Code);
+        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt4Code, &TableIndex);
         ACPI_CHECK_OK (AcpiLoadTable, Status);
 
-        Status = AcpiGetHandle (NULL, "\\_T96", &Handle);
-        ACPI_CHECK_OK (AcpiGetHandle, Status);
-
-        Status = AcpiUnloadParentTable (Handle);
-        ACPI_CHECK_OK (AcpiUnloadParentTable, Status);
+        Status = AcpiUnloadTable (TableIndex);
+        ACPI_CHECK_OK (AcpiUnloadTable, Status);
 
         /* Re-load SSDT4 */
 
-        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt4Code);
+        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt4Code, NULL);
         ACPI_CHECK_OK (AcpiLoadTable, Status);
 
         /* Unload and re-load SSDT2 (SSDT2 is in the XSDT) */
@@ -236,12 +238,12 @@ AeMiscellaneousTests (
         Status = AcpiUnloadParentTable (Handle);
         ACPI_CHECK_OK (AcpiUnloadParentTable, Status);
 
-        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt2Code);
+        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt2Code, NULL);
         ACPI_CHECK_OK (AcpiLoadTable, Status);
 
         /* Load OEM9 table (causes table override) */
 
-        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt3Code);
+        Status = AcpiLoadTable ((ACPI_TABLE_HEADER *) Ssdt3Code, NULL);
         ACPI_CHECK_OK (AcpiLoadTable, Status);
     }
 
@@ -591,6 +593,62 @@ AeTestSleepData (
         if (Status != AE_NOT_FOUND)
         {
             ACPI_CHECK_OK (AcpiGetSleepTypeData, Status);
+        }
+    }
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AeLateTest
+ *
+ * DESCRIPTION: Exercise tests that should be performed before shutdown.
+ *
+ *****************************************************************************/
+
+void
+AeLateTest (
+    void)
+{
+    AeGlobalAddressRangeCheck();
+}
+
+
+/******************************************************************************
+ *
+ * FUNCTION:    AeGlobalAddressRangeCheck
+ *
+ * DESCRIPTION: There have been some issues in the past with adding and
+ *              removing items to the global address list from
+ *              OperationRegions declared in control methods. This test loops
+ *              over the list to ensure that dangling pointers do not exist in
+ *              the global address list.
+ *
+ *****************************************************************************/
+
+static void
+AeGlobalAddressRangeCheck (
+    void)
+{
+    ACPI_STATUS             Status;
+    ACPI_ADDRESS_RANGE      *Current;
+    ACPI_BUFFER             ReturnBuffer;
+    UINT32                  i;
+
+
+    for (i = 0; i < ACPI_ADDRESS_RANGE_MAX; i++)
+    {
+        Current = AcpiGbl_AddressRangeList[i];
+
+        while (Current)
+        {
+            ReturnBuffer.Length = ACPI_ALLOCATE_BUFFER;
+
+            Status = AcpiGetName (Current->RegionNode, ACPI_SINGLE_NAME, &ReturnBuffer);
+            ACPI_CHECK_OK (AcpiGetname, Status);
+
+            AcpiOsFree (ReturnBuffer.Pointer);
+            Current = Current->Next;
         }
     }
 }

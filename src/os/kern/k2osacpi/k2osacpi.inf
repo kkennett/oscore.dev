@@ -137,8 +137,6 @@ AcpiGbl_EnableTableValidation
 AcpiGbl_EnableAmlDebugObject
 AcpiGbl_CopyDsdtLocally
 AcpiGbl_DoNotUseXsdt
-AcpiGbl_GroupModuleLevelCode
-AcpiGbl_ExecuteTablesAsMethods
 AcpiGbl_Use32BitFadtAddresses
 AcpiGbl_Use32BitFacsAddresses
 AcpiGbl_DisableAutoRepair

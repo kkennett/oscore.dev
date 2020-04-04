@@ -86,9 +86,9 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     {
         do {
             newTick = K2OS_SysUpTimeMs();
-} while (newTick - last < 1000);
-last = newTick;
-K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
+        } while (newTick - last < 1000);
+        last = newTick;
+        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
     }
 #endif
 

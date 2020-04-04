@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -26,7 +26,7 @@
      * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
      */
     /*
-     * Check Result Object proccessing on optional storing
+     * Check Result Object processing on optional storing
      * in the explicit conversion operators
      */
     Name (Z126, 0x7E)

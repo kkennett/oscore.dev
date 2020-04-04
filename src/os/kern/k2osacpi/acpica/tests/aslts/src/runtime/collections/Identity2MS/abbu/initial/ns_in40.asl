@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -142,8 +142,8 @@ Method(act0, 4, Serialized)
 		}
 	}
 	Case (10) {		// LNotEqual
-		if (LNotEqual(arg1, 0xabcd0d08)) {
-			err(ts, z167, __LINE__, 0, 0, arg1, 0xabcd0d08)
+		if (LNotEqual(arg1, Buffer(){0x08, 0x0d, 0xcd, 0xab})) {
+			err(ts, z167, __LINE__, 0, 0, arg1, Buffer(){0x08, 0x0d, 0xcd, 0xab})
 		}
 	}
 	} // Switch (arg0)
@@ -451,13 +451,13 @@ Method(mI01, 1, Serialized)
 		}
 		Case (16) {		// Buffer Field
 			// if (chk0) {
-			act0(OT00, arg0, c009, 0)
+			act0(OT00, arg0, c00b, 0)
 			// }
 			// if (chk0) {
 			act0(LN08, arg0, 0, 0)
 			// }
 			// if (chk0) {
-			act0(AD00, arg0, 2, 0xabcd0d0a)
+			act0(AD00, arg0, 2, Buffer(){0x0a, 0x0d, 0xcd, 0xab})
 			// }
 		}
 		Default {		// Uninitialized
@@ -2955,6 +2955,12 @@ Method(in41, 7, Serialized)
 	 * Some params are intermediately stored to Named
 	 */
 
+    /*
+     * bf01 is always treated like a buffer rather than an integer or buffer.
+     * The tests below assume that this bf01 is treated like an integer.
+     * Skip these tests for now...
+     */
+    /*
 	Name(ii06, 0)
 	Name(ii07, 0)
 	Name(ii08, 0)
@@ -3017,6 +3023,7 @@ Method(in41, 7, Serialized)
 	} else {
 		OUTP("WARNING: some tests of ns_in40.asl are blocked!")
 	}
+    */
 
 
 	/*
@@ -3163,7 +3170,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 */
 
 /*
@@ -3389,7 +3396,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note:
 	 *   in the checking above the locals (Local1, Local3, Local5)
@@ -3618,7 +3625,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note:
 	 *   in the checkings above the locals (Arg0-Arg5)
@@ -3842,7 +3849,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note:
 	 *   in the checkings above the locals (Arg0-Arg5)
@@ -4059,7 +4066,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note: no Args for this checking (see comment above).
 	 */
@@ -4270,7 +4277,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note: no Args for this checking (see comment above).
 	 */
@@ -4481,7 +4488,7 @@ Method(in41, 7, Serialized)
 	/*
 	 * Modification 2:
 	 *
-	 * Some params are intermediately stored to Args (efectively local)
+	 * Some params are intermediately stored to Args (effectively local)
 	 *
 	 * Note: no Args for this checking (see comment above).
 	 */

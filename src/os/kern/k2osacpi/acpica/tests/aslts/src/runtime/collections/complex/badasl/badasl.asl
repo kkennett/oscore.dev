@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -65,8 +65,8 @@ Method(m101,, Serialized)
  * in Package is greater than the value of NumElements. But,
  * ACPICA ASL Compiler run with -f option replaces the specified
  * value of NumElements by the actual number of elements in
- * PackageList. So - no exceptions. We cant specify the ASL
- * test - because we cant obtain AML code of Package with the
+ * PackageList. So - no exceptions. We can't specify the ASL
+ * test - because we can't obtain AML code of Package with the
  * actual number of elements in it greater than the value of
  * NumElements.
  *

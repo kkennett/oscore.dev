@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -51,7 +51,7 @@
     Method (MF10, 1, Serialized)
     {
         Name (I001, 0x00)
-        Debug = "m001 started, DONT apply DerefOf()"
+        Debug = "m001 started, DON'T apply DerefOf()"
         Local7 = (Arg0 + 0x01)
         If ((Arg0 != 0x07))
         {

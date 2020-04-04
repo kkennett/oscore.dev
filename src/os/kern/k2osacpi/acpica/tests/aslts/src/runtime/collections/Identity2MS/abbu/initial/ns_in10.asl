@@ -1,5 +1,5 @@
 /*
- * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,
@@ -43,7 +43,7 @@ Name(z164, 164)
 
 /*
  *
- * Read/write access to elemens of Package passed to method.
+ * Read/write access to elements of Package passed to method.
  *
  */
 

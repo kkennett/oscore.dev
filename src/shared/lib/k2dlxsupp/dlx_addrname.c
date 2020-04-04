@@ -120,7 +120,7 @@ DLX_AddrToName(
     else
     {
         K2ASC_PrintfLen(apRetNameBuffer, aBufferLen, "%.*s|%s+0x%X",
-            apDlx->mIntNameLen, apDlx->mpIntName, pBaseName, aAddr - baseAddr);
+            apDlx->mIntNameLen, apDlx->mpIntName, pBaseName, aAddr);
     }
 }
 

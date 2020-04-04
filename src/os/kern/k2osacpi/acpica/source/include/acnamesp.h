@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -177,6 +177,7 @@
 #define ACPI_NS_TEMPORARY           0x0040
 #define ACPI_NS_OVERRIDE_IF_FOUND   0x0080
 #define ACPI_NS_EARLY_INIT          0x0100
+#define ACPI_NS_PREFIX_MUST_EXIST   0x0200
 
 /* Flags for AcpiNsWalkNamespace */
 
@@ -418,10 +419,6 @@ ACPI_STATUS
 AcpiNsEvaluate (
     ACPI_EVALUATE_INFO      *Info);
 
-void
-AcpiNsExecModuleCodeList (
-    void);
-
 
 /*
  * nsarguments - Argument count/type checking for predefined/reserved names
@@ -489,6 +486,10 @@ AcpiNsBuildNormalizedPath (
     char                    *FullPath,
     UINT32                  PathSize,
     BOOLEAN                 NoTrailing);
+
+void
+AcpiNsNormalizePathname (
+    char                    *OriginalPath);
 
 char *
 AcpiNsGetNormalizedPathname (

@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -225,7 +225,7 @@
     }
 
     /*
-     * Fulfil and report Sleep
+     * Fulfill and report Sleep
      *
      * arg0 - Index of current thread
      * arg1 - number of milliseconds to sleep
@@ -244,7 +244,7 @@
     }
 
     /*
-     * Fulfil and report Stall
+     * Fulfill and report Stall
      *
      * arg0 - Index of current thread
      * arg1 - number of MicroSeconds to Stall

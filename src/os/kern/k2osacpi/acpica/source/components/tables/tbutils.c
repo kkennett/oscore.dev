@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -401,6 +401,7 @@ AcpiTbParseRootTable (
 
 
     /* Map the entire RSDP and extract the address of the RSDT or XSDT */
+
     Rsdp = AcpiOsMapMemory (RsdpAddress, sizeof (ACPI_TABLE_RSDP));
     if (!Rsdp)
     {
@@ -427,6 +428,7 @@ AcpiTbParseRootTable (
     else
     {
         /* Root table is an RSDT (32-bit physical addresses) */
+
         Address = (ACPI_PHYSICAL_ADDRESS) Rsdp->RsdtPhysicalAddress;
         TableEntrySize = ACPI_RSDT_ENTRY_SIZE;
     }
@@ -501,7 +503,7 @@ AcpiTbParseRootTable (
             ACPI_TABLE_ORIGIN_INTERNAL_PHYSICAL, FALSE, TRUE, &TableIndex);
 
         if (ACPI_SUCCESS (Status) &&
-            ACPI_COMPARE_NAME (
+            ACPI_COMPARE_NAMESEG (
                 &AcpiGbl_RootTableList.Tables[TableIndex].Signature,
                 ACPI_SIG_FADT))
         {

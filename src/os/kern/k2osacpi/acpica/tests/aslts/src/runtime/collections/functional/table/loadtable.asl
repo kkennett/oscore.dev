@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -1668,7 +1668,7 @@
          * Nothing like this should happen in real ASL code. The BIOS writer
          * knows whether the table is in the XSDT or not.
          */
-        /*	
+        /*
          Method(tstf, 1)
          {
          Name(DDBH, 0)

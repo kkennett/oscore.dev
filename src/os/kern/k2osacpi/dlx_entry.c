@@ -88,19 +88,9 @@ dlx_entry(
     Status = AcpiLoadTables();
     K2_ASSERT(!ACPI_FAILURE(Status));
 
-#if 0
-    /* Complete the ACPI namespace object initialization */
-
     Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-    if (ACPI_FAILURE(Status))
-    {
-        ACPI_EXCEPTION((AE_INFO, Status, "While initializing ACPICA objects"));
-        return (Status);
-    }
-#endif
+    K2_ASSERT(!ACPI_FAILURE(Status));
 
-    K2OS_DebugPrint("k2osacpi dlx_entry completed\n");
-
-    return 0;
+    return K2STAT_NO_ERROR;
 }
 

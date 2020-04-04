@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -442,7 +442,7 @@
     Name (BD10, Buffer (0x09){})
     /* It is used in b198 Name(id24, 0) */
     /* Name(id25, 0) */
-    /* Dont use this name bd13! */
+    /* Don't use this name bd13! */
     /* Name(bd13, Buffer(9){}) */
     Name (ID29, 0x00)
     Name (ID2A, 0x00)

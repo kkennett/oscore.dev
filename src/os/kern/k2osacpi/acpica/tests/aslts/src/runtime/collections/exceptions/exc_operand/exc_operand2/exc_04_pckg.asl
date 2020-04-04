@@ -1,5 +1,5 @@
     /*
-     * Some or all of this work - Copyright (c) 2006 - 2018, Intel Corp.
+     * Some or all of this work - Copyright (c) 2006 - 2020, Intel Corp.
      * All rights reserved.
      *
      * Redistribution and use in source and binary forms, with or without modification,
@@ -48,7 +48,7 @@
         Event (E000)
         Name (I000, 0x00)
         /* Local Named Object */
-        /* ASL compiler prohibits to use Pakage */
+        /* ASL compiler prohibits to use Package */
         /* Named Objects in the most of operators */
         Method (M000, 1, Serialized)
         {

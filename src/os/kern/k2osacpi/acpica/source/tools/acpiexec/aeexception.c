@@ -8,7 +8,7 @@
  *
  * 1. Copyright Notice
  *
- * Some or all of this work - Copyright (c) 1999 - 2018, Intel Corp.
+ * Some or all of this work - Copyright (c) 1999 - 2020, Intel Corp.
  * All rights reserved.
  *
  * 2. License
@@ -206,7 +206,7 @@ AeExceptionHandler (
 
         if (Name)
         {
-            if (ACPI_COMPARE_NAME (&Name, ACPI_ROOT_PATHNAME))
+            if (ACPI_COMPARE_NAMESEG (&Name, ACPI_ROOT_PATHNAME))
             {
                 AcpiOsPrintf (AE_PREFIX
                     "Evaluating executable code at [%s]\n", ACPI_NAMESPACE_ROOT);
