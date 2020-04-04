@@ -44,6 +44,8 @@ K2LIST_AddBefore(
     K2_ASSERT(apNode != NULL);
     K2_ASSERT(apAddBefore != NULL);
 
+    K2_ASSERT(((apAnchor->mpHead == NULL) && (apAnchor->mpTail == NULL)) || ((apAnchor->mpHead != NULL) && (apAnchor->mpTail != NULL)));
+
     apNode->mpNext = apAddBefore;
     p = apAddBefore->mpPrev;
     apAddBefore->mpPrev = apNode;

@@ -40,6 +40,8 @@ K2LIST_AddAtTail(
     K2_ASSERT(apAnchor != NULL);
     K2_ASSERT(apNode != NULL);
 
+    K2_ASSERT(((apAnchor->mpHead == NULL) && (apAnchor->mpTail == NULL)) || ((apAnchor->mpHead != NULL) && (apAnchor->mpTail != NULL)));
+
     apNode->mpPrev = apAnchor->mpTail;
     apNode->mpNext = NULL;
     if (apAnchor->mpTail == NULL)

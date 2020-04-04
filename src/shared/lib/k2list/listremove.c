@@ -37,18 +37,46 @@ K2LIST_Remove(
     K2LIST_LINK *   apNode
     )
 {
+    K2LIST_LINK *pOther;
+
     K2_ASSERT(apAnchor != NULL);
     K2_ASSERT(apNode != NULL);
     K2_ASSERT(apAnchor->mNodeCount > 0);
 
-    if (apNode->mpPrev)
-        apNode->mpPrev->mpNext = apNode->mpNext;
+    K2_ASSERT(((apAnchor->mpHead == NULL) && (apAnchor->mpTail == NULL)) || ((apAnchor->mpHead != NULL) && (apAnchor->mpTail != NULL)));
+
+    pOther = apNode->mpPrev;
+    if (pOther != NULL)
+    {
+        K2_ASSERT(apNode != apAnchor->mpHead);
+        pOther->mpNext = apNode->mpNext;
+    }
     else
-        apAnchor->mpHead = apNode->mpNext;
-    if (apNode->mpNext)
-        apNode->mpNext->mpPrev = apNode->mpPrev;
+    {
+        K2_ASSERT(apNode == apAnchor->mpHead);
+        pOther = apNode->mpNext;
+        apAnchor->mpHead = pOther;
+        if (pOther != NULL)
+            pOther->mpPrev = NULL;
+    }
+
+    pOther = apNode->mpNext;
+    if (pOther != NULL)
+    {
+        K2_ASSERT(apNode != apAnchor->mpTail);
+        pOther->mpPrev = apNode->mpPrev;
+    }
     else
-        apAnchor->mpTail = apNode->mpPrev;
+    {
+        K2_ASSERT(apNode == apAnchor->mpTail);
+        pOther = apNode->mpPrev;
+        apAnchor->mpTail = pOther;
+        if (pOther != NULL)
+            pOther->mpNext = NULL;
+    }
+
+    K2_ASSERT(((apAnchor->mpHead == NULL) && (apAnchor->mpTail == NULL)) || ((apAnchor->mpHead != NULL) && (apAnchor->mpTail != NULL)));
+
     apNode->mpNext = NULL;
     apNode->mpPrev = NULL;
 

@@ -185,7 +185,7 @@
 #define ACPI_MAX_STATE_CACHE_DEPTH      96          /* State objects */
 #define ACPI_MAX_PARSE_CACHE_DEPTH      96          /* Parse tree objects */
 #define ACPI_MAX_EXTPARSE_CACHE_DEPTH   96          /* Parse tree objects */
-#define ACPI_MAX_OBJECT_CACHE_DEPTH     128         /* Interpreter operand objects */
+#define ACPI_MAX_OBJECT_CACHE_DEPTH     96          /* Interpreter operand objects */
 #define ACPI_MAX_NAMESPACE_CACHE_DEPTH  96          /* Namespace objects */
 #define ACPI_MAX_COMMENT_CACHE_DEPTH    96          /* Comments for the -ca option */
 
