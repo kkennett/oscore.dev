@@ -132,6 +132,8 @@ void KernSched_AddCurrentCore(void)
 
     KernArch_PrepareThread(pThread, 0);
 
+    gData.Sched.mSysWideThreadCount = 1;
+
     pThisCore->Sched.mpRunThread = pThread;
 
     pThisCore->Sched.mActivePrio = pThread->Sched.mActivePrio;

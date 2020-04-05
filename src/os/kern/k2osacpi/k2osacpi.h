@@ -27,4 +27,19 @@ typedef struct _K2OSACPI_INTR K2OSACPI_INTR;
 extern K2LIST_ANCHOR gK2OSACPI_IntrList;
 extern K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
 
+typedef struct _CACHE_HDR CACHE_HDR;
+struct _CACHE_HDR
+{
+    char *              mpCacheName;
+    UINT32              mObjectBytes;
+    UINT32              mMaxDepth;
+    UINT32              mHighwater;
+    K2OSKERN_SEQLOCK    SeqLock;
+    K2LIST_ANCHOR       FreeList;
+    K2LIST_LINK         CacheListLink;
+    UINT8               CacheData[4];
+};
+
+extern K2LIST_ANCHOR gK2OSACPI_CacheList;
+
 #endif // __K2OSACPI_H

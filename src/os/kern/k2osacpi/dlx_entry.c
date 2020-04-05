@@ -71,7 +71,9 @@ dlx_entry(
     UINT32  aReason
     )
 {
-    ACPI_STATUS Status;
+    ACPI_STATUS     Status;
+    K2LIST_LINK *   pListLink;
+    CACHE_HDR *     pCache;
 
     Status = AcpiInitializeSubsystem();
     K2_ASSERT(!ACPI_FAILURE(Status));
@@ -90,6 +92,16 @@ dlx_entry(
 
     Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(Status));
+
+    K2OSKERN_Debug("\n=========================\nAT ACPI INIT DONE:\n");
+    pListLink = gK2OSACPI_CacheList.mpHead;
+    while (pListLink != NULL)
+    {
+        pCache = K2_GET_CONTAINER(CACHE_HDR, pListLink, CacheListLink);
+        K2OSKERN_Debug("%4d/%4d (high %4d) -- %s\n", pCache->mMaxDepth - pCache->FreeList.mNodeCount, pCache->mMaxDepth, pCache->mHighwater, pCache->mpCacheName);
+        pListLink = pListLink->mpNext;
+    }
+    K2OSKERN_Debug("=========================\n");
 
     return K2STAT_NO_ERROR;
 }

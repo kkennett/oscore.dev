@@ -722,8 +722,6 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
 
 static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, UINT32 *apResult)
 {
-    *apResult = K2OS_WAIT_SIGNALLED_0;
-
     switch (aObjWait.mpHdr->mObjType)
     {
     case K2OS_Obj_Event:
@@ -744,6 +742,15 @@ static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABL
         return aObjWait.mpThread->Info.mState >= K2OS_Thread_Exited;
 
     case K2OS_Obj_Semaphore:
+        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+        {
+            //
+            // very special case - changing the object and returning no wait
+            //
+            K2_ASSERT(aObjWait.mpSem->mCurCount > 0);
+            aObjWait.mpSem->mCurCount--;
+            return TRUE;
+        }
         *apResult = K2STAT_THREAD_WAITED;
         return FALSE;
 
@@ -779,6 +786,7 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTi
     }
 
     do {
+        result = K2OS_WAIT_SIGNALLED_0;
         if (sCheckNoWait(pThisThread, objWait, &result))
             break;
 

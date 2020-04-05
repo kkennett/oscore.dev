@@ -1,16 +1,5 @@
 #include "k2osacpi.h"
 
-typedef struct _CACHE_HDR CACHE_HDR;
-struct _CACHE_HDR
-{
-    char *              mpCacheName;
-    UINT32              mObjectBytes;
-    UINT32              mMaxDepth;
-    K2OSKERN_SEQLOCK    SeqLock;
-    K2LIST_ANCHOR       FreeList;
-    UINT8               CacheData[4];
-};
-
 static void sInitCache(CACHE_HDR *apCache)
 {
     UINT32          MaxDepth;
@@ -67,6 +56,8 @@ AcpiOsCreateCache(
 
     sInitCache(pRet);
 
+    K2LIST_AddAtTail(&gK2OSACPI_CacheList, &pRet->CacheListLink);
+
     *ReturnCache = (ACPI_CACHE_T *)pRet;
 
     return AE_OK;
@@ -80,6 +71,8 @@ AcpiOsDeleteCache(
     CACHE_HDR * pCache;
 
     pCache = (CACHE_HDR *)Cache;
+
+    K2LIST_Remove(&gK2OSACPI_CacheList, &pCache->CacheListLink);
 
     K2MEM_Zero(pCache, sizeof(CACHE_HDR));
 
@@ -140,6 +133,10 @@ AcpiOsAcquireObject(
         K2_ASSERT(K2MEM_Verify(pAct, 0x55, pCache->mObjectBytes - sizeof(K2LIST_LINK)));
 
         K2LIST_Remove(&pCache->FreeList, pListLink);
+
+        offset = (pCache->mMaxDepth - pCache->FreeList.mNodeCount);
+        if (offset > pCache->mHighwater)
+            pCache->mHighwater = offset;
     }
     else
     {

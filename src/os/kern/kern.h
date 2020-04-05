@@ -312,6 +312,8 @@ struct _K2OSKERN_SCHED
     K2LIST_ANCHOR                   CpuCorePrioList;
     K2LIST_ANCHOR                   ReadyThreadPrioList;
 
+    UINT32                          mSysWideThreadCount;
+
     UINT64                          mAbsTimeMs;
 
     UINT32 volatile                 mReq;
@@ -805,6 +807,7 @@ enum _KernInitStage
 
     KernInitStage_Threaded,
     KernInitStage_MemReady,
+    KernInitStage_MultiThreaded,
     // should be last entry
     KernInitStage_Count
 };
@@ -973,6 +976,8 @@ void                     KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
 void    K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 K2STAT                   KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
 K2STAT                   KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
+
+UINT32 K2_CALLCONV_REGS  K2OSKERN_Thread0(void *apArg);
 
 /* --------------------------------------------------------------------------------- */
 

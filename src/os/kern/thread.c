@@ -32,69 +32,6 @@
 
 #include "kern.h"
 
-void KernAcpi_Start(void)
-{
-    DLX_pf_ENTRYPOINT   acpiEntryPoint;
-    K2STAT              stat;
-
-    stat = gData.mpShared->FuncTab.GetDlxInfo(
-        gData.mpShared->mpDlxAcpi,
-        NULL,
-        &acpiEntryPoint,
-        NULL,
-        NULL);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
-    stat = acpiEntryPoint(gData.mpShared->mpDlxAcpi, DLX_ENTRY_REASON_LOAD);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
-    K2OSKERN_Debug("ACPI entry point returned\n");
-}
-
-UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
-{
-    KernInitStage initStage;
-    UINT64 last, newTick;
-
-    //
-    // ready to go
-    //
-    for (initStage = KernInitStage_Threaded; initStage < KernInitStage_Count; initStage++)
-    {
-        KernInit_Stage(initStage);
-    }
-
-    K2OSKERN_Debug("Reached end of InitStage\n");
-
-    //
-    // kernel init finished.  init core stuff that needs threads
-    //
-    gData.mpShared->FuncTab.CoreThreadedPostInit();
-
-    //
-    // find and call entrypoint for acpi dlx
-    //
-    KernAcpi_Start();
-
-    //
-    // main Thread0 actions can commence here
-    //
-#if 1
-    K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
-    while (1)
-    {
-        do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
-    }
-#endif
-
-    return 0xAABBCCDD;
-}
-
 void KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread)
 {
     K2OSKERN_Debug("DUMP THREAD %08X\n", apThread);

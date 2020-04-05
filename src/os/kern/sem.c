@@ -81,8 +81,7 @@ K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewC
     if (aCount == 0)
         return K2STAT_ERROR_BAD_ARGUMENT;
 
-    if (apRetNewCount != NULL)
-        *apRetNewCount = (UINT32)-1;
+    *apRetNewCount = (UINT32)-1;
 
     K2_ASSERT(apSem != NULL);
 
@@ -97,15 +96,23 @@ K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewC
             break;
         }
 
-        pCurThread = K2OSKERN_CURRENT_THREAD;
-        pCurThread->Sched.Item.mSchedItemType = KernSchedItem_SemRelease;
-        pCurThread->Sched.Item.Args.SemRelease.mpSem = apSem;
-        pCurThread->Sched.Item.Args.SemRelease.mCount = aCount;
-        KernArch_ThreadCallSched();
-        stat = pCurThread->Sched.Item.mResult;
-        if ((!K2STAT_IS_ERROR(stat)) && (apRetNewCount != NULL))
+        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
         {
-            *apRetNewCount = pCurThread->Sched.Item.Args.SemRelease.mRetNewCount;
+            apSem->mCurCount += aCount;
+            *apRetNewCount = apSem->mCurCount;
+        }
+        else
+        {
+            pCurThread = K2OSKERN_CURRENT_THREAD;
+            pCurThread->Sched.Item.mSchedItemType = KernSchedItem_SemRelease;
+            pCurThread->Sched.Item.Args.SemRelease.mpSem = apSem;
+            pCurThread->Sched.Item.Args.SemRelease.mCount = aCount;
+            KernArch_ThreadCallSched();
+            stat = pCurThread->Sched.Item.mResult;
+            if ((!K2STAT_IS_ERROR(stat)) && (apRetNewCount != NULL))
+            {
+                *apRetNewCount = pCurThread->Sched.Item.Args.SemRelease.mRetNewCount;
+            }
         }
 
     } while (0);

@@ -6,6 +6,7 @@ K2OSACPI_INTR sgIntr[MAX_NUM_INTR];
 
 K2LIST_ANCHOR gK2OSACPI_IntrList;
 K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
+K2LIST_ANCHOR gK2OSACPI_CacheList;
 
 ACPI_STATUS
 AcpiOsInitialize(
@@ -20,6 +21,8 @@ AcpiOsInitialize(
     {
         K2LIST_AddAtTail(&gK2OSACPI_IntrFreeList, &sgIntr[ix].ListLink);
     }
+
+    K2LIST_Init(&gK2OSACPI_CacheList);
     
     return AE_OK;
 }
