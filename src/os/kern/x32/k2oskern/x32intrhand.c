@@ -101,7 +101,7 @@ void sX32Kern_sDumpCommonExceptionContext(
 )
 {
     K2OSKERN_Debug("ErrCode 0x%08X\n", apContext->Exception_ErrorCode);
-    K2OSKERN_Debug("IntNum  0x%08X\n", apContext->Exception_IntNum);
+    K2OSKERN_Debug("IrqVec  0x%08X\n", apContext->Exception_IrqVector);
     K2OSKERN_Debug("EAX     0x%08X\n", apContext->REGS.EAX);
     K2OSKERN_Debug("ECX     0x%08X\n", apContext->REGS.ECX);
     K2OSKERN_Debug("EDX     0x%08X\n", apContext->REGS.EDX);
@@ -161,11 +161,11 @@ sX32Kern_Exception(
             apContext->KernelMode.EIP,
             apContext->REGS.EBP,
             ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
-        K2OSKERN_Panic("Exception %d in Monitor\n", apContext->Exception_IntNum);
+        K2OSKERN_Panic("Exception %d in Monitor\n", apContext->Exception_IrqVector);
     }
 
     K2OSKERN_Debug("Exception %d in %s Mode while running Thread %d, Context @ 0x%08X\n",
-        apContext->Exception_IntNum,
+        apContext->Exception_IrqVector,
         apCurThread->mIsInKernelMode ? "Kernel" : "User",
         apCurThread->Info.mThreadId,
         apContext);
@@ -199,7 +199,7 @@ sX32Kern_Exception(
 
 static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
-static K2OSKERN_OBJ_INTR *  sgIntrObj[X32_NUM_IDT_ENTRIES] = { 0, };
+static K2OSKERN_OBJ_INTR *  sgpIntrObj[X32_NUM_IDT_ENTRIES] = { 0, };
 
 void
 X32Kern_InterruptHandler(
@@ -210,6 +210,7 @@ X32Kern_InterruptHandler(
     K2OSKERN_CPUCORE_EVENT volatile *   pCoreEvent;
     KernCpuCoreEventType                eventType;
     K2OSKERN_OBJ_THREAD *               pActiveThread;
+    UINT32                              devIntrId;
     BOOL                                enterMonitor;
     BOOL                                threadFaulted;
 
@@ -225,44 +226,16 @@ X32Kern_InterruptHandler(
 
     pActiveThread = pThisCore->mpActiveThread;
 
-    if (aContext.Exception_IntNum >= X32KERN_INTR_ICI_BASE)
+    if (aContext.Exception_IrqVector >= X32KERN_INTR_ICI_BASE)
     {
-        if (aContext.Exception_IntNum >= X32KERN_INTR_DEV_BASE)
-        {
-            //
-            // this is an IRQ from a device
-            //
-            if (aContext.Exception_IntNum == X32KERN_INTR_LVT_TIMER)
-            {
-                //
-                // 1ms tick
-                //
-                if (X32Kern_IntrTimerTick())
-                {
-                    pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
-                    pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
-                    pCoreEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
-                    pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
-
-                    KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
-
-                    enterMonitor = TRUE;
-                }
-            }
-            else
-            {
-                K2OSKERN_Debug("Non-Timer IRQ %d on core %d\n", aContext.Exception_IntNum, pThisCore->mCoreIx);
-                KernIntr_RecvIrq(pThisCore, aContext.Exception_IntNum);
-            }
-        }
-        else
+        if (aContext.Exception_IrqVector < X32KERN_INTR_LVT_BASE)
         {
             //
             // this is an ICI from another core
             //
-            K2_ASSERT(aContext.Exception_IntNum - X32KERN_INTR_ICI_BASE < gData.mCpuCount);
+            K2_ASSERT(aContext.Exception_IrqVector - X32KERN_INTR_ICI_BASE < gData.mCpuCount);
 
-            pCoreEvent = &pThisCore->IciFromOtherCore[aContext.Exception_IntNum - X32KERN_INTR_ICI_BASE];
+            pCoreEvent = &pThisCore->IciFromOtherCore[aContext.Exception_IrqVector - X32KERN_INTR_ICI_BASE];
             eventType = pCoreEvent->mEventType;
 
             K2_ASSERT((eventType >= KernCpuCoreEvent_Ici_Wakeup) && (eventType <= KernCpuCoreEvent_Ici_Debug));
@@ -270,6 +243,59 @@ X32Kern_InterruptHandler(
             KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
             enterMonitor = TRUE;
         }
+        else
+        {
+            if (aContext.Exception_IrqVector < X32KERN_INTR_DEV_BASE)
+            {
+                //
+                // this is a LVT interrupt from the CPU's APIC
+                //
+                if (aContext.Exception_IrqVector == X32KERN_INTR_LVT_TIMER)
+                {
+                    //
+                    // 1ms tick
+                    //
+                    if (X32Kern_IntrTimerTick())
+                    {
+                        pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
+                        pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
+                        pCoreEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
+                        pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
+
+                        KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
+
+                        enterMonitor = TRUE;
+                    }
+                }
+                else
+                {
+                    K2OSKERN_Panic("***Unexpected LVT interrupt %d\n", aContext.Exception_IrqVector);
+                    while (1);
+                }
+            }
+            else
+            {
+                //
+                // this is an IRQ from a device
+                //
+                K2OSKERN_Debug("IRQ %d on core %d\n", aContext.Exception_IrqVector, pThisCore->mCoreIx);
+                devIntrId = KernArch_SysIrqToDevIntr(aContext.Exception_IrqVector);
+                K2_ASSERT(devIntrId < X32_NUM_IDT_ENTRIES);
+                if (sgpIntrObj[devIntrId] != NULL)
+                {
+                    sgpIntrObj[devIntrId]->mfHandler(sgpIntrObj[devIntrId]->mpHandlerContext);
+                }
+                else
+                {
+                    K2OSKERN_Debug("Unhandled Interrupt IRQ %d (Intr %d). Masked\n", aContext.Exception_IrqVector, devIntrId);
+                    X32Kern_MaskDevIntr(devIntrId);
+                }
+            }
+        }
+        //
+        // end of interrupt
+        //
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_EOI, 0);
     }
     else
     {
@@ -305,9 +331,9 @@ K2STAT KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 
     K2_ASSERT(intrIx < X32_NUM_IDT_ENTRIES);
     
-    K2_ASSERT(sgIntrObj[intrIx] == NULL);
+    K2_ASSERT(sgpIntrObj[intrIx] == NULL);
 
-    sgIntrObj[intrIx] = apIntr;
+    sgpIntrObj[intrIx] = apIntr;
 
     X32Kern_ConfigDevIntr(&apIntr->Config);
 
@@ -324,9 +350,9 @@ K2STAT KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 
     K2_ASSERT(intrIx < X32_NUM_IDT_ENTRIES);
 
-    K2_ASSERT(sgIntrObj[intrIx] == apIntr);
+    K2_ASSERT(sgpIntrObj[intrIx] == apIntr);
 
-    sgIntrObj[intrIx] = NULL;
+    sgpIntrObj[intrIx] = NULL;
 
     X32Kern_MaskDevIntr(apIntr->Config.mSourceId);
 

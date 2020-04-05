@@ -65,17 +65,19 @@ K2_STATIC_ASSERT(K2OSKERN_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA
 
 // interrupt vectors 0-31 reserved
 #define X32KERN_INTR_ICI_BASE           32
-#define X32KERN_INTR_DEV_BASE           (X32KERN_INTR_ICI_BASE + K2OS_MAX_CPU_COUNT)
 
-#define X32KERN_INTR_LVT_CMCI           (X32KERN_INTR_DEV_BASE + 0)
-#define X32KERN_INTR_LVT_TIMER          (X32KERN_INTR_DEV_BASE + 1)
-#define X32KERN_INTR_LVT_THERM          (X32KERN_INTR_DEV_BASE + 2)
-#define X32KERN_INTR_LVT_PERF           (X32KERN_INTR_DEV_BASE + 3)
-#define X32KERN_INTR_LVT_LINT0          (X32KERN_INTR_DEV_BASE + 4)
-#define X32KERN_INTR_LVT_LINT1          (X32KERN_INTR_DEV_BASE + 5)
-#define X32KERN_INTR_LVT_ERROR          (X32KERN_INTR_DEV_BASE + 6)
+#define X32KERN_INTR_LVT_BASE           (X32KERN_INTR_ICI_BASE + K2OS_MAX_CPU_COUNT)
 
-#define X32KERN_INTR_DEV_SCHED_TIMER    (X32KERN_INTR_DEV_BASE + 7)
+#define X32KERN_INTR_LVT_CMCI           (X32KERN_INTR_LVT_BASE + 0)
+#define X32KERN_INTR_LVT_TIMER          (X32KERN_INTR_LVT_BASE + 1)
+#define X32KERN_INTR_LVT_THERM          (X32KERN_INTR_LVT_BASE + 2)
+#define X32KERN_INTR_LVT_PERF           (X32KERN_INTR_LVT_BASE + 3)
+#define X32KERN_INTR_LVT_LINT0          (X32KERN_INTR_LVT_BASE + 4)
+#define X32KERN_INTR_LVT_LINT1          (X32KERN_INTR_LVT_BASE + 5)
+#define X32KERN_INTR_LVT_ERROR          (X32KERN_INTR_LVT_BASE + 6)
+#define X32KERN_INTR_RESERVED_LVT_7     (X32KERN_INTR_LVT_BASE + 7)
+
+#define X32KERN_INTR_DEV_BASE           (X32KERN_INTR_LVT_BASE + 8)
 
 /* --------------------------------------------------------------------------------- */
 
@@ -101,7 +103,7 @@ struct _X32_EXCEPTION_CONTEXT
 {
     UINT32      DS;
     X32_PUSHA   REGS;                   // 8 32-bit words
-    UINT32      Exception_IntNum;
+    UINT32      Exception_IrqVector;
     UINT32      Exception_ErrorCode;
     union
     {
@@ -136,9 +138,12 @@ extern ACPI_MADT_SUB_IO_APIC *              gpX32Kern_MADT_IoApic;
 extern ACPI_HPET *                          gpX32Kern_HPET;
 extern BOOL                                 gX32Kern_ApicReady;
 extern UINT32                               gX32Kern_BusClockRate;
-extern UINT32                               gX32Kern_IntrMap[256];
-extern UINT16                               gX32Kern_IntrFlags[256];
 extern X32_CPUID                            gX32Kern_CpuId01;
+
+extern UINT32                               gX32Kern_IrqToDevIntrMap[X32_NUM_IDT_ENTRIES];
+
+extern UINT32                               gX32Kern_IntrOverrideMap[X32_NUM_IDT_ENTRIES];
+extern UINT16                               gX32Kern_IntrOverrideFlags[X32_NUM_IDT_ENTRIES];
 
 /* --------------------------------------------------------------------------------- */
 
@@ -165,8 +170,8 @@ void X32Kern_StartTime(void);
 BOOL X32Kern_IntrTimerTick(void);
 
 void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig);
-void X32Kern_MaskDevIntr(UINT8 aIntrId);
-void X32Kern_UnmaskDevIntr(UINT8 aIntrId);
+void X32Kern_MaskDevIntr(UINT8 aDevIntrId);
+void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId);
 
 /* --------------------------------------------------------------------------------- */
 

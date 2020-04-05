@@ -32,8 +32,6 @@ AcpiOsCreateCache(
     K2_ASSERT(ObjectSize > 0);
     K2_ASSERT(MaxDepth > 0);
 
-//    K2OSKERN_Debug("AcpiOsCreateCache(\"%s\", %d, %d)\n", CacheName, ObjectSize, MaxDepth);
-
     objectBytes = ObjectSize;
     objectBytes = (ObjectSize + 3) & ~3;
     objectBytes += sizeof(K2LIST_LINK);
@@ -140,7 +138,7 @@ AcpiOsAcquireObject(
     }
     else
     {
-        K2OSKERN_Debug("-------------EMPTY CACHE(%s)-----------\n", pCache->mpCacheName);
+        K2OSKERN_Debug("!!!!!!-------EMPTY CACHE(%s)-----------\n", pCache->mpCacheName);
         pAct = NULL;
     }
 

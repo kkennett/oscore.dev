@@ -48,9 +48,10 @@ ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC *    gpX32Kern_MADT_LocApic[K2OS_MAX_CPU_COUN
 ACPI_MADT_SUB_IO_APIC *                 gpX32Kern_MADT_IoApic = NULL;
 ACPI_HPET *                             gpX32Kern_HPET = NULL;
 BOOL                                    gX32Kern_ApicReady = FALSE;
-UINT32                                  gX32Kern_IntrMap[256];
-UINT16                                  gX32Kern_IntrFlags[256];
 X32_CPUID                               gX32Kern_CpuId01;
+UINT32                                  gX32Kern_IrqToDevIntrMap[X32_NUM_IDT_ENTRIES];
+UINT32                                  gX32Kern_IntrOverrideMap[X32_NUM_IDT_ENTRIES];
+UINT16                                  gX32Kern_IntrOverrideFlags[X32_NUM_IDT_ENTRIES];
 
 static void sInit_AtDlxEntry(void)
 {
@@ -228,12 +229,24 @@ static void sInit_BeforeHal_ScanAcpi(void)
     }
 
     //
-    // init interrupt mapping
+    // init irq (vector) back to intr mapping
     //
-    for (left = 0; left < 256; left++)
+    for (left = 0; left < X32KERN_INTR_DEV_BASE; left++)
     {
-        gX32Kern_IntrMap[left] = (UINT32)-1;
-        gX32Kern_IntrFlags[left] = 0;
+        gX32Kern_IrqToDevIntrMap[left] = (UINT32)-1;
+    }
+    for (left = X32KERN_INTR_DEV_BASE; left < X32_NUM_IDT_ENTRIES; left++)
+    {
+        gX32Kern_IrqToDevIntrMap[left] = left - X32KERN_INTR_DEV_BASE;
+    }
+
+    //
+    // init intr override map
+    //
+    for (left = 0; left < X32KERN_INTR_DEV_BASE; left++)
+    {
+        gX32Kern_IntrOverrideMap[left] = (UINT32)-1; // this means "not overridden"
+        gX32Kern_IntrOverrideFlags[left] = 0;
     }
 
     //
@@ -265,8 +278,13 @@ static void sInit_BeforeHal_ScanAcpi(void)
         else if (*pScan == ACPI_MADT_SUB_TYPE_INTERRUPT_SOURCE_OVERRIDE)
         {
             pIntrOver = (ACPI_MADT_SUB_INTERRUPT_SOURCE_OVERRIDE *)pScan;
-            gX32Kern_IntrMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
-            gX32Kern_IntrFlags[pIntrOver->Source] = pIntrOver->Flags;
+           
+            K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+
+            gX32Kern_IntrOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
+            gX32Kern_IntrOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
+
+            gX32Kern_IrqToDevIntrMap[pIntrOver->GlobalSystemInterrupt + X32KERN_INTR_DEV_BASE] = pIntrOver->Source;
         }
         K2_ASSERT(left >= pScan[1]);
         left -= pScan[1];

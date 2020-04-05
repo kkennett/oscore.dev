@@ -107,37 +107,43 @@ void X32Kern_IoApicInit(void)
 }
 
 UINT32  
-KernArch_IntrToIrq(
-    UINT8 aIntr
+KernArch_DevIntrToSysIrq(
+    UINT32 aDevIntr
 )
 {
     UINT32 ret;
 
-    if (sgUseIoApic)
+    ret = gX32Kern_IntrOverrideMap[aDevIntr];
+    if (ret != (UINT32)-1)
     {
-        ret = gX32Kern_IntrMap[aIntr];
-        if (ret != (UINT32)-1)
-        {
-            return ret + X32KERN_INTR_DEV_BASE;
-        }
+        return ret + X32KERN_INTR_DEV_BASE;
     }
+    return aDevIntr + X32KERN_INTR_DEV_BASE;
+}
 
-    return ((UINT32)aIntr) + X32KERN_INTR_DEV_BASE;
+UINT32
+KernArch_SysIrqToDevIntr(
+    UINT32 aSysIrq
+)
+{
+    K2_ASSERT(aSysIrq >= X32KERN_INTR_DEV_BASE);
+
+    return gX32Kern_IrqToDevIntrMap[aSysIrq];
 }
 
 static
 void
 sIoApic_SetMask(
-    UINT8   aIntrId,
+    UINT8   aDevIntrId,
     BOOL    aSetMask
 )
 {
     UINT32 mapped;
     UINT32 v;
 
-    mapped = gX32Kern_IntrMap[aIntrId];
-    if (mapped == (UINT32)-1)
-        mapped = aIntrId;
+    K2_ASSERT(aDevIntrId < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+
+    mapped = KernArch_DevIntrToSysIrq(aDevIntrId);
 
     v = sReadIoApic(X32_IOAPIC_REGIX_REDLO(mapped));
     if (aSetMask)
@@ -148,12 +154,13 @@ sIoApic_SetMask(
     {
         v &= ~X32_IOAPIC_REDLO_MASK;
     }
+
     sWriteIoApic(X32_IOAPIC_REGIX_REDLO(mapped), v);
 }
 
 void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
 {
-    UINT32 mapped;
+    UINT32 redIx;
     UINT32 redHi;
     UINT32 redLo;
 
@@ -162,14 +169,25 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     //
     redHi = (1 << X32_IOAPIC_REDHI_DEST_SHIFT);
 
-    mapped = gX32Kern_IntrMap[apConfig->mSourceId];
-    if (mapped != (UINT32)-1)
+    redIx = gX32Kern_IntrOverrideMap[apConfig->mSourceId];
+    if (redIx != (UINT32)-1)
     {
         //
         // use flags in override
         //
-        switch (gX32Kern_IntrFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_POLARITY_MASK)
+        switch (gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_POLARITY_MASK)
         {
+        case ACPI_APIC_INTR_FLAG_POLARITY_BUS:
+            if ((gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK) == ACPI_APIC_INTR_FLAG_TRIGGER_LEVEL)
+            {
+                redLo = X32_IOAPIC_REDLO_POLARITY_LOW;
+            }
+            else
+            {
+                redLo = X32_IOAPIC_REDLO_POLARITY_HIGH;
+            }
+            break;
+
         case ACPI_APIC_INTR_FLAG_POLARITY_ACTIVE_HIGH:
             redLo = X32_IOAPIC_REDLO_POLARITY_HIGH;
             break;
@@ -183,8 +201,9 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
             return;
         }
 
-        switch (gX32Kern_IntrFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK)
+        switch (gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK)
         {
+        case ACPI_APIC_INTR_FLAG_TRIGGER_BUS:
         case ACPI_APIC_INTR_FLAG_TRIGGER_EDGE:
             redLo |= X32_IOAPIC_REDLO_TRIGGER_EDGE;
             break;
@@ -201,9 +220,9 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     else
     {
         //
-        // use flags in apConfig
+        // not overridden in ACPI - use flags in apConfig
         //
-        mapped = apConfig->mSourceId;
+        redIx = apConfig->mSourceId;
 
         K2_ASSERT(apConfig->mDestCoreIx < gData.mCpuCount);
 
@@ -223,28 +242,28 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     redLo |= X32_IOAPIC_REDLO_MASK;
     redLo |= X32_IOAPIC_REDLO_DEST_LOG;
     redLo |= X32_IOAPIC_REDLO_MODE_FIXED;
-    redLo |= (KernArch_IntrToIrq(apConfig->mSourceId) & X32_IOAPIC_REDLO_VECTOR_MASK);
+    redLo |= ((redIx + X32KERN_INTR_DEV_BASE) & X32_IOAPIC_REDLO_VECTOR_MASK);
 
-//    K2OSKERN_Debug("Writing to IOAPIC %d LO %08X HI %08X\n", mapped, redLo, redHi);
+//    K2OSKERN_Debug("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
 
-    sWriteIoApic(X32_IOAPIC_REGIX_REDLO(mapped), redLo);
-    sWriteIoApic(X32_IOAPIC_REGIX_REDHI(mapped), redHi);
+    sWriteIoApic(X32_IOAPIC_REGIX_REDLO(redIx), redLo);
+    sWriteIoApic(X32_IOAPIC_REGIX_REDHI(redIx), redHi);
 }
 
-void X32Kern_MaskDevIntr(UINT8 aIntrId)
+void X32Kern_MaskDevIntr(UINT8 aDevIntrId)
 {
     K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
     if (sgUseIoApic)
-        sIoApic_SetMask(aIntrId, TRUE);
+        sIoApic_SetMask(aDevIntrId, TRUE);
     else
-        sPic_SetMask(aIntrId, TRUE);
+        sPic_SetMask(aDevIntrId, TRUE);
 }
 
-void X32Kern_UnmaskDevIntr(UINT8 aIntrId)
+void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId)
 {
     K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
     if (sgUseIoApic)
-        sIoApic_SetMask(aIntrId, FALSE);
+        sIoApic_SetMask(aDevIntrId, FALSE);
     else
-        sPic_SetMask(aIntrId, FALSE);
+        sPic_SetMask(aDevIntrId, FALSE);
 }

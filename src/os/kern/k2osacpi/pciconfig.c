@@ -7,6 +7,7 @@ AcpiOsReadPciConfiguration(
     UINT64                  *Value,
     UINT32                  Width)
 {
+    K2_ASSERT(0);
     return ACPI_FAILURE(1);
 }
 
@@ -17,6 +18,7 @@ AcpiOsWritePciConfiguration(
     UINT64                  Value,
     UINT32                  Width)
 {
+    K2_ASSERT(0);
     return ACPI_FAILURE(1);
 }
 

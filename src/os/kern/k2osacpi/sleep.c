@@ -6,6 +6,7 @@ AcpiOsEnterSleep(
     UINT32                  RegaValue,
     UINT32                  RegbValue)
 {
+    K2_ASSERT(0);
     return ACPI_FAILURE(1);
 }
 

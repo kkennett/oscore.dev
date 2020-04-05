@@ -57,7 +57,7 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread, UINT32 aUserModeStack
     pInitCtx->DS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
     pInitCtx->REGS.ECX = (UINT32)apThread;
     pInitCtx->REGS.EBP = 0;
-    pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_IntNum;
+    pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_IrqVector;
     pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO;
     pInitCtx->KernelMode.CS = X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL;
     pInitCtx->KernelMode.EIP = (UINT32)KernThread_Entry;

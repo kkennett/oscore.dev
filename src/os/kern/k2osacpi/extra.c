@@ -1,24 +1,5 @@
 
 
-ACPI_STATUS
-AcpiOsReadPciConfiguration(
-    ACPI_PCI_ID             *PciId,
-    UINT32                  Reg,
-    UINT64                  *Value,
-    UINT32                  Width)
-{
-    return ACPI_FAILURE(1);
-}
-
-ACPI_STATUS
-AcpiOsWritePciConfiguration(
-    ACPI_PCI_ID             *PciId,
-    UINT32                  Reg,
-    UINT64                  Value,
-    UINT32                  Width)
-{
-    return ACPI_FAILURE(1);
-}
 
 BOOLEAN
 AcpiOsReadable(
@@ -34,15 +15,6 @@ AcpiOsWritable(
     ACPI_SIZE               Length)
 {
     return FALSE;
-}
-
-ACPI_STATUS
-AcpiOsEnterSleep(
-    UINT8                   SleepState,
-    UINT32                  RegaValue,
-    UINT32                  RegbValue)
-{
-    return ACPI_FAILURE(1);
 }
 
 void

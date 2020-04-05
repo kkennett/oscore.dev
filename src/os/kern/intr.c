@@ -32,19 +32,6 @@
 
 #include "kern.h"
 
-void KernIntr_RecvIrq(K2OSKERN_CPUCORE *apThisCore, UINT32 aIrqNum)
-{
-    //
-    // in interrrupt context on core
-    //
-    K2_ASSERT(0);
-}
-
-void KernIntr_RecvIci(K2OSKERN_CPUCORE *apThisCore, UINT32 aSendingCoreIx)
-{
-    K2_ASSERT(0);
-}
-
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent)
 {
     K2OSKERN_CPUCORE_EVENT *    pNext;
@@ -59,7 +46,6 @@ void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_
             (UINT32)pNext);
     } while (old != (UINT32)pNext);
 }
-
 
 K2OS_TOKEN
 K2OSKERN_InstallIntrHandler(
@@ -94,7 +80,7 @@ K2OSKERN_InstallIntrHandler(
     pIntr->mIsSignalled = FALSE;
     pIntr->mfHandler = aHandler;
     pIntr->mpHandlerContext = apContext;
-    pIntr->IntrTreeNode.mUserVal = KernArch_IntrToIrq(apConfig->mSourceId);
+    pIntr->IntrTreeNode.mUserVal = KernArch_DevIntrToSysIrq(apConfig->mSourceId);
     pIntr->Config = *apConfig;
 
     disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);

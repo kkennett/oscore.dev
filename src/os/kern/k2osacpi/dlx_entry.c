@@ -64,6 +64,8 @@ sInstallHandlers(void)
     return (AE_OK);
 }
 
+#define CHK_WATER 0
+
 K2STAT 
 K2_CALLCONV_REGS 
 dlx_entry(
@@ -72,8 +74,10 @@ dlx_entry(
     )
 {
     ACPI_STATUS     Status;
+#if CHK_WATER
     K2LIST_LINK *   pListLink;
     CACHE_HDR *     pCache;
+#endif
 
     Status = AcpiInitializeSubsystem();
     K2_ASSERT(!ACPI_FAILURE(Status));
@@ -93,6 +97,7 @@ dlx_entry(
     Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(Status));
 
+#if CHK_WATER
     K2OSKERN_Debug("\n=========================\nAT ACPI INIT DONE:\n");
     pListLink = gK2OSACPI_CacheList.mpHead;
     while (pListLink != NULL)
@@ -102,6 +107,7 @@ dlx_entry(
         pListLink = pListLink->mpNext;
     }
     K2OSKERN_Debug("=========================\n");
+#endif
 
     return K2STAT_NO_ERROR;
 }

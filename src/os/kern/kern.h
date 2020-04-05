@@ -960,7 +960,8 @@ void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTarget
 void    KernArch_ArmSchedTimer(UINT32 aMsFromNow);
 K2STAT  KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 K2STAT  KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
-UINT32  KernArch_IntrToIrq(UINT8 aIntr);
+UINT32  KernArch_DevIntrToSysIrq(UINT32 aDevIntr);
+UINT32  KernArch_SysIrqToDevIntr(UINT32 aSysIrq);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1034,8 +1035,6 @@ void KernInit_CpuCore(void);
 /* --------------------------------------------------------------------------------- */
 
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
-void KernIntr_RecvIrq(K2OSKERN_CPUCORE *apThisCore, UINT32 aIrqNum);
-void KernIntr_RecvIci(K2OSKERN_CPUCORE *apThisCore, UINT32 aSendingCoreIx); 
 
 /* --------------------------------------------------------------------------------- */
 
