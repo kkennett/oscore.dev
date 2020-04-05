@@ -50,40 +50,6 @@ K2OSKERN_GetIntr(
     return X32_GetCoreInterruptMask() ? FALSE : TRUE;
 }
 
-void
-X32Kern_PICInit(void)
-{
-    /* start the init sequence (ICW1) */
-    X32_IoWrite8(X32PC_8259_PIC_ICW1_INIT | X32PC_8259_PIC_ICW1_WORD4NEEDED, X32PC_PIC1_COMMAND);
-    X32_IoWait();
-    X32_IoWrite8(X32PC_8259_PIC_ICW1_INIT | X32PC_8259_PIC_ICW1_WORD4NEEDED, X32PC_PIC2_COMMAND);
-    X32_IoWait();
-
-    /* define the PIC vector bases (ICW2) */
-    X32_IoWrite8(32, X32PC_PIC1_DATA);    /* master IRQ 0-7 -> IRQ 32->39 */
-    X32_IoWait();
-    X32_IoWrite8(40, X32PC_PIC2_DATA);    /* slave  IRQ 0-7 -> IRQ 40->47 */
-    X32_IoWait();
-
-    /* define the slave location (ICW3) */
-    X32_IoWrite8(0x04, X32PC_PIC1_DATA);  /* MASTER, so bit 2 is a SLAVE */
-    X32_IoWait();
-    X32_IoWrite8(2, X32PC_PIC2_DATA);     /* SLAVE, id is 2 */
-    X32_IoWait();
-
-    /* operation mode (ICW4) - not special, nonbuffered, normal EOI, 8086 mode */
-    X32_IoWrite8(X32PC_8259_PIC_ICW4_8086MODE, X32PC_PIC1_DATA);
-    X32_IoWait();
-    X32_IoWrite8(X32PC_8259_PIC_ICW4_8086MODE, X32PC_PIC2_DATA);
-    X32_IoWait();
-
-    /* init finished */
-
-    /* mask all interrupts */
-    X32_IoWrite8(0xFB, X32PC_PIC1_DATA);    /* bit 2 clear (2nd pic) */
-    X32_IoWrite8(0xFF, X32PC_PIC2_DATA);
-}
-
 void 
 X32Kern_APICInit(UINT32 aCpuIx)
 {
@@ -145,16 +111,6 @@ X32Kern_APICInit(UINT32 aCpuIx)
     MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
 }
 
-void 
-X32Kern_IoApicInit(void)
-{
-    UINT32 v;
-
-    MMREG_WRITE32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOREGSEL, X32_IOAPIC_REGIX_IOAPICVER);
-    v = MMREG_READ32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOWIN);
-    K2_ASSERT(v != 0);
-}
-
 void KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx)
 {
     UINT32 reg;
@@ -179,3 +135,4 @@ void KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpu
     MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_HIGH32, reg);
     MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_LOGICAL | X32_LOCAPIC_ICR_LOW_MODE_FIXED | (X32KERN_INTR_ICI_BASE + aCurCoreIx));
 }
+

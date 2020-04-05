@@ -81,7 +81,8 @@ enum _K2OS_ObjectType
     K2OS_Obj_Mailbox = 10,
     K2OS_Obj_Mailslot = 11,
     K2OS_Obj_Msg = 12,
-    K2OS_Obj_RwLockReq = 13
+    K2OS_Obj_RwLockReq = 13,
+    K2OS_Obj_Interrupt = 14,
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);

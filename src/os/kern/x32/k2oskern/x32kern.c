@@ -232,7 +232,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
     //
     for (left = 0; left < 256; left++)
     {
-        gX32Kern_IntrMap[left] = left;
+        gX32Kern_IntrMap[left] = (UINT32)-1;
         gX32Kern_IntrFlags[left] = 0;
     }
 

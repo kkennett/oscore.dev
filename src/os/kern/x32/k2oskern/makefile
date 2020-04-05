@@ -53,6 +53,7 @@ SOURCES += x32idtasm.s
 SOURCES += x32intr.c 
 SOURCES += x32intrasm.s
 SOURCES += x32intrhand.c
+SOURCES += x32devintr.c
 
 SOURCES += x32tss.c
 

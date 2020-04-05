@@ -82,6 +82,7 @@ typedef struct _K2OSKERN_OBJ_EVENT          K2OSKERN_OBJ_EVENT;
 typedef struct _K2OSKERN_OBJ_NAME           K2OSKERN_OBJ_NAME;
 typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
 typedef struct _K2OSKERN_OBJ_SEM            K2OSKERN_OBJ_SEM;
+typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -95,6 +96,7 @@ union _K2OSKERN_OBJ_WAITABLE
     K2OSKERN_OBJ_NAME *     mpName;
     K2OSKERN_OBJ_THREAD *   mpThread;
     K2OSKERN_OBJ_SEM *      mpSem;
+    K2OSKERN_OBJ_INTR *     mpIntr;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -634,6 +636,18 @@ struct _K2OSKERN_OBJ_NAME
 
 /* --------------------------------------------------------------------------------- */
 
+struct _K2OSKERN_OBJ_INTR
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+    BOOL                    mIsSignalled;
+    K2TREE_NODE             IntrTreeNode;
+    K2OSKERN_INTR_CONFIG    Config;
+    K2OSKERN_pf_IntrHandler mfHandler;
+    void *                  mpHandlerContext;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 typedef enum _KernPhysPageList KernPhysPageList;
 enum _KernPhysPageList
 {
@@ -858,6 +872,10 @@ struct _KERN_DATA
     K2TREE_ANCHOR                       ObjTree;
     K2TREE_ANCHOR                       NameTree;
 
+    // interrupts
+    K2OSKERN_SEQLOCK                    IntrTreeSeqLock;
+    K2TREE_ANCHOR                       IntrTree;
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                              mA32VectorPagePhys;
@@ -937,6 +955,9 @@ void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore);
 void    KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
 void    KernArch_ArmSchedTimer(UINT32 aMsFromNow);
+K2STAT  KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
+K2STAT  KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
+UINT32  KernArch_IntrToIrq(UINT8 aIntr);
 
 /* --------------------------------------------------------------------------------- */
 

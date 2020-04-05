@@ -15,4 +15,16 @@
 #include <acpixf.h>
 #include <acexcep.h>
 
+struct _K2OSACPI_INTR
+{
+    UINT32              InterruptNumber;
+    ACPI_OSD_HANDLER    ServiceRoutine;
+    K2OS_TOKEN          mToken;
+    K2LIST_LINK         ListLink;
+};
+typedef struct _K2OSACPI_INTR K2OSACPI_INTR;
+
+extern K2LIST_ANCHOR gK2OSACPI_IntrList;
+extern K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
+
 #endif // __K2OSACPI_H

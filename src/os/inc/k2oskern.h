@@ -223,6 +223,50 @@ K2OSKERN_UnmapDevice(
 //------------------------------------------------------------------------
 //
 
+struct _K2OSKERN_INTR_CONFIG
+{
+    UINT32  mSourceId;
+    UINT32  mDestCoreIx;
+    BOOL    mIsLevelTriggered;
+    BOOL    mIsActiveLow;
+};
+typedef struct _K2OSKERN_INTR_CONFIG K2OSKERN_INTR_CONFIG;
+
+//
+// calling convention must match ACPI_SYSTEM_XFACE
+//
+typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
+
+typedef
+K2OS_TOKEN
+(*K2OSKERN_pf_InstallIntrHandler)(
+    K2OSKERN_INTR_CONFIG const *    apConfig,
+    K2OSKERN_pf_IntrHandler         aHandler,
+    void *                          apContext
+    );
+
+K2OS_TOKEN
+K2OSKERN_InstallIntrHandler(
+    K2OSKERN_INTR_CONFIG const *    apConfig,
+    K2OSKERN_pf_IntrHandler         aHandler,
+    void *                          apContext
+    );
+
+typedef
+K2STAT
+(*K2OSKERN_pf_RemoveIntrHandler)(
+    K2OS_TOKEN aTokIntr
+    );
+
+K2STAT
+K2OSKERN_RemoveIntrHandler(
+    K2OS_TOKEN aTokIntr
+    );
+
+//
+//------------------------------------------------------------------------
+//
+
 typedef
 K2STAT
 (*K2OSKERN_pf_Esc)(

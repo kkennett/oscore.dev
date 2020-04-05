@@ -164,6 +164,10 @@ void X32Kern_InitStall(void);
 void X32Kern_StartTime(void);
 BOOL X32Kern_IntrTimerTick(void);
 
+void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig);
+void X32Kern_MaskDevIntr(UINT8 aIntrId);
+void X32Kern_UnmaskDevIntr(UINT8 aIntrId);
+
 /* --------------------------------------------------------------------------------- */
 
 #endif // __X32KERN_H

@@ -199,6 +199,8 @@ sX32Kern_Exception(
 
 static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
+static K2OSKERN_OBJ_INTR *  sgIntrObj[X32_NUM_IDT_ENTRIES] = { 0, };
+
 void
 X32Kern_InterruptHandler(
     X32_EXCEPTION_CONTEXT aContext
@@ -293,3 +295,40 @@ X32Kern_InterruptHandler(
     sgInIntr[pThisCore->mCoreIx] = FALSE;
 }
 
+K2_STATIC_ASSERT(X32_NUM_IDT_ENTRIES <= 256);
+
+K2STAT KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
+{
+    UINT32 intrIx;
+
+    intrIx = apIntr->Config.mSourceId;
+
+    K2_ASSERT(intrIx < X32_NUM_IDT_ENTRIES);
+    
+    K2_ASSERT(sgIntrObj[intrIx] == NULL);
+
+    sgIntrObj[intrIx] = apIntr;
+
+    X32Kern_ConfigDevIntr(&apIntr->Config);
+
+    X32Kern_UnmaskDevIntr(apIntr->Config.mSourceId);
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
+{
+    UINT32 intrIx;
+
+    intrIx = apIntr->Config.mSourceId;
+
+    K2_ASSERT(intrIx < X32_NUM_IDT_ENTRIES);
+
+    K2_ASSERT(sgIntrObj[intrIx] == apIntr);
+
+    sgIntrObj[intrIx] = NULL;
+
+    X32Kern_MaskDevIntr(apIntr->Config.mSourceId);
+
+    return K2STAT_NO_ERROR;
+}

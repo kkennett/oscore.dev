@@ -59,3 +59,84 @@ void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_
             (UINT32)pNext);
     } while (old != (UINT32)pNext);
 }
+
+
+K2OS_TOKEN
+K2OSKERN_InstallIntrHandler(
+    K2OSKERN_INTR_CONFIG const *    apConfig,
+    K2OSKERN_pf_IntrHandler         aHandler,
+    void *                          apContext
+)
+{
+    K2OSKERN_OBJ_INTR *     pIntr;
+    BOOL                    disp;
+    K2STAT                  stat;
+    K2TREE_NODE *           pTreeNode;
+    K2OS_TOKEN              tokIntr;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+
+    K2_ASSERT(apConfig != NULL);
+    K2_ASSERT(aHandler != NULL);
+
+    pIntr = (K2OSKERN_OBJ_INTR *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_INTR));
+    if (pIntr == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_OUT_OF_MEMORY);
+        return NULL;
+    }
+
+    tokIntr = NULL;
+
+    K2MEM_Zero(pIntr, sizeof(K2OSKERN_OBJ_INTR));
+    pIntr->Hdr.mObjType = K2OS_Obj_Interrupt;
+    pIntr->Hdr.mRefCount = 1;
+    K2LIST_Init(&pIntr->Hdr.WaitingThreadsPrioList);
+    pIntr->mIsSignalled = FALSE;
+    pIntr->mfHandler = aHandler;
+    pIntr->mpHandlerContext = apContext;
+    pIntr->IntrTreeNode.mUserVal = KernArch_IntrToIrq(apConfig->mSourceId);
+    pIntr->Config = *apConfig;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal);
+    if (pTreeNode != NULL)
+    {
+        stat = K2STAT_ERROR_ALREADY_EXISTS;
+    }
+    else
+    {
+        stat = KernArch_InstallIntrHandler(pIntr);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            K2TREE_Insert(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal, &pIntr->IntrTreeNode);
+        }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        stat = K2OS_HeapFree(pIntr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    }
+    else
+    {
+        pObjHdr = &pIntr->Hdr;
+        KernTok_Create(1, &pObjHdr, &tokIntr);
+        K2_ASSERT(tokIntr != NULL);
+    }
+
+    return tokIntr;
+}
+
+K2STAT
+K2OSKERN_RemoveIntrHandler(
+    K2OS_TOKEN aTokIntr
+)
+{
+    K2_ASSERT(0);
+
+    return K2STAT_ERROR_NOT_IMPL;
+}

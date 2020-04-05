@@ -83,6 +83,9 @@ dlx_entry(
     K2OSKERN_SeqIntrInit(&gData.ProcListSeqLock);
     K2LIST_Init(&gData.ProcList);
 
+    K2OSKERN_SeqIntrInit(&gData.IntrTreeSeqLock);
+    K2TREE_Init(&gData.IntrTree, NULL);
+
     gData.mpShared->FuncTab.Exec = KernExec;
 
     gData.mpShared->FuncTab.Debug = K2OSKERN_Debug;

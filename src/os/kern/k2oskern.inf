@@ -50,6 +50,8 @@ K2OSKERN_SeqIntrUnlock
 K2OSKERN_GetCpuIndex
 K2OSKERN_MapDevice
 K2OSKERN_UnmapDevice
+K2OSKERN_InstallIntrHandler
+K2OSKERN_RemoveIntrHandler
 K2OSKERN_Esc
 
 #
