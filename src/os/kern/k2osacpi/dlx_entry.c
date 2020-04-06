@@ -48,6 +48,7 @@ RegionInit(
     void                        *HandlerContext,
     void                        **RegionContext)
 {
+    K2OSKERN_Debug("K2OSACPI:RegionInit = Received a region init for %08X\n", RegionHandle);
     if (Function == ACPI_REGION_DEACTIVATE)
     {
         *RegionContext = NULL;
@@ -90,7 +91,7 @@ sInstallHandlers(void)
         ACPI_SYSTEM_NOTIFY, NotifyHandler, NULL);
     if (ACPI_FAILURE(Status))
     {
-        K2OSKERN_Debug("K2OSACPI: Failure will installing notify handler\n");
+        K2OSKERN_Debug("K2OSACPI: Failure with installing notify handler\n");
         return (Status);
     }
 
@@ -98,14 +99,7 @@ sInstallHandlers(void)
         ACPI_ADR_SPACE_SYSTEM_MEMORY, RegionHandler, RegionInit, NULL);
     if (ACPI_FAILURE(Status))
     {
-        K2OSKERN_Debug("K2OSACPI: Failure will installing OpRegion handler\n");
-        return (Status);
-    }
-
-    Status = AcpiInstallFixedEventHandler(ACPI_EVENT_POWER_BUTTON, PowerButtonHandler, NULL);
-    if (ACPI_FAILURE(Status))
-    {
-        K2OSKERN_Debug("K2OSACPI: Failure will installing Power Button handler\n");
+        K2OSKERN_Debug("K2OSACPI: Failure with installing OpRegion handler\n");
         return (Status);
     }
 
@@ -126,6 +120,7 @@ dlx_entry(
     K2LIST_LINK *       pListLink;
     CACHE_HDR *         pCache;
 #endif
+    ACPI_EVENT_STATUS   evtStatus;
 
     Status = AcpiInitializeSubsystem();
     K2_ASSERT(!ACPI_FAILURE(Status));
@@ -145,6 +140,19 @@ dlx_entry(
     Status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(Status));
 
+    Status = AcpiInstallFixedEventHandler(ACPI_EVENT_POWER_BUTTON, PowerButtonHandler, NULL);
+    if (ACPI_FAILURE(Status))
+    {
+        K2OSKERN_Debug("K2OSACPI: Failure with installing Power Button handler\n");
+        return (Status);
+    }
+    Status = AcpiEnableEvent(ACPI_EVENT_POWER_BUTTON, 0);
+    if (ACPI_FAILURE(Status))
+    {
+        K2OSKERN_Debug("K2OSACPI: Failure enabling Power Button handler\n");
+        return (Status);
+}
+
 #if CHK_WATER
     K2OSKERN_Debug("\n=========================\nAT ACPI INIT DONE:\n");
     pListLink = gK2OSACPI_CacheList.mpHead;
@@ -157,6 +165,62 @@ dlx_entry(
     K2OSKERN_Debug("=========================\n");
 #endif
 
+#if 0
+    AcpiGetEventStatus(ACPI_EVENT_PMTIMER, &evtStatus);
+    K2OSKERN_Debug("ACPI_EVENT_PMTIMER          status = %08X\n", evtStatus);
+    K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLED) ? "ENB" : "DIS",
+        (evtStatus & ACPI_EVENT_FLAG_WAKE_ENABLED) ? "WKE" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_STATUS_SET) ? "SET" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLE_SET) ? "SETENB" : "NOTENB",
+        (evtStatus & ACPI_EVENT_FLAG_HAS_HANDLER) ? "HAND" : "----",
+        (evtStatus & ACPI_EVENT_FLAG_MASKED) ? "MASK" : "LIVE"
+        );
+
+    AcpiGetEventStatus(ACPI_EVENT_GLOBAL, &evtStatus);
+    K2OSKERN_Debug("ACPI_EVENT_GLOBAL           status = %08X\n", evtStatus);
+    K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLED) ? "ENB" : "DIS",
+        (evtStatus & ACPI_EVENT_FLAG_WAKE_ENABLED) ? "WKE" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_STATUS_SET) ? "SET" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLE_SET) ? "SETENB" : "NOTENB",
+        (evtStatus & ACPI_EVENT_FLAG_HAS_HANDLER) ? "HAND" : "----",
+        (evtStatus & ACPI_EVENT_FLAG_MASKED) ? "MASK" : "LIVE"
+    );
+
+    AcpiGetEventStatus(ACPI_EVENT_POWER_BUTTON, &evtStatus);
+    K2OSKERN_Debug("ACPI_EVENT_POWER_BUTTON     status = %08X\n", evtStatus);
+    K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLED) ? "ENB" : "DIS",
+        (evtStatus & ACPI_EVENT_FLAG_WAKE_ENABLED) ? "WKE" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_STATUS_SET) ? "SET" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLE_SET) ? "SETENB" : "NOTENB",
+        (evtStatus & ACPI_EVENT_FLAG_HAS_HANDLER) ? "HAND" : "----",
+        (evtStatus & ACPI_EVENT_FLAG_MASKED) ? "MASK" : "LIVE"
+    );
+
+    AcpiGetEventStatus(ACPI_EVENT_SLEEP_BUTTON, &evtStatus);
+    K2OSKERN_Debug("ACPI_EVENT_SLEEP_BUTTON     status = %08X\n", evtStatus);
+    K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLED) ? "ENB" : "DIS",
+        (evtStatus & ACPI_EVENT_FLAG_WAKE_ENABLED) ? "WKE" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_STATUS_SET) ? "SET" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLE_SET) ? "SETENB" : "NOTENB",
+        (evtStatus & ACPI_EVENT_FLAG_HAS_HANDLER) ? "HAND" : "----",
+        (evtStatus & ACPI_EVENT_FLAG_MASKED) ? "MASK" : "LIVE"
+    );
+
+    AcpiGetEventStatus(ACPI_EVENT_RTC, &evtStatus);
+    K2OSKERN_Debug("ACPI_EVENT_RTC              status = %08X\n", evtStatus);
+    K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLED) ? "ENB" : "DIS",
+        (evtStatus & ACPI_EVENT_FLAG_WAKE_ENABLED) ? "WKE" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_STATUS_SET) ? "SET" : "---",
+        (evtStatus & ACPI_EVENT_FLAG_ENABLE_SET) ? "SETENB" : "NOTENB",
+        (evtStatus & ACPI_EVENT_FLAG_HAS_HANDLER) ? "HAND" : "----",
+        (evtStatus & ACPI_EVENT_FLAG_MASKED) ? "MASK" : "LIVE"
+    );
+#endif
     return K2STAT_NO_ERROR;
 }
 
