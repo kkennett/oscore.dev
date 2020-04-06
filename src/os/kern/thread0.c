@@ -49,17 +49,10 @@ void KernAcpi_Start(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
-UINT32 sMyPITHandler(void *apContext)
-{
-    K2_ASSERT(0);
-    return 0;
-}
-
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
-    KernInitStage           initStage;
-    K2OSKERN_INTR_CONFIG    config;
-    UINT64                  last, newTick;
+    KernInitStage initStage;
+    UINT64        last, newTick;
 
     //
     // run stages up to multithreaded
@@ -84,10 +77,6 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     //
     // main Thread0 actions can commence here
     //
-    K2MEM_Zero(&config, sizeof(config));
-    
-    K2OSKERN_InstallIntrHandler(&config, sMyPITHandler, NULL);
-
 #if 1
     K2OSKERN_Debug("Hang ints on\n");
     last = K2OS_SysUpTimeMs();

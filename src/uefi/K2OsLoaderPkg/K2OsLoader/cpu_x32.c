@@ -120,47 +120,50 @@ EFI_STATUS Loader_FillCpuInfo(void)
 
     if (pMADT == NULL)
     {
-        K2Printf(L"***No APIC table found.\n");
-        return EFI_NOT_FOUND;
+        K2Printf(L"---No APIC table found. Assume CpuId 0\n");
+        gData.LoadInfo.CpuInfo[gData.LoadInfo.mCpuCoreCount].mCpuId = 0;
+        gData.LoadInfo.mCpuCoreCount++;
     }
-
-    left = pMADT->Header.Length;
-    if (left < sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER) + sizeof(APIC_TABLE_ENTRY_HDR))
+    else
     {
-        K2Printf(L"*** MADT size is invalid (%d)\n", left);
-    }
-
-    gData.LoadInfo.mCpuCoreCount = 0;
-
-    left -= sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER);
-    pTabEnt = (APIC_TABLE_ENTRY_HDR *)(((UINT8 *)pMADT) + sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER));
-    do {
-        if (left < pTabEnt->Length)
+        left = pMADT->Header.Length;
+        if (left < sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER) + sizeof(APIC_TABLE_ENTRY_HDR))
         {
-            K2Printf(L"*** Table error\n");
-            return EFI_DEVICE_ERROR;
+            K2Printf(L"*** MADT size is invalid (%d)\n", left);
         }
-        if (pTabEnt->Type == EFI_ACPI_5_0_PROCESSOR_LOCAL_APIC)
-        {
-            pProc = (EFI_ACPI_5_0_PROCESSOR_LOCAL_APIC_STRUCTURE *)pTabEnt;
-            if (pProc->Flags & EFI_ACPI_5_0_LOCAL_APIC_ENABLED)
+
+        gData.LoadInfo.mCpuCoreCount = 0;
+
+        left -= sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER);
+        pTabEnt = (APIC_TABLE_ENTRY_HDR *)(((UINT8 *)pMADT) + sizeof(EFI_ACPI_5_0_MULTIPLE_APIC_DESCRIPTION_TABLE_HEADER));
+        do {
+            if (left < pTabEnt->Length)
             {
-                //
-                // processor is enabled
-                //
-                gData.LoadInfo.CpuInfo[gData.LoadInfo.mCpuCoreCount].mCpuId = pProc->AcpiProcessorId;
-                gData.LoadInfo.mCpuCoreCount++;
-                if (gData.LoadInfo.mCpuCoreCount == K2OS_MAX_CPU_COUNT)
+                K2Printf(L"*** Table error\n");
+                return EFI_DEVICE_ERROR;
+            }
+            if (pTabEnt->Type == EFI_ACPI_5_0_PROCESSOR_LOCAL_APIC)
+            {
+                pProc = (EFI_ACPI_5_0_PROCESSOR_LOCAL_APIC_STRUCTURE *)pTabEnt;
+                if (pProc->Flags & EFI_ACPI_5_0_LOCAL_APIC_ENABLED)
                 {
-                    K2Printf(L"!!! Hit max # of supported CPUs.\n");
-                    break;
+                    //
+                    // processor is enabled
+                    //
+                    gData.LoadInfo.CpuInfo[gData.LoadInfo.mCpuCoreCount].mCpuId = pProc->AcpiProcessorId;
+                    gData.LoadInfo.mCpuCoreCount++;
+                    if (gData.LoadInfo.mCpuCoreCount == K2OS_MAX_CPU_COUNT)
+                    {
+                        K2Printf(L"!!! Hit max # of supported CPUs.\n");
+                        break;
+                    }
                 }
             }
-        }
 
-        left -= pTabEnt->Length;
-        pTabEnt = (APIC_TABLE_ENTRY_HDR *)(((UINT8 *)pTabEnt) + pTabEnt->Length);
-    } while (left > 0);
+            left -= pTabEnt->Length;
+            pTabEnt = (APIC_TABLE_ENTRY_HDR *)(((UINT8 *)pTabEnt) + pTabEnt->Length);
+        } while (left > 0);
+    }
 
     if (gData.LoadInfo.mCpuCoreCount == 0)
     {
