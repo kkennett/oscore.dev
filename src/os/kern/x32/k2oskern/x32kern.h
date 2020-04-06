@@ -64,9 +64,10 @@ K2_STATIC_ASSERT(K2OSKERN_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA
 /* --------------------------------------------------------------------------------- */
 
 // interrupt vectors 0-31 reserved
-#define X32KERN_INTR_ICI_BASE           32
+#define X32KERN_INTR_DEV_BASE           32  // fits with vectors from classic PIC
+#define X32KERN_INTR_DEV_LAST           55  // 32 + 24 - 1
 
-#define X32KERN_INTR_LVT_BASE           (X32KERN_INTR_ICI_BASE + K2OS_MAX_CPU_COUNT)
+#define X32KERN_INTR_LVT_BASE           56 
 
 #define X32KERN_INTR_LVT_CMCI           (X32KERN_INTR_LVT_BASE + 0)
 #define X32KERN_INTR_LVT_TIMER          (X32KERN_INTR_LVT_BASE + 1)
@@ -75,9 +76,11 @@ K2_STATIC_ASSERT(K2OSKERN_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA
 #define X32KERN_INTR_LVT_LINT0          (X32KERN_INTR_LVT_BASE + 4)
 #define X32KERN_INTR_LVT_LINT1          (X32KERN_INTR_LVT_BASE + 5)
 #define X32KERN_INTR_LVT_ERROR          (X32KERN_INTR_LVT_BASE + 6)
-#define X32KERN_INTR_RESERVED_LVT_7     (X32KERN_INTR_LVT_BASE + 7)
+#define X32KERN_INTR_LVT_RESERVED       (X32KERN_INTR_LVT_BASE + 7)
 
-#define X32KERN_INTR_DEV_BASE           (X32KERN_INTR_LVT_BASE + 8)
+#define X32KERN_INTR_ICI_BASE           (X32KERN_INTR_LVT_BASE + 8)
+#define X32KERN_INTR_ICI_LAST           (X32KERN_INTR_ICI_BASE + K2OS_MAX_CPU_COUNT - 1)
+
 
 /* --------------------------------------------------------------------------------- */
 

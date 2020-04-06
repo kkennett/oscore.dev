@@ -202,6 +202,23 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
 static K2OSKERN_OBJ_INTR *  sgpIntrObj[X32_NUM_IDT_ENTRIES] = { 0, };
 
+static BOOL sCheckTimer(K2OSKERN_CPUCORE * pThisCore)
+{
+    K2OSKERN_CPUCORE_EVENT volatile * pCoreEvent;
+
+    if (!X32Kern_IntrTimerTick())
+        return FALSE;
+
+    pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
+    pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
+    pCoreEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
+    pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
+
+    KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
+
+    return TRUE;
+}
+
 void
 X32Kern_InterruptHandler(
     X32_EXCEPTION_CONTEXT aContext
@@ -227,14 +244,21 @@ X32Kern_InterruptHandler(
 
     pActiveThread = pThisCore->mpActiveThread;
 
-    if (aContext.Exception_IrqVector >= X32KERN_INTR_ICI_BASE)
+    if (aContext.Exception_IrqVector < X32KERN_INTR_DEV_BASE)
     {
-        if (aContext.Exception_IrqVector < X32KERN_INTR_LVT_BASE)
+        threadFaulted = sX32Kern_Exception(pThisCore, pActiveThread, &aContext);
+        if (threadFaulted)
+            enterMonitor = TRUE;
+    }
+    else
+    {
+//        K2OSKERN_Debug("Core %d Vector %d\n", pThisCore->mCoreIx, aContext.Exception_IrqVector);
+        if (aContext.Exception_IrqVector >= X32KERN_INTR_ICI_BASE)
         {
             //
-            // this is an ICI from another core
+            // ICI from another core
             //
-            K2_ASSERT(aContext.Exception_IrqVector - X32KERN_INTR_ICI_BASE < gData.mCpuCount);
+            K2_ASSERT(aContext.Exception_IrqVector <= X32KERN_INTR_ICI_LAST);
 
             pCoreEvent = &pThisCore->IciFromOtherCore[aContext.Exception_IrqVector - X32KERN_INTR_ICI_BASE];
             eventType = pCoreEvent->mEventType;
@@ -244,65 +268,57 @@ X32Kern_InterruptHandler(
             KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
             enterMonitor = TRUE;
         }
-        else
+        else if (aContext.Exception_IrqVector < X32KERN_INTR_LVT_BASE)
         {
-            if (aContext.Exception_IrqVector < X32KERN_INTR_DEV_BASE)
+            //
+            // external interrupt
+            //
+            devIntrId = KernArch_SysIrqToDevIntr(aContext.Exception_IrqVector);
+//            K2OSKERN_Debug("IRQ %d -> DEVINTR %d on core %d\n", aContext.Exception_IrqVector, devIntrId, pThisCore->mCoreIx);
+            K2_ASSERT(devIntrId < X32_NUM_IDT_ENTRIES);
+            if ((gpX32Kern_MADT == NULL) && (devIntrId == 0))
             {
                 //
-                // this is a LVT interrupt from the CPU's APIC
+                // 1ms tick via PIT
                 //
-                if (aContext.Exception_IrqVector == X32KERN_INTR_LVT_TIMER)
-                {
-                    //
-                    // 1ms tick
-                    //
-                    if (X32Kern_IntrTimerTick())
-                    {
-                        pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
-                        pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
-                        pCoreEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
-                        pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
-
-                        KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
-
-                        enterMonitor = TRUE;
-                    }
-                }
-                else
-                {
-                    K2OSKERN_Panic("***Unexpected LVT interrupt %d\n", aContext.Exception_IrqVector);
-                    while (1);
-                }
+                if (sCheckTimer(pThisCore))
+                    enterMonitor = TRUE;
+            }
+            else if (sgpIntrObj[devIntrId] != NULL)
+            {
+                K2OSKERN_Debug("IRQ %d -> DEVINTR %d on core %d\n", aContext.Exception_IrqVector, devIntrId, pThisCore->mCoreIx);
+                sgpIntrObj[devIntrId]->mfHandler(sgpIntrObj[devIntrId]->mpHandlerContext);
             }
             else
             {
+                K2OSKERN_Debug("****Unhandled Interrupt IRQ %d (Intr %d). Masked\n", aContext.Exception_IrqVector, devIntrId);
+                X32Kern_MaskDevIntr(devIntrId);
+            }
+        }
+        else
+        {
+            //
+            // LVT interrupt
+            //
+            if (aContext.Exception_IrqVector == X32KERN_INTR_LVT_TIMER)
+            {
+                K2_ASSERT(gpX32Kern_MADT != NULL);
                 //
-                // this is an IRQ from a device
+                // 1ms tick via LVT TIMER
                 //
-                K2OSKERN_Debug("IRQ %d on core %d\n", aContext.Exception_IrqVector, pThisCore->mCoreIx);
-                devIntrId = KernArch_SysIrqToDevIntr(aContext.Exception_IrqVector);
-                K2_ASSERT(devIntrId < X32_NUM_IDT_ENTRIES);
-                if (sgpIntrObj[devIntrId] != NULL)
-                {
-                    sgpIntrObj[devIntrId]->mfHandler(sgpIntrObj[devIntrId]->mpHandlerContext);
-                }
-                else
-                {
-                    K2OSKERN_Debug("Unhandled Interrupt IRQ %d (Intr %d). Masked\n", aContext.Exception_IrqVector, devIntrId);
-                    X32Kern_MaskDevIntr(devIntrId);
-                }
+                if (sCheckTimer(pThisCore))
+                    enterMonitor = TRUE;
+            }
+            else
+            {
+                K2OSKERN_Panic("***Unexpected LVT interrupt %d\n", aContext.Exception_IrqVector);
+                while (1);
             }
         }
         //
         // end of interrupt
         //
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_EOI, 0);
-    }
-    else
-    {
-        threadFaulted = sX32Kern_Exception(pThisCore, pActiveThread, &aContext);
-        if (threadFaulted)
-            enterMonitor = TRUE;
+        X32Kern_EOI(aContext.Exception_IrqVector);
     }
 
     if (enterMonitor)
