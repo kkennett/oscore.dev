@@ -30,17 +30,23 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __X32KERNASM_INC
-#define __X32KERNASM_INC
+#include "x32kernasm.inc"
 
-#include <k2asmx32.inc>
-#include <spec/x32pcdef.inc>
-#include "x32kerndef.inc"
+// void X32Kern_PITInit(void)
+BEGIN_X32_PROC(X32Kern_PITInit)
+    pushfd
+    cli
+    mov %al, 0x34
+    outb X32PC_PIT_CMD_IOPORT, %al
+    nop
+    mov %ax, 1193 // == 1000 Hz.  36157 == 33 Hz
+    outb X32PC_PIT_TIMER, %al
+    rol %ax, 8           
+    outb X32PC_PIT_TIMER, %al
+    popfd
+    ret
+END_X32_PROC(X32Kern_PITInit)
+  
+    .end
 
-/* --------------------------------------------------------------------------------- */
 
-
-
-/* --------------------------------------------------------------------------------- */
-
-#endif // __X32KERNASM_INC

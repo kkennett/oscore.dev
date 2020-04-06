@@ -153,6 +153,7 @@ void X32Kern_IDTSetup(void);
 void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0);
 
 void X32Kern_PICInit(void);
+void X32Kern_PITInit(void);
 void X32Kern_APICInit(UINT32 aCpuIx);
 void X32Kern_IoApicInit(void);
 
@@ -172,6 +173,8 @@ BOOL X32Kern_IntrTimerTick(void);
 void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig);
 void X32Kern_MaskDevIntr(UINT8 aDevIntrId);
 void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId);
+
+void X32Kern_EOI(UINT32 aSysIrq);
 
 /* --------------------------------------------------------------------------------- */
 

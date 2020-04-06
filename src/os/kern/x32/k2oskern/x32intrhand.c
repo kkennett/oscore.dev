@@ -90,7 +90,8 @@ sX32Kern_DumpStackTrace(
             return;
         }
         K2OSKERN_Debug("%08X ", pBackPtr[1]);
-        sEmitSymbolName(apThisCore, pBackPtr[1]);
+        if (pBackPtr[1] != 0)
+            sEmitSymbolName(apThisCore, pBackPtr[1]);
         K2OSKERN_Debug("\n");
     } while (1);
 }

@@ -142,35 +142,39 @@ X32Kern_InitStall(
     //
     // now get bus clock frequency
     //
-
-    // set timer divisor to 4 to get bus clock rate (FSB rate is gBusClockRate * 4)
-    reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV);
-    reg &= ~X32_LOCAPIC_TIMER_DIV_MASK;
-    reg |= X32_LOCAPIC_TIMER_DIV_4;
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV, reg);
-
-    // start the timer
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0xFFFFFFFF);
-
-    // timer counts DOWN.  use 1/10 second timings, averaging 4 of them
-    for (ix = 0; ix < 4; ix++)
+    if (gpX32Kern_MADT != NULL)
     {
-        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
-        K2OSKERN_MicroStall(100000);
-        v = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
-        avg[ix] = reg - v;
-    }
+        // set timer divisor to 4 to get bus clock rate (FSB rate is gBusClockRate * 4)
+        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV);
+        reg &= ~X32_LOCAPIC_TIMER_DIV_MASK;
+        reg |= X32_LOCAPIC_TIMER_DIV_4;
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV, reg);
 
-    // stop the timer
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
+        // start the timer
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0xFFFFFFFF);
 
-    // average the timings
-    for (ix = 1; ix < 4; ix++)
-    {
-        avg[0] += avg[ix];
+        // timer counts DOWN.  use 1/10 second timings, averaging 4 of them
+        for (ix = 0; ix < 4; ix++)
+        {
+            reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
+            K2OSKERN_MicroStall(100000);
+            v = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
+            avg[ix] = reg - v;
+        }
+
+        // stop the timer
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
+
+        // average the timings
+        for (ix = 1; ix < 4; ix++)
+        {
+            avg[0] += avg[ix];
+        }
+        avg[0] >>= 2;
+        gX32Kern_BusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
     }
-    avg[0] >>= 2;
-    gX32Kern_BusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
+    else
+        gX32Kern_BusClockRate = 1000000;
 }
 
 void
@@ -247,8 +251,6 @@ X32Kern_IntrTimerTick(
     //
     sgTickCounter++;
 
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_EOI, X32KERN_INTR_LVT_TIMER);
-
     //
     // if scheduling timer expires, return TRUE and will enter scheduler, else return FALSE
     //
@@ -283,27 +285,36 @@ X32Kern_StartTime(
 {
     UINT32 reg;
 
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-    sgTickCounter = 0;
+    if (gpX32Kern_MADT != NULL)
+    {
+        //
+        // called on core 0 right before core enters monitor for the first time 
+        //
+        sgTickCounter = 0;
 
-    // make sure the timer is stopped
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
+        // make sure the timer is stopped
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
 
-    // set timer mode to masked and periodic
-    reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER);
-    reg &= ~X32_LOCAPIC_LVT_TIMER_MODE_MASK;
-    reg |= X32_LOCAPIC_LVT_TIMER_PERIODIC;
-    reg |= X32_LOCAPIC_LVT_MASK;
-    reg &= ~X32_LOCAPIC_LVT_STATUS;
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
+        // set timer mode to masked and periodic
+        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER);
+        reg &= ~X32_LOCAPIC_LVT_TIMER_MODE_MASK;
+        reg |= X32_LOCAPIC_LVT_TIMER_PERIODIC;
+        reg |= X32_LOCAPIC_LVT_MASK;
+        reg &= ~X32_LOCAPIC_LVT_STATUS;
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
 
-    // interrupt once per millisecond
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, gX32Kern_BusClockRate / 1000);
+        // interrupt once per millisecond
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, gX32Kern_BusClockRate / 1000);
 
-    // unmask interrupt
-    reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
+        // unmask interrupt
+        reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
+    }
+    else
+    {
+        K2OSKERN_Debug("No MADT - must use PIT for timer!\n");
+        X32Kern_PITInit();
+        X32Kern_UnmaskDevIntr(0);
+    }
 }
 
