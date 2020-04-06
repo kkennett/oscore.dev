@@ -204,31 +204,6 @@ static void sInit_BeforeHal_ScanAcpi(void)
     }
 
     //
-    // find MADT
-    //
-    pTabAddr = gpX32Kern_AcpiTablePtrs;
-    workCount = gX32Kern_AcpiTableCount;
-    do {
-        workAddr = (UINT32)(*pTabAddr);
-        workAddr = workAddr - physBase + virtBase;
-        pHeader = (ACPI_DESC_HEADER *)workAddr;
-        if (pHeader->Signature == ACPI_MADT_SIGNATURE)
-            break;
-        pTabAddr++;
-    } while (--workCount);
-    K2_ASSERT(workCount > 0);
-
-    gpX32Kern_MADT = (ACPI_MADT *)pHeader;
-
-    //
-    // MADT - check to see if there is a PIC and if so make it be quiet
-    //
-    if (gpX32Kern_MADT->Flags & ACPI_MADT_FLAGS_X32_DUAL_8259_PRESENT)
-    {
-        X32Kern_PICInit();
-    }
-
-    //
     // init irq (vector) back to intr mapping
     //
     for (left = 0; left < X32KERN_INTR_DEV_BASE; left++)
@@ -250,74 +225,108 @@ static void sInit_BeforeHal_ScanAcpi(void)
     }
 
     //
-    // MADT - first pass - discover stuff
+    // find MADT
     //
-    ixCpu = 0;
-    localApicAddress = (UINT32)gpX32Kern_MADT->LocalApicAddress;
-    pScan = ((UINT8 *)gpX32Kern_MADT) + sizeof(ACPI_MADT);
-    left = gpX32Kern_MADT->Header.Length - sizeof(ACPI_MADT);
-    K2_ASSERT(left > 0);
-    pOverride = NULL;
+    pTabAddr = gpX32Kern_AcpiTablePtrs;
+    workCount = gX32Kern_AcpiTableCount;
     do {
-        if (*pScan == ACPI_MADT_SUB_TYPE_LOCAL_APIC_ADDRESS_OVERRIDE)
-        {
-            if (pOverride == NULL)
-                pOverride = (ACPI_MADT_SUB_LOCAL_APIC_ADDRESS_OVERRIDE *)pScan;
-        }
-        else if (*pScan == ACPI_MADT_SUB_TYPE_PROCESSOR_LOCAL_APIC)
-        {
-            K2_ASSERT(ixCpu < gData.mCpuCount);
-            gpX32Kern_MADT_LocApic[ixCpu] = (ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC *)pScan;
-            ixCpu++;
-        }
-        else if (*pScan == ACPI_MADT_SUB_TYPE_IO_APIC)
-        {
-            K2_ASSERT(gpX32Kern_MADT_IoApic == NULL);
-            gpX32Kern_MADT_IoApic = (ACPI_MADT_SUB_IO_APIC *)pScan;
-        }
-        else if (*pScan == ACPI_MADT_SUB_TYPE_INTERRUPT_SOURCE_OVERRIDE)
-        {
-            pIntrOver = (ACPI_MADT_SUB_INTERRUPT_SOURCE_OVERRIDE *)pScan;
-           
-            K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+        workAddr = (UINT32)(*pTabAddr);
+        workAddr = workAddr - physBase + virtBase;
+        pHeader = (ACPI_DESC_HEADER *)workAddr;
+        if (pHeader->Signature == ACPI_MADT_SIGNATURE)
+            break;
+        pTabAddr++;
+    } while (--workCount);
 
-            gX32Kern_IntrOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
-            gX32Kern_IntrOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
-
-            gX32Kern_IrqToDevIntrMap[pIntrOver->GlobalSystemInterrupt + X32KERN_INTR_DEV_BASE] = pIntrOver->Source;
-        }
-        K2_ASSERT(left >= pScan[1]);
-        left -= pScan[1];
-        pScan += pScan[1];
-    } while (left > 0);
-    K2_ASSERT(ixCpu == gData.mCpuCount);
-
-    if (pOverride != NULL)
+    if (workCount == 0)
     {
-        localApicAddress = (UINT32)pOverride->LocalApicAddress;
+        //
+        // No MADT!  Assume old PIC
+        //
+        gpX32Kern_MADT = NULL;
+        X32Kern_PICInit();
     }
-    KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_LOCAPIC_KVA, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
-
-    //
-    // init and enable cpu 0 APIC 
-    //
-    X32Kern_APICInit(0);
-    gX32Kern_ApicReady = TRUE;
-    K2_CpuWriteBarrier();
-
-    //
-    // find and configure io apic 
-    //
-    if (gpX32Kern_MADT_IoApic != NULL)
+    else
     {
-        K2_ASSERT(gpX32Kern_MADT_IoApic->GlobalSystemInterruptBase == 0);
-
-        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_IOAPIC_KVA, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+        gpX32Kern_MADT = (ACPI_MADT *)pHeader;
+        //
+        // MADT - check to see if there is a PIC and if so make it be quiet
+        //
+        if (gpX32Kern_MADT->Flags & ACPI_MADT_FLAGS_X32_DUAL_8259_PRESENT)
+        {
+            X32Kern_PICInit();
+        }
 
         //
-        // initialize IO Apic
+        // MADT - first pass - discover stuff
         //
-        X32Kern_IoApicInit();
+        ixCpu = 0;
+        localApicAddress = (UINT32)gpX32Kern_MADT->LocalApicAddress;
+        pScan = ((UINT8 *)gpX32Kern_MADT) + sizeof(ACPI_MADT);
+        left = gpX32Kern_MADT->Header.Length - sizeof(ACPI_MADT);
+        K2_ASSERT(left > 0);
+        pOverride = NULL;
+        do {
+            if (*pScan == ACPI_MADT_SUB_TYPE_LOCAL_APIC_ADDRESS_OVERRIDE)
+            {
+                if (pOverride == NULL)
+                    pOverride = (ACPI_MADT_SUB_LOCAL_APIC_ADDRESS_OVERRIDE *)pScan;
+            }
+            else if (*pScan == ACPI_MADT_SUB_TYPE_PROCESSOR_LOCAL_APIC)
+            {
+                K2_ASSERT(ixCpu < gData.mCpuCount);
+                gpX32Kern_MADT_LocApic[ixCpu] = (ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC *)pScan;
+                ixCpu++;
+            }
+            else if (*pScan == ACPI_MADT_SUB_TYPE_IO_APIC)
+            {
+                K2_ASSERT(gpX32Kern_MADT_IoApic == NULL);
+                gpX32Kern_MADT_IoApic = (ACPI_MADT_SUB_IO_APIC *)pScan;
+            }
+            else if (*pScan == ACPI_MADT_SUB_TYPE_INTERRUPT_SOURCE_OVERRIDE)
+            {
+                pIntrOver = (ACPI_MADT_SUB_INTERRUPT_SOURCE_OVERRIDE *)pScan;
+
+                K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+
+                gX32Kern_IntrOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
+                gX32Kern_IntrOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
+
+                gX32Kern_IrqToDevIntrMap[pIntrOver->GlobalSystemInterrupt + X32KERN_INTR_DEV_BASE] = pIntrOver->Source;
+            }
+            K2_ASSERT(left >= pScan[1]);
+            left -= pScan[1];
+            pScan += pScan[1];
+        } while (left > 0);
+        K2_ASSERT(ixCpu == gData.mCpuCount);
+
+        if (pOverride != NULL)
+        {
+            localApicAddress = (UINT32)pOverride->LocalApicAddress;
+        }
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_LOCAPIC_KVA, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+
+        //
+        // init and enable cpu 0 APIC 
+        //
+        X32Kern_APICInit(0);
+        gX32Kern_ApicReady = TRUE;
+        K2_CpuWriteBarrier();
+
+        //
+        // find and configure io apic 
+        //
+        if (gpX32Kern_MADT_IoApic != NULL)
+        {
+            K2_ASSERT(gpX32Kern_MADT_IoApic->GlobalSystemInterruptBase == 0);
+
+            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_IOAPIC_KVA, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+
+            //
+            // initialize IO Apic
+            //
+            X32Kern_IoApicInit();
+        }
     }
 
     //

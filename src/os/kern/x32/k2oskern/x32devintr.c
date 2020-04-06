@@ -69,14 +69,138 @@ X32Kern_PICInit(void)
     X32_IoWrite8(0xFF, X32PC_PIC2_DATA);
 }
 
+void X32Kern_PIC_EOI_BitNum(UINT8 aBitNum)
+{
+    BOOL disp;
+
+    K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
+
+    /* disable interrupts */
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    if (aBitNum > 7)
+    {
+        /* mark specific EOI for slave PIC */
+        aBitNum -= 8;
+
+        X32_IoWrite8(X32PC_8259_OCW_SPECIFIC_EOI(aBitNum), X32PC_PIC2_COMMAND);
+
+        /* set to EOI slave's port on master PIC */
+        aBitNum = X32PC_IRQ_PIC2;
+    }
+
+    /* mark specific EOI for master PIC */
+    X32_IoWrite8(X32PC_8259_OCW_SPECIFIC_EOI(aBitNum), X32PC_PIC1_COMMAND);
+
+    /* put interrupts back to whatever they were */
+    K2OSKERN_SetIntr(disp);
+}
+
+UINT32 X32Kern_PIC_ReadMask(void)
+{
+    BOOL    disp;
+    UINT32  mask;
+
+    /* disable interrupts */
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    /* read the mask for the first PIC */
+    mask = X32_IoRead8(X32PC_PIC1_DATA);
+    mask |= (((UINT32)X32_IoRead8(X32PC_PIC2_DATA)) << 8);
+
+    /* put interrupts back to whatever they were */
+    K2OSKERN_SetIntr(disp);
+
+    return mask;
+}
+
+void X32Kern_PIC_Mask_BitNum(UINT32 aBitNum)
+{
+    BOOL    disp;
+    UINT8   mask;
+    UINT16  port;
+
+    K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
+
+    /* disable interrupts */
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    if (aBitNum > 7)
+    {
+        /* mask on slave PIC */
+        aBitNum -= 8;
+        port = X32PC_PIC2_DATA;
+    }
+    else
+        port = X32PC_PIC1_DATA;
+
+    /* change the mask */
+    mask = X32_IoRead8(port);
+    if (!(mask & (1 << aBitNum)))
+    {
+        mask |= (1 << aBitNum);
+        X32_IoWrite8(mask, port);
+    }
+
+    /* put interrupts back to whatever they were */
+    K2OSKERN_SetIntr(disp);
+}
+
+void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
+{
+    BOOL    disp;
+    UINT16  port;
+    UINT8   mask;
+
+    K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
+
+    /* disable interrupts */
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    if (aBitNum > 7)
+    {
+        /* mask on slave PIC */
+        aBitNum -= 8;
+        port = X32PC_PIC2_DATA;
+    }
+    else
+        port = X32PC_PIC1_DATA;
+
+    /* change the mask */
+    mask = X32_IoRead8(port);
+    if (mask & (1 << aBitNum))
+    {
+        mask &= ~(1 << aBitNum);
+        X32_IoWrite8(mask, port);
+    }
+
+    /* put interrupts back to whatever they were */
+    K2OSKERN_SetIntr(disp);
+}
+
 static
 void
-sPic_SetMask(
-    UINT8   aIntrId,
+sPic_SetDevIntrMask(
+    UINT32  aDevIntr,
     BOOL    aSetMask
 )
 {
-    K2_ASSERT(0);
+    UINT32 bitNum;
+
+    bitNum = gX32Kern_IntrOverrideMap[aDevIntr];
+    if (bitNum == (UINT32)-1)
+        bitNum = aDevIntr;
+
+    if (aSetMask)
+    {
+        K2OSKERN_Debug("PIC.Mask Device Intr %d(%d)\n", aDevIntr, bitNum);
+        X32Kern_PIC_Mask_BitNum(bitNum);
+    }
+    else
+    {
+        K2OSKERN_Debug("PIC.Unmask Device Intr %d(%d)\n", aDevIntr, bitNum);
+        X32Kern_PIC_Unmask_BitNum(bitNum);
+    }
 }
 
 UINT32 sReadIoApic(UINT32 aReg)
@@ -133,29 +257,30 @@ KernArch_SysIrqToDevIntr(
 
 static
 void
-sIoApic_SetMask(
-    UINT8   aDevIntrId,
+sIoApic_SetDevIntrMask(
+    UINT32  aDevIntr,
     BOOL    aSetMask
 )
 {
-    UINT32 mapped;
     UINT32 v;
+    UINT32 redIx;
 
-    K2_ASSERT(aDevIntrId < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+    redIx = gX32Kern_IntrOverrideMap[aDevIntr];
+    if (redIx == (UINT32)-1)
+        redIx = aDevIntr;
 
-    mapped = KernArch_DevIntrToSysIrq(aDevIntrId);
-
-    v = sReadIoApic(X32_IOAPIC_REGIX_REDLO(mapped));
+    v = sReadIoApic(X32_IOAPIC_REGIX_REDLO(redIx));
     if (aSetMask)
     {
+        K2OSKERN_Debug("IOAPIC.Mask Device Intr %d(%d)\n", aDevIntr, redIx);
         v |= X32_IOAPIC_REDLO_MASK;
     }
     else
     {
+        K2OSKERN_Debug("IOAPIC.Unmask Device Intr %d(%d)\n", aDevIntr, redIx);
         v &= ~X32_IOAPIC_REDLO_MASK;
     }
-
-    sWriteIoApic(X32_IOAPIC_REGIX_REDLO(mapped), v);
+    sWriteIoApic(X32_IOAPIC_REGIX_REDLO(redIx), v);
 }
 
 void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
@@ -163,6 +288,9 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     UINT32 redIx;
     UINT32 redHi;
     UINT32 redLo;
+
+    if (gpX32Kern_MADT == NULL)
+        return;
 
     //
     // default to core 0 targeted
@@ -253,17 +381,34 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
 void X32Kern_MaskDevIntr(UINT8 aDevIntrId)
 {
     K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-    if (sgUseIoApic)
-        sIoApic_SetMask(aDevIntrId, TRUE);
+    if (gpX32Kern_MADT != NULL)
+        sIoApic_SetDevIntrMask(aDevIntrId, TRUE);
     else
-        sPic_SetMask(aDevIntrId, TRUE);
+        sPic_SetDevIntrMask(aDevIntrId, TRUE);
 }
 
 void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId)
 {
     K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-    if (sgUseIoApic)
-        sIoApic_SetMask(aDevIntrId, FALSE);
+    if (gpX32Kern_MADT != NULL)
+        sIoApic_SetDevIntrMask(aDevIntrId, FALSE);
     else
-        sPic_SetMask(aDevIntrId, FALSE);
+        sPic_SetDevIntrMask(aDevIntrId, FALSE);
 }
+
+void X32Kern_EOI(UINT32 aSysIrq)
+{
+    UINT32 devIntr;
+
+    devIntr = KernArch_SysIrqToDevIntr(aSysIrq);
+
+    if (gpX32Kern_MADT != NULL)
+    {
+        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_EOI, devIntr);
+    }
+    else
+    {
+        X32Kern_PIC_EOI_BitNum((UINT8)devIntr);
+    }
+}
+
