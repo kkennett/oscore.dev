@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-void KernAcpi_Start(void)
+void KernAcpi_Init(void)
 {
     DLX_pf_ENTRYPOINT   acpiEntryPoint;
     K2STAT              stat;
@@ -49,10 +49,38 @@ void KernAcpi_Start(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
+typedef void (*K2OSEXEC_pf_Run)(void);
+
+static K2OSEXEC_pf_Run K2OSEXEC_Run;
+
+void KernExec_Init(void)
+{
+    DLX_pf_ENTRYPOINT   execEntryPoint;
+    K2STAT              stat;
+
+    stat = DLX_FindExport(
+        gData.mpShared->mpDlxExec,
+        DlxSeg_Text,
+        "K2OSEXEC_Run",
+        (UINT32 *)&K2OSEXEC_Run);
+    if (K2STAT_IS_ERROR(stat))
+        K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_RunIn\" missing\n");
+
+    stat = gData.mpShared->FuncTab.GetDlxInfo(
+        gData.mpShared->mpDlxExec,
+        NULL,
+        &execEntryPoint,
+        NULL,
+        NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    stat = execEntryPoint(gData.mpShared->mpDlxExec, DLX_ENTRY_REASON_LOAD);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+}
+
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
     KernInitStage initStage;
-    UINT64        last, newTick;
 
     //
     // run stages up to multithreaded
@@ -62,33 +90,23 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
         KernInit_Stage(initStage);
     }
 
-    K2OSKERN_Debug("Up to KernInitStage_MultiThreaded\n");
-
     //
     // kernel init finished.  init core stuff that needs threads
     //
     gData.mpShared->FuncTab.CoreThreadedPostInit();
 
     //
-    // find and call entrypoint for acpi dlx
+    // "load" ACPI and EXEC DLX
     //
-    KernAcpi_Start();
+    KernAcpi_Init();
+    KernExec_Init();
 
     //
-    // main Thread0 actions can commence here
+    // run the executive
     //
-#if 1
-    K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
-    while (1)
-    {
-        do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
-    }
-#endif
+    K2OSEXEC_Run();
+
+    K2OSKERN_Panic("Executive returned");
 
     return 0xAABBCCDD;
 }

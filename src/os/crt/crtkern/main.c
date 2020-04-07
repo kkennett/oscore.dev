@@ -117,6 +117,9 @@ sInitialize(
     status = DLX_Acquire("k2osacpi.dlx", &gShared.mpDlxAcpi);
     K2_ASSERT(!K2STAT_IS_ERROR(status));
 
+    status = DLX_Acquire("k2osexec.dlx", &gShared.mpDlxExec);
+    K2_ASSERT(!K2STAT_IS_ERROR(status));
+
     status = DLX_Acquire("k2oskern.dlx", &gShared.mpDlxKern);
     K2_ASSERT(!K2STAT_IS_ERROR(status));
 

@@ -1309,6 +1309,11 @@ static void sInit_BeforeVirt(void)
     sInitMapDlxSegments(&gData.DlxAcpi);
     pNode->mpSegment = &gData.DlxAcpi.PageSeg;
 
+    stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gData.DlxExec.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    sInitMapDlxSegments(&gData.DlxExec);
+    pNode->mpSegment = &gData.DlxExec.PageSeg;
+
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, gpProc0->PrimaryModule.PageSeg.SegTreeNode.mUserVal, K2_VA32_MEMPAGE_BYTES, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     sInitMapDlxSegments(&gpProc0->PrimaryModule);

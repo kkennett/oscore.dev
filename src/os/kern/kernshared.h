@@ -95,6 +95,7 @@ struct _K2OSKERN_SHARED
     DLX *                   mpDlxKern;
     DLX *                   mpDlxHal;
     DLX *                   mpDlxAcpi;
+    DLX *                   mpDlxExec;
     K2OSKERN_FUNCTAB        FuncTab;
 };
 

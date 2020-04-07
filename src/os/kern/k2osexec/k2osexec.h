@@ -30,16 +30,12 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2osacpi.h"
+#ifndef __K2OSEXEC_H
+#define __K2OSEXEC_H
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
-{
-    return K2STAT_NO_ERROR;
-}
+#include <k2oskern.h>
+#include "..\k2osacpi\k2osacpi.h"
 
- 
+
+
+#endif // __K2OSEXEC_H

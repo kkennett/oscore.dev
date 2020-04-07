@@ -862,6 +862,7 @@ struct _KERN_DATA
     K2OSKERN_OBJ_DLX                    DlxCrt;
     K2OSKERN_OBJ_DLX                    DlxHal;
     K2OSKERN_OBJ_DLX                    DlxAcpi;
+    K2OSKERN_OBJ_DLX                    DlxExec;
     // kernel dlx is in gpProc0 process object
 
     // sched.c
