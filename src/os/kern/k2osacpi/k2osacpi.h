@@ -57,6 +57,7 @@ extern K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
 typedef struct _CACHE_HDR CACHE_HDR;
 struct _CACHE_HDR
 {
+    UINT32              mCacheId;
     char *              mpCacheName;
     UINT32              mObjectBytes;
     UINT32              mMaxDepth;

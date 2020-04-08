@@ -48,6 +48,7 @@ GCCOPT += -DACPI_USE_NATIVE_DIVIDE
 # Executive
 #
 SOURCES += dlx_entry.c 
+SOURCES += run.c
 
 ifeq ($(K2_ARCH),X32)
 SOURCE_LIBS += @shared/lib/k2archx32

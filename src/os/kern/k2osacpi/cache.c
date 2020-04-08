@@ -44,11 +44,13 @@ static void sInitCache(CACHE_HDR *apCache)
     pListLink = (K2LIST_LINK *)&apCache->CacheData[0];
     do {
         pAct = ((UINT8 *)pListLink) + sizeof(K2LIST_LINK);
-        K2MEM_Set(pAct, 0x55, apCache->mObjectBytes - sizeof(K2LIST_LINK));
+        K2MEM_Set(pAct, (UINT8)apCache->mCacheId, apCache->mObjectBytes - sizeof(K2LIST_LINK));
         K2LIST_AddAtTail(&apCache->FreeList, pListLink);
         pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + apCache->mObjectBytes);
     } while (--MaxDepth);
 }
+
+static UINT32 sSysCacheId = 0x65;
 
 ACPI_STATUS
 AcpiOsCreateCache(
@@ -81,6 +83,8 @@ AcpiOsCreateCache(
     pRet->mpCacheName = CacheName;
     pRet->mObjectBytes = objectBytes;
     pRet->mMaxDepth = MaxDepth;
+    pRet->mCacheId = sSysCacheId++;
+    K2OSKERN_Debug("%02X = %s\n", pRet->mCacheId, pRet->mpCacheName);
 
     K2OSKERN_SeqIntrInit(&pRet->SeqLock);
 
@@ -160,7 +164,7 @@ AcpiOsAcquireObject(
         //
         // if this fires an object was used after it was freed
         //
-        K2_ASSERT(K2MEM_Verify(pAct, 0x55, pCache->mObjectBytes - sizeof(K2LIST_LINK)));
+        K2_ASSERT(K2MEM_Verify(pAct, (UINT8)pCache->mCacheId, pCache->mObjectBytes - sizeof(K2LIST_LINK)));
 
         K2LIST_Remove(&pCache->FreeList, pListLink);
 
@@ -205,7 +209,7 @@ AcpiOsReleaseObject(
     K2_ASSERT((offset % pCache->mObjectBytes) == 0);
     K2_ASSERT((offset / pCache->mObjectBytes) < pCache->mMaxDepth);
 
-    K2MEM_Set(Object, 0x55, pCache->mObjectBytes - sizeof(K2LIST_LINK));
+    K2MEM_Set(Object, (UINT8)pCache->mCacheId, pCache->mObjectBytes - sizeof(K2LIST_LINK));
 
     disp = K2OSKERN_SeqIntrLock(&pCache->SeqLock);
 

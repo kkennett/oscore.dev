@@ -193,12 +193,12 @@ sPic_SetDevIntrMask(
 
     if (aSetMask)
     {
-        K2OSKERN_Debug("PIC.Mask Device Intr %d(%d)\n", aDevIntr, bitNum);
+//        K2OSKERN_Debug("PIC.Mask Device Intr %d(%d)\n", aDevIntr, bitNum);
         X32Kern_PIC_Mask_BitNum(bitNum);
     }
     else
     {
-        K2OSKERN_Debug("PIC.Unmask Device Intr %d(%d)\n", aDevIntr, bitNum);
+//        K2OSKERN_Debug("PIC.Unmask Device Intr %d(%d)\n", aDevIntr, bitNum);
         X32Kern_PIC_Unmask_BitNum(bitNum);
     }
 }
@@ -272,12 +272,12 @@ sIoApic_SetDevIntrMask(
     v = sReadIoApic(X32_IOAPIC_REGIX_REDLO(redIx));
     if (aSetMask)
     {
-        K2OSKERN_Debug("IOAPIC.Mask Device Intr %d(%d)\n", aDevIntr, redIx);
+//        K2OSKERN_Debug("IOAPIC.Mask Device Intr %d(%d)\n", aDevIntr, redIx);
         v |= X32_IOAPIC_REDLO_MASK;
     }
     else
     {
-        K2OSKERN_Debug("IOAPIC.Unmask Device Intr %d(%d)\n", aDevIntr, redIx);
+//        K2OSKERN_Debug("IOAPIC.Unmask Device Intr %d(%d)\n", aDevIntr, redIx);
         v &= ~X32_IOAPIC_REDLO_MASK;
     }
     sWriteIoApic(X32_IOAPIC_REGIX_REDLO(redIx), v);
