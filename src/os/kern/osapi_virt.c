@@ -257,6 +257,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         //
         // range must not already be mapped
         //
+        K2OSKERN_Debug("@@%d\n", __LINE__);
         if (!KernMap_SegRangeNotMapped(pCurThread, pSeg, segOffset, aPageCount))
         {
             stat = K2STAT_ERROR_ALREADY_MAPPED;
@@ -301,9 +302,130 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 aPageCount)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    K2_ASSERT(0);
-    return FALSE;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2TREE_NODE *           pTreeNode;
+    K2OSKERN_OBJ_PROCESS *  pUseProc;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+    UINT32                  segPageCount;
+    UINT32                  segOffset;
+    BOOL                    disp;
+    K2STAT                  stat;
+
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
+    //
+    // find the segment containing the address
+    //
+    if (aPagesAddr >= K2OS_KVA_KERN_BASE)
+    {
+        pUseProc = gpProc0;
+    }
+    else
+    {
+        pUseProc = pCurThread->mpProc;
+    }
+
+    disp = K2OSKERN_SeqIntrLock(&pUseProc->SegTreeSeqLock);
+
+    pTreeNode = K2TREE_FindOrAfter(&pUseProc->SegTree, aPagesAddr);
+    if (pTreeNode == NULL)
+    {
+        pTreeNode = K2TREE_LastNode(&pUseProc->SegTree);
+        pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
+        if (pTreeNode != NULL)
+        {
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+            K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+        }
+        else
+        {
+            K2_ASSERT(pUseProc->SegTree.mNodeCount == 0);
+            pSeg = NULL;
+        }
+    }
+    else
+    {
+        if (pTreeNode->mUserVal != aPagesAddr)
+        {
+            pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
+            if (pTreeNode != NULL)
+            {
+                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+                K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+            }
+            else
+            {
+                pSeg = NULL;
+            }
+        }
+        else
+        {
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+        }
+    }
+
+    if (pSeg != NULL)
+    {
+        //
+        // seg will start at or before page range
+        //
+        segPageCount = pSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+        segOffset = (aPagesAddr - pSeg->SegTreeNode.mUserVal) / K2_VA32_MEMPAGE_BYTES;
+        if (segOffset < segPageCount)
+        {
+            if ((segPageCount - segOffset) >= aPageCount)
+            {
+                KernObj_AddRef(&pSeg->Hdr);
+            }
+            else
+            {
+                pSeg = NULL;
+            }
+        }
+        else
+        {
+            pSeg = NULL;
+        }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&pUseProc->SegTreeSeqLock, disp);
+
+    if (pSeg == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_FOUND);
+        return FALSE;
+    }
+
+//    K2OSKERN_Debug("Decommit %d pages at page offset %d within segment starting at 0x%08X that has %d pages in it.\n",
+//        aPageCount, segOffset, pSeg->SegTreeNode.mUserVal, segPageCount);
+
+    do {
+        //
+        // range must be mapped
+        //
+        if (!KernMap_SegRangeMapped(pCurThread, pSeg, segOffset, aPageCount))
+        {
+            stat = K2STAT_ERROR_NOT_MAPPED;
+            break;
+        }
+
+        stat = KernMem_UnmapSegPagesToThread(pCurThread, pSeg, segOffset, aPageCount);
+        if (K2STAT_IS_ERROR(stat))
+            break;
+
+        KernMem_PhysFreeFromThread(pCurThread);
+
+    } while (0);
+
+    KernObj_Release(&pSeg->Hdr);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesSetAttr(UINT32 aPagesAddr, UINT32 aPageCount, UINT32 aPageAttrFlags) 

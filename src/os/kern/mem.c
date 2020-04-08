@@ -1769,6 +1769,7 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
     UINT32                      virtAddr;
     UINT32                      segPageCount;
     K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+    KernPhysPageList            pageList;
 
     segPageCount = apSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
 
@@ -1792,6 +1793,8 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
     apCurThread->mWorkMapAttr = aPageAttrFlags;
 
     cleanAfter = (apCurThread->mWorkMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE) ? TRUE : FALSE;
+
+    pageList = sGetSegTargetPageList(apSrc);
 
     do {
         apCurThread->mWorkMapAddr = virtAddr;
@@ -1827,7 +1830,7 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
 
         K2OSKERN_SetIntr(disp);
 
-        KernMap_MakeOnePageFromThread(apCurThread, apSrc, sGetSegTargetPageList(apSrc));
+        KernMap_MakeOnePageFromThread(apCurThread, apSrc, pageList);
         if (cleanAfter)
         {
             K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
@@ -1835,6 +1838,95 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
 
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--aPageCount > 0);
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount)
+{
+    BOOL                        disp;
+    UINT32                      virtAddr;
+    UINT32                      segPageCount;
+    K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
+    KernPhysPageList            pageList;
+
+    segPageCount = apSrc->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+
+    K2_ASSERT(aSegOffset < segPageCount);
+    K2_ASSERT(aPageCount <= segPageCount);
+    K2_ASSERT((segPageCount - aSegOffset) >= aPageCount);
+    K2_ASSERT(apCurThread->mpWorkPage == NULL);
+
+    virtAddr = apSrc->SegTreeNode.mUserVal + (aSegOffset * K2_VA32_MEMPAGE_BYTES);
+
+    K2_ASSERT(!apCurThread->mTlbFlushNeeded);
+
+    pageList = sGetSegTargetPageList(apSrc);
+
+    do {
+        apCurThread->mWorkMapAddr = virtAddr;
+
+        if (!apCurThread->mTlbFlushNeeded)
+        {
+            apCurThread->mTlbFlushNeeded = TRUE;
+            apCurThread->mTlbFlushBase = virtAddr;
+            apCurThread->mTlbFlushPages = 1;
+        }
+        else
+            apCurThread->mTlbFlushPages++;
+
+        KernMap_BreakOnePageToThread(apCurThread, apSrc, pageList);
+
+        pPhysPage = apCurThread->mpWorkPage;
+        K2_ASSERT(pPhysPage != NULL);
+
+        disp = K2OSKERN_SetIntr(FALSE);
+
+        //
+        // assume pages are dirty when unmapped
+        //
+        pPhysPage->mpOwnerObject = NULL;
+        pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
+        pPhysPage->mFlags |= (KernPhysPageList_Thread_Dirty << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
+        K2LIST_AddAtTail(&apCurThread->WorkPages_Dirty, &pPhysPage->ListLink);
+        apCurThread->mpWorkPage = NULL;
+
+        pPhysPage = apCurThread->mpWorkPtPage;
+        if (pPhysPage != NULL)
+        {
+            //
+            // pagetable was unmapped too. pagetables are always clean when unmapped
+            //
+            pPhysPage->mpOwnerObject = NULL;
+            pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
+            pPhysPage->mFlags |= (KernPhysPageList_Thread_PtClean << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
+            K2LIST_AddAtTail(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
+            apCurThread->mpWorkPtPage = NULL;
+        }
+
+        K2OSKERN_SetIntr(disp);
+
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+
+    } while (--aPageCount > 0);
+
+    KernMem_PhysFreeFromThread(apCurThread);
+
+    if (apCurThread->mTlbFlushNeeded)
+    {
+#if K2_TARGET_ARCH_IS_ARM
+        K2_ASSERT(0);
+#else
+        apCurThread->Sched.Item.mSchedItemType = KernSchedItem_InvalidateTlb;
+        apCurThread->Sched.Item.Args.InvalidateTlb.mpProc = apCurThread->mpProc;
+        apCurThread->Sched.Item.Args.InvalidateTlb.mVirtAddr = apCurThread->mTlbFlushBase;
+        apCurThread->Sched.Item.Args.InvalidateTlb.mPageCount = apCurThread->mTlbFlushPages;
+        KernArch_ThreadCallSched();
+#endif
+        apCurThread->mTlbFlushNeeded = FALSE;
+        apCurThread->mTlbFlushBase = 0;
+        apCurThread->mTlbFlushPages = 0;
+    }
 
     return K2STAT_NO_ERROR;
 }

@@ -62,6 +62,7 @@ struct _CACHE_HDR
     UINT32              mObjectBytes;
     UINT32              mMaxDepth;
     UINT32              mHighwater;
+    UINT32              mVirtBase;
     K2OSKERN_SEQLOCK    SeqLock;
     K2LIST_ANCHOR       FreeList;
     K2LIST_LINK         CacheListLink;

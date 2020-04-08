@@ -932,6 +932,7 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg);
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags);
+K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -944,6 +945,7 @@ void   KernMap_MakeOnePageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apP
 void   KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPageOwner, KernPhysPageList aMatchList);
 
 BOOL   KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount);
+BOOL   KernMap_SegRangeMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -963,6 +965,7 @@ K2STAT  KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 K2STAT  KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 UINT32  KernArch_DevIntrToSysIrq(UINT32 aDevIntr);
 UINT32  KernArch_SysIrqToDevIntr(UINT32 aSysIrq);
+void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 

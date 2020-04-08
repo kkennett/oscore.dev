@@ -85,6 +85,8 @@ K2OSKERN_Panic(
         } while (gData.mCoresInPanic < gData.mCpuCount);
     }
 
+    KernArch_Panic(pThisCore);
+
     while (1);
 }
 

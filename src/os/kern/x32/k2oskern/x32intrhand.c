@@ -375,3 +375,14 @@ K2STAT KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 
     return K2STAT_NO_ERROR;
 }
+
+void KernArch_Panic(K2OSKERN_CPUCORE *apThisCore)
+{
+    sX32Kern_DumpStackTrace(
+        apThisCore,
+        (UINT32)K2_RETURN_ADDRESS,
+        X32_ReadEBP(),
+        X32_ReadESP()
+    );
+    while (1);
+}

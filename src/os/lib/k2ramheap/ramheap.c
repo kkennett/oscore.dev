@@ -32,6 +32,8 @@
 
 #include <lib/k2ramheap.h>
 
+#define DBG_ALLOC_PATTERN 1
+
 static
 BOOL
 sCheckHdrSent(
@@ -757,6 +759,12 @@ K2OS_RAMHEAP_Alloc(
 {
     K2TREE_NODE *   pTreeNode;
     K2STAT          stat;
+#if DBG_ALLOC_PATTERN
+    char            ascBuf[40];
+
+    K2ASC_Printf(ascBuf, "+ALOC(%d)\n", aByteCount);
+    K2OS_DebugPrint(ascBuf);
+#endif
 
     *appRetPtr = NULL;
 
@@ -786,6 +794,11 @@ K2OS_RAMHEAP_Alloc(
     sCheckLockedHeap(apHeap);
 
     sUnlockHeap(apHeap);
+
+#if DBG_ALLOC_PATTERN
+    K2ASC_Printf(ascBuf, "-ALOC(%08X)\n", *appRetPtr);
+    K2OS_DebugPrint(ascBuf);
+#endif
 
     return stat;
 }
@@ -945,6 +958,12 @@ K2OS_RAMHEAP_Free(
     K2TREE_NODE *           pTreeNode;
     K2OS_RAMHEAP_CHUNK *    pChunk;
     K2STAT                  stat;
+#if DBG_ALLOC_PATTERN
+    char            ascBuf[40];
+
+    K2ASC_Printf(ascBuf, "_FREE(%08X)\n", aPtr);
+    K2OS_DebugPrint(ascBuf);
+#endif
 
     sLockHeap(apHeap);
 
