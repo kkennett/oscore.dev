@@ -34,6 +34,10 @@
 
 #include "k2os.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 //
 //------------------------------------------------------------------------
 //
@@ -301,6 +305,10 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 //
 //------------------------------------------------------------------------
 //
+
+#if __cplusplus
+}
+#endif
 
 
 #endif // __K2OSKERN_H

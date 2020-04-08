@@ -41,7 +41,15 @@
 
 #if !K2_TOOLCHAIN_IS_MS
 
+#if __cplusplus
+extern "C" {
+#endif
+
 typedef VALIST va_list;
+
+#if __cplusplus
+}
+#endif
 
 #define va_start(v,l)	K2_VASTART(v,l)
 #define va_end(v)	    K2_VAEND(v)

@@ -34,6 +34,10 @@
 
 #include "k2osbase.h"
 
+#if __cplusplus
+extern "C" {
+#endif
+
 //
 //------------------------------------------------------------------------
 //
@@ -367,5 +371,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
 //
 //------------------------------------------------------------------------
 //
+
+#if __cplusplus
+}
+#endif
 
 #endif // __K2OS_H
