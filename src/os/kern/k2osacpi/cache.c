@@ -248,7 +248,7 @@ AcpiOsAcquireObject(
 
     if (pCache->FreeList.mNodeCount == 0)
     {
-        K2OSKERN_Debug("!!!!!!-------EMPTY CACHE(%s)-----------\n", pCache->mpCacheName);
+        K2OSKERN_Panic("!!!!!!-------EMPTY CACHE(%s)-----------\n", pCache->mpCacheName);
         pAct = NULL;
     }
     else

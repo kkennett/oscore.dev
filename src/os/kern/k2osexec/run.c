@@ -107,8 +107,6 @@ sInstallHandlers(void)
     return (AE_OK);
 }
 
-#define CHK_WATER 0
-
 ACPI_STATUS sDeviceWalkCallback(
     ACPI_HANDLE Object,
     UINT32      NestingLevel,
@@ -135,14 +133,7 @@ ACPI_STATUS sDeviceWalkCallback(
 
 void K2OSEXEC_Run(void)
 {
-    UINT64          last, newTick;
     ACPI_STATUS     Status;
-#if CHK_WATER
-    K2LIST_LINK *   pListLink;
-    CACHE_HDR *     pCache;
-#endif
-    //    ACPI_EVENT_STATUS   evtStatus;
-    void *pWalkRet;
 
     Status = AcpiInitializeSubsystem();
     K2_ASSERT(!ACPI_FAILURE(Status));
@@ -168,19 +159,8 @@ void K2OSEXEC_Run(void)
     Status = AcpiEnableEvent(ACPI_EVENT_POWER_BUTTON, 0);
     K2_ASSERT(!ACPI_FAILURE(Status));
 
-#if CHK_WATER
-    K2OSKERN_Debug("\n=========================\nAT ACPI INIT DONE:\n");
-    pListLink = gK2OSACPI_CacheList.mpHead;
-    while (pListLink != NULL)
-    {
-        pCache = K2_GET_CONTAINER(CACHE_HDR, pListLink, CacheListLink);
-        K2OSKERN_Debug("%4d/%4d (high %4d) -- %s\n", pCache->mMaxDepth - pCache->FreeList.mNodeCount, pCache->mMaxDepth, pCache->mHighwater, pCache->mpCacheName);
-        pListLink = pListLink->mpNext;
-    }
-    K2OSKERN_Debug("=========================\n");
-#endif
-
 #if 0
+    ACPI_EVENT_STATUS   evtStatus;
     AcpiGetEventStatus(ACPI_EVENT_PMTIMER, &evtStatus);
     K2OSKERN_Debug("ACPI_EVENT_PMTIMER          status = %08X\n", evtStatus);
     K2OSKERN_Debug("  %s %s %s %s %s %s\n\n",
@@ -237,6 +217,32 @@ void K2OSEXEC_Run(void)
     );
 #endif
 
+    //
+    // find MCFG if it exists
+    //
+    ACPI_TABLE_HEADER * pMCFG;
+    Status = AcpiGetTable(ACPI_SIG_MCFG, 0, &pMCFG);
+    if (!ACPI_FAILURE(Status))
+    {
+        //
+        // find memory mapped io segments for PCI bridges
+        //
+        K2_ASSERT(pMCFG->Length > sizeof(ACPI_TABLE_MCFG));
+        UINT32 sizeEnt = pMCFG->Length - sizeof(ACPI_TABLE_MCFG);
+        UINT32 entCount = sizeEnt / sizeof(ACPI_MCFG_ALLOCATION);
+        K2OSKERN_Debug("Content %d, each %d\n", sizeEnt, sizeof(ACPI_MCFG_ALLOCATION));
+        ACPI_MCFG_ALLOCATION *pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pMCFG) + sizeof(ACPI_TABLE_MCFG));
+        do {
+            K2OSKERN_Debug("\nAddress:    %08X\n", (UINT32)(pAlloc->Address & 0xFFFFFFFF));
+            K2OSKERN_Debug("PciSegment: %d\n", pAlloc->PciSegment);
+            K2OSKERN_Debug("StartBus:   %d\n", pAlloc->StartBusNumber);
+            K2OSKERN_Debug("EndBus:     %d\n", pAlloc->EndBusNumber);
+            pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
+        } while (--entCount);
+    }
+
+#if 0
+    void *pWalkRet;
     pWalkRet = NULL;
     Status = AcpiGetDevices(
         NULL,
@@ -244,8 +250,10 @@ void K2OSEXEC_Run(void)
         NULL,
         &pWalkRet
     );
+#endif
 
 #if 1
+    UINT64          last, newTick;
     K2OSKERN_Debug("Hang ints on\n");
     last = K2OS_SysUpTimeMs();
     while (1)
