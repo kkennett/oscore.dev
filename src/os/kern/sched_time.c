@@ -38,7 +38,7 @@ BOOL KernSched_TimePassedUntil(UINT64 aTimeNow)
 
     executedSomething = FALSE;
     
-    K2OSKERN_Debug("SCHED: Time %d\n", (UINT32)aTimeNow);
+//    K2OSKERN_Debug("SCHED: Time %d\n", (UINT32)aTimeNow);
 
     return executedSomething;
 }

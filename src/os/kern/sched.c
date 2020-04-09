@@ -406,7 +406,7 @@ void KernSched_Check(K2OSKERN_CPUCORE *apThisCore)
     //
     // if we get here we are the scheduling core 
     //
-    K2OSKERN_Debug("!Core %d: Entered Scheduler\n", apThisCore->mCoreIx);
+//    K2OSKERN_Debug("!Core %d: Entered Scheduler\n", apThisCore->mCoreIx);
 
     gData.Sched.mpSchedulingCore = apThisCore;
 
@@ -438,7 +438,7 @@ void KernSched_Check(K2OSKERN_CPUCORE *apThisCore)
     // 
     // if we got here we left the scheduler
     //
-    K2OSKERN_Debug("!Core %d: Left Scheduler\n", apThisCore->mCoreIx);
+//    K2OSKERN_Debug("!Core %d: Left Scheduler\n", apThisCore->mCoreIx);
 }
 
 static

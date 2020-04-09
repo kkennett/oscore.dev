@@ -88,7 +88,7 @@ BOOL KernSched_Exec_PurgePT(void)
 
         gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 
-        physPtAddr = KernMap_BreakOnePage(pUseProc->mVirtMapKVA, virtPtAddr);
+        physPtAddr = KernMap_BreakOnePage(pUseProc->mVirtMapKVA, virtPtAddr, 0);
 
         gData.Sched.mpActiveItem->Args.PurgePt.mPtPhysOut = physPtAddr;
 

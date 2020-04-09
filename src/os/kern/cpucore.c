@@ -69,7 +69,7 @@ sProcessOneCpuCoreEvent(
     KernCpuCoreEventType    aEventType
 )
 {
-    K2OSKERN_Debug("!Core %d: Event %d\n", apThisCore->mCoreIx,aEventType);
+//    K2OSKERN_Debug("!Core %d: Event %d\n", apThisCore->mCoreIx,aEventType);
 
     switch (aEventType)
     {

@@ -53,11 +53,25 @@ static UINT32 sgSysCacheId = 0x65;
 static UINT32 sgOperandCacheId = 0;
 static K2LIST_ANCHOR sgOpCacheActive;
 
-static void sInitOperandCache(CACHE_HDR *apCache)
+void sReleaseOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
+{
+    UINT32  effAddr;
+    BOOL    ok;
+
+    K2LIST_Remove(&sgOpCacheActive, apListLink);
+
+    effAddr = apCache->mVirtBase + (aOffset * K2_VA32_MEMPAGE_BYTES);
+
+    ok = K2OS_VirtPagesDecommit(effAddr, 1);
+    K2_ASSERT(ok);
+}
+
+void sInitOperandCache(CACHE_HDR *apCache)
 {
     UINT32          addr;
     BOOL            ok;
     UINT32          MaxDepth;
+    UINT32          offset;
     K2LIST_LINK *   pListLink;
 
     if (apCache->mVirtBase != 0)
@@ -65,7 +79,19 @@ static void sInitOperandCache(CACHE_HDR *apCache)
         //
         // purge the list
         //
-        K2_ASSERT(0);
+        while (sgOpCacheActive.mpHead != NULL)
+        {
+            pListLink = sgOpCacheActive.mpHead;
+
+            offset = ((UINT32)pListLink) - ((UINT32)&apCache->CacheData[0]);
+            K2_ASSERT((offset % sizeof(K2LIST_LINK)) == 0);
+            offset /= sizeof(K2LIST_LINK);
+            K2_ASSERT(offset < apCache->mMaxDepth);
+            sReleaseOperandObject(apCache, pListLink, offset);
+
+            K2_ASSERT(apCache->FreeList.mNodeCount < apCache->mMaxDepth);
+            K2LIST_AddAtTail(&apCache->FreeList, pListLink);
+        }
     }
     else
     {
@@ -88,12 +114,10 @@ static void sInitOperandCache(CACHE_HDR *apCache)
     }
 }
 
-static UINT8 * sAcquireOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
+UINT8 * sAcquireOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
 {
     UINT32  effAddr;
     BOOL    ok;
-
-    K2OSKERN_Debug("+AcquireOperandObject(%d)\n", aOffset);
 
     K2LIST_AddAtTail(&sgOpCacheActive, apListLink);
 
@@ -102,27 +126,9 @@ static UINT8 * sAcquireOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink
     ok = K2OS_VirtPagesCommit(effAddr, 1, K2OS_MAPTYPE_KERN_DATA);
     K2_ASSERT(ok);
 
-    K2OSKERN_Debug("-AcquireOperandObject(%d)\n", aOffset);
-
     return (UINT8 *)effAddr;
 }
 
-static void sReleaseOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
-{
-    UINT32  effAddr;
-    BOOL    ok;
-
-    K2OSKERN_Debug("+ReleaseOperandObject(%d)\n", aOffset);
-
-    K2LIST_Remove(&sgOpCacheActive, apListLink);
-
-    effAddr = apCache->mVirtBase + (aOffset * K2_VA32_MEMPAGE_BYTES);
-
-    ok = K2OS_VirtPagesDecommit(effAddr, 1);
-    K2_ASSERT(ok);
-
-    K2OSKERN_Debug("-ReleaseOperandObject(%d)\n", aOffset);
-}
 
 ACPI_STATUS
 AcpiOsCreateCache(

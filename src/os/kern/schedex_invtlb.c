@@ -40,7 +40,7 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore)
     //
     // called from monitor on the core in response to Ici
     //
-    K2OSKERN_Debug("PerCpuTlbInv(%d)\n", apThisCore->mCoreIx);
+//    K2OSKERN_Debug("PerCpuTlbInv(%d)\n", apThisCore->mCoreIx);
 
     if ((gData.Sched.mTlbInv1_Base >= K2OS_KVA_KERN_BASE) ||
         (apThisCore->mpActiveProc == gData.Sched.mpTlbInvProc))
@@ -48,7 +48,7 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore)
         left = gData.Sched.mTlbInv1_PageCount;
         virtAddr = gData.Sched.mTlbInv1_Base;
         do {
-            K2OSKERN_Debug("Invalidate Tlb Cpu %d Virt 0x%08X\n", apThisCore->mCoreIx, virtAddr);
+//            K2OSKERN_Debug("Invalidate Tlb Cpu %d Virt 0x%08X\n", apThisCore->mCoreIx, virtAddr);
             KernArch_InvalidateTlbPageOnThisCore(virtAddr);
             virtAddr += K2_VA32_MEMPAGE_BYTES;
         } while (--left);
@@ -62,7 +62,7 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore)
             left = gData.Sched.mTlbInv2_PageCount;
             virtAddr = gData.Sched.mTlbInv2_Base;
             do {
-                K2OSKERN_Debug("Invalidate Tlb Cpu %d Virt 0x%08X\n", apThisCore->mCoreIx, virtAddr);
+//                K2OSKERN_Debug("Invalidate Tlb Cpu %d Virt 0x%08X\n", apThisCore->mCoreIx, virtAddr);
                 KernArch_InvalidateTlbPageOnThisCore(virtAddr);
                 virtAddr += K2_VA32_MEMPAGE_BYTES;
             } while (--left);

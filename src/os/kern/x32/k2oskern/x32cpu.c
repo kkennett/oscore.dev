@@ -348,13 +348,13 @@ void KernArch_LaunchCores(void)
         //
         // unmap startup stuff now
         //
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_PAGEDIR_KVA);
 
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_PAGETABLE_KVA);
 
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_TRANSITION_KVA);
     }
 

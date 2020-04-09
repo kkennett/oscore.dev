@@ -32,7 +32,7 @@
 
 #include <lib/k2ramheap.h>
 
-#define DBG_ALLOC_PATTERN 1
+#define DBG_ALLOC_PATTERN 0
 
 static
 BOOL

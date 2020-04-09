@@ -327,7 +327,7 @@ static void sInit_BeforeLaunchCores(void)
     // 
     // break the mapping
     //
-    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE);
+    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, 0);
     KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_ARCHSPEC_BASE);
 
     //

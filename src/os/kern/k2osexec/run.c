@@ -237,7 +237,6 @@ void K2OSEXEC_Run(void)
     );
 #endif
 
-    K2OSKERN_Debug("\nAcpiGetDevices:\n");
     pWalkRet = NULL;
     Status = AcpiGetDevices(
         NULL,

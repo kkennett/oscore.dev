@@ -257,7 +257,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         //
         // range must not already be mapped
         //
-        K2OSKERN_Debug("@@%d\n", __LINE__);
         if (!KernMap_SegRangeNotMapped(pCurThread, pSeg, segOffset, aPageCount))
         {
             stat = K2STAT_ERROR_ALREADY_MAPPED;

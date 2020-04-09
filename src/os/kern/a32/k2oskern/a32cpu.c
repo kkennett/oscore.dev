@@ -157,7 +157,7 @@ static void sStartCpu(UINT32 aCpuIx, UINT32 transitPhys)
 
     MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, (1 << (aCpuIx + 16)));
 
-    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT);
+    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT, 0);
     KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_CPUINFO_PAGE_VIRT);
 }
 
@@ -278,19 +278,19 @@ void KernArch_LaunchCores(void)
         //
         // unmap all the pages since we are done using them
         //
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TRANSIT_PAGE_VIRT);
 
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_PAGETABLE_VIRT);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_PAGETABLE_VIRT, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_PAGETABLE_VIRT);
 
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT);
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x1000);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x1000, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x1000);
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x2000);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x2000, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x2000);
-        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000);
+        KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x3000);
 
         //

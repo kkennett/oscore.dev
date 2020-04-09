@@ -34,6 +34,25 @@
 
 #define MAX_DLX_NAME_LEN    64
 
+static void sDumpList(K2LIST_ANCHOR *apList)
+{
+    K2LIST_LINK *pListLink;
+
+    K2OSKERN_Debug("-----------------------\n");
+    K2OSKERN_Debug("List @ %08X\n", apList);
+    K2OSKERN_Debug("  Head %08X\n", apList->mpHead);
+    K2OSKERN_Debug("  Tail %08X\n", apList->mpTail);
+    pListLink = apList->mpHead;
+    while (pListLink != NULL)
+    {
+        K2OSKERN_Debug("    %08X PREV\n", pListLink->mpPrev);
+        K2OSKERN_Debug("    %08X   LINK\n", pListLink);
+        K2OSKERN_Debug("    %08X NEXT\n", pListLink->mpNext);
+        pListLink = pListLink->mpNext;
+    }
+    K2OSKERN_Debug("-----------------------\n");
+}
+
 static
 void
 sDumpHeapNode(
@@ -1092,6 +1111,7 @@ void KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread)
         do {
             pListLink = apCurThread->WorkPages_Dirty.mpHead;
             K2LIST_Remove(&apCurThread->WorkPages_Dirty, pListLink);
+
             pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, pListLink, ListLink);
             pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
             pPhysPage->mFlags |= (KernPhysPageList_Free_Dirty << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
@@ -1181,7 +1201,7 @@ static void sCleanPage(UINT32 aPhysPage)
 
     K2MEM_Zero((void *)virtAddr, K2_VA32_MEMPAGE_BYTES);
 
-    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr);
+    KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, 0);
 
     KernArch_InvalidateTlbPageOnThisCore(virtAddr);
 
@@ -1702,7 +1722,9 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
         pCurThread->mTlbFlushBase = (UINT32)pSlab;
         pCurThread->mTlbFlushPages = 1;
 
-        KernMap_BreakOnePageToThread(pCurThread, &pSlab->This, KernPhysPageList_Non_KData);
+        K2_ASSERT(0); // no.  destroysegmenttothread instead
+
+        KernMap_BreakOnePageToThread(pCurThread, &pSlab->This, KernPhysPageList_Non_KData, K2OSKERN_PTE_NP_BIT);
 
         //
         // pSlab is gone here (unmapped), as is apSeg
@@ -1821,6 +1843,7 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
             }
 
             disp = K2OSKERN_SetIntr(FALSE);
+
             K2LIST_Remove(&apCurThread->WorkPages_Dirty, &pPhysPage->ListLink);
         }
 
@@ -1875,7 +1898,7 @@ K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
         else
             apCurThread->mTlbFlushPages++;
 
-        KernMap_BreakOnePageToThread(apCurThread, apSrc, pageList);
+        KernMap_BreakOnePageToThread(apCurThread, apSrc, pageList, K2OSKERN_PTE_NP_BIT);
 
         pPhysPage = apCurThread->mpWorkPage;
         K2_ASSERT(pPhysPage != NULL);

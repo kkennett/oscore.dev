@@ -52,10 +52,10 @@ void KernMonitor_Run(void)
     if (pThisCore->mIsIdle)
     {
         pThisCore->mIsIdle = FALSE;
-        K2OSKERN_Debug("!Core %d: Leave idle\n", pThisCore->mCoreIx);
+//        K2OSKERN_Debug("!Core %d: Leave idle\n", pThisCore->mCoreIx);
     }
-    else
-        K2OSKERN_Debug("!Core %d: Enter monitor\n", pThisCore->mCoreIx);
+//    else
+//        K2OSKERN_Debug("!Core %d: Enter monitor\n", pThisCore->mCoreIx);
 
     /* interrupts MUST BE ON running here */
 #ifdef K2_DEBUG
@@ -79,7 +79,7 @@ void KernMonitor_Run(void)
                 if (pThread == NULL)
                 {
                     pThisCore->mIsIdle = TRUE;
-                    K2OSKERN_Debug("!Core %d: Enter idle\n", pThisCore->mCoreIx);
+//                    K2OSKERN_Debug("!Core %d: Enter idle\n", pThisCore->mCoreIx);
                     //
                     // interrupts are off. exiting from this function
                     // returns to the caller, which knows this and will
@@ -92,7 +92,7 @@ void KernMonitor_Run(void)
                 //
                 // we have a thread to run, so return to it
                 //
-                K2OSKERN_Debug("!Core %d run Thread %d\n", pThisCore->mCoreIx, pThread->Env.mId);
+//                K2OSKERN_Debug("!Core %d run Thread %d\n", pThisCore->mCoreIx, pThread->Env.mId);
                 KernArch_SwitchFromMonitorToThread(pThisCore);
 
                 //
