@@ -187,8 +187,6 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     {
         X32_CacheFlushAll();
         K2_CpuWriteBarrier();
-
-        X32Kern_StartTime();
     }
 
     //

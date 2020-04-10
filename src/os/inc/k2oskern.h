@@ -242,19 +242,21 @@ typedef struct _K2OSKERN_INTR_CONFIG K2OSKERN_INTR_CONFIG;
 typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
 
 typedef
-K2OS_TOKEN
+K2STAT
 (*K2OSKERN_pf_InstallIntrHandler)(
     K2OSKERN_INTR_CONFIG const *    apConfig,
     K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext
+    void *                          apContext,
+    K2OS_TOKEN *                    apRetTokIntr
     );
 
-K2OS_TOKEN
+K2STAT
 K2OSKERN_InstallIntrHandler(
     K2OSKERN_INTR_CONFIG const *    apConfig,
     K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext
-    );
+    void *                          apContext,
+    K2OS_TOKEN *                    apRetTokIntr
+);
 
 typedef
 K2STAT

@@ -41,6 +41,7 @@ AcpiOsInstallInterruptHandler(
     K2OSKERN_INTR_CONFIG    config;
     K2LIST_LINK *           pListLink;
     K2OSACPI_INTR *         pIntr;
+    K2STAT                  stat;
 
     K2_ASSERT(gK2OSACPI_IntrFreeList.mNodeCount > 0);
 
@@ -63,8 +64,8 @@ AcpiOsInstallInterruptHandler(
     config.mIsLevelTriggered = TRUE;
     config.mIsActiveLow = TRUE;
 
-    pIntr->mToken = K2OSKERN_InstallIntrHandler(&config, ServiceRoutine, Context);
-    K2_ASSERT(pIntr->mToken != NULL);
+    stat = K2OSKERN_InstallIntrHandler(&config, ServiceRoutine, Context, &pIntr->mToken);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     return AE_OK;
 }

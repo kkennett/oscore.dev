@@ -241,7 +241,6 @@ static void sInsertToItemList(K2OSKERN_SCHED_ITEM *apNewItems)
 static BOOL sExecItems(void)
 {
     K2OSKERN_SCHED_ITEM *   pPendNew;
-    UINT64                  timeNow;
     BOOL                    changedSomething;
     BOOL                    subChangedSomething;
 
@@ -306,13 +305,9 @@ static BOOL sExecItems(void)
 
     } while (1);
 
-    timeNow = K2OS_SysUpTimeMs();
-    if (timeNow > gData.Sched.mAbsTimeMs)
-    {
-        subChangedSomething = KernSched_TimePassedUntil(timeNow);
-        if (!changedSomething)
-            changedSomething = subChangedSomething;
-    }
+    subChangedSomething = KernSched_TimePassed();
+    if (!changedSomething)
+        changedSomething = subChangedSomething;
 
     return changedSomething;
 }

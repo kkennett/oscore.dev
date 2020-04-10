@@ -49,15 +49,18 @@ void SetupPciConfig(void)
         K2_ASSERT(pMCFG->Length > sizeof(ACPI_TABLE_MCFG));
         UINT32 sizeEnt = pMCFG->Length - sizeof(ACPI_TABLE_MCFG);
         UINT32 entCount = sizeEnt / sizeof(ACPI_MCFG_ALLOCATION);
-        K2OSKERN_Debug("Content %d, each %d\n", sizeEnt, sizeof(ACPI_MCFG_ALLOCATION));
-        ACPI_MCFG_ALLOCATION *pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pMCFG) + sizeof(ACPI_TABLE_MCFG));
-        do {
-            K2OSKERN_Debug("\nAddress:    %08X\n", (UINT32)(pAlloc->Address & 0xFFFFFFFF));
-            K2OSKERN_Debug("PciSegment: %d\n", pAlloc->PciSegment);
-            K2OSKERN_Debug("StartBus:   %d\n", pAlloc->StartBusNumber);
-            K2OSKERN_Debug("EndBus:     %d\n", pAlloc->EndBusNumber);
-            pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
-        } while (--entCount);
+        if (entCount)
+        {
+            ACPI_MCFG_ALLOCATION *pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pMCFG) + sizeof(ACPI_TABLE_MCFG));
+            K2OSKERN_Debug("MCFG:\n");
+            do {
+                K2OSKERN_Debug("  Address:    %08X\n", (UINT32)(pAlloc->Address & 0xFFFFFFFF));
+                K2OSKERN_Debug("  PciSegment: %d\n", pAlloc->PciSegment);
+                K2OSKERN_Debug("  StartBus:   %d\n", pAlloc->StartBusNumber);
+                K2OSKERN_Debug("  EndBus:     %d\n\n", pAlloc->EndBusNumber);
+                pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
+            } while (--entCount);
+        }
     }
 }
 

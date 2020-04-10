@@ -70,8 +70,7 @@ SOURCES += x32monitorasm.s
 SOURCES += x32thread.c 
 SOURCES += x32threadasm.s 
 
-SOURCES += x32time.c
-SOURCES += x32pitasm.s
+SOURCES += x32stall.c
 
 SOURCE_LIBS += @shared/lib/k2archx32
 SOURCE_LIBS += @shared/lib/k2heap

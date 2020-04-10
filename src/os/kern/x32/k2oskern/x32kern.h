@@ -140,7 +140,6 @@ extern ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC * gpX32Kern_MADT_LocApic[K2OS_MAX_CPU_
 extern ACPI_MADT_SUB_IO_APIC *              gpX32Kern_MADT_IoApic;
 extern ACPI_HPET *                          gpX32Kern_HPET;
 extern BOOL                                 gX32Kern_ApicReady;
-extern UINT32                               gX32Kern_BusClockRate;
 extern X32_CPUID                            gX32Kern_CpuId01;
 
 extern UINT32                               gX32Kern_IrqToDevIntrMap[X32_NUM_IDT_ENTRIES];
@@ -156,7 +155,6 @@ void X32Kern_IDTSetup(void);
 void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0);
 
 void X32Kern_PICInit(void);
-void X32Kern_PITInit(void);
 void X32Kern_APICInit(UINT32 aCpuIx);
 void X32Kern_IoApicInit(void);
 
@@ -170,8 +168,6 @@ typedef void (K2_CALLCONV_REGS *pf_X32Kern_LaunchEntryPoint)(UINT32 aCoreIx);
 void K2_CALLCONV_REGS X32Kern_LaunchEntryPoint(UINT32 aCoreIx);
 
 void X32Kern_InitStall(void);
-void X32Kern_StartTime(void);
-BOOL X32Kern_IntrTimerTick(void);
 
 void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig);
 void X32Kern_MaskDevIntr(UINT8 aDevIntrId);

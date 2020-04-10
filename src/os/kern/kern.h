@@ -315,8 +315,6 @@ struct _K2OSKERN_SCHED
 
     UINT32                          mSysWideThreadCount;
 
-    UINT64                          mAbsTimeMs;
-
     UINT32 volatile                 mReq;
     K2OSKERN_SCHED_ITEM * volatile  mpPendingItemListHead;
 
@@ -964,11 +962,13 @@ void    KernArch_ThreadCallSched(void);
 void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore);
 void    KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
-void    KernArch_ArmSchedTimer(UINT32 aMsFromNow);
-K2STAT  KernArch_InstallIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
-K2STAT  KernArch_RemoveIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
+
+void    KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
+void    KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask);
+void    KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 UINT32  KernArch_DevIntrToSysIrq(UINT32 aDevIntr);
 UINT32  KernArch_SysIrqToDevIntr(UINT32 aSysIrq);
+
 void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore);
 
 /* --------------------------------------------------------------------------------- */
@@ -1004,13 +1004,13 @@ BOOL KernSched_Exec_Destroy_CritSec(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);
-
-BOOL KernSched_TimePassedUntil(UINT64 aTimeNow);
+BOOL KernSched_TimePassed(void);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig);
+void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 
 /* --------------------------------------------------------------------------------- */
 

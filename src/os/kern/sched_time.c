@@ -32,18 +32,122 @@
 
 #include "kern.h"
 
-BOOL KernSched_TimePassedUntil(UINT64 aTimeNow)
+static UINT64 volatile sgTickCounter;
+static UINT32 volatile sgTicksLeft;
+static UINT64 sgLastSchedTime = 0;
+
+BOOL KernSched_TimePassed(void)
 {
-    BOOL executedSomething;
+    BOOL    executedSomething;
+    UINT64  newTick;
+    UINT32  elapsed;
 
     executedSomething = FALSE;
+
+    newTick = sgTickCounter;
+    K2_CpuReadBarrier();
+
+    if (newTick > sgLastSchedTime)
+    {
+        elapsed = (UINT32)(newTick - sgLastSchedTime);
+
+        //
+        // 'elapsed' milliseconds have elapsed
+        //
+        K2OSKERN_Debug("SCHED: Elapsed(%d)\n", elapsed);
+
+        sgLastSchedTime = newTick;
+    }
     
-//    K2OSKERN_Debug("SCHED: Time %d\n", (UINT32)aTimeNow);
+    //    K2OSKERN_Debug("SCHED: Time %d\n", (UINT32)aTimeNow);
 
     return executedSomething;
 }
 
+UINT32 KernSched_SystemTickInterrupt(void *apContext)
+{
+    K2OSKERN_CPUCORE *                  pThisCore;
+    K2OSKERN_CPUCORE_EVENT volatile *   pCoreEvent;
+    UINT32                              v;
+
+    K2_ASSERT(gData.Sched.mTokSysTickIntr == (*((K2OS_TOKEN *)apContext)));
+
+    //
+    // interrupts are off
+    //
+    sgTickCounter++;
+    K2_CpuWriteBarrier();
+
+    //
+    // if scheduling timer expires, return TRUE and will enter scheduler, else return FALSE
+    //
+    do {
+        v = sgTicksLeft;
+        K2_CpuReadBarrier();
+
+        if (v == 0)
+            break;
+
+        if (v == K2ATOMIC_CompareExchange(&sgTicksLeft, v - 1, v))
+            break;
+
+    } while (1);
+
+    if (v != 1)
+        return v;
+
+    //
+    // just decremented the last tick - queue the scheduling timer event
+    //
+    pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
+
+    pCoreEvent = &gData.Sched.SchedTimerSchedItem.CpuCoreEvent;
+    pCoreEvent->mEventType = KernCpuCoreEvent_SchedTimerFired;
+    pCoreEvent->mEventAbsTimeMs = sgTickCounter;
+    pCoreEvent->mSrcCoreIx = pThisCore->mCoreIx;
+
+    KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
+
+    return 0;
+}
+
 void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig)
 {
-    K2_ASSERT(0);
+    K2STAT stat;
+
+    sgTickCounter = 0;
+    sgTicksLeft = 0;
+
+    K2_CpuWriteBarrier();
+
+    stat = K2OSKERN_InstallIntrHandler(apConfig, KernSched_SystemTickInterrupt, &gData.Sched.mTokSysTickIntr, &gData.Sched.mTokSysTickIntr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    K2_ASSERT(gData.Sched.mTokSysTickIntr != NULL);
+}
+
+UINT64
+K2_CALLCONV_REGS
+K2OS_SysUpTimeMs(
+    void
+)
+{
+    return sgTickCounter;
+}
+
+void
+KernSched_ArmSchedTimer(
+    UINT32 aMsFromNow
+)
+{
+    BOOL disp;
+
+    //
+    // interrupts should be on
+    //
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    K2ATOMIC_Exchange(&sgTicksLeft, aMsFromNow);
+
+    K2OSKERN_SetIntr(disp);
 }

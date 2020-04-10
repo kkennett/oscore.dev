@@ -47,11 +47,12 @@ void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_
     } while (old != (UINT32)pNext);
 }
 
-K2OS_TOKEN
+K2STAT
 K2OSKERN_InstallIntrHandler(
     K2OSKERN_INTR_CONFIG const *    apConfig,
     K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext
+    void *                          apContext,
+    K2OS_TOKEN *                    apRetTokIntr
 )
 {
     K2OSKERN_OBJ_INTR *     pIntr;
@@ -63,12 +64,12 @@ K2OSKERN_InstallIntrHandler(
 
     K2_ASSERT(apConfig != NULL);
     K2_ASSERT(aHandler != NULL);
+    K2_ASSERT(apRetTokIntr != NULL);
 
     pIntr = (K2OSKERN_OBJ_INTR *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_INTR));
     if (pIntr == NULL)
     {
-        K2OS_ThreadSetStatus(K2STAT_ERROR_OUT_OF_MEMORY);
-        return NULL;
+        return K2STAT_ERROR_OUT_OF_MEMORY;
     }
 
     tokIntr = NULL;
@@ -92,11 +93,9 @@ K2OSKERN_InstallIntrHandler(
     }
     else
     {
-        stat = KernArch_InstallIntrHandler(pIntr);
-        if (!K2STAT_IS_ERROR(stat))
-        {
-            K2TREE_Insert(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal, &pIntr->IntrTreeNode);
-        }
+        KernArch_InstallDevIntrHandler(pIntr);
+        K2TREE_Insert(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal, &pIntr->IntrTreeNode);
+        stat = K2STAT_NO_ERROR;
     }
 
     K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
@@ -110,11 +109,19 @@ K2OSKERN_InstallIntrHandler(
     else
     {
         pObjHdr = &pIntr->Hdr;
-        KernTok_Create(1, &pObjHdr, &tokIntr);
+        stat = KernTok_Create(1, &pObjHdr, &tokIntr);
         K2_ASSERT(tokIntr != NULL);
+
+        //
+        // interrupts can occur immediately, so write to the token return value
+        // before we unmask interrupts
+
+        *apRetTokIntr = tokIntr;
+        K2_CpuWriteBarrier();
+        KernArch_SetDevIntrMask(pIntr, FALSE);
     }
 
-    return tokIntr;
+    return stat;
 }
 
 K2STAT

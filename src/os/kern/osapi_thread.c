@@ -886,6 +886,9 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT3
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate)
 {
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_MultiThreaded);
+
+
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return NULL;
 }
