@@ -31,6 +31,31 @@
 //
 
 #include "k2osacpi.h"
+#if K2_TARGET_ARCH_IS_INTEL
+#include <spec/x32pcdef.inc>
+#endif
+
+//
+// this is for port access.  memory mapped access if applicable is done 
+// via a handler installed externally
+//
+
+typedef union _PCIADDR PCIADDR;
+union _PCIADDR
+{
+    UINT32  mAsUINT32;
+    struct
+    {
+        UINT32 mSBZ : 2;
+        UINT32 mWord : 6;
+        UINT32 mFunction : 3;
+        UINT32 mDevice : 5;
+        UINT32 mBus : 8;
+        UINT32 mReserved : 7;
+        UINT32 mSBO : 1;
+    };
+};
+K2_STATIC_ASSERT(sizeof(PCIADDR) == sizeof(UINT32));
 
 ACPI_STATUS
 AcpiOsReadPciConfiguration(
@@ -39,8 +64,40 @@ AcpiOsReadPciConfiguration(
     UINT64                  *Value,
     UINT32                  Width)
 {
-    K2_ASSERT(0);
-    return ACPI_FAILURE(1);
+    PCIADDR addr;
+
+#if !K2_TARGET_ARCH_IS_INTEL
+    *Value = 0;
+    return AE_OK;
+#endif
+
+    K2OSKERN_Debug("ReadPciConfig(%d_%d/%d/%d, Reg %d, Width %d\n", PciId->Segment, PciId->Bus, PciId->Device, PciId->Function, Reg, Width);
+
+    addr.mAsUINT32 = 0;
+    addr.mSBO = 1;
+    addr.mBus = PciId->Bus;
+    addr.mDevice = PciId->Device;
+    addr.mFunction = PciId->Function;
+    addr.mWord = Reg;
+
+    X32_IoWrite32(addr.mAsUINT32, X32PC_PCI_CONFIG_ADDR_IOPORT);
+
+    switch (Width)
+    {
+    case 8:
+        *Value = (UINT64)X32_IoRead8(X32PC_PCI_CONFIG_DATA_IOPORT);
+        break;
+    case 16:
+        *Value = (UINT64)X32_IoRead16(X32PC_PCI_CONFIG_DATA_IOPORT);
+        break;
+    case 32:
+        *Value = (UINT64)X32_IoRead32(X32PC_PCI_CONFIG_DATA_IOPORT);
+        break;
+    default:
+        K2_ASSERT(0);
+    }
+
+    return AE_OK;
 }
 
 ACPI_STATUS
@@ -50,7 +107,16 @@ AcpiOsWritePciConfiguration(
     UINT64                  Value,
     UINT32                  Width)
 {
+#if !K2_TARGET_ARCH_IS_INTEL
+
+
+
+    return AE_ERROR;
+
+#endif
+
+
     K2_ASSERT(0);
-    return ACPI_FAILURE(1);
+    return AE_ERROR;
 }
 

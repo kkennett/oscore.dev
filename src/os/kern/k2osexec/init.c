@@ -32,59 +32,28 @@
 
 #include "k2osexec.h"
 
-ACPI_STATUS DeviceWalkCallback(
-    ACPI_HANDLE Object,
-    UINT32      NestingLevel,
-    void *      Context,
-    void **     ReturnValue)
+void InitPart1(void)
 {
-    ACPI_BUFFER bufDesc;
-    char        charBuf[8];
     ACPI_STATUS acpiStatus;
 
-    bufDesc.Length = 8;
-    bufDesc.Pointer = charBuf;
+    acpiStatus = AcpiInitializeSubsystem();
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    charBuf[0] = 0;
-    acpiStatus = AcpiGetName(Object, ACPI_SINGLE_NAME, &bufDesc);
-    if (!ACPI_FAILURE(acpiStatus))
-    {
-        charBuf[4] = 0;
-        K2OSKERN_Debug("%3d %s\n", NestingLevel, charBuf);
-    }
-
-    return AE_OK;
+    acpiStatus = AcpiInitializeTables(NULL, 16, FALSE);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
 
-void K2OSEXEC_Run(void)
+void InitPart2(void)
 {
-    InitPart1();
-    InstallHandlers1();
-    InitPart2();
-    InstallHandlers2();
-    SetupPciConfig();
+    ACPI_STATUS acpiStatus;
 
+    acpiStatus = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    void *pWalkRet;
-    pWalkRet = NULL;
-    AcpiGetDevices(
-        NULL,
-        DeviceWalkCallback,
-        NULL,
-        &pWalkRet
-    );
+    acpiStatus = AcpiLoadTables();
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-#if 1
-    UINT64          last, newTick;s
-    K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
-    while (1)
-    {
-        do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
-    }
-#endif
+    acpiStatus = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
+

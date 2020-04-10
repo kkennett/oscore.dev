@@ -36,6 +36,12 @@
 #include <k2oskern.h>
 #include "..\k2osacpi\k2osacpi.h"
 
+void InitPart1(void);
+void InitPart2(void);
 
+void InstallHandlers1(void);
+void InstallHandlers2(void);
+
+void SetupPciConfig(void);
 
 #endif // __K2OSEXEC_H

@@ -49,6 +49,9 @@ GCCOPT += -DACPI_USE_NATIVE_DIVIDE
 #
 SOURCES += dlx_entry.c 
 SOURCES += run.c
+SOURCES += init.c 
+SOURCES += handlers.c 
+SOURCES += pciconfig.c 
 
 ifeq ($(K2_ARCH),X32)
 SOURCE_LIBS += @shared/lib/k2archx32

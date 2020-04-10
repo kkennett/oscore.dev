@@ -32,59 +32,32 @@
 
 #include "k2osexec.h"
 
-ACPI_STATUS DeviceWalkCallback(
-    ACPI_HANDLE Object,
-    UINT32      NestingLevel,
-    void *      Context,
-    void **     ReturnValue)
+void SetupPciConfig(void)
 {
-    ACPI_BUFFER bufDesc;
-    char        charBuf[8];
     ACPI_STATUS acpiStatus;
 
-    bufDesc.Length = 8;
-    bufDesc.Pointer = charBuf;
-
-    charBuf[0] = 0;
-    acpiStatus = AcpiGetName(Object, ACPI_SINGLE_NAME, &bufDesc);
+    //
+    // find MCFG if it exists
+    //
+    ACPI_TABLE_HEADER * pMCFG;
+    acpiStatus = AcpiGetTable(ACPI_SIG_MCFG, 0, &pMCFG);
     if (!ACPI_FAILURE(acpiStatus))
     {
-        charBuf[4] = 0;
-        K2OSKERN_Debug("%3d %s\n", NestingLevel, charBuf);
-    }
-
-    return AE_OK;
-}
-
-void K2OSEXEC_Run(void)
-{
-    InitPart1();
-    InstallHandlers1();
-    InitPart2();
-    InstallHandlers2();
-    SetupPciConfig();
-
-
-    void *pWalkRet;
-    pWalkRet = NULL;
-    AcpiGetDevices(
-        NULL,
-        DeviceWalkCallback,
-        NULL,
-        &pWalkRet
-    );
-
-#if 1
-    UINT64          last, newTick;s
-    K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
-    while (1)
-    {
+        //
+        // find memory mapped io segments for PCI bridges
+        //
+        K2_ASSERT(pMCFG->Length > sizeof(ACPI_TABLE_MCFG));
+        UINT32 sizeEnt = pMCFG->Length - sizeof(ACPI_TABLE_MCFG);
+        UINT32 entCount = sizeEnt / sizeof(ACPI_MCFG_ALLOCATION);
+        K2OSKERN_Debug("Content %d, each %d\n", sizeEnt, sizeof(ACPI_MCFG_ALLOCATION));
+        ACPI_MCFG_ALLOCATION *pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pMCFG) + sizeof(ACPI_TABLE_MCFG));
         do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
+            K2OSKERN_Debug("\nAddress:    %08X\n", (UINT32)(pAlloc->Address & 0xFFFFFFFF));
+            K2OSKERN_Debug("PciSegment: %d\n", pAlloc->PciSegment);
+            K2OSKERN_Debug("StartBus:   %d\n", pAlloc->StartBusNumber);
+            K2OSKERN_Debug("EndBus:     %d\n", pAlloc->EndBusNumber);
+            pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
+        } while (--entCount);
     }
-#endif
 }
+
