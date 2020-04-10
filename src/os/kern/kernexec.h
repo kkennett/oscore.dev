@@ -30,19 +30,52 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __K2OSEXEC_H
-#define __K2OSEXEC_H
+#ifndef __KERNEXEC_H
+#define __KERNEXEC_H
 
-#include <k2oskern.h>
-#include "..\k2osacpi\k2osacpi.h"
-#include "..\kernexec.h"
+#include <k2oshal.h>
+#include <lib/k2dlxsupp.h>
 
-void InitPart1(void);
-void InitPart2(void);
+/* --------------------------------------------------------------------------------- */
 
-void InstallHandlers1(void);
-void InstallHandlers2(void);
+typedef struct _K2OSEXEC_INIT_INFO K2OSEXEC_INIT_INFO;
+struct _K2OSEXEC_INIT_INFO
+{
+    //
+    // INPUT
+    //
+    UINT32  mEfiMapSize;
+    UINT32  mEfiMemDescSize;
+    UINT32  mEfiMemDescVer;
 
-void SetupPciConfig(void);
+    //
+    // OUTPUT
+    //
+    K2OSKERN_INTR_CONFIG  SysTickDevIntrConfig;    // 1ms tick interrupt
+};
 
-#endif // __K2OSEXEC_H
+typedef
+void
+(*K2OSEXEC_pf_Init)(
+    K2OSEXEC_INIT_INFO * apInitInfo
+    );
+
+void
+K2OSEXEC_Init(
+    K2OSEXEC_INIT_INFO * apInitInfo
+    );
+
+typedef
+void
+(*K2OSEXEC_pf_Run)(
+    void
+    );
+
+void
+K2OSEXEC_Run(
+    void
+    );
+
+/* --------------------------------------------------------------------------------- */
+
+#endif // __KERNEXEC_H

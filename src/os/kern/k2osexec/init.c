@@ -57,3 +57,17 @@ void InitPart2(void)
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
 
+void
+K2OSEXEC_Init(
+    K2OSEXEC_INIT_INFO * apInitInfo
+)
+{
+    InitPart1();
+    InstallHandlers1();
+    InitPart2();
+    InstallHandlers2();
+    SetupPciConfig();
+
+    K2_ASSERT(0);
+}
+

@@ -43,3 +43,7 @@ BOOL KernSched_TimePassedUntil(UINT64 aTimeNow)
     return executedSomething;
 }
 
+void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig)
+{
+    K2_ASSERT(0);
+}

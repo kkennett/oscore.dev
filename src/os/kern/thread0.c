@@ -49,22 +49,29 @@ void KernAcpi_Init(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
-typedef void (*K2OSEXEC_pf_Run)(void);
-
-static K2OSEXEC_pf_Run K2OSEXEC_Run;
-
-void KernExec_Init(void)
+static K2OSEXEC_pf_Run sExec_Init(void)
 {
     DLX_pf_ENTRYPOINT   execEntryPoint;
     K2STAT              stat;
+    K2OSEXEC_INIT_INFO  initInfo;
+    K2OSEXEC_pf_Init    fExec_Init;
+    K2OSEXEC_pf_Run     fExec_Run;
+
+    stat = DLX_FindExport(
+        gData.mpShared->mpDlxExec,
+        DlxSeg_Text,
+        "K2OSEXEC_Init",
+        (UINT32 *)&fExec_Init);
+    if (K2STAT_IS_ERROR(stat))
+        K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
 
     stat = DLX_FindExport(
         gData.mpShared->mpDlxExec,
         DlxSeg_Text,
         "K2OSEXEC_Run",
-        (UINT32 *)&K2OSEXEC_Run);
+        (UINT32 *)&fExec_Run);
     if (K2STAT_IS_ERROR(stat))
-        K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_RunIn\" missing\n");
+        K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Run\" missing\n");
 
     stat = gData.mpShared->FuncTab.GetDlxInfo(
         gData.mpShared->mpDlxExec,
@@ -76,6 +83,19 @@ void KernExec_Init(void)
 
     stat = execEntryPoint(gData.mpShared->mpDlxExec, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    K2MEM_Zero(&initInfo,sizeof(initInfo));
+    initInfo.mEfiMapSize = gData.mpShared->LoadInfo.mEfiMapSize;
+    initInfo.mEfiMemDescSize = gData.mpShared->LoadInfo.mEfiMemDescSize;
+    initInfo.mEfiMemDescVer = gData.mpShared->LoadInfo.mEfiMemDescVer;
+
+    fExec_Init(&initInfo);
+
+    K2_ASSERT(initInfo.SysTickDevIntrConfig.mSourceId != 0);
+
+    KernSched_StartSysTick(&initInfo.SysTickDevIntrConfig);
+
+    return fExec_Run;
 }
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
@@ -96,15 +116,14 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     gData.mpShared->FuncTab.CoreThreadedPostInit();
 
     //
-    // "load" ACPI and EXEC DLX
+    // "load" ACPI
     //
     KernAcpi_Init();
-    KernExec_Init();
 
     //
-    // run the executive
+    // load the exec and run it
     //
-    K2OSEXEC_Run();
+    (sExec_Init())();
 
     K2OSKERN_Panic("Executive returned");
 

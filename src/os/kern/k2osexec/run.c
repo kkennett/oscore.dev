@@ -80,16 +80,13 @@ ACPI_STATUS DeviceWalkCallback(
     return AE_OK;
 }
 
-void K2OSEXEC_Run(void)
+void
+K2OSEXEC_Run(
+    void
+)
 {
-    InitPart1();
-    InstallHandlers1();
-    InitPart2();
-    InstallHandlers2();
-    SetupPciConfig();
-
-
     void *pWalkRet;
+
     pWalkRet = NULL;
     AcpiGetDevices(
         NULL,

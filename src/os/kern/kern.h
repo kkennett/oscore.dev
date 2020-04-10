@@ -36,6 +36,7 @@
 #include <k2oshal.h>
 #include "kerndef.inc"
 #include "kernshared.h"
+#include "kernexec.h"
 #include <lib/k2heap.h>
 #include <lib/k2ramheap.h>
 #include <lib/k2bit.h>
@@ -334,6 +335,9 @@ struct _K2OSKERN_SCHED
     UINT32                          mTlbInv2_Base;
     UINT32                          mTlbInv2_PageCount;
     INT32 volatile                  mTlbCores;
+
+    K2OSKERN_INTR_CONFIG            SysTickDevIntrConfig;
+    K2OS_TOKEN                      mTokSysTickIntr;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1006,6 +1010,7 @@ BOOL KernSched_TimePassedUntil(UINT64 aTimeNow);
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig);
 
 /* --------------------------------------------------------------------------------- */
 
