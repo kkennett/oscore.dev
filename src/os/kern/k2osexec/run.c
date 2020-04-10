@@ -41,6 +41,9 @@ ACPI_STATUS DeviceWalkCallback(
     ACPI_BUFFER bufDesc;
     char        charBuf[8];
     ACPI_STATUS acpiStatus;
+    ACPI_DEVICE_INFO *pDevInfo;
+    UINT32 ix;
+    char *  pHID;
 
     bufDesc.Length = 8;
     bufDesc.Pointer = charBuf;
@@ -50,7 +53,28 @@ ACPI_STATUS DeviceWalkCallback(
     if (!ACPI_FAILURE(acpiStatus))
     {
         charBuf[4] = 0;
-        K2OSKERN_Debug("%3d %s\n", NestingLevel, charBuf);
+        acpiStatus = AcpiGetObjectInfo(Object, &pDevInfo);
+        if (!ACPI_FAILURE(acpiStatus))
+        {
+            if (pDevInfo->Type == ACPI_TYPE_DEVICE)
+            {
+                for (ix = 0; ix < NestingLevel; ix++)
+                    K2OSKERN_Debug(" ");
+                pHID = pDevInfo->HardwareId.String;
+                if (pHID != NULL)
+                    K2OSKERN_Debug("%s: _HID(%s)\n", charBuf, pHID);
+                else
+                    K2OSKERN_Debug("%s\n", charBuf);
+            }
+            else
+            {
+                K2OSKERN_Debug("%s: Not DEVICE\n", charBuf);
+            }
+        }
+        else
+        {
+            K2OSKERN_Debug("***%3d %s\n", NestingLevel, charBuf);
+        }
     }
 
     return AE_OK;
@@ -75,7 +99,7 @@ void K2OSEXEC_Run(void)
     );
 
 #if 1
-    UINT64          last, newTick;s
+    UINT64          last, newTick;
     K2OSKERN_Debug("Hang ints on\n");
     last = K2OS_SysUpTimeMs();
     while (1)
