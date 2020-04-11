@@ -147,7 +147,7 @@ AcpiOsCreateCache(
 
     newCacheId = sgSysCacheId++;
 
-    if (0 == K2ASC_CompIns(CacheName, "Acpi-Operand"))
+    if (0 == K2ASC_CompIns(CacheName, "Acpi-Operand-Nope"))
     {
         sgOperandCacheId = newCacheId;
         objectBytes = sizeof(K2LIST_LINK);
@@ -174,7 +174,7 @@ AcpiOsCreateCache(
     pRet->mCacheId = newCacheId;
     K2LIST_Init(&pRet->FreeList);
 
-    K2OSKERN_Debug("%02X = %s\n", pRet->mCacheId, pRet->mpCacheName);
+//    K2OSKERN_Debug("%02X = %s\n", pRet->mCacheId, pRet->mpCacheName);
 
     if (sgOperandCacheId != pRet->mCacheId)
     {

@@ -38,10 +38,10 @@ AcpiOsInstallInterruptHandler(
     ACPI_OSD_HANDLER        ServiceRoutine,
     void                    *Context)
 {
-    K2OSKERN_INTR_CONFIG    config;
-    K2LIST_LINK *           pListLink;
-    K2OSACPI_INTR *         pIntr;
-    K2STAT                  stat;
+    K2OSKERN_IRQ_CONFIG config;
+    K2LIST_LINK *       pListLink;
+    K2OSACPI_INTR *     pIntr;
+    K2STAT              stat;
 
     K2_ASSERT(gK2OSACPI_IntrFreeList.mNodeCount > 0);
 
@@ -59,7 +59,7 @@ AcpiOsInstallInterruptHandler(
 
     K2MEM_Zero(&config, sizeof(config));
 
-    config.mSourceId = InterruptNumber;
+    config.mSourceIrq = InterruptNumber;
     config.mDestCoreIx = 0;
     config.mIsLevelTriggered = TRUE;
     config.mIsActiveLow = TRUE;

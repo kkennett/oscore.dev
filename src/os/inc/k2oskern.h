@@ -227,14 +227,14 @@ K2OSKERN_UnmapDevice(
 //------------------------------------------------------------------------
 //
 
-struct _K2OSKERN_INTR_CONFIG
+struct _K2OSKERN_IRQ_CONFIG
 {
-    UINT32  mSourceId;
+    UINT32  mSourceIrq;
     UINT32  mDestCoreIx;
     BOOL    mIsLevelTriggered;
     BOOL    mIsActiveLow;
 };
-typedef struct _K2OSKERN_INTR_CONFIG K2OSKERN_INTR_CONFIG;
+typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
 
 //
 // calling convention must match ACPI_SYSTEM_XFACE
@@ -244,30 +244,32 @@ typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
 typedef
 K2STAT
 (*K2OSKERN_pf_InstallIntrHandler)(
-    K2OSKERN_INTR_CONFIG const *    apConfig,
-    K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext,
-    K2OS_TOKEN *                    apRetTokIntr
+    K2OSKERN_IRQ_CONFIG const * apConfig,
+    K2OSKERN_pf_IntrHandler     aHandler,
+    void *                      apContext,
+    K2OS_TOKEN *                apRetTokIntr
     );
 
 K2STAT
 K2OSKERN_InstallIntrHandler(
-    K2OSKERN_INTR_CONFIG const *    apConfig,
-    K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext,
-    K2OS_TOKEN *                    apRetTokIntr
+    K2OSKERN_IRQ_CONFIG const * apConfig,
+    K2OSKERN_pf_IntrHandler     aHandler,
+    void *                      apContext,
+    K2OS_TOKEN *                apRetTokIntr
 );
 
-typedef
+typedef 
 K2STAT
-(*K2OSKERN_pf_RemoveIntrHandler)(
-    K2OS_TOKEN aTokIntr
-    );
+(*K2OSKERN_pf_SetIntrMask)(
+    K2OS_TOKEN  aTokIntr,
+    BOOL        aMask
+);
 
 K2STAT
-K2OSKERN_RemoveIntrHandler(
-    K2OS_TOKEN aTokIntr
-    );
+K2OSKERN_SetIntrMask(
+    K2OS_TOKEN  aTokIntr,
+    BOOL        aMask
+);
 
 //
 //------------------------------------------------------------------------
@@ -307,6 +309,20 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 //
 //------------------------------------------------------------------------
 //
+
+#if K2_TARGET_ARCH_IS_INTEL
+
+#define X32_DEVIRQ_LVT_BASE     24 
+#define X32_DEVIRQ_LVT_CMCI     (X32_DEVIRQ_LVT_BASE + 0)
+#define X32_DEVIRQ_LVT_TIMER    (X32_DEVIRQ_LVT_BASE + 1)
+#define X32_DEVIRQ_LVT_THERM    (X32_DEVIRQ_LVT_BASE + 2)
+#define X32_DEVIRQ_LVT_PERF     (X32_DEVIRQ_LVT_BASE + 3)
+#define X32_DEVIRQ_LVT_LINT0    (X32_DEVIRQ_LVT_BASE + 4)
+#define X32_DEVIRQ_LVT_LINT1    (X32_DEVIRQ_LVT_BASE + 5)
+#define X32_DEVIRQ_LVT_ERROR    (X32_DEVIRQ_LVT_BASE + 6)
+#define X32_DEVIRQ_LVT_LAST     X32_DEVIRQ_LVT_ERROR
+
+#endif
 
 #if __cplusplus
 }

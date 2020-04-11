@@ -33,7 +33,6 @@
 #include "x32kern.h"
 
 static BOOL     sgUseIoApic = FALSE;
-static UINT32   sgIoRedirectionEntryCount = 0; // something like 24
 
 void
 X32Kern_PICInit(void)
@@ -180,39 +179,39 @@ void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
 
 static
 void
-sPic_SetDevIntrMask(
-    UINT32  aDevIntr,
+sPic_SetDevIrqMask(
+    UINT32  aDevIrq,
     BOOL    aSetMask
 )
 {
     UINT32 bitNum;
 
-    bitNum = gX32Kern_IntrOverrideMap[aDevIntr];
-    if (bitNum == (UINT32)-1)
-        bitNum = aDevIntr;
+    bitNum = gX32Kern_kkIrqOverrideMap[aDevIrq];
+    if (bitNum == 0xFFFF)
+        bitNum = aDevIrq;
 
     if (aSetMask)
     {
-//        K2OSKERN_Debug("PIC.Mask Device Intr %d(%d)\n", aDevIntr, bitNum);
+//        K2OSKERN_Debug("PIC.Mask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Mask_BitNum(bitNum);
     }
     else
     {
-//        K2OSKERN_Debug("PIC.Unmask Device Intr %d(%d)\n", aDevIntr, bitNum);
+//        K2OSKERN_Debug("PIC.Unmask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Unmask_BitNum(bitNum);
     }
 }
 
 UINT32 sReadIoApic(UINT32 aReg)
 {
-    MMREG_WRITE32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOREGSEL, aReg);
-    return MMREG_READ32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOWIN);
+    MMREG_WRITE32(K2OS_KVA_X32_IOAPIC, X32_IOAPIC_OFFSET_IOREGSEL, aReg);
+    return MMREG_READ32(K2OS_KVA_X32_IOAPIC, X32_IOAPIC_OFFSET_IOWIN);
 }
 
 void sWriteIoApic(UINT32 aReg, UINT32 aVal)
 {
-    MMREG_WRITE32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOREGSEL, aReg);
-    MMREG_WRITE32(K2OSKERN_X32_IOAPIC_KVA, X32_IOAPIC_OFFSET_IOWIN, aVal);
+    MMREG_WRITE32(K2OS_KVA_X32_IOAPIC, X32_IOAPIC_OFFSET_IOREGSEL, aReg);
+    MMREG_WRITE32(K2OS_KVA_X32_IOAPIC, X32_IOAPIC_OFFSET_IOWIN, aVal);
 }
 
 void X32Kern_IoApicInit(void)
@@ -227,67 +226,117 @@ void X32Kern_IoApicInit(void)
     v = sReadIoApic(X32_IOAPIC_REGIX_IOAPICVER);
 
     K2_ASSERT((v & 0x1FF) != 0);
-    sgIoRedirectionEntryCount = ((v & 0x00FF0000) >> 16) + 1;
+    K2_ASSERT((((v & 0x00FF0000) >> 16) + 1) > 0);
 }
 
-UINT32  
-KernArch_DevIntrToSysIrq(
-    UINT32 aDevIntr
-)
+void
+X32Kern_APICInit(UINT32 aCpuIx)
+{
+    UINT32 reg;
+
+    //
+    // enable APIC 
+    //
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_SPUR);
+    if (!(reg & (1 << 8)))
+    {
+        reg |= (1 << 8);
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_SPUR, reg);
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_SPUR);
+    }
+
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ID) >> 24;
+    K2_ASSERT(reg == aCpuIx);
+
+    // Task Priority 
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TPR, 0);
+
+    // Destination Format - select flat model
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_DFR);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_DFR, reg | 0xF0000000);
+
+    // Logical Destination - set as processor bit (flat model gives us logical CPUs 0-7)
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LDR);
+    reg &= 0x00FFFFFF;
+    reg |= (1 << (aCpuIx + 24));
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LDR, reg);
+
+    // Spurious Register - set as intr 255
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_SPUR);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_SPUR, reg | 0xFF);
+
+    // mask everything and target linear device vectors
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_CMCI, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_CMCI);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_TIMER, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_TIMER);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_THERM, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_THERM);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_PERF, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_PERF);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_LINT0, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_LINT0);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_LINT1, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_LINT1);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_ERROR, X32_LOCAPIC_LVT_MASK | X32KERN_DEVVECTOR_LVT_ERROR);
+}
+
+UINT32 KernArch_DevIrqToVector(UINT32 aDevIrq)
 {
     UINT32 ret;
 
-    ret = gX32Kern_IntrOverrideMap[aDevIntr];
-    if (ret != (UINT32)-1)
-    {
-        return ret + X32KERN_INTR_DEV_BASE;
-    }
-    return aDevIntr + X32KERN_INTR_DEV_BASE;
+    K2_ASSERT(aDevIrq <= X32_DEVIRQ_LVT_LAST);
+
+    ret = gX32Kern_kkIrqOverrideMap[aDevIrq];
+    if (ret == 0xFFFF)
+        ret = aDevIrq;
+
+    return ret + X32KERN_DEVVECTOR_BASE;
 }
 
-UINT32
-KernArch_SysIrqToDevIntr(
-    UINT32 aSysIrq
-)
+UINT32 KernArch_VectorToDevIrq(UINT32 aVector)
 {
-    K2_ASSERT(aSysIrq >= X32KERN_INTR_DEV_BASE);
+    UINT32 ret;
 
-    return gX32Kern_IrqToDevIntrMap[aSysIrq];
+    K2_ASSERT(aVector < X32_NUM_IDT_ENTRIES);
+    
+    ret = gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[aVector];
+    if (ret == 0xFFFF)
+        return aVector - X32KERN_DEVVECTOR_BASE;
+
+    return ret;
 }
 
 static
 void
-sIoApic_SetDevIntrMask(
-    UINT32  aDevIntr,
+sIoApic_SetDevIrqMask(
+    UINT32  aIrqIx,
     BOOL    aSetMask
 )
 {
     UINT32 v;
     UINT32 redIx;
 
-    redIx = gX32Kern_IntrOverrideMap[aDevIntr];
-    if (redIx == (UINT32)-1)
-        redIx = aDevIntr;
+    redIx = gX32Kern_kkIrqOverrideMap[aIrqIx];
+    if (redIx == 0xFFFF)
+        redIx = aIrqIx;
 
     v = sReadIoApic(X32_IOAPIC_REGIX_REDLO(redIx));
     if (aSetMask)
     {
-//        K2OSKERN_Debug("IOAPIC.Mask Device Intr %d(%d)\n", aDevIntr, redIx);
+//        K2OSKERN_Debug("IOAPIC.Mask Device Irq %d(%d)\n", aIrqIx, redIx);
         v |= X32_IOAPIC_REDLO_MASK;
     }
     else
     {
-//        K2OSKERN_Debug("IOAPIC.Unmask Device Intr %d(%d)\n", aDevIntr, redIx);
+//        K2OSKERN_Debug("IOAPIC.Unmask Device Irq %d(%d)\n", aIrqIx, redIx);
         v &= ~X32_IOAPIC_REDLO_MASK;
     }
     sWriteIoApic(X32_IOAPIC_REGIX_REDLO(redIx), v);
 }
 
-void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
+void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
 {
     UINT32 redIx;
     UINT32 redHi;
     UINT32 redLo;
+
+    if (apConfig->mSourceIrq > X32_DEVIRQ_LVT_BASE)
+        return;
 
     if (gpX32Kern_MADT == NULL)
         return;
@@ -297,16 +346,16 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     //
     redHi = (1 << X32_IOAPIC_REDHI_DEST_SHIFT);
 
-    redIx = gX32Kern_IntrOverrideMap[apConfig->mSourceId];
-    if (redIx != (UINT32)-1)
+    redIx = gX32Kern_kkIrqOverrideMap[apConfig->mSourceIrq];
+    if (redIx != 0xFFFF)
     {
         //
         // use flags in override
         //
-        switch (gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_POLARITY_MASK)
+        switch (gX32Kern_kkIrqOverrideFlags[apConfig->mSourceIrq] & ACPI_APIC_INTR_FLAG_POLARITY_MASK)
         {
         case ACPI_APIC_INTR_FLAG_POLARITY_BUS:
-            if ((gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK) == ACPI_APIC_INTR_FLAG_TRIGGER_LEVEL)
+            if ((gX32Kern_kkIrqOverrideFlags[apConfig->mSourceIrq] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK) == ACPI_APIC_INTR_FLAG_TRIGGER_LEVEL)
             {
                 redLo = X32_IOAPIC_REDLO_POLARITY_LOW;
             }
@@ -329,7 +378,7 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
             return;
         }
 
-        switch (gX32Kern_IntrOverrideFlags[apConfig->mSourceId] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK)
+        switch (gX32Kern_kkIrqOverrideFlags[apConfig->mSourceIrq] & ACPI_APIC_INTR_FLAG_TRIGGER_MASK)
         {
         case ACPI_APIC_INTR_FLAG_TRIGGER_BUS:
         case ACPI_APIC_INTR_FLAG_TRIGGER_EDGE:
@@ -350,7 +399,7 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
         //
         // not overridden in ACPI - use flags in apConfig
         //
-        redIx = apConfig->mSourceId;
+        redIx = apConfig->mSourceIrq;
 
         K2_ASSERT(apConfig->mDestCoreIx < gData.mCpuCount);
 
@@ -370,7 +419,7 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     redLo |= X32_IOAPIC_REDLO_MASK;
     redLo |= X32_IOAPIC_REDLO_DEST_LOG;
     redLo |= X32_IOAPIC_REDLO_MODE_FIXED;
-    redLo |= ((redIx + X32KERN_INTR_DEV_BASE) & X32_IOAPIC_REDLO_VECTOR_MASK);
+    redLo |= ((redIx + X32KERN_DEVVECTOR_BASE) & X32_IOAPIC_REDLO_VECTOR_MASK);
 
 //    K2OSKERN_Debug("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
 
@@ -378,37 +427,75 @@ void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig)
     sWriteIoApic(X32_IOAPIC_REGIX_REDHI(redIx), redHi);
 }
 
-void X32Kern_MaskDevIntr(UINT8 aDevIntrId)
+static
+void
+sLvt_SetDevIrqMask(
+    UINT32  aDevIrq,
+    BOOL    aSetMask
+)
 {
-    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-    if (gpX32Kern_MADT != NULL)
-        sIoApic_SetDevIntrMask(aDevIntrId, TRUE);
+//    K2OSKERN_CPUCORE *  pThisCore;
+    UINT32              offset;
+    UINT32              localIrqIx;
+    UINT32              reg;
+
+//    pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
+
+    localIrqIx = aDevIrq - X32_DEVIRQ_LVT_BASE;
+
+    K2_ASSERT(localIrqIx < 7);
+
+    if (localIrqIx == 0)
+        offset = X32_LOCAPIC_OFFSET_LVT_CMCI;
     else
-        sPic_SetDevIntrMask(aDevIntrId, TRUE);
-}
+        offset = X32_LOCAPIC_OFFSET_LVT_TIMER + (0x10 * (localIrqIx - 1));
 
-void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId)
-{
-    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-    if (gpX32Kern_MADT != NULL)
-        sIoApic_SetDevIntrMask(aDevIntrId, FALSE);
-    else
-        sPic_SetDevIntrMask(aDevIntrId, FALSE);
-}
-
-void X32Kern_EOI(UINT32 aSysIrq)
-{
-    UINT32 devIntr;
-
-    devIntr = KernArch_SysIrqToDevIntr(aSysIrq);
-
-    if (gpX32Kern_MADT != NULL)
+    reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, offset);
+    if (aSetMask)
     {
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_EOI, devIntr);
+//        K2OSKERN_Debug("LVT.Mask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+        reg |= X32_LOCAPIC_LVT_MASK;
     }
     else
     {
-        X32Kern_PIC_EOI_BitNum((UINT8)devIntr);
+//        K2OSKERN_Debug("LVT.Unmask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+        reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
+    }
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, offset, reg);
+}
+
+void X32Kern_MaskDevIrq(UINT8 aDevIrqIx)
+{
+    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
+
+    if (aDevIrqIx > X32_DEVIRQ_LVT_BASE)
+        sLvt_SetDevIrqMask(aDevIrqIx, TRUE);
+    else if (gpX32Kern_MADT != NULL)
+        sIoApic_SetDevIrqMask(aDevIrqIx, TRUE);
+    else
+        sPic_SetDevIrqMask(aDevIrqIx, TRUE);
+}
+
+void X32Kern_UnmaskDevIrq(UINT8 aDevIrqIx)
+{
+    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
+    if (aDevIrqIx > X32_DEVIRQ_LVT_BASE)
+        sLvt_SetDevIrqMask(aDevIrqIx, FALSE);
+    else if (gpX32Kern_MADT != NULL)
+        sIoApic_SetDevIrqMask(aDevIrqIx, FALSE);
+    else
+        sPic_SetDevIrqMask(aDevIrqIx, FALSE);
+}
+
+void X32Kern_EOI(UINT32 aVector)
+{
+    if (gpX32Kern_MADT != NULL)
+    {
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_EOI, 0);
+    }
+    else
+    {
+        X32Kern_PIC_EOI_BitNum((UINT8)KernArch_VectorToDevIrq(aVector));
     }
 }
 

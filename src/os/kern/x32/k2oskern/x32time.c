@@ -77,7 +77,7 @@ X32Kern_InitStall(
     if (gpX32Kern_HPET != 0)
     {
         v = ((UINT32)gpX32Kern_HPET->Address.Address) & K2_VA32_MEMPAGE_OFFSET_MASK;
-        sgHPET = K2OSKERN_X32_HPET_KVA | v;
+        sgHPET = K2OS_KVA_X32_HPET | v;
 
         //
         // get # of timers

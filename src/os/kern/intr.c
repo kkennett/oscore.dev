@@ -49,10 +49,10 @@ void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_
 
 K2STAT
 K2OSKERN_InstallIntrHandler(
-    K2OSKERN_INTR_CONFIG const *    apConfig,
-    K2OSKERN_pf_IntrHandler         aHandler,
-    void *                          apContext,
-    K2OS_TOKEN *                    apRetTokIntr
+    K2OSKERN_IRQ_CONFIG const * apConfig,
+    K2OSKERN_pf_IntrHandler     aHandler,
+    void *                      apContext,
+    K2OS_TOKEN *                apRetTokIntr
 )
 {
     K2OSKERN_OBJ_INTR *     pIntr;
@@ -81,8 +81,8 @@ K2OSKERN_InstallIntrHandler(
     pIntr->mIsSignalled = FALSE;
     pIntr->mfHandler = aHandler;
     pIntr->mpHandlerContext = apContext;
-    pIntr->IntrTreeNode.mUserVal = KernArch_DevIntrToSysIrq(apConfig->mSourceId);
-    pIntr->Config = *apConfig;
+    pIntr->IntrTreeNode.mUserVal = apConfig->mSourceIrq;
+    pIntr->IrqConfig = *apConfig;
 
     disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);
 
@@ -125,11 +125,26 @@ K2OSKERN_InstallIntrHandler(
 }
 
 K2STAT
-K2OSKERN_RemoveIntrHandler(
-    K2OS_TOKEN aTokIntr
+K2OSKERN_SetIntrMask(
+    K2OS_TOKEN  aTokIntr,
+    BOOL        aMask
 )
 {
-    K2_ASSERT(0);
+    K2STAT              stat;
+    K2OSKERN_OBJ_INTR * pIntr;
 
-    return K2STAT_ERROR_NOT_IMPL;
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokIntr, (K2OSKERN_OBJ_HEADER **)&pIntr);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    if (pIntr->Hdr.mObjType == K2OS_Obj_Interrupt)
+    {
+        KernArch_SetDevIntrMask(pIntr, aMask);
+    }
+
+    KernObj_Release(&pIntr->Hdr);
+
+    return stat;
+
+
 }

@@ -44,14 +44,14 @@ struct _K2OSEXEC_INIT_INFO
     //
     // INPUT
     //
-    UINT32  mEfiMapSize;
-    UINT32  mEfiMemDescSize;
-    UINT32  mEfiMemDescVer;
+    UINT32              mEfiMapSize;
+    UINT32              mEfiMemDescSize;
+    UINT32              mEfiMemDescVer;
 
     //
     // OUTPUT
     //
-    K2OSKERN_INTR_CONFIG  SysTickDevIntrConfig;    // 1ms tick interrupt
+    K2OSKERN_IRQ_CONFIG SysTickDevIrqConfig;    // 1ms tick interrupt
 };
 
 typedef

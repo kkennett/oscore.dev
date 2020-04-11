@@ -30,10 +30,11 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "x32kernasm.inc"
+#include "k2asmx32.inc"
+#include "spec/x32pcdef.inc"
 
-// void X32Kern_PITInit(void)
-BEGIN_X32_PROC(X32Kern_PITInit)
+// void X32PIT_InitTo1Khz(void)
+BEGIN_X32_PROC(X32PIT_InitTo1Khz)
     pushfd
     cli
     mov %al, 0x34
@@ -45,7 +46,7 @@ BEGIN_X32_PROC(X32Kern_PITInit)
     outb X32PC_PIT_TIMER, %al
     popfd
     ret
-END_X32_PROC(X32Kern_PITInit)
+END_X32_PROC(X32PIT_InitTo1Khz)
   
     .end
 

@@ -39,47 +39,29 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OSKERN_X32_LOCAPIC_KVA            K2OS_KVA_ARCHSPEC_BASE
-#define K2OSKERN_X32_LOCAPIC_SIZE           K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_IOAPIC_KVA             (K2OSKERN_X32_LOCAPIC_KVA + K2OSKERN_X32_LOCAPIC_SIZE)
-#define K2OSKERN_X32_IOAPIC_SIZE            K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_HPET_KVA               (K2OSKERN_X32_IOAPIC_KVA + K2OSKERN_X32_IOAPIC_SIZE)
-#define K2OSKERN_X32_HPET_SIZE              K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_AP_TRANSITION_KVA      (K2OSKERN_X32_HPET_KVA + K2OSKERN_X32_HPET_SIZE)
-#define K2OSKERN_X32_AP_TRANSITION_SIZE     K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_AP_PAGEDIR_KVA         (K2OSKERN_X32_AP_TRANSITION_KVA + K2OSKERN_X32_AP_TRANSITION_SIZE)
-#define K2OSKERN_X32_AP_PAGEDIR_SIZE        K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_AP_PAGETABLE_KVA       (K2OSKERN_X32_AP_PAGEDIR_KVA + K2OSKERN_X32_AP_PAGEDIR_SIZE)
-#define K2OSKERN_X32_AP_PAGETABLE_SIZE      K2_VA32_MEMPAGE_BYTES
-
-#define K2OSKERN_X32_ARCHSPEC_END           (K2OSKERN_X32_AP_PAGETABLE_KVA + K2OSKERN_X32_AP_PAGETABLE_SIZE)
-
-K2_STATIC_ASSERT(K2OSKERN_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA_ARCHSPEC_SIZE));
+K2_STATIC_ASSERT(K2OS_KVA_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA_ARCHSPEC_SIZE));
 
 /* --------------------------------------------------------------------------------- */
 
 // interrupt vectors 0-31 reserved
-#define X32KERN_INTR_DEV_BASE           32  // fits with vectors from classic PIC
-#define X32KERN_INTR_DEV_LAST           55  // 32 + 24 - 1
+#define X32KERN_DEVVECTOR_BASE            32  // fits with vectors from classic PIC
+#define X32KERN_DEVVECTOR_LAST            55  // 32 + 24 - 1
 
-#define X32KERN_INTR_LVT_BASE           56 
+#define X32KERN_DEVVECTOR_LVT_BASE        56 
 
-#define X32KERN_INTR_LVT_CMCI           (X32KERN_INTR_LVT_BASE + 0)
-#define X32KERN_INTR_LVT_TIMER          (X32KERN_INTR_LVT_BASE + 1)
-#define X32KERN_INTR_LVT_THERM          (X32KERN_INTR_LVT_BASE + 2)
-#define X32KERN_INTR_LVT_PERF           (X32KERN_INTR_LVT_BASE + 3)
-#define X32KERN_INTR_LVT_LINT0          (X32KERN_INTR_LVT_BASE + 4)
-#define X32KERN_INTR_LVT_LINT1          (X32KERN_INTR_LVT_BASE + 5)
-#define X32KERN_INTR_LVT_ERROR          (X32KERN_INTR_LVT_BASE + 6)
-#define X32KERN_INTR_LVT_RESERVED       (X32KERN_INTR_LVT_BASE + 7)
+#define X32KERN_DEVVECTOR_LVT_CMCI        (X32KERN_DEVVECTOR_LVT_BASE + 0)
+#define X32KERN_DEVVECTOR_LVT_TIMER       (X32KERN_DEVVECTOR_LVT_BASE + 1)
+#define X32KERN_DEVVECTOR_LVT_THERM       (X32KERN_DEVVECTOR_LVT_BASE + 2)
+#define X32KERN_DEVVECTOR_LVT_PERF        (X32KERN_DEVVECTOR_LVT_BASE + 3)
+#define X32KERN_DEVVECTOR_LVT_LINT0       (X32KERN_DEVVECTOR_LVT_BASE + 4)
+#define X32KERN_DEVVECTOR_LVT_LINT1       (X32KERN_DEVVECTOR_LVT_BASE + 5)
+#define X32KERN_DEVVECTOR_LVT_ERROR       (X32KERN_DEVVECTOR_LVT_BASE + 6)
+#define X32KERN_DEVVECTOR_LVT_RESERVED    (X32KERN_DEVVECTOR_LVT_BASE + 7)
 
-#define X32KERN_INTR_ICI_BASE           (X32KERN_INTR_LVT_BASE + 8)
-#define X32KERN_INTR_ICI_LAST           (X32KERN_INTR_ICI_BASE + K2OS_MAX_CPU_COUNT - 1)
+#define X32KERN_VECTOR_ICI_BASE           (X32KERN_DEVVECTOR_LVT_BASE + 8)
+#define X32KERN_VECTOR_ICI_LAST           (X32KERN_VECTOR_ICI_BASE + K2OS_MAX_CPU_COUNT - 1)
+
+K2_STATIC_ASSERT(X32KERN_DEVVECTOR_LVT_BASE == (X32KERN_DEVVECTOR_BASE + X32_DEVIRQ_LVT_BASE));
 
 
 /* --------------------------------------------------------------------------------- */
@@ -106,7 +88,7 @@ struct _X32_EXCEPTION_CONTEXT
 {
     UINT32      DS;
     X32_PUSHA   REGS;                   // 8 32-bit words
-    UINT32      Exception_IrqVector;
+    UINT32      Exception_Vector;
     UINT32      Exception_ErrorCode;
     union
     {
@@ -141,11 +123,10 @@ extern ACPI_MADT_SUB_IO_APIC *              gpX32Kern_MADT_IoApic;
 extern ACPI_HPET *                          gpX32Kern_HPET;
 extern BOOL                                 gX32Kern_ApicReady;
 extern X32_CPUID                            gX32Kern_CpuId01;
-
-extern UINT32                               gX32Kern_IrqToDevIntrMap[X32_NUM_IDT_ENTRIES];
-
-extern UINT32                               gX32Kern_IntrOverrideMap[X32_NUM_IDT_ENTRIES];
-extern UINT16                               gX32Kern_IntrOverrideFlags[X32_NUM_IDT_ENTRIES];
+extern K2OSKERN_SEQLOCK                     gX32Kern_IntrSeqLock;
+extern UINT16                               gX32Kern_kkIrqOverrideMap[X32_DEVIRQ_LVT_LAST + 1];
+extern UINT16                               gX32Kern_kkIrqOverrideFlags[X32_DEVIRQ_LVT_LAST + 1];
+extern UINT16                               gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
 
 /* --------------------------------------------------------------------------------- */
 
@@ -169,11 +150,11 @@ void K2_CALLCONV_REGS X32Kern_LaunchEntryPoint(UINT32 aCoreIx);
 
 void X32Kern_InitStall(void);
 
-void X32Kern_ConfigDevIntr(K2OSKERN_INTR_CONFIG const *apConfig);
-void X32Kern_MaskDevIntr(UINT8 aDevIntrId);
-void X32Kern_UnmaskDevIntr(UINT8 aDevIntrId);
+void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig);
+void X32Kern_MaskDevIrq(UINT8 aIrqIx);
+void X32Kern_UnmaskDevIrq(UINT8 aIrqIx);
 
-void X32Kern_EOI(UINT32 aSysIrq);
+void X32Kern_EOI(UINT32 aVector);
 
 /* --------------------------------------------------------------------------------- */
 

@@ -45,4 +45,10 @@ void InstallHandlers2(void);
 
 void SetupPciConfig(void);
 
+#if K2_TARGET_ARCH_IS_INTEL
+
+void X32PIT_InitTo1Khz(void);
+
+#endif
+
 #endif // __K2OSEXEC_H

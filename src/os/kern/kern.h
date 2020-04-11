@@ -334,7 +334,7 @@ struct _K2OSKERN_SCHED
     UINT32                          mTlbInv2_PageCount;
     INT32 volatile                  mTlbCores;
 
-    K2OSKERN_INTR_CONFIG            SysTickDevIntrConfig;
+    K2OSKERN_IRQ_CONFIG             SysTickDevIrqConfig;
     K2OS_TOKEN                      mTokSysTickIntr;
 };
 
@@ -645,7 +645,7 @@ struct _K2OSKERN_OBJ_INTR
     K2OSKERN_OBJ_HEADER     Hdr;
     BOOL                    mIsSignalled;
     K2TREE_NODE             IntrTreeNode;
-    K2OSKERN_INTR_CONFIG    Config;
+    K2OSKERN_IRQ_CONFIG     IrqConfig;
     K2OSKERN_pf_IntrHandler mfHandler;
     void *                  mpHandlerContext;
 };
@@ -966,8 +966,9 @@ void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTarget
 void    KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 void    KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask);
 void    KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
-UINT32  KernArch_DevIntrToSysIrq(UINT32 aDevIntr);
-UINT32  KernArch_SysIrqToDevIntr(UINT32 aSysIrq);
+
+UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
+UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 
 void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore);
 
@@ -1009,7 +1010,7 @@ BOOL KernSched_TimePassed(void);
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
-void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig);
+void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 
 /* --------------------------------------------------------------------------------- */

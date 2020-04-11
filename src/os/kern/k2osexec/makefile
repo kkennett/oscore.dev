@@ -52,6 +52,7 @@ SOURCES += run.c
 SOURCES += init.c 
 SOURCES += handlers.c 
 SOURCES += pciconfig.c 
+SOURCES += x32pitasm.s
 
 ifeq ($(K2_ARCH),X32)
 SOURCE_LIBS += @shared/lib/k2archx32

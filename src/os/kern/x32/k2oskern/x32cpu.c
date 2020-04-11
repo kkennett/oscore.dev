@@ -170,7 +170,7 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     stackPtr -= X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT;
     pInitCtx = (X32_EXCEPTION_CONTEXT *)stackPtr;
     pInitCtx->DS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
-    pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_IrqVector;
+    pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_Vector;
     pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO;
     pInitCtx->KernelMode.CS = X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL;
 
@@ -237,12 +237,12 @@ static void sStartCpu(UINT32 aCpuIndex)
     //
     // copy in startup code
     //
-    K2MEM_Copy((void *)K2OSKERN_X32_AP_TRANSITION_KVA, sgCpuStartCode, sizeof(sgCpuStartCode));
+    K2MEM_Copy((void *)K2OS_KVA_X32_AP_TRANSITION, sgCpuStartCode, sizeof(sgCpuStartCode));
 
     //
     // set arguments
     //
-    pArgs = (STARTARGS_1800 *)(K2OSKERN_X32_AP_TRANSITION_KVA + 0x800);
+    pArgs = (STARTARGS_1800 *)(K2OS_KVA_X32_AP_TRANSITION + 0x800);
     pArgs->mTransitionCR3 = K2OS_X32_APSTART_PAGEDIR_ADDR;
     pArgs->mSubCoreEntry = (UINT32)sSubCore_Entry;
     pArgs->mCpuIx = aCpuIndex;
@@ -257,19 +257,19 @@ static void sStartCpu(UINT32 aCpuIndex)
     //
     // send physical INIT IPI to target processor
     //
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_HIGH32, (aCpuIndex << 24));
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_PHYSICAL | X32_LOCAPIC_ICR_LOW_MODE_INIT);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_HIGH32, (aCpuIndex << 24));
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_PHYSICAL | X32_LOCAPIC_ICR_LOW_MODE_INIT);
     do {
-        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_LOW32);
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32);
     } while (reg & X32_LOCAPIC_ICR_LOW_DELIVER_STATUS);
 
     //
     // send physical START IPI to target processor
     //
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_HIGH32, (aCpuIndex << 24));
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_PHYSICAL | X32_LOCAPIC_ICR_LOW_MODE_STARTUP | 0x01); /* vector to 0x1000 */
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_HIGH32, (aCpuIndex << 24));
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_PHYSICAL | X32_LOCAPIC_ICR_LOW_MODE_STARTUP | 0x01); /* vector to 0x1000 */
     do {
-        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_ICR_LOW32);
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32);
     } while (reg & X32_LOCAPIC_ICR_LOW_DELIVER_STATUS);
 }
 
@@ -286,15 +286,15 @@ void KernArch_LaunchCores(void)
         // 
         // map the AP processors' startup page directory so we can write to it.
         //
-        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
-        pPageDir = (X32_PAGEDIR *)K2OSKERN_X32_AP_PAGEDIR_KVA;
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_PAGEDIR, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        pPageDir = (X32_PAGEDIR *)K2OS_KVA_X32_AP_PAGEDIR;
         K2MEM_Zero(pPageDir, K2_VA32_MEMPAGE_BYTES);
 
         //
         // map the AP processors' startup page table so we can write to it.
         //
-        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
-        pPageTable = (X32_PAGETABLE *)K2OSKERN_X32_AP_PAGETABLE_KVA;
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_PAGETABLE, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        pPageTable = (X32_PAGETABLE *)K2OS_KVA_X32_AP_PAGETABLE;
         K2MEM_Zero(pPageTable, K2_VA32_MEMPAGE_BYTES);
 
         //
@@ -313,7 +313,7 @@ void KernArch_LaunchCores(void)
         //
         // map the transition page.  AP startup code is hardwired to work at this address
         //
-        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_TRANSITION, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
         
         //
         // put the transition page into the AP processors' pagetable
@@ -346,14 +346,14 @@ void KernArch_LaunchCores(void)
         //
         // unmap startup stuff now
         //
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGEDIR_KVA, 0);
-        KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_PAGEDIR_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_PAGEDIR, 0);
+        KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_PAGEDIR);
 
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_PAGETABLE_KVA, 0);
-        KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_PAGETABLE_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_PAGETABLE, 0);
+        KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_PAGETABLE);
 
-        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OSKERN_X32_AP_TRANSITION_KVA, 0);
-        KernArch_InvalidateTlbPageOnThisCore(K2OSKERN_X32_AP_TRANSITION_KVA);
+        KernMap_BreakOnePage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_AP_TRANSITION, 0);
+        KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_TRANSITION);
     }
 
     X32Kern_LaunchEntryPoint(0);

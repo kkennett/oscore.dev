@@ -91,9 +91,9 @@ static K2OSEXEC_pf_Run sExec_Init(void)
 
     fExec_Init(&initInfo);
 
-    K2_ASSERT(initInfo.SysTickDevIntrConfig.mSourceId != 0);
+    K2_ASSERT(initInfo.SysTickDevIrqConfig.mSourceIrq <= X32_DEVIRQ_LVT_ERROR);
 
-    KernSched_StartSysTick(&initInfo.SysTickDevIntrConfig);
+    KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
 
     return fExec_Run;
 }

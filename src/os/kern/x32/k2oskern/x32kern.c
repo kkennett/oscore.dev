@@ -49,9 +49,10 @@ ACPI_MADT_SUB_IO_APIC *                 gpX32Kern_MADT_IoApic = NULL;
 ACPI_HPET *                             gpX32Kern_HPET = NULL;
 BOOL                                    gX32Kern_ApicReady = FALSE;
 X32_CPUID                               gX32Kern_CpuId01;
-UINT32                                  gX32Kern_IrqToDevIntrMap[X32_NUM_IDT_ENTRIES];
-UINT32                                  gX32Kern_IntrOverrideMap[X32_NUM_IDT_ENTRIES];
-UINT16                                  gX32Kern_IntrOverrideFlags[X32_NUM_IDT_ENTRIES];
+K2OSKERN_SEQLOCK                        gX32Kern_IntrSeqLock;
+UINT16                                  gX32Kern_kkIrqOverrideMap[X32_DEVIRQ_LVT_LAST + 1];
+UINT16                                  gX32Kern_kkIrqOverrideFlags[X32_DEVIRQ_LVT_LAST + 1];
+UINT16                                  gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
 
 static void sInit_AtDlxEntry(void)
 {
@@ -75,6 +76,8 @@ static void sInit_AtDlxEntry(void)
     //
     X32Kern_GDTSetup();
     X32Kern_IDTSetup();
+
+    K2OSKERN_SeqIntrInit(&gX32Kern_IntrSeqLock);
 }
 
 static void sInit_BeforeHal_SetupPtPageCount(void)
@@ -199,30 +202,22 @@ static void sInit_BeforeHal_ScanAcpi(void)
             }
             ixCpu = (UINT32)gpX32Kern_HPET->Address.Address;
             ixCpu &= K2_VA32_PAGEFRAME_MASK;
-            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_HPET_KVA, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
+            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_HPET, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
         } while (0);
-    }
-
-    //
-    // init irq (vector) back to intr mapping
-    //
-    for (left = 0; left < X32KERN_INTR_DEV_BASE; left++)
-    {
-        gX32Kern_IrqToDevIntrMap[left] = (UINT32)-1;
-    }
-    for (left = X32KERN_INTR_DEV_BASE; left < X32_NUM_IDT_ENTRIES; left++)
-    {
-        gX32Kern_IrqToDevIntrMap[left] = left - X32KERN_INTR_DEV_BASE;
     }
 
     //
     // init intr override map
     //
-    for (left = 0; left < X32KERN_INTR_DEV_BASE; left++)
+    for (left = 0; left < X32_DEVIRQ_LVT_LAST; left++)
     {
-        gX32Kern_IntrOverrideMap[left] = (UINT32)-1; // this means "not overridden"
-        gX32Kern_IntrOverrideFlags[left] = 0;
+        gX32Kern_kkIrqOverrideMap[left] = (UINT16)-1; // this means "not overridden"
+        gX32Kern_kkIrqOverrideFlags[left] = 0;
+        gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
     }
+    do {
+        gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
+    } while (++left < X32_NUM_IDT_ENTRIES);
 
     //
     // find MADT
@@ -287,12 +282,15 @@ static void sInit_BeforeHal_ScanAcpi(void)
             {
                 pIntrOver = (ACPI_MADT_SUB_INTERRUPT_SOURCE_OVERRIDE *)pScan;
 
-                K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_INTR_DEV_BASE));
+                K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_DEVVECTOR_BASE));
 
-                gX32Kern_IntrOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
-                gX32Kern_IntrOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
+                gX32Kern_kkIrqOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
+                gX32Kern_kkIrqOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
 
-                gX32Kern_IrqToDevIntrMap[pIntrOver->GlobalSystemInterrupt + X32KERN_INTR_DEV_BASE] = pIntrOver->Source;
+                // now that override is set, the KernArch_DevIrqToVector should work for it
+                gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[KernArch_DevIrqToVector(pIntrOver->Source)] = pIntrOver->Source;
+
+                K2_ASSERT(KernArch_VectorToDevIrq(KernArch_DevIrqToVector(pIntrOver->Source)) == pIntrOver->Source);
             }
             K2_ASSERT(left >= pScan[1]);
             left -= pScan[1];
@@ -304,7 +302,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
         {
             localApicAddress = (UINT32)pOverride->LocalApicAddress;
         }
-        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_LOCAPIC_KVA, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+        KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_LOCAPIC, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
 
         //
         // init and enable cpu 0 APIC 
@@ -320,7 +318,7 @@ static void sInit_BeforeHal_ScanAcpi(void)
         {
             K2_ASSERT(gpX32Kern_MADT_IoApic->GlobalSystemInterruptBase == 0);
 
-            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OSKERN_X32_IOAPIC_KVA, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_IOAPIC, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
 
             //
             // initialize IO Apic

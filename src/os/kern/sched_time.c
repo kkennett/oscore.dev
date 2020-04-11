@@ -40,7 +40,7 @@ BOOL KernSched_TimePassed(void)
 {
     BOOL    executedSomething;
     UINT64  newTick;
-    UINT32  elapsed;
+//    UINT32  elapsed;
 
     executedSomething = FALSE;
 
@@ -49,12 +49,12 @@ BOOL KernSched_TimePassed(void)
 
     if (newTick > sgLastSchedTime)
     {
-        elapsed = (UINT32)(newTick - sgLastSchedTime);
+//        elapsed = (UINT32)(newTick - sgLastSchedTime);
 
         //
         // 'elapsed' milliseconds have elapsed
         //
-        K2OSKERN_Debug("SCHED: Elapsed(%d)\n", elapsed);
+//        K2OSKERN_Debug("SCHED: Elapsed(%d)\n", elapsed);
 
         sgLastSchedTime = newTick;
     }
@@ -111,7 +111,7 @@ UINT32 KernSched_SystemTickInterrupt(void *apContext)
     return 0;
 }
 
-void KernSched_StartSysTick(K2OSKERN_INTR_CONFIG const * apConfig)
+void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig)
 {
     K2STAT stat;
 

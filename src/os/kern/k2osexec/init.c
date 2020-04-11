@@ -57,109 +57,101 @@ void InitPart2(void)
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
 
+
+UINT32 gBusClockRate = 0;
+ACPI_TABLE_MADT *   gpMADT;
+
+void
+StartTime(
+    K2OSEXEC_INIT_INFO * apInitInfo
+)
+{
+    UINT32 v;
+    UINT32 reg;
+    UINT32 ix;
+    UINT32 avg[4];
+
+    K2MEM_Zero(&apInitInfo->SysTickDevIrqConfig, sizeof(K2OSKERN_IRQ_CONFIG));
+
+    if (gpMADT != NULL)
+    {
+        // set timer divisor to 4 to get bus clock rate (FSB rate is gBusClockRate * 4)
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_DIV);
+        reg &= ~X32_LOCAPIC_TIMER_DIV_MASK;
+        reg |= X32_LOCAPIC_TIMER_DIV_4;
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_DIV, reg);
+
+        // start the timer
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, 0xFFFFFFFF);
+
+        // timer counts DOWN.  use 1/10 second timings, averaging 4 of them
+        for (ix = 0; ix < 4; ix++)
+        {
+            reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_CURR);
+            K2OSKERN_MicroStall(100000);
+            v = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_CURR);
+            avg[ix] = reg - v;
+        }
+
+        // stop the timer
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
+
+        // average the timings
+        for (ix = 1; ix < 4; ix++)
+        {
+            avg[0] += avg[ix];
+        }
+        avg[0] >>= 2;
+        gBusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
+
+        // make sure the timer is stopped
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
+
+        // set timer mode to masked and periodic
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_TIMER);
+        reg &= ~X32_LOCAPIC_LVT_TIMER_MODE_MASK;
+        reg |= X32_LOCAPIC_LVT_TIMER_PERIODIC;
+        reg |= X32_LOCAPIC_LVT_MASK;
+        reg &= ~X32_LOCAPIC_LVT_STATUS;
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
+
+        // interrupt once per millisecond
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, gBusClockRate / 1000);
+
+        apInitInfo->SysTickDevIrqConfig.mSourceIrq = X32_DEVIRQ_LVT_TIMER;
+    }
+    else
+    {
+        gBusClockRate = 1000000;
+        X32PIT_InitTo1Khz();
+        // leave mSourceIrq as zero, which is the IRQ of the PIT
+    }
+}
+
 void
 K2OSEXEC_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
+    ACPI_TABLE_HEADER * pMADT;
+    ACPI_STATUS         acpiStatus;
+
     InitPart1();
     InstallHandlers1();
     InitPart2();
     InstallHandlers2();
+
+    acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pMADT);
+    if (ACPI_FAILURE(acpiStatus))
+        gpMADT = NULL;
+    else
+        gpMADT = (ACPI_TABLE_MADT *)pMADT;
+
     SetupPciConfig();
 
     //
     // find the system tick interrupt source and set it up
     //
-
-
-    K2_ASSERT(0);
+    StartTime(apInitInfo);
 }
 
-
-#if 0
-
-void
-X32Kern_StartTime(
-    void
-)
-{
-    UINT32 reg;
-
-    if (gpX32Kern_MADT != NULL)
-    {
-        //
-        // called on core 0 right before core enters monitor for the first time 
-        //
-        sgTickCounter = 0;
-
-        // make sure the timer is stopped
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
-
-        // set timer mode to masked and periodic
-        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER);
-        reg &= ~X32_LOCAPIC_LVT_TIMER_MODE_MASK;
-        reg |= X32_LOCAPIC_LVT_TIMER_PERIODIC;
-        reg |= X32_LOCAPIC_LVT_MASK;
-        reg &= ~X32_LOCAPIC_LVT_STATUS;
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
-
-        // interrupt once per millisecond
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, gX32Kern_BusClockRate / 1000);
-
-        // unmask interrupt
-        reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
-        MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
-    }
-    else
-    {
-        K2OSKERN_Debug("No MADT - must use PIT for timer!\n");
-        X32Kern_PITInit();
-        X32Kern_UnmaskDevIntr(0);
-    }
-}
-
-#endif
-
-#if 0
-
-//
-// now get bus clock frequency
-//
-UINT32  gX32Kern_BusClockRate = 0;
-if (gpX32Kern_MADT != NULL)
-{
-    // set timer divisor to 4 to get bus clock rate (FSB rate is gBusClockRate * 4)
-    reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV);
-    reg &= ~X32_LOCAPIC_TIMER_DIV_MASK;
-    reg |= X32_LOCAPIC_TIMER_DIV_4;
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_DIV, reg);
-
-    // start the timer
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0xFFFFFFFF);
-
-    // timer counts DOWN.  use 1/10 second timings, averaging 4 of them
-    for (ix = 0; ix < 4; ix++)
-    {
-        reg = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
-        K2OSKERN_MicroStall(100000);
-        v = MMREG_READ32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_CURR);
-        avg[ix] = reg - v;
-    }
-
-    // stop the timer
-    MMREG_WRITE32(K2OSKERN_X32_LOCAPIC_KVA, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
-
-    // average the timings
-    for (ix = 1; ix < 4; ix++)
-    {
-        avg[0] += avg[ix];
-    }
-    avg[0] >>= 2;
-    gX32Kern_BusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
-}
-else
-gX32Kern_BusClockRate = 1000000;
-
-
-#endif
