@@ -32,6 +32,23 @@
 
 #include "k2osexec.h"
 
+K2HEAP_ANCHOR       gPhysSpaceHeap;
+K2OS_CRITSEC        gPhysSpaceSec;
+
+UINT32              gBusClockRate;
+ACPI_TABLE_MADT *   gpMADT;
+
+
+static K2HEAP_NODE * sAcquireNode(K2HEAP_ANCHOR *apHeap)
+{
+    return (K2HEAP_NODE *)K2OS_HeapAlloc(sizeof(PHYS_HEAPNODE));
+}
+
+static void sReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+{
+    K2OS_HeapFree(apNode);
+}
+
 K2STAT
 K2_CALLCONV_REGS
 dlx_entry(
@@ -39,6 +56,15 @@ dlx_entry(
     UINT32  aReason
 )
 {
+    BOOL ok;
+
+    gBusClockRate = 0;
+    gpMADT = NULL;
+
+    K2HEAP_Init(&gPhysSpaceHeap, sAcquireNode, &sReleaseNode);
+    ok = K2OS_CritSecInit(&gPhysSpaceSec);
+    K2_ASSERT(ok);
+
     return K2STAT_NO_ERROR;
 }
 

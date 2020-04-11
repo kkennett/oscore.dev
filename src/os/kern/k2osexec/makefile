@@ -52,9 +52,13 @@ SOURCES += run.c
 SOURCES += init.c 
 SOURCES += handlers.c 
 SOURCES += pciconfig.c 
-SOURCES += x32pitasm.s
+SOURCES += time.c
+SOURCES += phys.c
+
+SOURCE_LIBS += @shared/lib/k2heap
 
 ifeq ($(K2_ARCH),X32)
+SOURCES += x32pitasm.s
 SOURCE_LIBS += @shared/lib/k2archx32
 endif
 

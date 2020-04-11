@@ -83,8 +83,8 @@ K2HEAP_Init(
 
 void
 K2HEAP_Dump(
-    K2HEAP_ANCHOR *         apHeap,
-    pf_K2HEAP_DumpNode      afDumpNode
+    K2HEAP_ANCHOR *     apHeap,
+    pf_K2HEAP_DumpNode  afDumpNode
     );
 
 static
@@ -124,7 +124,7 @@ static
 K2_INLINE
 K2HEAP_NODE *
 K2HEAP_GetFirstNode(
-    K2HEAP_ANCHOR *  apHeap
+    K2HEAP_ANCHOR * apHeap
     )
 {
     K2TREE_NODE *pTreeNode;
@@ -140,7 +140,7 @@ static
 K2_INLINE
 K2HEAP_NODE *
 K2HEAP_GetLastNode(
-    K2HEAP_ANCHOR *  apHeap
+    K2HEAP_ANCHOR * apHeap
     )
 {
     K2TREE_NODE *pTreeNode;
@@ -156,8 +156,8 @@ static
 K2_INLINE
 K2HEAP_NODE *
 K2HEAP_GetPrevNode(
-    K2HEAP_ANCHOR *      apHeap,
-    K2HEAP_NODE * apNode
+    K2HEAP_ANCHOR * apHeap,
+    K2HEAP_NODE *   apNode
     )
 {
     K2TREE_NODE *pTreeNode;
@@ -174,8 +174,8 @@ static
 K2_INLINE
 K2HEAP_NODE *
 K2HEAP_GetNextNode(
-    K2HEAP_ANCHOR *      apHeap,
-    K2HEAP_NODE * apNode
+    K2HEAP_ANCHOR * apHeap,
+    K2HEAP_NODE *   apNode
     )
 {
     K2TREE_NODE *pTreeNode;
@@ -190,66 +190,66 @@ K2HEAP_GetNextNode(
 
 K2HEAP_NODE *
 K2HEAP_FindNodeContainingAddr(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aAddr
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aAddr
     );
 
 K2HEAP_NODE *
 K2HEAP_GetFirstNodeInRange(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aStart,
-    UINT32  aSize
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aStart,
+    UINT32          aSize
     );
 
 K2STAT
 K2HEAP_AllocNodeAt(
-    K2HEAP_ANCHOR *      apHeap,
-    UINT32      aAddr,
-    UINT32      aSize,
-    K2HEAP_NODE **apRetNode
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aAddr,
+    UINT32          aSize,
+    K2HEAP_NODE **  apRetNode
     );
 
 K2STAT
 K2HEAP_AllocNodeLowest(
-    K2HEAP_ANCHOR *      apHeap,
-    UINT32      aSize,
-    UINT32      aAlign,
-    K2HEAP_NODE **apRetNode
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign,
+    K2HEAP_NODE **  apRetNode
     );
 
 K2STAT
 K2HEAP_AllocNodeHighest(
-    K2HEAP_ANCHOR *      apHeap,
-    UINT32      aSize,
-    UINT32      aAlign,
-    K2HEAP_NODE **apRetNode
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign,
+    K2HEAP_NODE **  apRetNode
     );
 
 K2STAT
 K2HEAP_AllocNodeBest(
-    K2HEAP_ANCHOR *      apHeap,
-    UINT32      aSize,
-    UINT32      aAlign,
-    K2HEAP_NODE **apRetNode
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign,
+    K2HEAP_NODE **  apRetNode
     );
 
 K2STAT
 K2HEAP_AddFreeSpaceNode(
-    K2HEAP_ANCHOR *      apHeap,
-    UINT32      aStart,
-    UINT32      aSize,
-    K2HEAP_NODE **apRetNode
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aStart,
+    UINT32          aSize,
+    K2HEAP_NODE **  apRetNode
     );
 
 K2STAT
 K2HEAP_FreeNode(
-    K2HEAP_ANCHOR *      apHeap,
-    K2HEAP_NODE * apNode
+    K2HEAP_ANCHOR * apHeap,
+    K2HEAP_NODE *   apNode
     );
 
 void
 K2HEAP_MergeTags(
-    K2HEAP_ANCHOR *      apHeap
+    K2HEAP_ANCHOR * apHeap
     );
 
 /* ------------------------------------------------------------------------- */
@@ -258,9 +258,9 @@ static
 K2_INLINE
 K2STAT
 K2HEAP_AllocAt(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aAddr,
-    UINT32  aSize
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aAddr,
+    UINT32          aSize
     )
 {
     return K2HEAP_AllocNodeAt(apHeap, aAddr, aSize, NULL);
@@ -270,9 +270,9 @@ static
 K2_INLINE
 UINT32
 K2HEAP_AllocAlignedLowest(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize,
-    UINT32  aAlign
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign
     )
 {
     K2STAT status;
@@ -289,9 +289,9 @@ static
 K2_INLINE
 UINT32
 K2HEAP_AllocAlignedHighest(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize,
-    UINT32  aAlign
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign
     )
 {
     K2STAT status;
@@ -308,9 +308,9 @@ static
 K2_INLINE
 UINT32
 K2HEAP_AllocAligned(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize,
-    UINT32  aAlign
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize,
+    UINT32          aAlign
     )
 {
     K2STAT status;
@@ -327,8 +327,8 @@ static
 K2_INLINE
 UINT32
 K2HEAP_AllocLowest(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize
     )
 {
     return K2HEAP_AllocAlignedLowest(apHeap, aSize, 0);
@@ -338,8 +338,8 @@ static
 K2_INLINE
 UINT32
 K2HEAP_AllocHighest(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize
     )
 {
     return K2HEAP_AllocAlignedHighest(apHeap, aSize, 0);
@@ -349,8 +349,8 @@ static
 K2_INLINE
 UINT32
 K2HEAP_Alloc(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aSize
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aSize
     )
 {
     return K2HEAP_AllocAligned(apHeap, aSize, 0);
@@ -360,8 +360,8 @@ static
 K2_INLINE
 BOOL
 K2HEAP_Free(
-    K2HEAP_ANCHOR *  apHeap,
-    UINT32  aAddr
+    K2HEAP_ANCHOR * apHeap,
+    UINT32          aAddr
     )
 {
     K2HEAP_NODE *pHeapNode = K2HEAP_FindNodeContainingAddr(apHeap, aAddr);

@@ -36,19 +36,70 @@
 #include <k2oskern.h>
 #include "..\k2osacpi\k2osacpi.h"
 #include "..\kernexec.h"
+#include <lib/k2heap.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* ----------------------------------------------------------------------------- */
 
 void InitPart1(void);
 void InitPart2(void);
 
+/* ----------------------------------------------------------------------------- */
+
 void InstallHandlers1(void);
 void InstallHandlers2(void);
 
+/* ----------------------------------------------------------------------------- */
+
 void SetupPciConfig(void);
+
+/* ----------------------------------------------------------------------------- */
 
 #if K2_TARGET_ARCH_IS_INTEL
 
 void X32PIT_InitTo1Khz(void);
 
+#endif
+
+void
+StartTime(
+    K2OSEXEC_INIT_INFO * apInitInfo
+);
+
+/* ----------------------------------------------------------------------------- */
+
+typedef struct _PHYS_HEAPNODE PHYS_HEAPNODE;
+struct _PHYS_HEAPNODE
+{
+    K2HEAP_NODE HeapNode;   // must go first
+    UINT32      mDisp;
+};
+
+#define PHYS_DISP_ERROR         0
+#define PHYS_DISP_MAPPEDIO      1
+#define PHYS_DISP_MEMORY        2
+#define PHYS_DISP_MAPPEDPORT    3
+
+extern K2HEAP_ANCHOR        gPhysSpaceHeap;
+extern K2OS_CRITSEC         gPhysSpaceSec;
+
+void 
+InitPhys(
+    K2OSEXEC_INIT_INFO * apInitInfo
+);
+
+/* ----------------------------------------------------------------------------- */
+
+extern UINT32               gBusClockRate;
+extern ACPI_TABLE_MADT *    gpMADT;
+
+/* ----------------------------------------------------------------------------- */
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif // __K2OSEXEC_H
