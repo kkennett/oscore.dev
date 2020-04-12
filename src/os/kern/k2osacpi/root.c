@@ -30,7 +30,7 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2osacpi.h"
+#include "ik2osacpi.h"
 
 ACPI_PHYSICAL_ADDRESS
 AcpiOsGetRootPointer(

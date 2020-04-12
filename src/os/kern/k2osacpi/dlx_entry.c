@@ -30,7 +30,7 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2osacpi.h"
+#include "ik2osacpi.h"
 
 K2STAT
 K2_CALLCONV_REGS

@@ -42,33 +42,28 @@
 #include <acpixf.h>
 #include <acexcep.h>
 
-struct _K2OSACPI_INTR
-{
-    UINT32              InterruptNumber;
-    ACPI_OSD_HANDLER    ServiceRoutine;
-    K2OS_TOKEN          mToken;
-    K2LIST_LINK         ListLink;
-};
-typedef struct _K2OSACPI_INTR K2OSACPI_INTR;
+typedef
+ACPI_STATUS
+(*K2OSACPI_pf_ReadPciConfiguration)(
+    ACPI_PCI_ID             *PciId,
+    UINT32                  Reg,
+    UINT64                  *Value,
+    UINT32                  Width
+    );
 
-extern K2LIST_ANCHOR gK2OSACPI_IntrList;
-extern K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
+typedef
+ACPI_STATUS
+(*K2OSACPI_pf_WritePciConfiguration)(
+    ACPI_PCI_ID             *PciId,
+    UINT32                  Reg,
+    UINT64                  Value,
+    UINT32                  Width
+    );
 
-typedef struct _CACHE_HDR CACHE_HDR;
-struct _CACHE_HDR
-{
-    UINT32              mCacheId;
-    char *              mpCacheName;
-    UINT32              mObjectBytes;
-    UINT32              mMaxDepth;
-    UINT32              mHighwater;
-    UINT32              mVirtBase;
-    K2OSKERN_SEQLOCK    SeqLock;
-    K2LIST_ANCHOR       FreeList;
-    K2LIST_LINK         CacheListLink;
-    UINT8               CacheData[4];
-};
-
-extern K2LIST_ANCHOR gK2OSACPI_CacheList;
+K2STAT
+K2OSACPI_SetPciConfigOverride(
+    K2OSACPI_pf_ReadPciConfiguration    afRead,
+    K2OSACPI_pf_WritePciConfiguration      afWrite
+);
 
 #endif // __K2OSACPI_H

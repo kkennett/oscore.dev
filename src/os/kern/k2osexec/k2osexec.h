@@ -44,6 +44,12 @@ extern "C" {
 
 /* ----------------------------------------------------------------------------- */
 
+typedef struct _PHYS_HEAPNODE   PHYS_HEAPNODE;
+typedef struct _PCI_SEGMENT     PCI_SEGMENT;
+typedef struct _PCI_DEVICE      PCI_DEVICE;
+
+/* ----------------------------------------------------------------------------- */
+
 void InitPart1(void);
 void InitPart2(void);
 
@@ -53,6 +59,25 @@ void InstallHandlers1(void);
 void InstallHandlers2(void);
 
 /* ----------------------------------------------------------------------------- */
+
+struct _PCI_DEVICE
+{
+    ACPI_PCI_ID         PciId;
+    UINT32              CfgPageMapping;
+    ACPI_HANDLE         mhAcpiDevice;
+    PCI_SEGMENT *       mpPciSeg;
+    K2TREE_NODE         PciDevTreeNode;
+};
+
+struct _PCI_SEGMENT
+{
+    ACPI_MCFG_ALLOCATION *  mpMcfgAlloc;
+    PHYS_HEAPNODE *         mpPhysHeapNode;
+    K2TREE_ANCHOR           PciDevTree;
+    K2LIST_LINK             PciSegListLink;
+};
+
+extern K2LIST_ANCHOR gPciSegList;
 
 void SetupPciConfig(void);
 
@@ -71,7 +96,6 @@ StartTime(
 
 /* ----------------------------------------------------------------------------- */
 
-typedef struct _PHYS_HEAPNODE PHYS_HEAPNODE;
 struct _PHYS_HEAPNODE
 {
     K2HEAP_NODE HeapNode;   // must go first
@@ -82,6 +106,7 @@ struct _PHYS_HEAPNODE
 #define PHYS_DISP_MAPPEDIO      1
 #define PHYS_DISP_MEMORY        2
 #define PHYS_DISP_MAPPEDPORT    3
+#define PHYS_DISP_PCI_SEGMENT   4
 
 extern K2HEAP_ANCHOR        gPhysSpaceHeap;
 extern K2OS_CRITSEC         gPhysSpaceSec;
@@ -90,6 +115,8 @@ void
 InitPhys(
     K2OSEXEC_INIT_INFO * apInitInfo
 );
+
+extern ACPI_TABLE_MCFG *    gpMCFG;
 
 /* ----------------------------------------------------------------------------- */
 

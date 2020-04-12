@@ -149,13 +149,7 @@ AcpiWarning
 AcpiInfo
 AcpiBiosError
 AcpiBiosWarning
-#AcpiDebugPrint
-#AcpiDebugPrintRaw
-#AcpiTracePoint
-#AcpiInitializeDebugger
-#AcpiTerminateDebugger
-#AcpiRunDebugger
-#AcpiSetDebuggerThreadId
+K2OSACPI_SetPciConfigOverride
 
 [Data]
 AcpiGbl_EnableInterpreterSlack

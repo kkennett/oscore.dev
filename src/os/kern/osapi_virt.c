@@ -127,8 +127,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
         if (K2STAT_IS_ERROR(stat))
         {
             KernMem_VirtFreeFromThread(pCurThread);
-            K2OS_ThreadSetStatus(stat);
-            return FALSE;
         }
 
     } while (0);

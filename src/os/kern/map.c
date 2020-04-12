@@ -356,7 +356,6 @@ void KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *ap
     BOOL                        emptyPt;
     K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
 
-
     pPtPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
 
     virtAddr = apCurThread->mWorkMapAddr;

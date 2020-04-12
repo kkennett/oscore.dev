@@ -33,22 +33,24 @@
 #include "k2osexec.h"
 
 static void
-NotifyHandler(
+SystemNotifyHandler(
     ACPI_HANDLE                 Device,
     UINT32                      Value,
     void                        *Context)
 {
     K2OSKERN_Debug("K2OSACPI:NotifyHandler = Received a Notify %08X\n", Value);
+    K2_ASSERT(0);
 }
 
 static ACPI_STATUS
-RegionInit(
+SysMemoryRegionInit(
     ACPI_HANDLE                 RegionHandle,
     UINT32                      Function,
     void                        *HandlerContext,
     void                        **RegionContext)
 {
-    K2OSKERN_Debug("K2OSACPI:RegionInit = Received a region init for %08X\n", RegionHandle);
+    K2OSKERN_Debug("K2OSACPI:SysMemoryRegionInit = Received a region init for %08X\n", RegionHandle);
+    K2_ASSERT(0);
     if (Function == ACPI_REGION_DEACTIVATE)
     {
         *RegionContext = NULL;
@@ -61,7 +63,7 @@ RegionInit(
 }
 
 static ACPI_STATUS
-RegionHandler(
+SysMemoryRegionHandler(
     UINT32                      Function,
     ACPI_PHYSICAL_ADDRESS       Address,
     UINT32                      BitWidth,
@@ -69,8 +71,22 @@ RegionHandler(
     void                        *HandlerContext,
     void                        *RegionContext)
 {
-    K2OSKERN_Debug("K2OSACPI:RegionHandler = Received a Region Access\n");
+    K2OSKERN_Debug("K2OSACPI:SysMemoryRegionHandler = Received a Region Access\n");
+    K2_ASSERT(0);
     return (AE_OK);
+}
+
+void InstallHandlers1(void)
+{
+    ACPI_STATUS acpiStatus;
+
+    acpiStatus = AcpiInstallNotifyHandler(ACPI_ROOT_OBJECT,
+        ACPI_SYSTEM_NOTIFY, SystemNotifyHandler, NULL);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+
+    acpiStatus = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT,
+        ACPI_ADR_SPACE_SYSTEM_MEMORY, SysMemoryRegionHandler, SysMemoryRegionInit, NULL);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
 
 static UINT32
@@ -81,19 +97,6 @@ PowerButtonHandler(
     K2OSKERN_Debug("K2OSACPI:PowerButtonHandler\n");
     AcpiClearEvent(ACPI_EVENT_POWER_BUTTON);
     return (AE_OK);
-}
-
-void InstallHandlers1(void)
-{
-    ACPI_STATUS acpiStatus;
-
-    acpiStatus = AcpiInstallNotifyHandler(ACPI_ROOT_OBJECT,
-        ACPI_SYSTEM_NOTIFY, NotifyHandler, NULL);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT,
-        ACPI_ADR_SPACE_SYSTEM_MEMORY, RegionHandler, RegionInit, NULL);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 }
 
 void InstallHandlers2(void)

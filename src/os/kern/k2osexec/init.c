@@ -62,23 +62,43 @@ K2OSEXEC_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
-    ACPI_TABLE_HEADER * pMADT;
+    ACPI_TABLE_HEADER * pAcpiHdr;
     ACPI_STATUS         acpiStatus;
 
     InitPart1();
-    InstallHandlers1();
-    InitPart2();
-    InstallHandlers2();
 
-    InitPhys(apInitInfo);
+    //
+    // root tables available
+    //
 
-    acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pMADT);
+    acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pAcpiHdr);
     if (ACPI_FAILURE(acpiStatus))
         gpMADT = NULL;
     else
-        gpMADT = (ACPI_TABLE_MADT *)pMADT;
+        gpMADT = (ACPI_TABLE_MADT *)pAcpiHdr;
+
+    acpiStatus = AcpiGetTable(ACPI_SIG_MCFG, 0, &pAcpiHdr);
+    if (ACPI_FAILURE(acpiStatus))
+        gpMCFG = NULL;
+    else
+        gpMCFG = (ACPI_TABLE_MCFG *)pAcpiHdr;
+
+    InitPhys(apInitInfo);
 
     SetupPciConfig();
+
+
+    //
+    // allocated/used physical memory regions are known
+    //
+
+    InstallHandlers1();
+
+    InitPart2();
+
+    InstallHandlers2();
+
+
 
     StartTime(apInitInfo);
 }

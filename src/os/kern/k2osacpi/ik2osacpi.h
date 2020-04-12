@@ -30,45 +30,38 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2osexec.h"
+#ifndef __IK2OSACPI_H
+#define __IK2OSACPI_H
 
-K2HEAP_ANCHOR       gPhysSpaceHeap;
-K2OS_CRITSEC        gPhysSpaceSec;
-ACPI_TABLE_MCFG *   gpMCFG;
+#include "k2osacpi.h"
 
-K2LIST_ANCHOR       gPciSegList;
-
-UINT32              gBusClockRate;
-ACPI_TABLE_MADT *   gpMADT;
-
-static K2HEAP_NODE * sAcquireNode(K2HEAP_ANCHOR *apHeap)
+struct _K2OSACPI_INTR
 {
-    return (K2HEAP_NODE *)K2OS_HeapAlloc(sizeof(PHYS_HEAPNODE));
-}
+    UINT32              InterruptNumber;
+    ACPI_OSD_HANDLER    ServiceRoutine;
+    K2OS_TOKEN          mToken;
+    K2LIST_LINK         ListLink;
+};
+typedef struct _K2OSACPI_INTR K2OSACPI_INTR;
 
-static void sReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+extern K2LIST_ANCHOR gK2OSACPI_IntrList;
+extern K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
+
+typedef struct _CACHE_HDR CACHE_HDR;
+struct _CACHE_HDR
 {
-    K2OS_HeapFree(apNode);
-}
+    UINT32              mCacheId;
+    char *              mpCacheName;
+    UINT32              mObjectBytes;
+    UINT32              mMaxDepth;
+    UINT32              mHighwater;
+    UINT32              mVirtBase;
+    K2OSKERN_SEQLOCK    SeqLock;
+    K2LIST_ANCHOR       FreeList;
+    K2LIST_LINK         CacheListLink;
+    UINT8               CacheData[4];
+};
 
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
-{
-    BOOL ok;
+extern K2LIST_ANCHOR gK2OSACPI_CacheList;
 
-    gBusClockRate = 0;
-    gpMADT = NULL;
-
-    K2HEAP_Init(&gPhysSpaceHeap, sAcquireNode, &sReleaseNode);
-    ok = K2OS_CritSecInit(&gPhysSpaceSec);
-    K2_ASSERT(ok);
-
-    K2LIST_Init(&gPciSegList);
-
-    return K2STAT_NO_ERROR;
-}
-
+#endif // __IK2OSACPI_H

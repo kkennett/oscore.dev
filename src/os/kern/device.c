@@ -32,28 +32,7 @@
 
 #include "kern.h"
 
-static
-K2STAT
-sMapDeviceEarly(
-    UINT32      aPhysDeviceAddr,
-    UINT32      aPageCount,
-    UINT32 *    apRetVirtAddr
-)
-{
-
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-static
-K2STAT
-sMapDeviceAfterHal(
-    UINT32      aPhysDeviceAddr,
-    UINT32      aPageCount,
-    UINT32 *    apRetVirtAddr
-)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
+#define DEVMAP_CHUNK 128
 
 K2STAT
 K2OSKERN_MapDevice(
@@ -62,36 +41,96 @@ K2OSKERN_MapDevice(
     UINT32 *    apRetVirtAddr
 )
 {
-    K2STAT stat;
+    K2STAT                  stat;
+    BOOL                    disp;
+    UINT32                  virtAddr;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+    UINT32                  chunkLeft;
 
-    K2OSKERN_Debug("+K2OSKERN_MapDevice(%08X,%d)\n", aPhysDeviceAddr, aPageCount);
+    if (gData.mKernInitStage < KernInitStage_MemReady)
+        return K2STAT_ERROR_API_ORDER;
 
-    if (gData.mKernInitStage < KernInitStage_After_Hal)
-        stat = sMapDeviceEarly(aPhysDeviceAddr, aPageCount, apRetVirtAddr);
-    else
-        stat = sMapDeviceAfterHal(aPhysDeviceAddr, aPageCount, apRetVirtAddr);
+    pSeg = NULL;
+    stat = KernMem_SegAlloc(&pSeg);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return stat;
+    }
+    K2_ASSERT(pSeg != NULL);
 
-    K2OSKERN_Debug("-K2OSKERN_MapDevice(%08X,%d)\n", aPhysDeviceAddr, aPageCount);
+    do {
+        pCurThread = K2OSKERN_CURRENT_THREAD;
+
+        stat = KernMem_VirtAllocToThread(pCurThread, 0, aPageCount, FALSE);
+        if (K2STAT_IS_ERROR(stat))
+            break;
+
+        K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+        pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+        pSeg->Hdr.mRefCount = 1;
+        K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+        pSeg->SegTreeNode.mUserVal = pCurThread->mWorkVirt_Range;
+        pSeg->mPagesBytes = pCurThread->mWorkVirt_PageCount * K2_VA32_MEMPAGE_BYTES;
+        pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_DEVMAP | K2OS_MAPTYPE_KERN_DEVICEIO;
+        pSeg->Info.User.mpProc = pCurThread->mpProc;
+
+        K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+        K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+
+        stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            *apRetVirtAddr = pSeg->SegTreeNode.mUserVal;
+            K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
+            K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
+
+            //
+            // map the device pages to the virtual range just created
+            //
+            chunkLeft = DEVMAP_CHUNK;
+            virtAddr = pSeg->SegTreeNode.mUserVal;
+
+            disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+
+            do {
+                KernMap_MakeOnePresentPage(
+                    K2OS_KVA_KERNVAMAP_BASE,
+                    virtAddr,
+                    aPhysDeviceAddr,
+                    K2OS_MAPTYPE_KERN_DEVICEIO);
+                virtAddr += K2_VA32_MEMPAGE_BYTES;
+                aPhysDeviceAddr += K2_VA32_MEMPAGE_BYTES;
+
+                if (--chunkLeft == 0)
+                {
+                    if (aPageCount > 1)
+                    {
+                        K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+                        disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+                        chunkLeft = DEVMAP_CHUNK;
+                    }
+                }
+
+            } while (--aPageCount);
+
+            K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+        }
+        else
+        {
+            KernMem_VirtFreeFromThread(pCurThread);
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernMem_SegFree(pSeg);
+        K2OS_ThreadSetStatus(stat);
+    }
 
     return stat;
-}
-
-static
-K2STAT
-sUnmapDeviceEarly(
-    UINT32  aVirtDeviceAddr
-)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-static
-K2STAT
-sUnmapDeviceAfterHal(
-    UINT32  aVirtDeviceAddr
-)
-{
-    return K2STAT_ERROR_NOT_IMPL;
 }
 
 K2STAT
@@ -101,14 +140,10 @@ K2OSKERN_UnmapDevice(
 {
     K2STAT stat;
 
-    K2OSKERN_Debug("+K2OSKERN_UnmapDevice(%08X)\n", aVirtDeviceAddr);
+    if (gData.mKernInitStage < KernInitStage_MemReady)
+        return K2STAT_ERROR_API_ORDER;
 
-    if (gData.mKernInitStage < KernInitStage_After_Hal)
-        stat = sUnmapDeviceEarly(aVirtDeviceAddr);
-    else
-        stat = sUnmapDeviceAfterHal(aVirtDeviceAddr);
-
-    K2OSKERN_Debug("-K2OSKERN_UnmapDevice(%08X)\n", aVirtDeviceAddr);
+    stat = K2STAT_ERROR_NOT_IMPL;
 
     return stat;
 }

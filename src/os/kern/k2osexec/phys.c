@@ -48,6 +48,9 @@ InitPhys(
     PHYS_HEAPNODE *             pPhysNode;
     PHYS_HEAPNODE *             pPhysNext;
     UINT32                      prevEnd;
+    UINT32                      sizeEnt;
+    ACPI_MCFG_ALLOCATION *      pAlloc;
+    PCI_SEGMENT *               pPciSeg;
 
     K2_ASSERT(apInitInfo->mEfiMemDescSize <= DESC_BUFFER_BYTES);
     entCount = apInitInfo->mEfiMapSize / apInitInfo->mEfiMemDescSize;
@@ -61,8 +64,6 @@ InitPhys(
         //
         // evaluate descriptor at pDesc
         //
-        sPrintDesc(ix, pDesc);
-
         stat = K2HEAP_AddFreeSpaceNode(
             &gPhysSpaceHeap,
             (UINT32)(((UINT64)pDesc->PhysicalStart) & 0x00000000FFFFFFFFull),
@@ -147,4 +148,41 @@ InitPhys(
     //
     // we have our physical space map now, with free space available to be allocated
     //
+    if ((gpMCFG) && (gpMCFG->Header.Length > sizeof(ACPI_TABLE_MCFG)))
+    {
+        //
+        // find memory mapped io segments for PCI bridges
+        // before pci configuration accesses happen since on non-x32 
+        // platforms the 'old' configuration mechanism doesnt exist
+        //
+        sizeEnt = gpMCFG->Header.Length - sizeof(ACPI_TABLE_MCFG);
+        entCount = sizeEnt / sizeof(ACPI_MCFG_ALLOCATION);
+        if (entCount > 0)
+        {
+            pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)gpMCFG) + sizeof(ACPI_TABLE_MCFG));
+            prevEnd = pAlloc->EndBusNumber - pAlloc->StartBusNumber + 1;
+            if (prevEnd > 0)
+            {
+                do {
+                    stat = K2HEAP_AllocNodeAt(&gPhysSpaceHeap,
+                        (UINT32)(pAlloc->Address & 0xFFFFFFFF),
+                        prevEnd * 0x100000,
+                        (K2HEAP_NODE **)&pPhysNode
+                    );
+                    pPhysNode->mDisp = PHYS_DISP_PCI_SEGMENT;
+                    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+                    pPciSeg = (PCI_SEGMENT *)K2OS_HeapAlloc(sizeof(PCI_SEGMENT));
+                    K2MEM_Zero(pPciSeg, sizeof(PCI_SEGMENT));
+                    K2_ASSERT(pPciSeg != NULL);
+                    pPciSeg->mpMcfgAlloc = pAlloc;
+                    pPciSeg->mpPhysHeapNode = pPhysNode;
+                    K2TREE_Init(&pPciSeg->PciDevTree, NULL);
+                    K2LIST_AddAtTail(&gPciSegList, &pPciSeg->PciSegListLink);
+
+                    pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
+                } while (--entCount);
+            }
+        }
+    }
 }
