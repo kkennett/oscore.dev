@@ -71,10 +71,8 @@ K2OSKERN_MapDevice(
         pSeg->Hdr.mObjType = K2OS_Obj_Segment;
         pSeg->Hdr.mRefCount = 1;
         K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
-        pSeg->SegTreeNode.mUserVal = pCurThread->mWorkVirt_Range;
-        pSeg->mPagesBytes = pCurThread->mWorkVirt_PageCount * K2_VA32_MEMPAGE_BYTES;
         pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_DEVMAP | K2OS_MAPTYPE_KERN_DEVICEIO;
-        pSeg->Info.User.mpProc = pCurThread->mpProc;
+        pSeg->Info.DeviceMap.mPhysDeviceAddr = aPhysDeviceAddr;
 
         K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
         K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
@@ -82,7 +80,7 @@ K2OSKERN_MapDevice(
         stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
         if (!K2STAT_IS_ERROR(stat))
         {
-            *apRetVirtAddr = pSeg->SegTreeNode.mUserVal;
+            *apRetVirtAddr = pSeg->ProcSegTreeNode.mUserVal;
             K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
             K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
 
@@ -90,7 +88,7 @@ K2OSKERN_MapDevice(
             // map the device pages to the virtual range just created
             //
             chunkLeft = DEVMAP_CHUNK;
-            virtAddr = pSeg->SegTreeNode.mUserVal;
+            virtAddr = pSeg->ProcSegTreeNode.mUserVal;
 
             disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
 
@@ -138,13 +136,77 @@ K2OSKERN_UnmapDevice(
     UINT32  aVirtDeviceAddr
 )
 {
-    K2STAT stat;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2TREE_NODE *           pTreeNode;
+    UINT32                  physAddr;
+    BOOL                    disp;
+    UINT32                  chunkLeft;
+    UINT32                  pageCount;
+    UINT32                  unmapPhys;
 
     if (gData.mKernInitStage < KernInitStage_MemReady)
         return K2STAT_ERROR_API_ORDER;
 
-    stat = K2STAT_ERROR_NOT_IMPL;
+    //
+    // find the segment containing the address
+    //
 
-    return stat;
+    disp = K2OSKERN_SeqIntrLock(&gpProc0->SegTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gpProc0->SegTree, aVirtDeviceAddr);
+    if (pTreeNode != NULL)
+    {
+        pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+        KernObj_AddRef(&pSeg->Hdr);
+    }
+    else
+        pSeg = NULL;
+
+    K2OSKERN_SeqIntrUnlock(&gpProc0->SegTreeSeqLock, disp);
+
+    if (pSeg == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_FOUND);
+        return K2STAT_ERROR_NOT_FOUND;
+    }
+
+    //
+    // unmap all pages in the segment
+    //
+    chunkLeft = DEVMAP_CHUNK;
+    pageCount = pSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+    physAddr = pSeg->Info.DeviceMap.mPhysDeviceAddr;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+
+    do {
+        unmapPhys = KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, aVirtDeviceAddr, K2OSKERN_PTE_NP_BIT);
+        
+        K2_ASSERT(unmapPhys == physAddr);
+
+        aVirtDeviceAddr += K2_VA32_MEMPAGE_BYTES;
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+
+        if (--chunkLeft == 0)
+        {
+            if (pageCount > 1)
+            {
+                K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+                disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+                chunkLeft = DEVMAP_CHUNK;
+            }
+        }
+
+    } while (--pageCount);
+
+    K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+
+    //
+    // now we can double-release the segment
+    //
+    KernObj_Release(&pSeg->Hdr);    // caller reference
+    KernObj_Release(&pSeg->Hdr);    // local reference
+
+    return K2STAT_NO_ERROR;
 }
 

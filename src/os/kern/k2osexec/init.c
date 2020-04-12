@@ -32,29 +32,104 @@
 
 #include "k2osexec.h"
 
-void InitPart1(void)
+ACPI_TABLE_MADT * gpMADT;
+ACPI_TABLE_MCFG * gpMCFG;
+
+static
+ACPI_STATUS
+sResourcesEnumCallback(
+    ACPI_RESOURCE * Resource,
+    void *          Context
+)
 {
-    ACPI_STATUS acpiStatus;
-
-    acpiStatus = AcpiInitializeSubsystem();
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiInitializeTables(NULL, 16, FALSE);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+    K2OSKERN_Debug("Res: Type %d Length %d\n", Resource->Type, Resource->Length);
+    //    ACPI_RESOURCE_DATA              Data;
+    return AE_OK;
 }
 
-void InitPart2(void)
+ACPI_STATUS DeviceWalkCallback(
+    ACPI_HANDLE Object,
+    UINT32      NestingLevel,
+    void *      Context,
+    void **     ReturnValue)
 {
-    ACPI_STATUS acpiStatus;
+    ACPI_BUFFER         bufDesc;
+    char                charBuf[8];
+    ACPI_STATUS         acpiStatus;
+    ACPI_DEVICE_INFO *  pDevInfo;
+    UINT32              ix;
+    char *              pStr;
+    ACPI_BUFFER         ResourceBuffer;
 
-    acpiStatus = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+    bufDesc.Length = 8;
+    bufDesc.Pointer = charBuf;
 
-    acpiStatus = AcpiLoadTables();
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+    charBuf[0] = 0;
+    acpiStatus = AcpiGetName(Object, ACPI_SINGLE_NAME, &bufDesc);
+    if (!ACPI_FAILURE(acpiStatus))
+    {
+        charBuf[4] = 0;
+        acpiStatus = AcpiGetObjectInfo(Object, &pDevInfo);
+        if (!ACPI_FAILURE(acpiStatus))
+        {
+            if (pDevInfo->Type == ACPI_TYPE_DEVICE)
+            {
+                for (ix = 0; ix < NestingLevel; ix++)
+                    K2OSKERN_Debug(" ");
 
-    acpiStatus = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+                K2OSKERN_Debug("%08X%08X %s\n", (UINT32)(pDevInfo->Address >> 32), (UINT32)(pDevInfo->Address & 0xFFFFFFFF), charBuf);
+
+                pStr = pDevInfo->HardwareId.String;
+                if (pStr != NULL)
+                {
+                    for (ix = 0; ix < NestingLevel + 2; ix++)
+                        K2OSKERN_Debug(" ");
+                    K2OSKERN_Debug("_HID(%s)\n", pStr);
+                }
+
+                pStr = pDevInfo->UniqueId.String;
+                if (pStr != NULL)
+                {
+                    for (ix = 0; ix < NestingLevel + 2; ix++)
+                        K2OSKERN_Debug(" ");
+                    K2OSKERN_Debug("_UID(%s)\n", pStr);
+                }
+
+                pStr = pDevInfo->ClassCode.String;
+                if (pStr != NULL)
+                {
+                    for (ix = 0; ix < NestingLevel + 2; ix++)
+                        K2OSKERN_Debug(" ");
+                    K2OSKERN_Debug("_CID(%s)\n", pStr);
+                }
+
+                K2MEM_Zero(&ResourceBuffer, sizeof(ResourceBuffer));
+                ResourceBuffer.Length = ACPI_ALLOCATE_LOCAL_BUFFER;
+
+                acpiStatus = AcpiGetCurrentResources(Object, &ResourceBuffer);
+                if (!ACPI_FAILURE(acpiStatus))
+                {
+                    K2_ASSERT(ResourceBuffer.Pointer);
+                    acpiStatus = AcpiWalkResourceBuffer(
+                        &ResourceBuffer,
+                        sResourcesEnumCallback,
+                        NULL
+                    );
+                    K2OS_HeapFree(ResourceBuffer.Pointer);
+                }
+            }
+            else
+            {
+                K2OSKERN_Debug("%s: Not DEVICE\n", charBuf);
+            }
+        }
+        else
+        {
+            K2OSKERN_Debug("***%3d %s\n", NestingLevel, charBuf);
+        }
+    }
+
+    return AE_OK;
 }
 
 void
@@ -64,12 +139,18 @@ K2OSEXEC_Init(
 {
     ACPI_TABLE_HEADER * pAcpiHdr;
     ACPI_STATUS         acpiStatus;
+    void *              pWalkRet;
 
-    InitPart1();
+    gpMADT = NULL;
+    gpMCFG = NULL;
 
-    //
-    // root tables available
-    //
+    Phys_Init(apInitInfo);
+
+    acpiStatus = AcpiInitializeSubsystem();
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+
+    acpiStatus = AcpiInitializeTables(NULL, 16, FALSE);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
     acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pAcpiHdr);
     if (ACPI_FAILURE(acpiStatus))
@@ -83,23 +164,31 @@ K2OSEXEC_Init(
     else
         gpMCFG = (ACPI_TABLE_MCFG *)pAcpiHdr;
 
-    InitPhys(apInitInfo);
+    Pci_Init();
 
-    SetupPciConfig();
+    Handlers_Init1();
 
+    acpiStatus = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    //
-    // allocated/used physical memory regions are known
-    //
+    acpiStatus = AcpiLoadTables();
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    InstallHandlers1();
+    acpiStatus = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
+    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    InitPart2();
+    Pci_Discover();
 
-    InstallHandlers2();
+    Handlers_Init2();
 
+    Time_Start(apInitInfo);
 
-
-    StartTime(apInitInfo);
+    pWalkRet = NULL;
+    AcpiGetDevices(
+        NULL,
+        DeviceWalkCallback,
+        NULL,
+        &pWalkRet
+    );
 }
 

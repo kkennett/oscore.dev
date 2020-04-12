@@ -39,7 +39,7 @@ void KernSegment_Dump(K2OSKERN_OBJ_SEGMENT *apSeg)
         apSeg->Hdr.mRefCount,
         apSeg->Hdr.mObjFlags,
         apSeg->mSegAndMemPageAttr,
-        apSeg->SegTreeNode.mUserVal,
+        apSeg->ProcSegTreeNode.mUserVal,
         apSeg->mPagesBytes);
     switch (apSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK)
     {

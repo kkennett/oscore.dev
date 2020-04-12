@@ -80,7 +80,8 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.Hdr.mObjType = K2OS_Obj_Segment;
     apDlxObj->PageSeg.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     apDlxObj->PageSeg.Hdr.mRefCount = 0x7FFFFFFF;
-    apDlxObj->PageSeg.SegTreeNode.mUserVal = pageAddr;
+    apDlxObj->PageSeg.mpProc = gpProc0;
+    apDlxObj->PageSeg.ProcSegTreeNode.mUserVal = pageAddr;
     apDlxObj->PageSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
     apDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_DLX_PAGE;
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
@@ -193,8 +194,8 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
         pTreeNode = K2TREE_PrevNode(&apCurProc->SegTree, pTreeNode);
         if (pTreeNode != NULL)
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-            K2_ASSERT(pSeg->SegTreeNode.mUserVal < aAddr);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+            K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aAddr);
         }
         else
         {
@@ -209,8 +210,8 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
             pTreeNode = K2TREE_PrevNode(&apCurProc->SegTree, pTreeNode);
             if (pTreeNode != NULL)
             {
-                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-                K2_ASSERT(pSeg->SegTreeNode.mUserVal < aAddr);
+                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+                K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aAddr);
             }
             else
             {
@@ -219,7 +220,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
         }
         else
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
         }
     }
 
@@ -232,7 +233,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
     K2OSKERN_SeqIntrUnlock(&apCurProc->SegTreeSeqLock, disp);
 
-    symAddr = pSeg->SegTreeNode.mUserVal;
+    symAddr = pSeg->ProcSegTreeNode.mUserVal;
 
     if (pSeg != NULL)
     {

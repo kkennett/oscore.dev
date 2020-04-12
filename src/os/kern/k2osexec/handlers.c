@@ -76,7 +76,7 @@ SysMemoryRegionHandler(
     return (AE_OK);
 }
 
-void InstallHandlers1(void)
+void Handlers_Init1(void)
 {
     ACPI_STATUS acpiStatus;
 
@@ -99,7 +99,7 @@ PowerButtonHandler(
     return (AE_OK);
 }
 
-void InstallHandlers2(void)
+void Handlers_Init2(void)
 {
     ACPI_STATUS acpiStatus;
 

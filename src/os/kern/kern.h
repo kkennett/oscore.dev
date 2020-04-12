@@ -394,7 +394,7 @@ struct _K2OSKERN_SEGMENT_INFO_DLX_PART
 typedef struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP K2OSKERN_SEGMENT_INFO_DEVICEMAP;
 struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP
 {
-    UINT32                  mEfiMapIndex;
+    UINT32                  mPhysDeviceAddr;
 };
 
 typedef struct _K2OSKERN_SEGMENT_INFO_PHYSBUF K2OSKERN_SEGMENT_INFO_PHYSBUF;
@@ -430,7 +430,10 @@ union _K2OSKERN_SEGMENT_INFO
 struct _K2OSKERN_OBJ_SEGMENT
 {
     K2OSKERN_OBJ_HEADER     Hdr;
-    K2TREE_NODE             SegTreeNode;    // base address is tree node UserVal
+
+    K2OSKERN_OBJ_PROCESS *  mpProc;
+    K2TREE_NODE             ProcSegTreeNode;    // base address is tree node UserVal
+
     UINT32                  mPagesBytes;
     UINT32                  mSegAndMemPageAttr;
     K2OSKERN_SEGMENT_INFO   Info;
@@ -930,11 +933,13 @@ void   KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 
 K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg);
 K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg);
+void   KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg);
 
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags);
 K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount);
+
 
 /* --------------------------------------------------------------------------------- */
 

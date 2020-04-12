@@ -50,22 +50,25 @@ typedef struct _PCI_DEVICE      PCI_DEVICE;
 
 /* ----------------------------------------------------------------------------- */
 
-void InitPart1(void);
-void InitPart2(void);
+extern ACPI_TABLE_MADT * gpMADT;
+extern ACPI_TABLE_MCFG * gpMCFG;
 
 /* ----------------------------------------------------------------------------- */
 
-void InstallHandlers1(void);
-void InstallHandlers2(void);
+void Handlers_Init1(void);
+void Handlers_Init2(void);
 
 /* ----------------------------------------------------------------------------- */
 
 struct _PCI_DEVICE
 {
     ACPI_PCI_ID         PciId;
-    UINT32              CfgPageMapping;
+    UINT32              mVenLo_DevHi;
     ACPI_HANDLE         mhAcpiDevice;
-    PCI_SEGMENT *       mpPciSeg;
+
+    PCI_SEGMENT *       mpPciSeg;           // NULL if on intel system with no ECAM
+    UINT32              CfgPageMapping;     // 0    if on intel system with no ECAM
+
     K2TREE_NODE         PciDevTreeNode;
 };
 
@@ -77,9 +80,11 @@ struct _PCI_SEGMENT
     K2LIST_LINK             PciSegListLink;
 };
 
-extern K2LIST_ANCHOR gPciSegList;
+extern K2LIST_ANCHOR        gPci_SegList;
+extern K2OSKERN_SEQLOCK     gPci_SeqLock;
 
-void SetupPciConfig(void);
+void Pci_Init(void);
+void Pci_Discover(void);
 
 /* ----------------------------------------------------------------------------- */
 
@@ -89,8 +94,10 @@ void X32PIT_InitTo1Khz(void);
 
 #endif
 
+extern UINT32  gTime_BusClockRate;
+
 void
-StartTime(
+Time_Start(
     K2OSEXEC_INIT_INFO * apInitInfo
 );
 
@@ -108,20 +115,13 @@ struct _PHYS_HEAPNODE
 #define PHYS_DISP_MAPPEDPORT    3
 #define PHYS_DISP_PCI_SEGMENT   4
 
-extern K2HEAP_ANCHOR        gPhysSpaceHeap;
-extern K2OS_CRITSEC         gPhysSpaceSec;
+extern K2HEAP_ANCHOR        gPhys_SpaceHeap;
+extern K2OS_CRITSEC         gPhys_SpaceSec;
 
 void 
-InitPhys(
+Phys_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 );
-
-extern ACPI_TABLE_MCFG *    gpMCFG;
-
-/* ----------------------------------------------------------------------------- */
-
-extern UINT32               gBusClockRate;
-extern ACPI_TABLE_MADT *    gpMADT;
 
 /* ----------------------------------------------------------------------------- */
 

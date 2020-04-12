@@ -473,7 +473,7 @@ BOOL KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SE
 
     K2_ASSERT((aPageOffset + aPageCount) <= segPageCount);
 
-    virtAddr = apSeg->SegTreeNode.mUserVal + (aPageOffset * K2_VA32_MEMPAGE_BYTES);
+    virtAddr = apSeg->ProcSegTreeNode.mUserVal + (aPageOffset * K2_VA32_MEMPAGE_BYTES);
 
     pPTE = (UINT32 *)K2_VA32_TO_PTE_ADDR(apCurThread->mpProc->mVirtMapKVA, virtAddr);
 
@@ -508,7 +508,7 @@ BOOL KernMap_SegRangeMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGME
 
     K2_ASSERT((aPageOffset + aPageCount) <= segPageCount);
 
-    virtAddr = apSeg->SegTreeNode.mUserVal + (aPageOffset * K2_VA32_MEMPAGE_BYTES);
+    virtAddr = apSeg->ProcSegTreeNode.mUserVal + (aPageOffset * K2_VA32_MEMPAGE_BYTES);
 
     pPTE = (UINT32 *)K2_VA32_TO_PTE_ADDR(apCurThread->mpProc->mVirtMapKVA, virtAddr);
 

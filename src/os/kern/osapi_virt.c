@@ -68,14 +68,15 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
             pSeg->Hdr.mObjType = K2OS_Obj_Segment;
             pSeg->Hdr.mRefCount = 1;
             K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
-            pSeg->SegTreeNode.mUserVal = pCurThread->mWorkVirt_Range;
-            pSeg->mPagesBytes = pCurThread->mWorkVirt_PageCount * K2_VA32_MEMPAGE_BYTES;
-            if (pSeg->SegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
+            if (pCurThread->mWorkVirt_Range >= K2OS_KVA_KERN_BASE)
+            {
                 aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;
+            }
             else
+            {
                 aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
+            }
             pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_USER | aPageAttrFlags;
-            pSeg->Info.User.mpProc = pCurThread->mpProc;
 
             if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
@@ -115,7 +116,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
             if (!K2STAT_IS_ERROR(stat))
             {
-                *apAddr = pSeg->SegTreeNode.mUserVal;
+                *apAddr = pSeg->ProcSegTreeNode.mUserVal;
                 K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
                 K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
                 K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
@@ -176,8 +177,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
         if (pTreeNode != NULL)
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-            K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+            K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aPagesAddr);
         }
         else
         {
@@ -192,8 +193,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
             pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
             if (pTreeNode != NULL)
             {
-                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-                K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+                K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aPagesAddr);
             }
             else
             {
@@ -202,7 +203,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         }
         else
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
         }
     }
 
@@ -212,7 +213,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         // seg will start at or before page range
         //
         segPageCount = pSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
-        segOffset = (aPagesAddr - pSeg->SegTreeNode.mUserVal) / K2_VA32_MEMPAGE_BYTES;
+        segOffset = (aPagesAddr - pSeg->ProcSegTreeNode.mUserVal) / K2_VA32_MEMPAGE_BYTES;
         if (segOffset < segPageCount)
         {
             if ((segPageCount - segOffset) >= aPageCount)
@@ -241,7 +242,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
     if ((pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) != K2OS_SEG_ATTR_TYPE_USER)
         aPageAttrFlags = pSeg->mSegAndMemPageAttr;
     
-    if (pSeg->SegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
+    if (pSeg->ProcSegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
         aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;
     else
         aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
@@ -249,7 +250,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
     aPageAttrFlags &= K2OS_MEMPAGE_ATTR_MASK;
 
 //    K2OSKERN_Debug("Commit %d pages at page offset %d within segment starting at 0x%08X that has %d pages in it.\n",
-//        aPageCount, segOffset, pSeg->SegTreeNode.mUserVal, segPageCount);
+//        aPageCount, segOffset, pSeg->ProcSegTreeNode.mUserVal, segPageCount);
 
     do {
         //
@@ -331,8 +332,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
         pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
         if (pTreeNode != NULL)
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-            K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+            K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aPagesAddr);
         }
         else
         {
@@ -347,8 +348,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
             pTreeNode = K2TREE_PrevNode(&pUseProc->SegTree, pTreeNode);
             if (pTreeNode != NULL)
             {
-                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
-                K2_ASSERT(pSeg->SegTreeNode.mUserVal < aPagesAddr);
+                pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
+                K2_ASSERT(pSeg->ProcSegTreeNode.mUserVal < aPagesAddr);
             }
             else
             {
@@ -357,7 +358,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
         }
         else
         {
-            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, SegTreeNode);
+            pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
         }
     }
 
@@ -367,7 +368,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
         // seg will start at or before page range
         //
         segPageCount = pSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
-        segOffset = (aPagesAddr - pSeg->SegTreeNode.mUserVal) / K2_VA32_MEMPAGE_BYTES;
+        segOffset = (aPagesAddr - pSeg->ProcSegTreeNode.mUserVal) / K2_VA32_MEMPAGE_BYTES;
         if (segOffset < segPageCount)
         {
             if ((segPageCount - segOffset) >= aPageCount)
@@ -394,7 +395,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
     }
 
 //    K2OSKERN_Debug("Decommit %d pages at page offset %d within segment starting at 0x%08X that has %d pages in it.\n",
-//        aPageCount, segOffset, pSeg->SegTreeNode.mUserVal, segPageCount);
+//        aPageCount, segOffset, pSeg->ProcSegTreeNode.mUserVal, segPageCount);
 
     do {
         //

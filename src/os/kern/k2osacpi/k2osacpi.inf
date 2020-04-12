@@ -149,7 +149,10 @@ AcpiWarning
 AcpiInfo
 AcpiBiosError
 AcpiBiosWarning
+
 K2OSACPI_SetPciConfigOverride
+AcpiOsReadPciConfiguration
+AcpiOsWritePciConfiguration
 
 [Data]
 AcpiGbl_EnableInterpreterSlack

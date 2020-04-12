@@ -51,7 +51,7 @@ SOURCES += dlx_entry.c
 SOURCES += run.c
 SOURCES += init.c 
 SOURCES += handlers.c 
-SOURCES += pciconfig.c 
+SOURCES += pci.c 
 SOURCES += time.c
 SOURCES += phys.c
 

@@ -34,11 +34,25 @@
 
 #define DESC_BUFFER_BYTES   (((sizeof(K2EFI_MEMORY_DESCRIPTOR) * 2) + 4) & ~3)
 
+K2HEAP_ANCHOR   gPhys_SpaceHeap;
+K2OS_CRITSEC    gPhys_SpaceSec;
+
+static K2HEAP_NODE * sAcquireNode(K2HEAP_ANCHOR *apHeap)
+{
+    return (K2HEAP_NODE *)K2OS_HeapAlloc(sizeof(PHYS_HEAPNODE));
+}
+
+static void sReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+{
+    K2OS_HeapFree(apNode);
+}
+
 void
-InitPhys(
+Phys_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
+    BOOL                        ok;
     UINT32                      entCount;
     UINT8                       descBuffer[DESC_BUFFER_BYTES];
     K2EFI_MEMORY_DESCRIPTOR *   pDesc = (K2EFI_MEMORY_DESCRIPTOR *)descBuffer;
@@ -48,9 +62,10 @@ InitPhys(
     PHYS_HEAPNODE *             pPhysNode;
     PHYS_HEAPNODE *             pPhysNext;
     UINT32                      prevEnd;
-    UINT32                      sizeEnt;
-    ACPI_MCFG_ALLOCATION *      pAlloc;
-    PCI_SEGMENT *               pPciSeg;
+
+    K2HEAP_Init(&gPhys_SpaceHeap, sAcquireNode, &sReleaseNode);
+    ok = K2OS_CritSecInit(&gPhys_SpaceSec);
+    K2_ASSERT(ok);
 
     K2_ASSERT(apInitInfo->mEfiMemDescSize <= DESC_BUFFER_BYTES);
     entCount = apInitInfo->mEfiMapSize / apInitInfo->mEfiMemDescSize;
@@ -65,7 +80,7 @@ InitPhys(
         // evaluate descriptor at pDesc
         //
         stat = K2HEAP_AddFreeSpaceNode(
-            &gPhysSpaceHeap,
+            &gPhys_SpaceHeap,
             (UINT32)(((UINT64)pDesc->PhysicalStart) & 0x00000000FFFFFFFFull),
             (UINT32)(pDesc->NumberOfPages * K2_VA32_MEMPAGE_BYTES),
             NULL);
@@ -75,7 +90,7 @@ InitPhys(
             (pDesc->Type == K2EFI_MEMTYPE_MappedIOPort))
         {
             stat = K2HEAP_AllocNodeAt(
-                &gPhysSpaceHeap, 
+                &gPhys_SpaceHeap, 
                 (UINT32)(((UINT64)pDesc->PhysicalStart) & 0x00000000FFFFFFFFull),
                 (UINT32)(pDesc->NumberOfPages * K2_VA32_MEMPAGE_BYTES),
                 (K2HEAP_NODE **)&pPhysNode);
@@ -90,14 +105,14 @@ InitPhys(
     //
     // now convert free space entries to contiguous allocations
     //
-    pPhysNode = (PHYS_HEAPNODE *)K2HEAP_GetFirstNode(&gPhysSpaceHeap);
+    pPhysNode = (PHYS_HEAPNODE *)K2HEAP_GetFirstNode(&gPhys_SpaceHeap);
     K2_ASSERT(pPhysNode != NULL);
     do {
-        pPhysNext = (PHYS_HEAPNODE *)K2HEAP_GetNextNode(&gPhysSpaceHeap, &pPhysNode->HeapNode);
+        pPhysNext = (PHYS_HEAPNODE *)K2HEAP_GetNextNode(&gPhys_SpaceHeap, &pPhysNode->HeapNode);
         if (K2HEAP_NodeIsFree(&pPhysNode->HeapNode))
         {
             stat = K2HEAP_AllocNodeAt(
-                &gPhysSpaceHeap,
+                &gPhys_SpaceHeap,
                 K2HEAP_NodeAddr(&pPhysNode->HeapNode),
                 K2HEAP_NodeSize(&pPhysNode->HeapNode),
                 (K2HEAP_NODE **)&pPhysNode);
@@ -111,17 +126,17 @@ InitPhys(
     // now insert free space everywhere there is holes
     //
     prevEnd = 0;
-    pPhysNode = (PHYS_HEAPNODE *)K2HEAP_GetFirstNode(&gPhysSpaceHeap);
+    pPhysNode = (PHYS_HEAPNODE *)K2HEAP_GetFirstNode(&gPhys_SpaceHeap);
     K2_ASSERT(pPhysNode != NULL);
     do {
-        pPhysNext = (PHYS_HEAPNODE *)K2HEAP_GetNextNode(&gPhysSpaceHeap, &pPhysNode->HeapNode);
+        pPhysNext = (PHYS_HEAPNODE *)K2HEAP_GetNextNode(&gPhys_SpaceHeap, &pPhysNode->HeapNode);
         if (K2HEAP_NodeAddr(&pPhysNode->HeapNode) != prevEnd)
         {
             //
             // insert free space between prevEnd and pPhysNode
             //
             stat = K2HEAP_AddFreeSpaceNode(
-                &gPhysSpaceHeap,
+                &gPhys_SpaceHeap,
                 prevEnd,
                 K2HEAP_NodeAddr(&pPhysNode->HeapNode) - prevEnd,
                 NULL);
@@ -138,7 +153,7 @@ InitPhys(
     if (prevEnd != 0)
     {
         stat = K2HEAP_AddFreeSpaceNode(
-            &gPhysSpaceHeap,
+            &gPhys_SpaceHeap,
             prevEnd,
             0 - prevEnd,
             NULL);
@@ -148,41 +163,4 @@ InitPhys(
     //
     // we have our physical space map now, with free space available to be allocated
     //
-    if ((gpMCFG) && (gpMCFG->Header.Length > sizeof(ACPI_TABLE_MCFG)))
-    {
-        //
-        // find memory mapped io segments for PCI bridges
-        // before pci configuration accesses happen since on non-x32 
-        // platforms the 'old' configuration mechanism doesnt exist
-        //
-        sizeEnt = gpMCFG->Header.Length - sizeof(ACPI_TABLE_MCFG);
-        entCount = sizeEnt / sizeof(ACPI_MCFG_ALLOCATION);
-        if (entCount > 0)
-        {
-            pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)gpMCFG) + sizeof(ACPI_TABLE_MCFG));
-            prevEnd = pAlloc->EndBusNumber - pAlloc->StartBusNumber + 1;
-            if (prevEnd > 0)
-            {
-                do {
-                    stat = K2HEAP_AllocNodeAt(&gPhysSpaceHeap,
-                        (UINT32)(pAlloc->Address & 0xFFFFFFFF),
-                        prevEnd * 0x100000,
-                        (K2HEAP_NODE **)&pPhysNode
-                    );
-                    pPhysNode->mDisp = PHYS_DISP_PCI_SEGMENT;
-                    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
-                    pPciSeg = (PCI_SEGMENT *)K2OS_HeapAlloc(sizeof(PCI_SEGMENT));
-                    K2MEM_Zero(pPciSeg, sizeof(PCI_SEGMENT));
-                    K2_ASSERT(pPciSeg != NULL);
-                    pPciSeg->mpMcfgAlloc = pAlloc;
-                    pPciSeg->mpPhysHeapNode = pPhysNode;
-                    K2TREE_Init(&pPciSeg->PciDevTree, NULL);
-                    K2LIST_AddAtTail(&gPciSegList, &pPciSeg->PciSegListLink);
-
-                    pAlloc = (ACPI_MCFG_ALLOCATION *)(((UINT8 *)pAlloc) + sizeof(ACPI_MCFG_ALLOCATION));
-                } while (--entCount);
-            }
-        }
-    }
 }

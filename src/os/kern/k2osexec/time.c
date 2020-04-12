@@ -32,8 +32,10 @@
 
 #include "k2osexec.h"
 
+UINT32 gTime_BusClockRate;
+
 void
-StartTime(
+Time_Start(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
@@ -46,7 +48,7 @@ StartTime(
 
     if (gpMADT != NULL)
     {
-        // set timer divisor to 4 to get bus clock rate (FSB rate is gBusClockRate * 4)
+        // set timer divisor to 4 to get bus clock rate (FSB rate is gTime_BusClockRate * 4)
         reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_DIV);
         reg &= ~X32_LOCAPIC_TIMER_DIV_MASK;
         reg |= X32_LOCAPIC_TIMER_DIV_4;
@@ -73,7 +75,7 @@ StartTime(
             avg[0] += avg[ix];
         }
         avg[0] >>= 2;
-        gBusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
+        gTime_BusClockRate = (((avg[0] * 10) + 500000) / 1000000) * 1000000;
 
         // make sure the timer is stopped
         MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, 0);
@@ -87,13 +89,13 @@ StartTime(
         MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_LVT_TIMER, reg);
 
         // interrupt once per millisecond
-        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, gBusClockRate / 1000);
+        MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_TIMER_INIT, gTime_BusClockRate / 1000);
 
         apInitInfo->SysTickDevIrqConfig.mSourceIrq = X32_DEVIRQ_LVT_TIMER;
     }
     else
     {
-        gBusClockRate = 1000000;
+        gTime_BusClockRate = 1000000;
         X32PIT_InitTo1Khz();
         // leave mSourceIrq as zero, which is the IRQ of the PIT
     }

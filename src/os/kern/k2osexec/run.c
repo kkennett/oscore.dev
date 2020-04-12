@@ -32,99 +32,11 @@
 
 #include "k2osexec.h"
 
-static 
-ACPI_STATUS
-sResourcesEnumCallback(
-    ACPI_RESOURCE * Resource,
-    void *          Context
-)
-{
-    K2OSKERN_Debug("Res: Type %d Length %d\n", Resource->Type, Resource->Length);
-//    ACPI_RESOURCE_DATA              Data;
-    return AE_OK;
-}
-
-ACPI_STATUS DeviceWalkCallback(
-    ACPI_HANDLE Object,
-    UINT32      NestingLevel,
-    void *      Context,
-    void **     ReturnValue)
-{
-    ACPI_BUFFER         bufDesc;
-    char                charBuf[8];
-    ACPI_STATUS         acpiStatus;
-    ACPI_DEVICE_INFO *  pDevInfo;
-    UINT32              ix;
-    char *              pHID;
-    ACPI_BUFFER         ResourceBuffer;
-
-    bufDesc.Length = 8;
-    bufDesc.Pointer = charBuf;
-
-    charBuf[0] = 0;
-    acpiStatus = AcpiGetName(Object, ACPI_SINGLE_NAME, &bufDesc);
-    if (!ACPI_FAILURE(acpiStatus))
-    {
-        charBuf[4] = 0;
-        acpiStatus = AcpiGetObjectInfo(Object, &pDevInfo);
-        if (!ACPI_FAILURE(acpiStatus))
-        {
-            if (pDevInfo->Type == ACPI_TYPE_DEVICE)
-            {
-                for (ix = 0; ix < NestingLevel; ix++)
-                    K2OSKERN_Debug(" ");
-                pHID = pDevInfo->HardwareId.String;
-                if (pHID != NULL)
-                {
-                    K2OSKERN_Debug("%s: _HID(%s)\n", charBuf, pHID);
-                }
-                else
-                    K2OSKERN_Debug("%s\n", charBuf);
-
-                K2MEM_Zero(&ResourceBuffer, sizeof(ResourceBuffer));
-                ResourceBuffer.Length = ACPI_ALLOCATE_LOCAL_BUFFER;
-
-                acpiStatus = AcpiGetCurrentResources(Object, &ResourceBuffer);
-                if (!ACPI_FAILURE(acpiStatus))
-                {
-                    K2_ASSERT(ResourceBuffer.Pointer);
-                    acpiStatus = AcpiWalkResourceBuffer(
-                        &ResourceBuffer,
-                        sResourcesEnumCallback, 
-                        NULL
-                    );
-                    K2OS_HeapFree(ResourceBuffer.Pointer);
-                }
-            }
-            else
-            {
-                K2OSKERN_Debug("%s: Not DEVICE\n", charBuf);
-            }
-        }
-        else
-        {
-            K2OSKERN_Debug("***%3d %s\n", NestingLevel, charBuf);
-        }
-    }
-
-    return AE_OK;
-}
-
 void
 K2OSEXEC_Run(
     void
 )
 {
-    void *pWalkRet;
-
-    pWalkRet = NULL;
-    AcpiGetDevices(
-        NULL,
-        DeviceWalkCallback,
-        NULL,
-        &pWalkRet
-    );
-
 #if 1
     UINT64          last, newTick;
     K2OSKERN_Debug("Hang ints on\n");
