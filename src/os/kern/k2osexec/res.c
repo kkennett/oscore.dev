@@ -32,51 +32,10 @@
 
 #include "k2osexec.h"
 
-ACPI_TABLE_MADT * gpMADT;
-
-void
-K2OSEXEC_Init(
-    K2OSEXEC_INIT_INFO * apInitInfo
-)
+void Res_Init(void)
 {
-    ACPI_TABLE_HEADER * pAcpiHdr;
-    ACPI_STATUS         acpiStatus;
-
-    gpMADT = NULL;
-
-    Phys_Init(apInitInfo);
-
-    acpiStatus = AcpiInitializeSubsystem();
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiInitializeTables(NULL, 16, FALSE);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pAcpiHdr);
-    if (ACPI_FAILURE(acpiStatus))
-        gpMADT = NULL;
-    else
-        gpMADT = (ACPI_TABLE_MADT *)pAcpiHdr;
-
-    Pci_Init();
-
-    Handlers_Init1();
-
-    acpiStatus = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiLoadTables();
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    acpiStatus = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
-    K2_ASSERT(!ACPI_FAILURE(acpiStatus));
-
-    Dev_Init();
-
-    Res_Init();
-
-    Handlers_Init2();
-
-    Time_Start(apInitInfo);
+    //
+    // scan dev tree and enumerate already-allocated resources
+    //
+    K2OSKERN_Debug("Res_Init()\n");
 }
-

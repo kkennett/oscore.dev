@@ -172,6 +172,8 @@ void Dev_Init(void)
         } while (pTreeNode != NULL);
     }
 
+    Pci_CheckManualScan();
+
     //
     // dump the device tree
     //

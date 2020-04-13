@@ -32,6 +32,8 @@
 
 #include "k2osexec.h"
 
+#define FORCE_NO_ECAM   0
+
 K2LIST_ANCHOR        gPci_SegList;
 K2OSKERN_SEQLOCK     gPci_SeqLock;
 
@@ -42,6 +44,7 @@ typedef DEV_NODE_PCI * (*pf_GetPciDev)(ACPI_PCI_ID * PciId);
 static ACPI_MCFG_ALLOCATION sgCAMAlloc;
 static PCI_SEGMENT          sgCAMSegment;
 static BOOL                 sgUseECAM;
+static BOOL                 sgDiscoveredViaAcpi;
 
 #else
 
@@ -51,7 +54,7 @@ static BOOL                 sgUseECAM;
 
 static pf_GetPciDev sgfGetPciDevFromId = NULL;
 
-//static 
+static 
 DEV_NODE_PCI *
 sECAM_GetPciDevFromId(
     ACPI_PCI_ID *   PciId
@@ -169,7 +172,7 @@ sECAM_GetPciDevFromId(
     return pPciDev;
 }
 
-//static
+static
 ACPI_STATUS
 sECAM_ReadPciConfiguration(
     ACPI_PCI_ID *   PciId,
@@ -213,7 +216,7 @@ sECAM_ReadPciConfiguration(
     return AE_OK;
 }
 
-//static
+static
 ACPI_STATUS
 sECAM_WritePciConfiguration(
     ACPI_PCI_ID *   PciId,
@@ -264,7 +267,7 @@ sECAM_WritePciConfiguration(
 
 #if !K2_TARGET_ARCH_IS_ARM
 
-//static
+static
 DEV_NODE_PCI *
 sCAM_GetPciDevFromId(
     ACPI_PCI_ID *   PciId
@@ -329,15 +332,18 @@ void Pci_Init(void)
     UINT32                  sizeEnt;
     UINT32                  entCount;
     UINT32                  prevEnd;
-    PCI_SEGMENT *           pPciSeg;
     ACPI_MCFG_ALLOCATION *  pAlloc;
+    PCI_SEGMENT *           pPciSeg;
     PHYS_HEAPNODE *         pPhysNode;
     ACPI_TABLE_MCFG *       pMCFG;
+#if !FORCE_NO_ECAM
     ACPI_STATUS             acpiStatus;
+#endif
 
     K2LIST_Init(&gPci_SegList);
     K2OSKERN_SeqIntrInit(&gPci_SeqLock);
 
+#if !FORCE_NO_ECAM
     pMCFG = NULL;
     acpiStatus = AcpiGetTable(ACPI_SIG_MCFG, 0, (ACPI_TABLE_HEADER **)&pMCFG);
     if (ACPI_FAILURE(acpiStatus))
@@ -348,6 +354,9 @@ void Pci_Init(void)
     {
         K2_ASSERT(pMCFG != NULL);
     }
+#else
+    pMCFG = NULL;
+#endif
 
 #if !K2_TARGET_ARCH_IS_ARM
     K2MEM_Zero(&sgCAMAlloc, sizeof(sgCAMAlloc));
@@ -439,8 +448,7 @@ sDiscoverOneBus(
     DEV_NODE * apDevNode
 );
 
-
-//static
+static
 void
 sDiscoveredChildPciDevice(
     DEV_NODE *      apParentDev,
@@ -597,6 +605,8 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     UINT32          busIx;
     UINT32          segIx;
 
+    sgDiscoveredViaAcpi = TRUE;
+
     //
     // device is a PCI or PCI EXPRESS bridge
     // 
@@ -664,3 +674,50 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     sDiscoverOneBus(apDevNode);
 }
 
+void Pci_CheckManualScan(void)
+{
+#if !K2_TARGET_ARCH_IS_ARM
+    DEV_NODE *      pTryNode;
+#endif
+
+    if (sgDiscoveredViaAcpi)
+        return;
+
+#if !K2_TARGET_ARCH_IS_ARM
+    //
+    // no PCI buses were discovered via ACPI PNP id for bridges
+    //
+
+    //
+    // scan PCI legacy bus 0
+    //
+    pTryNode = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
+    if (pTryNode == NULL)
+        return;
+    K2MEM_Zero(pTryNode, sizeof(DEV_NODE));
+
+    K2LIST_Init(&pTryNode->ChildList);
+    pTryNode->mpParent = gpDev_RootNode;
+    pTryNode->mPciBusBridgeFlags = DEV_NODE_PCIBUSBRIDGE_ISBUSROOT;
+    K2LIST_AddAtTail(&gpDev_RootNode->ChildList, &pTryNode->ChildListLink);
+    K2TREE_Insert(&gDev_Tree, pTryNode->DevTreeNode.mUserVal, &pTryNode->DevTreeNode);
+
+    sDiscoverOneBus(pTryNode);
+
+    if (pTryNode->ChildList.mNodeCount == 0)
+    {
+        //
+        // no PCI devices found using legacy CAM on bus 0.
+        // so no PCI in the system
+        //
+        K2TREE_Remove(&gDev_Tree, &pTryNode->DevTreeNode);
+        K2LIST_Remove(&gpDev_RootNode->ChildList, &pTryNode->ChildListLink);
+        K2MEM_Zero(pTryNode, sizeof(DEV_NODE));
+        K2OS_HeapFree(pTryNode);
+    }
+    else
+    {
+        pTryNode->mPciBusBridgeFlags |= DEV_NODE_PCIBUSBRIDGE_LEGACY;
+    }
+#endif
+}

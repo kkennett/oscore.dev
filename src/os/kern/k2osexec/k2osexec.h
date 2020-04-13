@@ -73,6 +73,7 @@ extern K2LIST_ANCHOR        gPci_SegList;
 extern K2OSKERN_SEQLOCK     gPci_SeqLock;
 
 void Pci_Init(void);
+void Pci_CheckManualScan(void);
 void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode);
 
 /* ----------------------------------------------------------------------------- */
@@ -126,7 +127,8 @@ struct _DEV_NODE_PCI
 };
 
 #define DEV_NODE_PCIBUSBRIDGE_ISBUSROOT     0x80000000
-#define DEV_NODE_PCIBUSBRIDGE_BUSID_MASK    0x7FFF0000
+#define DEV_NODE_PCIBUSBRIDGE_LEGACY        0x40000000
+#define DEV_NODE_PCIBUSBRIDGE_BUSID_MASK    0x00FF0000
 #define DEV_NODE_PCIBUSBRIDGE_BUSID_SHIFT   16
 #define DEV_NODE_PCIBUSBRIDGE_SEGID_MASK    0x0000FFFF
 #define DEV_NODE_PCIBUSBRIDGE_SEGID_SHIFT   0
@@ -155,6 +157,11 @@ Dev_Init(
 
 extern K2TREE_ANCHOR    gDev_Tree;
 extern K2OSKERN_SEQLOCK gDev_SeqLock;
+extern DEV_NODE *       gpDev_RootNode;
+
+/* ----------------------------------------------------------------------------- */
+
+void Res_Init(void);
 
 /* ----------------------------------------------------------------------------- */
 
