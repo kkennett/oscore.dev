@@ -34,6 +34,9 @@
 #define __IK2OSACPI_H
 
 #include "k2osacpi.h"
+#include "acpi.h"
+#include "accommon.h"
+#include "acutils.h"
 
 struct _K2OSACPI_INTR
 {

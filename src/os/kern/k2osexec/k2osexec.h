@@ -47,11 +47,12 @@ extern "C" {
 typedef struct _PHYS_HEAPNODE   PHYS_HEAPNODE;
 typedef struct _PCI_SEGMENT     PCI_SEGMENT;
 typedef struct _PCI_DEVICE      PCI_DEVICE;
+typedef struct _DEV_NODE_PCI    DEV_NODE_PCI;
+typedef struct _DEV_NODE        DEV_NODE;
 
 /* ----------------------------------------------------------------------------- */
 
 extern ACPI_TABLE_MADT * gpMADT;
-extern ACPI_TABLE_MCFG * gpMCFG;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -59,18 +60,6 @@ void Handlers_Init1(void);
 void Handlers_Init2(void);
 
 /* ----------------------------------------------------------------------------- */
-
-struct _PCI_DEVICE
-{
-    ACPI_PCI_ID         PciId;
-    UINT32              mVenLo_DevHi;
-    ACPI_HANDLE         mhAcpiDevice;
-
-    PCI_SEGMENT *       mpPciSeg;           // NULL if on intel system with no ECAM
-    UINT32              CfgPageMapping;     // 0    if on intel system with no ECAM
-
-    K2TREE_NODE         PciDevTreeNode;
-};
 
 struct _PCI_SEGMENT
 {
@@ -84,7 +73,7 @@ extern K2LIST_ANCHOR        gPci_SegList;
 extern K2OSKERN_SEQLOCK     gPci_SeqLock;
 
 void Pci_Init(void);
-void Pci_Discover(void);
+void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode);
 
 /* ----------------------------------------------------------------------------- */
 
@@ -122,6 +111,50 @@ void
 Phys_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 );
+
+/* ----------------------------------------------------------------------------- */
+
+struct _DEV_NODE_PCI
+{
+    DEV_NODE *      mpDevNode;
+    ACPI_PCI_ID     Id;
+    ACPI_HANDLE     mhAcpiDevice;
+    UINT32          mVenLo_DevHi;
+    PCI_SEGMENT *   mpSeg;
+    UINT32          mVirtConfigAddr;    // 0 if on intel system with no ECAM
+    K2TREE_NODE     PciTreeNode;
+};
+
+#define DEV_NODE_PCIBUSBRIDGE_ISBUSROOT     0x80000000
+#define DEV_NODE_PCIBUSBRIDGE_BUSID_MASK    0x7FFF0000
+#define DEV_NODE_PCIBUSBRIDGE_BUSID_SHIFT   16
+#define DEV_NODE_PCIBUSBRIDGE_SEGID_MASK    0x0000FFFF
+#define DEV_NODE_PCIBUSBRIDGE_SEGID_SHIFT   0
+
+struct _DEV_NODE
+{
+    K2TREE_NODE         DevTreeNode;   // should be first thing to make casts fast
+
+    DEV_NODE *          mpParent;
+    K2LIST_ANCHOR       ChildList;
+    K2LIST_LINK         ChildListLink;
+
+    // ACPI_HANDLE of object is TreeNode.mUserVal, indexing gDev_Tree
+    // devices with no acpi node are indexed at zero
+
+    ACPI_DEVICE_INFO *  mpAcpiInfo;
+
+    DEV_NODE_PCI *      mpPci;
+    UINT32              mPciBusBridgeFlags;
+};
+
+void 
+Dev_Init(
+    void
+);
+
+extern K2TREE_ANCHOR    gDev_Tree;
+extern K2OSKERN_SEQLOCK gDev_SeqLock;
 
 /* ----------------------------------------------------------------------------- */
 

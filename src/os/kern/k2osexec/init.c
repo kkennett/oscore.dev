@@ -33,104 +33,6 @@
 #include "k2osexec.h"
 
 ACPI_TABLE_MADT * gpMADT;
-ACPI_TABLE_MCFG * gpMCFG;
-
-static
-ACPI_STATUS
-sResourcesEnumCallback(
-    ACPI_RESOURCE * Resource,
-    void *          Context
-)
-{
-    K2OSKERN_Debug("Res: Type %d Length %d\n", Resource->Type, Resource->Length);
-    //    ACPI_RESOURCE_DATA              Data;
-    return AE_OK;
-}
-
-ACPI_STATUS DeviceWalkCallback(
-    ACPI_HANDLE Object,
-    UINT32      NestingLevel,
-    void *      Context,
-    void **     ReturnValue)
-{
-    ACPI_BUFFER         bufDesc;
-    char                charBuf[8];
-    ACPI_STATUS         acpiStatus;
-    ACPI_DEVICE_INFO *  pDevInfo;
-    UINT32              ix;
-    char *              pStr;
-    ACPI_BUFFER         ResourceBuffer;
-
-    bufDesc.Length = 8;
-    bufDesc.Pointer = charBuf;
-
-    charBuf[0] = 0;
-    acpiStatus = AcpiGetName(Object, ACPI_SINGLE_NAME, &bufDesc);
-    if (!ACPI_FAILURE(acpiStatus))
-    {
-        charBuf[4] = 0;
-        acpiStatus = AcpiGetObjectInfo(Object, &pDevInfo);
-        if (!ACPI_FAILURE(acpiStatus))
-        {
-            if (pDevInfo->Type == ACPI_TYPE_DEVICE)
-            {
-                for (ix = 0; ix < NestingLevel; ix++)
-                    K2OSKERN_Debug(" ");
-
-                K2OSKERN_Debug("%08X%08X %s\n", (UINT32)(pDevInfo->Address >> 32), (UINT32)(pDevInfo->Address & 0xFFFFFFFF), charBuf);
-
-                pStr = pDevInfo->HardwareId.String;
-                if (pStr != NULL)
-                {
-                    for (ix = 0; ix < NestingLevel + 2; ix++)
-                        K2OSKERN_Debug(" ");
-                    K2OSKERN_Debug("_HID(%s)\n", pStr);
-                }
-
-                pStr = pDevInfo->UniqueId.String;
-                if (pStr != NULL)
-                {
-                    for (ix = 0; ix < NestingLevel + 2; ix++)
-                        K2OSKERN_Debug(" ");
-                    K2OSKERN_Debug("_UID(%s)\n", pStr);
-                }
-
-                pStr = pDevInfo->ClassCode.String;
-                if (pStr != NULL)
-                {
-                    for (ix = 0; ix < NestingLevel + 2; ix++)
-                        K2OSKERN_Debug(" ");
-                    K2OSKERN_Debug("_CID(%s)\n", pStr);
-                }
-
-                K2MEM_Zero(&ResourceBuffer, sizeof(ResourceBuffer));
-                ResourceBuffer.Length = ACPI_ALLOCATE_LOCAL_BUFFER;
-
-                acpiStatus = AcpiGetCurrentResources(Object, &ResourceBuffer);
-                if (!ACPI_FAILURE(acpiStatus))
-                {
-                    K2_ASSERT(ResourceBuffer.Pointer);
-                    acpiStatus = AcpiWalkResourceBuffer(
-                        &ResourceBuffer,
-                        sResourcesEnumCallback,
-                        NULL
-                    );
-                    K2OS_HeapFree(ResourceBuffer.Pointer);
-                }
-            }
-            else
-            {
-                K2OSKERN_Debug("%s: Not DEVICE\n", charBuf);
-            }
-        }
-        else
-        {
-            K2OSKERN_Debug("***%3d %s\n", NestingLevel, charBuf);
-        }
-    }
-
-    return AE_OK;
-}
 
 void
 K2OSEXEC_Init(
@@ -139,10 +41,8 @@ K2OSEXEC_Init(
 {
     ACPI_TABLE_HEADER * pAcpiHdr;
     ACPI_STATUS         acpiStatus;
-    void *              pWalkRet;
 
     gpMADT = NULL;
-    gpMCFG = NULL;
 
     Phys_Init(apInitInfo);
 
@@ -158,12 +58,6 @@ K2OSEXEC_Init(
     else
         gpMADT = (ACPI_TABLE_MADT *)pAcpiHdr;
 
-    acpiStatus = AcpiGetTable(ACPI_SIG_MCFG, 0, &pAcpiHdr);
-    if (ACPI_FAILURE(acpiStatus))
-        gpMCFG = NULL;
-    else
-        gpMCFG = (ACPI_TABLE_MCFG *)pAcpiHdr;
-
     Pci_Init();
 
     Handlers_Init1();
@@ -177,18 +71,10 @@ K2OSEXEC_Init(
     acpiStatus = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
-    Pci_Discover();
+    Dev_Init();
 
     Handlers_Init2();
 
     Time_Start(apInitInfo);
-
-    pWalkRet = NULL;
-    AcpiGetDevices(
-        NULL,
-        DeviceWalkCallback,
-        NULL,
-        &pWalkRet
-    );
 }
 

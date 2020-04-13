@@ -150,7 +150,11 @@ AcpiInfo
 AcpiBiosError
 AcpiBiosWarning
 
+#
+# added exports
+#
 K2OSACPI_SetPciConfigOverride
+K2OSACPI_RunDeviceNumericMethod
 AcpiOsReadPciConfiguration
 AcpiOsWritePciConfiguration
 

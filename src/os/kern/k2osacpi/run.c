@@ -30,47 +30,14 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __K2OSACPI_H
-#define __K2OSACPI_H
-
-#include <k2oskern.h>
-#include <acenv.h>
-#include <actypes.h>
-#include <actbl.h>
-#include <acpiosxf.h>
-#include <acrestyp.h>
-#include <acpixf.h>
-#include <acexcep.h>
-
-typedef
-ACPI_STATUS
-(*K2OSACPI_pf_ReadPciConfiguration)(
-    ACPI_PCI_ID             *PciId,
-    UINT32                  Reg,
-    UINT64                  *Value,
-    UINT32                  Width
-    );
-
-typedef
-ACPI_STATUS
-(*K2OSACPI_pf_WritePciConfiguration)(
-    ACPI_PCI_ID             *PciId,
-    UINT32                  Reg,
-    UINT64                  Value,
-    UINT32                  Width
-    );
-
-K2STAT
-K2OSACPI_SetPciConfigOverride(
-    K2OSACPI_pf_ReadPciConfiguration    afRead,
-    K2OSACPI_pf_WritePciConfiguration      afWrite
-);
+#include "ik2osacpi.h"
 
 ACPI_STATUS
 K2OSACPI_RunDeviceNumericMethod(
     ACPI_HANDLE     Device,
     char const *    MethodName,
     UINT64 *        apRetValue
-);
-
-#endif // __K2OSACPI_H
+)
+{
+    return AcpiUtEvaluateNumericObject(MethodName, (ACPI_NAMESPACE_NODE *)Device, apRetValue);
+}
