@@ -32,48 +32,103 @@
 
 #include "ik2osacpi.h"
 
-#define CACHE_BLOCK_ITEM_COUNT  32
-
-typedef struct _CACHE_HDR       CACHE_HDR;
-typedef struct _CACHE_BLOCK_HDR CACHE_BLOCK_HDR;
-typedef struct _CACHE_ITEM_HDR  CACHE_ITEM_HDR;
-
-struct _CACHE_ITEM_HDR
+static void sInitCache(CACHE_HDR *apCache)
 {
-    CACHE_BLOCK_HDR *   mpBlock;
-    K2LIST_LINK         ItemListLink;
-    UINT8               Payload[4];
-};
+    UINT32          MaxDepth;
+    K2LIST_LINK *   pListLink;
+    UINT8 *         pAct;
 
-#define CACHE_ITEM_BYTES(alignedPayloadBytes) \
-    (sizeof(CACHE_ITEM_HDR) - 4 + (alignedPayloadBytes))
+    MaxDepth = apCache->mMaxDepth;
 
-struct _CACHE_BLOCK_HDR
+    pListLink = (K2LIST_LINK *)&apCache->CacheData[0];
+    do {
+        pAct = ((UINT8 *)pListLink) + sizeof(K2LIST_LINK);
+        K2MEM_Set(pAct, (UINT8)apCache->mCacheId, apCache->mObjectBytes - sizeof(K2LIST_LINK));
+        K2LIST_AddAtTail(&apCache->FreeList, pListLink);
+        pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + apCache->mObjectBytes);
+    } while (--MaxDepth);
+}
+
+static UINT32 sgSysCacheId = 0x65;
+static UINT32 sgOperandCacheId = 0;
+static K2LIST_ANCHOR sgOpCacheActive;
+
+void sReleaseOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
 {
-    CACHE_HDR *     mpCache;
-    K2LIST_LINK     BlockListLink;
-    UINT32          mBlockFreeCount;
-    CACHE_ITEM_HDR  Items[1];           // first of many(array)
-};
+    UINT32  effAddr;
+    BOOL    ok;
 
-#define CACHE_BLOCK_BYTES(blockItemCount, alignedPayloadBytes) \
-    (sizeof(CACHE_BLOCK_HDR) - sizeof(CACHE_ITEM_HDR) + ((blockItemCount) * CACHE_ITEM_BYTES(alignedPayloadBytes)))
+    K2LIST_Remove(&sgOpCacheActive, apListLink);
 
-struct _CACHE_HDR
+    effAddr = apCache->mVirtBase + (aOffset * K2_VA32_MEMPAGE_BYTES);
+
+    ok = K2OS_VirtPagesDecommit(effAddr, 1);
+    K2_ASSERT(ok);
+}
+
+void sInitOperandCache(CACHE_HDR *apCache)
 {
-    K2LIST_LINK         CacheListLink;
-    UINT32              mItemsPerBlock;
-    UINT32              mTruePayloadBytes;
-    UINT32              mTargetDepth;
-    char *              mpCacheName;
-    K2OSKERN_SEQLOCK    SeqLock;
-    K2LIST_ANCHOR       BlockList;
-    K2LIST_ANCHOR       ItemList;
-    CACHE_BLOCK_HDR     Block0;         // only block 0 lives here
-};
+    UINT32          addr;
+    BOOL            ok;
+    UINT32          MaxDepth;
+    UINT32          offset;
+    K2LIST_LINK *   pListLink;
 
-#define CACHE_BYTES(blockItemCount, alignedPayloadBytes) \
-    ((sizeof(CACHE_HDR) - sizeof(CACHE_BLOCK_HDR)) + CACHE_BLOCK_BYTES(blockItemCount, alignedPayloadBytes))
+    if (apCache->mVirtBase != 0)
+    {
+        //
+        // purge the list
+        //
+        while (sgOpCacheActive.mpHead != NULL)
+        {
+            pListLink = sgOpCacheActive.mpHead;
+
+            offset = ((UINT32)pListLink) - ((UINT32)&apCache->CacheData[0]);
+            K2_ASSERT((offset % sizeof(K2LIST_LINK)) == 0);
+            offset /= sizeof(K2LIST_LINK);
+            K2_ASSERT(offset < apCache->mMaxDepth);
+            sReleaseOperandObject(apCache, pListLink, offset);
+
+            K2_ASSERT(apCache->FreeList.mNodeCount < apCache->mMaxDepth);
+            K2LIST_AddAtTail(&apCache->FreeList, pListLink);
+        }
+    }
+    else
+    {
+        MaxDepth = apCache->mMaxDepth;
+
+        pListLink = (K2LIST_LINK *)&apCache->CacheData[0];
+        do {
+            K2LIST_AddAtTail(&apCache->FreeList, pListLink);
+            pListLink = (K2LIST_LINK *)(((UINT32)pListLink) + sizeof(K2LIST_LINK));
+        } while (--MaxDepth);
+
+        K2LIST_Init(&sgOpCacheActive);
+
+        addr = 0;
+
+        ok = K2OS_VirtPagesAlloc(&addr, apCache->mMaxDepth, 0, 0);
+        K2_ASSERT(ok);
+
+        apCache->mVirtBase = addr;
+    }
+}
+
+UINT8 * sAcquireOperandObject(CACHE_HDR *apCache, K2LIST_LINK *apListLink, UINT32 aOffset)
+{
+    UINT32  effAddr;
+    BOOL    ok;
+
+    K2LIST_AddAtTail(&sgOpCacheActive, apListLink);
+
+    effAddr = apCache->mVirtBase + (aOffset * K2_VA32_MEMPAGE_BYTES);
+
+    ok = K2OS_VirtPagesCommit(effAddr, 1, K2OS_MAPTYPE_KERN_DATA);
+    K2_ASSERT(ok);
+
+    return (UINT8 *)effAddr;
+}
+
 
 ACPI_STATUS
 AcpiOsCreateCache(
@@ -82,18 +137,29 @@ AcpiOsCreateCache(
     UINT16                  MaxDepth,
     ACPI_CACHE_T            **ReturnCache)
 {
-    CACHE_HDR *         pRet;
-    UINT32              alignedPayloadBytes;
-    UINT32              cacheBytes;
-    UINT32              ix;
-    CACHE_ITEM_HDR *    pItemHdr;
+    CACHE_HDR *     pRet;
+    UINT32          objectBytes;
+    UINT32          cacheBytes;
+    UINT32          newCacheId;
 
     K2_ASSERT(ObjectSize > 0);
     K2_ASSERT(MaxDepth > 0);
 
-    alignedPayloadBytes = (ObjectSize + 3) & ~3;
-    
-    cacheBytes = CACHE_BYTES(CACHE_BLOCK_ITEM_COUNT, alignedPayloadBytes);
+    newCacheId = sgSysCacheId++;
+
+    if (0 == K2ASC_CompIns(CacheName, "Acpi-Operand-Nope"))
+    {
+        sgOperandCacheId = newCacheId;
+        objectBytes = sizeof(K2LIST_LINK);
+    }
+    else
+    {
+        objectBytes = ObjectSize;
+        objectBytes = (ObjectSize + 3) & ~3;
+        objectBytes += sizeof(K2LIST_LINK);
+    }
+
+    cacheBytes = (objectBytes * ((UINT32)MaxDepth)) + sizeof(CACHE_HDR) - 4;
 
     pRet = (CACHE_HDR *)K2OS_HeapAlloc(cacheBytes);
     if (pRet == NULL)
@@ -102,33 +168,26 @@ AcpiOsCreateCache(
     }
 
     K2MEM_Zero(pRet, cacheBytes);
-    pRet->mItemsPerBlock = CACHE_BLOCK_ITEM_COUNT;
-    pRet->mTruePayloadBytes = ObjectSize;
-    pRet->mTargetDepth = MaxDepth;
+
     pRet->mpCacheName = CacheName;
-    K2OSKERN_SeqIntrInit(&pRet->SeqLock);
-    K2LIST_Init(&pRet->BlockList);
-    K2LIST_Init(&pRet->ItemList);
+    pRet->mMaxDepth = MaxDepth;
+    pRet->mCacheId = newCacheId;
+    K2LIST_Init(&pRet->FreeList);
 
-    pRet->Block0.mpCache = pRet;
-    K2LIST_AddAtHead(&pRet->BlockList, &pRet->Block0.BlockListLink);
+//    K2OSKERN_Debug("%02X = %s\n", pRet->mCacheId, pRet->mpCacheName);
 
-    pItemHdr = &pRet->Block0.Items[0];
-    for (ix = 0; ix < CACHE_BLOCK_ITEM_COUNT; ix++)
+    if (sgOperandCacheId != pRet->mCacheId)
     {
-        pItemHdr->mpBlock = &pRet->Block0;
-        K2LIST_AddAtTail(&pRet->ItemList, &pItemHdr->ItemListLink);
-        K2MEM_Set(&pItemHdr->Payload[0], 0xFE, pRet->mTruePayloadBytes);
-        pRet->Block0.mBlockFreeCount++;
+        pRet->mObjectBytes = objectBytes;
+        sInitCache(pRet);
+    }
+    else
+    {
+        pRet->mObjectBytes = ObjectSize;
+        sInitOperandCache(pRet);
     }
 
     K2LIST_AddAtTail(&gK2OSACPI_CacheList, &pRet->CacheListLink);
-
-    while (pRet->ItemList.mNodeCount < pRet->mTargetDepth)
-    {
-        //
-        // add a block
-    }
 
     *ReturnCache = (ACPI_CACHE_T *)pRet;
 
