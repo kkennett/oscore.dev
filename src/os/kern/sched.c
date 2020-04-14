@@ -122,12 +122,12 @@ void KernSched_AddCurrentCore(void)
     // manually insert thread as running on this core
     //
     pThread = gpThread0;
-    pThread->Sched.mBasePrio = K2OS_THREADPRIO_NORMAL;
-    pThread->Sched.Attr.mPriority = K2OS_THREADPRIO_NORMAL;
-    pThread->Sched.Attr.mAffinityMask = (1 << gData.mCpuCount) - 1;
-    pThread->Sched.Attr.mQuantum = K2OS_THREAD_DEFAULT_QUANTUM;
-    pThread->Sched.Attr.mFieldMask = K2OS_THREADATTR_VALID_MASK;
-    pThread->Sched.mQuantumLeft = K2OS_THREAD_DEFAULT_QUANTUM;
+
+    K2_ASSERT(pThread->Info.CreateInfo.Addr.mFieldMask == K2OS_THREADATTR_VALID_MASK);
+    pThread->Sched.Attr = pThread->Info.CreateInfo.Attr;
+    pThread->Sched.mBasePrio = pThread->Sched.Attr.mPriority;
+    pThread->Sched.mQuantumLeft = pThread->Sched.Attr.mQuantum;
+    pThread->Sched.mActivePrio = pThread->Sched.mBasePrio;
     K2LIST_Init(&pThread->Sched.OwnedCritSecList);
 
     KernArch_PrepareThread(pThread, 0);

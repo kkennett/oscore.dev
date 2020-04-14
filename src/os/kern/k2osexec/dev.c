@@ -96,23 +96,95 @@ sInitialDeviceWalkCallback(
     return AE_OK;
 }
 
+static void sPrefix(UINT32 aCount)
+{
+    if (0 == aCount)
+        return;
+    do {
+        K2OSKERN_Debug("  ");
+    } while (--aCount);
+}
+
 static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
 {
-    K2LIST_LINK *pListLink;
-    UINT32 ix;
+    K2LIST_LINK *               pListLink;
+    UINT32                      ix;
+    ACPI_DEVICE_INFO *          pDevInfo;
+    DEV_NODE_PCI *              pPci;
+    K2OSACPI_DEVICE_ID const *  pDevId;
 
-    for (ix = 0; ix < aLevel; ix++)
+    sPrefix(aLevel);
+    K2OSKERN_Debug("NODE(%08X)\n", apNode);
+
+    sPrefix(aLevel + 1);
+    pDevInfo = apNode->mpAcpiInfo;
+    if (NULL != pDevInfo)
     {
-        K2OSKERN_Debug("  ");
+        K2OSKERN_Debug("ACPI(hNode=%08X)", apNode->DevTreeNode.mUserVal);
+        if (pDevInfo->Valid & ACPI_VALID_HID)
+            K2OSKERN_Debug(" _HID(%s)", pDevInfo->HardwareId.String);
+        else
+            K2OSKERN_Debug(" NOHID");
+        if (pDevInfo->Valid & ACPI_VALID_UID)
+            K2OSKERN_Debug(" _UID(%s)", pDevInfo->UniqueId.String);
+        else
+            K2OSKERN_Debug(" NOUID");
+        if (pDevInfo->Valid & ACPI_VALID_CID)
+        {
+            K2OSKERN_Debug(" _CID(%d: %s", pDevInfo->CompatibleIdList.Count, pDevInfo->CompatibleIdList.Ids[0].String);
+            for (ix = 1; ix < pDevInfo->CompatibleIdList.Count; ix++)
+            {
+                K2OSKERN_Debug(", %s", pDevInfo->CompatibleIdList.Ids[ix].String);
+            }
+            K2OSKERN_Debug(")\n");
+        }
+        else
+            K2OSKERN_Debug(" NOCID\n");
+        if (pDevInfo->Valid & ACPI_VALID_HID)
+        {
+            pDevId = &AslDeviceIds[0];
+            while (pDevId->Name != NULL)
+            {
+                if (0 == K2ASC_CompIns(pDevId->Name, pDevInfo->HardwareId.String))
+                {
+                    sPrefix(aLevel + 1);
+                    K2OSKERN_Debug("\"%s\"\n", pDevId->Description);
+                    break;
+                }
+                pDevId++;
+            }
+        }
     }
-    K2OSKERN_Debug("NODE(%08X) ACPI_INFO(%08X) PCI(%08X) KEY(%08X)\n",
-        apNode, apNode->mpAcpiInfo, apNode->mpPci, apNode->DevTreeNode.mUserVal);
-    
+    else
+    {
+        K2OSKERN_Debug("ACPI(NONE)\n");
+    }
+
+    sPrefix(aLevel + 1);
+    pPci = apNode->mpPci;
+    if (NULL != pPci)
+    {
+        K2OSKERN_Debug("PCI(%d/%d/%d/%d) VID %04X PID %04X\n",
+            pPci->Id.Segment,
+            pPci->Id.Bus,
+            pPci->Id.Device,
+            pPci->Id.Function,
+            pPci->mVenLo_DevHi & 0xFFFF,
+            (pPci->mVenLo_DevHi >> 16) & 0xFFFF
+            );
+    }
+    else
+    {
+        K2OSKERN_Debug("PCI(NONE)\n");
+    }
+
+    sPrefix(aLevel + 1);
+    K2OSKERN_Debug("%d Children\n", apNode->ChildList.mNodeCount);
     pListLink = apNode->ChildList.mpHead;
     if (pListLink != NULL)
     {
         do {
-            sDumpDevice(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aLevel + 1);
+            sDumpDevice(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aLevel + 2);
             pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
     }

@@ -886,9 +886,71 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT3
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate)
 {
-    K2_ASSERT(gData.mKernInitStage >= KernInitStage_MultiThreaded);
+#if 0
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OS_THREADCREATE       cret;
+    K2STAT                  stat;
+
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_MemReady);
+
+    if (apCreate->mStructBytes < sizeof(K2OS_THREADCREATE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARUGMENT);
+        return NULL;
+    }
+
+    K2MEM_Copy(&cret, apCreate, sizeof(cret));
+
+    if (cret.mStackPages == 0)
+        cret.mStackPages = K2OS_THREAD_DEFAULT_STACK_PAGES;
+
+    if (0 == (cret.Attr.mFieldMask & K2OS_THREADATTR_PRIORITY))
+    {
+        cret.Attr.mPriority = pThisThread->Sched.mBasePrio;
+        cret.Attr.mFieldMask |= K2OS_THREADATTR_PRIORITY;
+    }
+    
+    if (0 == (cret.Attr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK))
+    {
+        cret.Attr.mAffinityMask = pThisThread->Sched.Attr.mAffinityMask;
+        cret.Attr.mFieldMask |= K2OS_THREADATTR_AFFINITYMASK;
+    }
+
+    if (0 == (cret.Attr.mFieldMask & K2OS_THREADATTR_QUANTUM))
+    {
+        cret.Attr.mQuantum = K2OS_THREAD_DEFAULT_QUANTUM;
+        cret.Attr.mFieldMask |= K2OS_THREADATTR_QUANTUM;
+    }
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    stat = KernMem_PhysAllocToThread(pThisThread, 0, cret.mStackPages + 1, FALSE);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    do {
 
 
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernMem_PhysFreeFromThread(pThisThread);
+        return NULL;
+    }
+    
+
+    K2STAT KernMem_VirtAllocToThread(K2OSKERN_OBJ_THREAD * apCurThread, UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
+    void   KernMem_VirtFreeFromThread(K2OSKERN_OBJ_THREAD * apCurThread);
+
+
+    K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT * *apRetSeg);
+
+
+#endif
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return NULL;
 }

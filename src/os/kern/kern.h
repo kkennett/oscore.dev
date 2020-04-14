@@ -65,13 +65,6 @@ typedef struct _K2OSKERN_SCHED_MACROWAIT    K2OSKERN_SCHED_MACROWAIT;
 typedef struct _K2OSKERN_SCHED_ITEM         K2OSKERN_SCHED_ITEM;
 typedef union  _K2OSKERN_SCHED_ITEM_ARGS    K2OSKERN_SCHED_ITEM_ARGS;
 
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
-
 typedef struct _K2OSKERN_CRITSEC            K2OSKERN_CRITSEC;
 
 typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
@@ -196,16 +189,27 @@ enum _KernSchedItemType
     KernSchedItem_Invalid = 0,
     KernSchedItem_SchedTimer,
     KernSchedItem_EnterDebug,
+
     KernSchedItem_ThreadExit,
     KernSchedItem_ThreadWait,
     KernSchedItem_Contended_Critsec,
-    KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
     KernSchedItem_SemRelease,
+    KernSchedItem_ThreadCreate
+
     // more here
     KernSchedItemType_Count
 };
+
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE;
+
 
 struct _K2OSKERN_SCHED_TIMERITEM
 {
@@ -271,6 +275,15 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE
     UINT32              mRetNewCount;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE
+{
+    //
+    // calling thread is creator
+    //
+    K2OSKERN_OBJ_PROCESS *  mpTargetProc;
+    K2OS_THREADCREATE       Cret;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -279,6 +292,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           PurgePt;
     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     InvalidateTlb;
     K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        SemRelease;
+    K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      ThreadCreate;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -584,9 +598,10 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                      mTlbFlushBase;
     UINT32                      mTlbFlushPages;
 
+    K2OSKERN_OBJ_SEGMENT *      mpSegCreate;
+
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
     K2_EXCEPTION_TRAP *         mpUserExTrapStack;
-
 };
 
 #define K2OSKERN_THREAD_KERNSTACK_BYTECOUNT (K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_OBJ_THREAD))

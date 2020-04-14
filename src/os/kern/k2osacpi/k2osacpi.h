@@ -73,4 +73,20 @@ K2OSACPI_RunDeviceNumericMethod(
     UINT64 *        apRetValue
 );
 
+typedef struct _K2OSACPI_PREDFINED_NAME K2OSACPI_PREDFINED_NAME;
+struct _K2OSACPI_PREDFINED_NAME
+{
+    char            *Name;
+    char            *Description;
+};
+extern const K2OSACPI_PREDFINED_NAME AslPredefinedInfo[];
+
+typedef struct _K2OSACPI_DEVICE_ID K2OSACPI_DEVICE_ID;
+struct _K2OSACPI_DEVICE_ID
+{
+    char            *Name;
+    char            *Description;
+};
+extern const K2OSACPI_DEVICE_ID AslDeviceIds[];
+
 #endif // __K2OSACPI_H

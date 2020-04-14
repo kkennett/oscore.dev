@@ -186,3 +186,9 @@ AcpiGbl_DisplayDebugTimer
 AcpiGbl_FADT
 AcpiCurrentGpeCount
 AcpiGbl_SystemAwakeAndRunning
+
+#
+# added exports
+#
+AslPredefinedInfo
+AslDeviceIds

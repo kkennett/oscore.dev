@@ -87,6 +87,10 @@ static void sInit_BeforeVirt(void)
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;
     pThread->Info.CreateInfo.mStackPages = K2OS_KVA_THREAD0_PHYS_BYTES / K2_VA32_MEMPAGE_BYTES;
+    pThread->Info.CreateInfo.Attr.mFieldMask = K2OS_THREADATTR_VALID_MASK;
+    pThread->Info.CreateInfo.Attr.mPriority = K2OS_THREADPRIO_NORMAL;
+    pThread->Info.CreateInfo.Attr.mAffinityMask = (1 << gData.mCpuCount) - 1;
+    pThread->Info.CreateInfo.Attr.mQuantum = K2OS_THREAD_DEFAULT_QUANTUM;
     K2LIST_Init(&pThread->WorkPages_Dirty);
     K2LIST_Init(&pThread->WorkPages_Clean);
     K2LIST_Init(&pThread->WorkPtPages_Dirty);

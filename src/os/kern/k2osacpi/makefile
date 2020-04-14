@@ -94,6 +94,10 @@ SOURCES += acpica/source/components/dispatcher/dswload2.c
 SOURCES += acpica/source/components/dispatcher/dswscope.c 
 SOURCES += acpica/source/components/dispatcher/dswstate.c 
 
+# common
+SOURCES += acpica/source/common/ahids.c
+SOURCES += acpica/source/common/ahpredef.c
+
 # events
 SOURCES += acpica/source/components/events/evevent.c
 SOURCES += acpica/source/components/events/evglock.c

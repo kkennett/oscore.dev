@@ -32,11 +32,39 @@
 
 #include "k2osexec.h"
 
+UINT32 K2_CALLCONV_REGS MsgThread(void *apParam)
+{
+    K2OSKERN_Debug("In MsgThread\n");
+    return (UINT32)0xAABBCCDD;
+}
+
+static
+void
+sCreateMsgThread(
+    void
+)
+{
+    K2OS_TOKEN          tokThread;
+    K2OS_THREADCREATE   cret;
+
+    K2MEM_Zero(&cret, sizeof(cret));
+    cret.mStructBytes = sizeof(cret);
+    cret.mEntrypoint = MsgThread;
+
+    tokThread = K2OS_ThreadCreate(&cret);
+    if (NULL == tokThread)
+    {
+        K2OSKERN_Debug("ThreadCreate for MsgThread failed\n");
+    }
+}
+
 void
 K2OSEXEC_Run(
     void
 )
 {
+    sCreateMsgThread();
+
 #if 1
     UINT64          last, newTick;
     K2OSKERN_Debug("Hang ints on\n");
@@ -52,3 +80,23 @@ K2OSEXEC_Run(
 #endif
 }
 
+#if 0
+
+8086 "Intel"
+27B9 "82801GBM (ICH7-M) LPC Interface Bridge"
+2415 "82801AA AC'97 Audio Controller"
+7113 "82371AB/EB/MB PIIX4 ACPI"
+7111 "82371AB/EB/MB PIIX4 IDE"
+265C "82801FB/FBM/FR/FW/FRW (ICH6 Family) USB2 EHCI Controller"
+
+80EE    "VirtualBox"
+BEEF "VirtualBox Graphics Adapter"
+CAFE "VirtualBox Guest Service"
+
+1022     "AMD"
+2000 "79c970 [PCnet32 LANCE]"
+
+106B "Apple"
+003F "KeyLargo / Intrepid USB"
+
+#endif
