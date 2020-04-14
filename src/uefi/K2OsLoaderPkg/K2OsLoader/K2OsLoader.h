@@ -127,6 +127,8 @@ void        Loader_TransitionToKernel(void);
 K2STAT      Loader_AssignRuntimeVirtual(void);
 K2STAT      Loader_AssembleAcpi(void);
 
+void        DumpFile(CHAR16 const *apFileName, void *apData, UINTN aDataBytes);
+
 UINTN       K2Printf(CHAR16 const * apFormat, ...);
 
 #endif /* __K2OSLOADER_H__ */

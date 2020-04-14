@@ -742,3 +742,31 @@ K2STAT sysDLX_Purge(K2DLXSUPP_HOST_FILE aHostFile)
     return status;
 }
 
+void DumpFile(CHAR16 const *apFileName, void *apData, UINTN aDataBytes)
+{
+    EFI_STATUS          efiStatus;
+    EFI_FILE_PROTOCOL * pDump;
+
+    efiStatus = sgpKernDir->Open(
+        sgpKernDir,
+        &pDump,
+        (CHAR16 *)apFileName,
+        (EFI_FILE_MODE_READ | EFI_FILE_MODE_WRITE | EFI_FILE_MODE_CREATE),
+        0);
+    if (efiStatus != EFI_SUCCESS)
+    {
+        K2Printf(L"*** Open \"%s\" failed with efi status %r\n", apFileName, efiStatus);
+        return;
+    }
+
+    efiStatus = pDump->Write(pDump, &aDataBytes, apData);
+    if (efiStatus != EFI_SUCCESS)
+    {
+        K2Printf(L"*** Write to \"%s\" failed with efi status %r\n", apFileName, efiStatus);
+        return;
+    }
+
+    pDump->Close(pDump);
+}
+
+
