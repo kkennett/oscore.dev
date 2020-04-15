@@ -421,7 +421,7 @@ AcpiInitializeObjects (
      * the table load filled them up more than they will be at runtime --
      * thus wasting non-paged memory.
      */
-//    Status = AcpiPurgeCachedObjects ();
+    Status = AcpiPurgeCachedObjects ();
 
     AcpiGbl_StartupFlags |= ACPI_INITIALIZED_OK;
     return_ACPI_STATUS (Status);

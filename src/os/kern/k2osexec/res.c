@@ -32,74 +32,113 @@
 
 #include "k2osexec.h"
 
+typedef struct _ENUM_CALLCONTEXT ENUM_CALLCONTEXT;
+struct _ENUM_CALLCONTEXT
+{
+    DEV_NODE *  mpDevNode;
+    UINT32      mResCount;
+};
+
 ACPI_STATUS
 Res_AcpiEnumCallback(
     ACPI_RESOURCE * Resource,
     void *          Context
 )
 {
-    DEV_NODE *pDevNode;
-    pDevNode = (DEV_NODE *)Context;
+    ENUM_CALLCONTEXT *  pCtx;
 
-    K2OSKERN_Debug("ResType %d\n", Resource->Type);
+    pCtx = (ENUM_CALLCONTEXT *)Context;
 
-#if 0
-    ACPI_RESOURCE_IRQ                       Irq;
-    ACPI_RESOURCE_DMA                       Dma;
-    ACPI_RESOURCE_START_DEPENDENT           StartDpf;
-    ACPI_RESOURCE_IO                        Io;
-    ACPI_RESOURCE_FIXED_IO                  FixedIo;
-    ACPI_RESOURCE_FIXED_DMA                 FixedDma;
-    ACPI_RESOURCE_VENDOR                    Vendor;
-    ACPI_RESOURCE_VENDOR_TYPED              VendorTyped;
-    ACPI_RESOURCE_END_TAG                   EndTag;
-    ACPI_RESOURCE_MEMORY24                  Memory24;
-    ACPI_RESOURCE_MEMORY32                  Memory32;
-    ACPI_RESOURCE_FIXED_MEMORY32            FixedMemory32;
-    ACPI_RESOURCE_ADDRESS16                 Address16;
-    ACPI_RESOURCE_ADDRESS32                 Address32;
-    ACPI_RESOURCE_ADDRESS64                 Address64;
-    ACPI_RESOURCE_EXTENDED_ADDRESS64        ExtAddress64;
-    ACPI_RESOURCE_EXTENDED_IRQ              ExtendedIrq;
-    ACPI_RESOURCE_GENERIC_REGISTER          GenericReg;
-    ACPI_RESOURCE_GPIO                      Gpio;
-    ACPI_RESOURCE_I2C_SERIALBUS             I2cSerialBus;
-    ACPI_RESOURCE_SPI_SERIALBUS             SpiSerialBus;
-    ACPI_RESOURCE_UART_SERIALBUS            UartSerialBus;
-    ACPI_RESOURCE_COMMON_SERIALBUS          CommonSerialBus;
-    ACPI_RESOURCE_PIN_FUNCTION              PinFunction;
-    ACPI_RESOURCE_PIN_CONFIG                PinConfig;
-    ACPI_RESOURCE_PIN_GROUP                 PinGroup;
-    ACPI_RESOURCE_PIN_GROUP_FUNCTION        PinGroupFunction;
-    ACPI_RESOURCE_PIN_GROUP_CONFIG          PinGroupConfig;
-#endif
+    if (Resource->Type == ACPI_RESOURCE_TYPE_END_TAG)
+    {
+        if (pCtx->mResCount > 0)
+        {
+            //
+            // this is the last callback for the device
+            //
+            K2OSKERN_Debug("%08X - END\n", pCtx->mpDevNode);
+        }
+        return AE_OK;
+    }
+
+    if (++pCtx->mResCount == 1)
+    {
+        //
+        // this is the first callback for the device
+        //
+        K2OSKERN_Debug("%08X - START\n", pCtx->mpDevNode);
+    }
+
+    switch (Resource->Type)
+    {
+    case ACPI_RESOURCE_TYPE_IRQ:
+        K2OSKERN_Debug("IRQ\n");
+        break;
+    case ACPI_RESOURCE_TYPE_DMA:
+        K2OSKERN_Debug("DMA\n");
+        break;
+    case ACPI_RESOURCE_TYPE_IO:
+        K2OSKERN_Debug("IO\n");
+        break;
+    case ACPI_RESOURCE_TYPE_FIXED_MEMORY32:
+        K2OSKERN_Debug("FIXED_MEMORY32\n");
+        break;
+    case ACPI_RESOURCE_TYPE_ADDRESS16:
+        K2OSKERN_Debug("ADDRESS16\n");
+        break;
+    case ACPI_RESOURCE_TYPE_ADDRESS32:
+        K2OSKERN_Debug("ADDRESS32\n");
+        break;
+    case ACPI_RESOURCE_TYPE_ADDRESS64:
+        K2OSKERN_Debug("ADDRESS64\n");
+        break;
+    default:
+        K2OSKERN_Debug("Resource Type %d not handled\n", Resource->Type);
+        K2_ASSERT(0);
+        break;
+    }
+         
+    return AE_OK;
+}
+
+void Res_CreateFromPciDevice(DEV_NODE *apDevNode, DEV_NODE_PCI *apDevPci)
+{
 
 }
 
 void Res_EnumAndAdd(DEV_NODE *apDevNode)
 {
-    ACPI_STATUS acpiStatus;
-    ACPI_BUFFER ResBuffer;
+    ACPI_STATUS         acpiStatus;
+    ACPI_HANDLE         hAcpi;
+    ACPI_BUFFER         ResBuffer;
+    DEV_NODE_PCI *      pPci;
+    ENUM_CALLCONTEXT    ctx;
 
-    if (apDevNode->DevTreeNode.mUserVal != 0)
+    hAcpi = (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal;
+    if (0 != hAcpi)
     {
         //
         // get ACPI defined resources
         //
         ResBuffer.Pointer = NULL;
         ResBuffer.Length = ACPI_ALLOCATE_LOCAL_BUFFER;
-        acpiStatus = AcpiGetCurrentResources((ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal, &ResBuffer);
+        ctx.mpDevNode = apDevNode;
+        ctx.mResCount = 0;
+        acpiStatus = AcpiGetCurrentResources(hAcpi, &ResBuffer);
         if (!ACPI_FAILURE(acpiStatus))
         {
-            AcpiWalkResourceBuffer(apResInfoBuffer, Res_AcpiEnumCallback, apDevNode);
+            AcpiWalkResourceBuffer(&ResBuffer, Res_AcpiEnumCallback, &ctx);
             K2OS_HeapFree(ResBuffer.Pointer);
         }
     }
-    if (apDevNode->mpPci)
+
+    pPci = apDevNode->mpPci;
+    if (NULL != pPci)
     {
         //
         // get PCI defined resources
         //
+        Res_CreateFromPciDevice(apDevNode, pPci);
     }
 }
 
@@ -108,10 +147,10 @@ void Res_Create(DEV_NODE *apDevNode)
     DEV_NODE *      pChild;
     K2LIST_LINK *   pListLink;
 
+    Res_EnumAndAdd(apDevNode);
     pListLink = apDevNode->ChildList.mpHead;
     if (pListLink == NULL)
         return;
-    Res_EnumAndAdd(apDevNode);
     do {
         pChild = K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink);
         pListLink = pListLink->mpNext;
@@ -125,7 +164,7 @@ void Res_Init(void)
     // scan dev tree and enumerate already-allocated resources
     //
     K2OSKERN_Debug("Res_Init()\n");
-    Res_Create(gDev_RootNode);
+    Res_Create(gpDev_RootNode);
 
 
 }

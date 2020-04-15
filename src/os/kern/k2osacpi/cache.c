@@ -32,7 +32,7 @@
 
 #include "ik2osacpi.h"
 
-#define CACHE_BLOCK_EXPAND_COUNT  32
+#define CACHE_BLOCK_EXPAND_COUNT  96
 
 typedef struct _CACHE_HDR       CACHE_HDR;
 typedef struct _CACHE_BLOCK_HDR CACHE_BLOCK_HDR;
@@ -169,6 +169,8 @@ AcpiOsCreateCache(
 
     sInitNewBlock(pRet, &pRet->Block0, pRet->mInitBlockItemCount, alignedPayloadBytes);
 
+    K2LIST_AddAtTail(&pRet->BlockList, &pRet->Block0.BlockListLink);
+
     K2_ASSERT(pRet->ItemFreeList.mNodeCount == MaxDepth);
 
     disp = K2OSKERN_SeqIntrLock(&gK2OSACPI_CacheSeqLock);
@@ -292,17 +294,19 @@ AcpiOsPurgeCache(
 
     pListLink = pCache->BlockList.mpHead;
     do {
-        pBlock = K2_GET_CONTAINER(CACHE_BLOCK_HDR, pBlock, BlockListLink);
+        pBlock = K2_GET_CONTAINER(CACHE_BLOCK_HDR, pListLink, BlockListLink);
         pListLink = pListLink->mpNext;
 
-        if ((pBlock != &pCache->Block0) &&
-            (pBlock->mBlockFreeCount == pCache->mBlockExpandItemCount))
+        if (pBlock != &pCache->Block0)
         {
-            sPurgeBlockItems(pCache, pBlock, pCache->mBlockExpandItemCount, alignedPayloadBytes);
+            if (pBlock->mBlockFreeCount == pCache->mBlockExpandItemCount)
+            {
+                sPurgeBlockItems(pCache, pBlock, pCache->mBlockExpandItemCount, alignedPayloadBytes);
 
-            K2LIST_Remove(&pCache->BlockList, &pBlock->BlockListLink);
+                K2LIST_Remove(&pCache->BlockList, &pBlock->BlockListLink);
 
-            K2LIST_AddAtTail(&freeList, &pBlock->BlockListLink);
+                K2LIST_AddAtTail(&freeList, &pBlock->BlockListLink);
+            }
         }
     } while (pListLink != NULL);
 
@@ -313,7 +317,6 @@ AcpiOsPurgeCache(
     {
         do
         {
-            K2OSKERN_Debug("Purge block of %d empty from %s\n", pCache->mBlockExpandItemCount, pCache->mpCacheName);
             pBlock = K2_GET_CONTAINER(CACHE_BLOCK_HDR, pListLink, BlockListLink);
             pListLink = pListLink->mpNext;
             K2OS_HeapFree(pBlock);
@@ -359,11 +362,11 @@ AcpiOsAcquireObject(
             break;
         }
 
+        K2OSKERN_SeqIntrUnlock(&pCache->SeqLock, disp);
+
         alignedPayloadBytes = (pCache->mTruePayloadBytes + 3) & ~3;
 
         blockBytes = CACHE_BLOCK_BYTES(pCache->mBlockExpandItemCount, alignedPayloadBytes);
-
-        K2OSKERN_Debug("Expand %s by %d\n", pCache->mpCacheName, pCache->mBlockExpandItemCount);
 
         pBlock = (CACHE_BLOCK_HDR *)K2OS_HeapAlloc(blockBytes);
 
@@ -374,9 +377,9 @@ AcpiOsAcquireObject(
 
         disp = K2OSKERN_SeqIntrLock(&pCache->SeqLock);
 
-        K2LIST_AddAtTail(&pCache->BlockList, &pBlock->BlockListLink);
-
         sInitNewBlock(pCache, pBlock, pCache->mBlockExpandItemCount, alignedPayloadBytes);
+
+        K2LIST_AddAtTail(&pCache->BlockList, &pBlock->BlockListLink);
 
     } while (1);
 
