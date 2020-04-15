@@ -30,41 +30,13 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "ik2osacpi.h"
+#include "kern.h"
 
-#define MAX_NUM_INTR 4
-
-K2OSACPI_INTR sgIntr[MAX_NUM_INTR];
-
-K2LIST_ANCHOR gK2OSACPI_IntrList;
-K2LIST_ANCHOR gK2OSACPI_IntrFreeList;
-
-K2OSKERN_SEQLOCK    gK2OSACPI_CacheSeqLock;
-K2LIST_ANCHOR       gK2OSACPI_CacheList;
-
-ACPI_STATUS
-AcpiOsInitialize(
-    void)
+BOOL KernSched_Exec_ThreadCreate(void)
 {
-    UINT32 ix;
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadCreate);
 
-    K2LIST_Init(&gK2OSACPI_IntrList);
-    K2LIST_Init(&gK2OSACPI_IntrFreeList);
+    K2_ASSERT(0);
 
-    for (ix = 0; ix < MAX_NUM_INTR; ix++)
-    {
-        K2LIST_AddAtTail(&gK2OSACPI_IntrFreeList, &sgIntr[ix].ListLink);
-    }
-
-    K2OSKERN_SeqIntrInit(&gK2OSACPI_CacheSeqLock);
-    K2LIST_Init(&gK2OSACPI_CacheList);
-    
-    return AE_OK;
-}
-
-ACPI_STATUS
-AcpiOsTerminate(
-    void)
-{
-    return AE_OK;
+    return FALSE;  // if something changes scheduling-wise, return true
 }

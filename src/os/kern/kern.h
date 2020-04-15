@@ -193,10 +193,11 @@ enum _KernSchedItemType
     KernSchedItem_ThreadExit,
     KernSchedItem_ThreadWait,
     KernSchedItem_Contended_Critsec,
+    KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
     KernSchedItem_SemRelease,
-    KernSchedItem_ThreadCreate
+    KernSchedItem_ThreadCreate,
 
     // more here
     KernSchedItemType_Count
@@ -1025,6 +1026,7 @@ BOOL KernSched_Exec_Destroy_CritSec(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);
+BOOL KernSched_Exec_ThreadCreate(void);
 BOOL KernSched_TimePassed(void);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);

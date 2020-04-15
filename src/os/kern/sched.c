@@ -46,7 +46,8 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
     KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
-    KernSched_Exec_SemRelease           // KernSchedItem_SemRelease
+    KernSched_Exec_SemRelease,          // KernSchedItem_SemRelease
+    KernSched_Exec_ThreadCreate         // KernSchedItem_ThreadCreate
 
 };
 
@@ -123,7 +124,7 @@ void KernSched_AddCurrentCore(void)
     //
     pThread = gpThread0;
 
-    K2_ASSERT(pThread->Info.CreateInfo.Addr.mFieldMask == K2OS_THREADATTR_VALID_MASK);
+    K2_ASSERT(pThread->Info.CreateInfo.Attr.mFieldMask == K2OS_THREADATTR_VALID_MASK);
     pThread->Sched.Attr = pThread->Info.CreateInfo.Attr;
     pThread->Sched.mBasePrio = pThread->Sched.Attr.mPriority;
     pThread->Sched.mQuantumLeft = pThread->Sched.Attr.mQuantum;

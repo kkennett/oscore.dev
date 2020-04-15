@@ -89,4 +89,9 @@ struct _K2OSACPI_DEVICE_ID
 };
 extern const K2OSACPI_DEVICE_ID AslDeviceIds[];
 
+extern K2LIST_ANCHOR    gK2OSACPI_IntrList;
+extern K2LIST_ANCHOR    gK2OSACPI_IntrFreeList;
+extern K2OSKERN_SEQLOCK gK2OSACPI_CacheSeqLock;
+extern K2LIST_ANCHOR    gK2OSACPI_CacheList;
+
 #endif // __K2OSACPI_H
