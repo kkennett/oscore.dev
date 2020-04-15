@@ -721,3 +721,8 @@ void Pci_CheckManualScan(void)
     }
 #endif
 }
+
+void Pci_DumpRes(DEV_NODE_PCI *apPci)
+{
+
+}

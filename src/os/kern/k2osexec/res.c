@@ -32,6 +32,48 @@
 
 #include "k2osexec.h"
 
+#if 0
+    ACPI_STATUS
+    AcpiGetIrqRoutingTable(
+        ACPI_HANDLE             Device,
+        ACPI_BUFFER             *RetBuffer);
+
+    gets PCI Routing Table _PRT of PCI root bus objects
+#endif
+
+static
+void
+sRes_DiscoveredAcpiIrq(
+    DEV_NODE *          apDevNode,
+    ACPI_RESOURCE_IRQ * apAcpiRes,
+    UINT32              aResLength
+)
+{
+    UINT8 ix;
+
+    K2OSKERN_Debug("  Resource->Length is %d\n", aResLength);
+    ix = aResLength - (sizeof(ACPI_RESOURCE_IRQ) - 1);
+    K2OSKERN_Debug("  This is space for %d interrupt bytes\n", ix);
+
+    K2OSKERN_Debug("  Trigger %s, Polarity %s, Shareable %s, WakeCapable %s\n",
+        apAcpiRes->Triggering ? "EDGE" : "LEVEL",
+        apAcpiRes->Polarity ? "LOW" : "HIGH",
+        apAcpiRes->Shareable ? "YES" : "NO",
+        apAcpiRes->WakeCapable ? "YES" : "NO");
+    if (apAcpiRes->InterruptCount > 0)
+    {
+        K2OSKERN_Debug("  InterruptCount is %d\n", apAcpiRes->InterruptCount);
+        for (ix = 0; ix < apAcpiRes->InterruptCount; ix++)
+        {
+            K2OSKERN_Debug("  Interrupts[%d] = %d\n", ix, apAcpiRes->Interrupts[ix]);
+        }
+    }
+    else
+    {
+        K2OSKERN_Debug("  InterruptCount is zero\n");
+    }
+}
+
 typedef struct _ENUM_CALLCONTEXT ENUM_CALLCONTEXT;
 struct _ENUM_CALLCONTEXT
 {
@@ -73,6 +115,7 @@ Res_AcpiEnumCallback(
     {
     case ACPI_RESOURCE_TYPE_IRQ:
         K2OSKERN_Debug("IRQ\n");
+        sRes_DiscoveredAcpiIrq(pCtx->mpDevNode, (ACPI_RESOURCE_IRQ *)&Resource->Data, Resource->Length);
         break;
     case ACPI_RESOURCE_TYPE_DMA:
         K2OSKERN_Debug("DMA\n");
@@ -103,7 +146,7 @@ Res_AcpiEnumCallback(
 
 void Res_CreateFromPciDevice(DEV_NODE *apDevNode, DEV_NODE_PCI *apDevPci)
 {
-
+    Pci_DumpRes(apDevPci);
 }
 
 void Res_EnumAndAdd(DEV_NODE *apDevNode)

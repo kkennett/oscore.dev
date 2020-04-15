@@ -75,6 +75,7 @@ extern K2OSKERN_SEQLOCK     gPci_SeqLock;
 void Pci_Init(void);
 void Pci_CheckManualScan(void);
 void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode);
+void Pci_DumpRes(DEV_NODE_PCI *apPci);
 
 /* ----------------------------------------------------------------------------- */
 
