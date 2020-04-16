@@ -37,6 +37,7 @@
 #include "..\k2osacpi\k2osacpi.h"
 #include "..\kernexec.h"
 #include <lib/k2heap.h>
+#include <spec/k2pci.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -121,9 +122,9 @@ struct _DEV_NODE_PCI
     DEV_NODE *      mpDevNode;
     ACPI_PCI_ID     Id;
     ACPI_HANDLE     mhAcpiDevice;
-    UINT32          mVenLo_DevHi;
     PCI_SEGMENT *   mpSeg;
     UINT32          mVirtConfigAddr;    // 0 if on intel system with no ECAM
+    PCICFG          PciCfg;
     K2TREE_NODE     PciTreeNode;
 };
 

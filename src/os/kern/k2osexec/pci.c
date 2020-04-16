@@ -68,8 +68,9 @@ sECAM_GetPciDevFromId(
     K2STAT          stat;
     UINT32          physAddr;
     UINT32          virtAddr;
-    UINT32          first32;
+    UINT32          val32;
     BOOL            disp;
+    UINT32          ix;
 
     pPciSeg = NULL;
     pPciDev = NULL;
@@ -128,8 +129,8 @@ sECAM_GetPciDevFromId(
     }
 
     do {
-        first32 = *((UINT32 *)virtAddr);
-        if (first32 == 0xFFFFFFFF)
+        val32 = *((UINT32 *)virtAddr);
+        if (val32 == 0xFFFFFFFF)
         {
             stat = K2STAT_ERROR_NOT_FOUND;
             break;
@@ -149,7 +150,14 @@ sECAM_GetPciDevFromId(
         K2MEM_Zero(pPciDev, sizeof(DEV_NODE_PCI));
 
         pPciDev->Id = *PciId;
-        pPciDev->mVenLo_DevHi = first32;
+        K2OSKERN_Debug("%d/%d/%d/%d\n", PciId->Segment, PciId->Bus, PciId->Device, PciId->Function);
+        pPciDev->PciCfg.mAsUINT32[0] = val32;
+        K2OSKERN_Debug("00: %08X\n", val32);
+        for (ix = 1; ix < 16; ix++)
+        {
+            pPciDev->PciCfg.mAsUINT32[ix] = *(((UINT32 *)virtAddr)+ix);
+            K2OSKERN_Debug("%02x: %08X\n", ix, pPciDev->PciCfg.mAsUINT32[ix]);
+        }
         pPciDev->mpSeg = pPciSeg;
         pPciDev->mVirtConfigAddr = virtAddr;
         pPciDev->PciTreeNode.mUserVal = funcIndexInSegment;
@@ -276,9 +284,10 @@ sCAM_GetPciDevFromId(
     UINT32          devIndexOnBus;
     K2TREE_NODE *   pTreeNode;
     DEV_NODE_PCI *  pPciDev;
-    UINT64          first32;
+    UINT64          val32;
     ACPI_STATUS     acpiStatus;
     BOOL            disp;
+    UINT32          ix;
 
     devIndexOnBus =
         (PciId->Device * 8) +
@@ -291,11 +300,12 @@ sCAM_GetPciDevFromId(
     if (pTreeNode != NULL)
         return K2_GET_CONTAINER(DEV_NODE_PCI, pTreeNode, PciTreeNode);
 
-    acpiStatus = AcpiOsReadPciConfiguration(PciId, 0, &first32, 32);
+    acpiStatus = AcpiOsReadPciConfiguration(PciId, 0, &val32, 32);
     if (ACPI_FAILURE(acpiStatus))
         return NULL;
 
-    if ((first32 & 0xFFFFFFFFull) == 0xFFFFFFFFull)
+    val32 &= 0xFFFFFFFFull;
+    if (val32 == 0xFFFFFFFF)
         return NULL;
 
     //
@@ -311,7 +321,18 @@ sCAM_GetPciDevFromId(
     K2MEM_Zero(pPciDev, sizeof(DEV_NODE_PCI));
 
     pPciDev->Id = *PciId;
-    pPciDev->mVenLo_DevHi = (UINT32)first32;
+    K2OSKERN_Debug("%d/%d/%d/%d\n", PciId->Segment, PciId->Bus, PciId->Device, PciId->Function);
+    pPciDev->PciCfg.mAsUINT32[0] = (UINT32)val32;
+    K2OSKERN_Debug("00: %08X\n", (UINT32)val32);
+    for (ix = 1; ix < 16; ix++)
+    {
+        acpiStatus = AcpiOsReadPciConfiguration(PciId, ix*4, &val32, 32);
+        if (!ACPI_FAILURE(acpiStatus))
+        {
+            pPciDev->PciCfg.mAsUINT32[ix] = (UINT32)(val32 & 0xFFFFFFFFull);
+            K2OSKERN_Debug("%02x: %08X\n", ix, pPciDev->PciCfg.mAsUINT32[ix]);
+        }
+    }
     pPciDev->mpSeg = &sgCAMSegment;
     pPciDev->mVirtConfigAddr = 0;
     pPciDev->PciTreeNode.mUserVal = devIndexOnBus;
@@ -724,5 +745,14 @@ void Pci_CheckManualScan(void)
 
 void Pci_DumpRes(DEV_NODE_PCI *apPci)
 {
+    K2OSKERN_Debug("%d/%d/%d/%d\n", apPci->Id.Segment, apPci->Id.Bus, apPci->Id.Device, apPci->Id.Function);
+    K2OSKERN_Debug("IRQLine = %d\n", apPci->PciCfg.AsTypeX.mInterruptLine);
+    K2OSKERN_Debug("IRQPin  = %d\n", apPci->PciCfg.AsTypeX.mInterruptPin);
+#if 0
+    UINT64 val64;
+    acpiStatus = AcpiOsReadPciConfiguration(&apPci->Id, 0x18, &val64, 32);
+    if (ACPI_FAILURE(acpiStatus))
+        return;
+#endif
 
 }

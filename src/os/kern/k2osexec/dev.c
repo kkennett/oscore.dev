@@ -169,8 +169,8 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
             pPci->Id.Bus,
             pPci->Id.Device,
             pPci->Id.Function,
-            pPci->mVenLo_DevHi & 0xFFFF,
-            (pPci->mVenLo_DevHi >> 16) & 0xFFFF
+            pPci->PciCfg.AsTypeX.mVendorId,
+            pPci->PciCfg.AsTypeX.mDeviceId
             );
     }
     else
