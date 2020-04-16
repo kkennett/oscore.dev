@@ -76,7 +76,6 @@ extern K2OSKERN_SEQLOCK     gPci_SeqLock;
 void Pci_Init(void);
 void Pci_CheckManualScan(void);
 void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode);
-void Pci_DumpRes(DEV_NODE_PCI *apPci);
 
 /* ----------------------------------------------------------------------------- */
 
@@ -119,21 +118,42 @@ Phys_Init(
 
 struct _DEV_NODE_PCI
 {
-    DEV_NODE *      mpDevNode;
+    DEV_NODE *      mpDevNode;          // set once we find it in DEV_NODE tree
     ACPI_PCI_ID     Id;
-    ACPI_HANDLE     mhAcpiDevice;
+    PCICFG          PciCfg;             // copy of first part of pci config space
+    UINT32          mBarSize[6];
+    ACPI_HANDLE     mhAcpiDevice;       // same as parent DEV_NODE DevTreeNode.mUserVal
     PCI_SEGMENT *   mpSeg;
     UINT32          mVirtConfigAddr;    // 0 if on intel system with no ECAM
-    PCICFG          PciCfg;
     K2TREE_NODE     PciTreeNode;
 };
 
-#define DEV_NODE_PCIBUSBRIDGE_ISBUSROOT     0x80000000
-#define DEV_NODE_PCIBUSBRIDGE_LEGACY        0x40000000
-#define DEV_NODE_PCIBUSBRIDGE_BUSID_MASK    0x00FF0000
-#define DEV_NODE_PCIBUSBRIDGE_BUSID_SHIFT   16
-#define DEV_NODE_PCIBUSBRIDGE_SEGID_MASK    0x0000FFFF
-#define DEV_NODE_PCIBUSBRIDGE_SEGID_SHIFT   0
+#define DEV_NODE_RESFLAGS_IS_BUS            0x80000000
+#define DEV_NODE_RESFLAGS_IS_LEGACY         0x40000000
+#define DEV_NODE_RESFLAGS_BUS_BUSID_MASK    0x00FF0000
+#define DEV_NODE_RESFLAGS_BUS_BUSID_SHIFT   16
+#define DEV_NODE_RESFLAGS_BUS_SEGID_MASK    0x0000FFFF
+#define DEV_NODE_RESFLAGS_BUS_SEGID_SHIFT   0
+
+typedef struct _DEV_NODE_RES_BUS DEV_NODE_RES_BUS;
+struct _DEV_NODE_RES_BUS
+{
+    ACPI_BUFFER IntRoutingTable;
+};
+
+typedef struct _DEV_NODE_RES_DEVICE DEV_NODE_RES_DEVICE;
+struct _DEV_NODE_RES_DEVICE
+{
+    ACPI_BUFFER CurrentAcpiRes;
+    UINT32      mInputIntrIndexToIntrController;
+};
+
+typedef union _DEV_NODE_RES DEV_NODE_RES;
+union _DEV_NODE_RES
+{
+    DEV_NODE_RES_DEVICE Device;
+    DEV_NODE_RES_BUS    Bus;
+};
 
 struct _DEV_NODE
 {
@@ -143,13 +163,15 @@ struct _DEV_NODE
     K2LIST_ANCHOR       ChildList;
     K2LIST_LINK         ChildListLink;
 
-    // ACPI_HANDLE of object is TreeNode.mUserVal, indexing gDev_Tree
+    // ACPI_HANDLE of object is DevTreeNode.mUserVal, indexing gDev_Tree
     // devices with no acpi node are indexed at zero
 
     ACPI_DEVICE_INFO *  mpAcpiInfo;
 
     DEV_NODE_PCI *      mpPci;
-    UINT32              mPciBusBridgeFlags;
+
+    UINT32              mResFlags;
+    DEV_NODE_RES        Res;
 };
 
 void 

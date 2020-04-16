@@ -32,6 +32,8 @@
 
 #include "k2osexec.h"
 
+#define DUMP_DEVICES 0
+
 K2TREE_ANCHOR       gDev_Tree;
 K2OSKERN_SEQLOCK    gDev_SeqLock;
 DEV_NODE *          gpDev_RootNode;
@@ -95,6 +97,8 @@ sInitialDeviceWalkCallback(
 
     return AE_OK;
 }
+
+#if DUMP_DEVICES
 
 static void sPrefix(UINT32 aCount)
 {
@@ -190,6 +194,8 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
     }
 }
 
+#endif
+
 void Dev_Init(void)
 {
     K2TREE_NODE *   pTreeNode;
@@ -246,9 +252,11 @@ void Dev_Init(void)
 
     Pci_CheckManualScan();
 
+#if DUMP_DEVICES
     //
     // dump the device tree
     //
     sDumpDevice(gpDev_RootNode,0);
+#endif
 }
 

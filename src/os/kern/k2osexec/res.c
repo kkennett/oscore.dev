@@ -32,15 +32,134 @@
 
 #include "k2osexec.h"
 
+static
+void 
+sRes_QueryPciDeviceBarSizes(
+    DEV_NODE *      apDevNode, 
+    DEV_NODE_PCI *  apPci
+)
+{
+    ACPI_STATUS acpiStatus;
+    UINT8       val8;
+    UINT32      barRegOffset;
+    UINT32      numBars;
+    UINT32      barSave;
+    UINT32      barVal;
+    UINT64      val64;
+    UINT32      ix;
+    UINT32      maskVal;
+    BOOL        disp;
+
+    barRegOffset = K2_FIELDOFFSET(PCICFG, AsType0.mBar0);
+
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    //
+    // get resources described by BARs
+    //
+    val8 = apPci->PciCfg.AsTypeX.mHeaderType & 0x3;
+    if (val8 < 2)
+    {
+        if (val8 == 0)
+            numBars = 6;
+        else
+            numBars = 2;
+        for (ix = 0; ix < numBars; ix++)
+        {
+            acpiStatus = AcpiOsReadPciConfiguration(&apPci->Id, barRegOffset, &val64, 32);
+            if (!ACPI_FAILURE(acpiStatus))
+            {
+                barSave = (UINT32)(val64 & 0xFFFFFFFFull);
+                if (barSave != 0)
+                {
+                    if (barSave & PCI_BAR_TYPE_IO_BIT)
+                        maskVal = PCI_BAR_BASEMASK_IO;
+                    else
+                        maskVal = PCI_BAR_BASEMASK_MEMORY;
+                    val64 = maskVal | (barSave & ~maskVal);
+                    acpiStatus = AcpiOsWritePciConfiguration(&apPci->Id, barRegOffset, val64, 32);
+                    if (!ACPI_FAILURE(acpiStatus))
+                    {
+                        acpiStatus = AcpiOsReadPciConfiguration(&apPci->Id, barRegOffset, &val64, 32);
+                        if (!ACPI_FAILURE(acpiStatus))
+                        {
+                            barVal = ((UINT32)val64) & maskVal;
+                            acpiStatus = AcpiOsWritePciConfiguration(&apPci->Id, barRegOffset, (UINT64)barSave, 32);
+                            if (!ACPI_FAILURE(acpiStatus))
+                            {
+                                apPci->mBarSize[ix] = barVal = (~barVal) + 1;
+                            }
+                        }
+                    }
+                }
+            }
+            barRegOffset += sizeof(UINT32);
+        }
+    }
+
+    K2OSKERN_SetIntr(disp);
+}
+
+static 
+void 
+sRes_EnumCurrent(
+    DEV_NODE *apDevNode
+)
+{
+    ACPI_HANDLE         hAcpi;
+    DEV_NODE_PCI *      pPci;
+
+    //
+    // get current resources from ACPI
+    //
+    hAcpi = (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal;
+    if (0 != hAcpi)
+    {
+        apDevNode->Res.Device.CurrentAcpiRes.Pointer = NULL;
+        apDevNode->Res.Device.CurrentAcpiRes.Length = ACPI_ALLOCATE_BUFFER;
+        AcpiGetCurrentResources(hAcpi, &apDevNode->Res.Device.CurrentAcpiRes);
+    }
+
+    //
+    // get PCI BAR resource sizes (IO, MEMORY sizes/alignment)
+    //
+    pPci = apDevNode->mpPci;
+    if (NULL != pPci)
+    {
+        sRes_QueryPciDeviceBarSizes(apDevNode, pPci);
+    }
+}
+
+static 
+void 
+sRes_EnumAll(
+    DEV_NODE *apDevNode
+)
+{
+    DEV_NODE *      pChild;
+    K2LIST_LINK *   pListLink;
+
+    sRes_EnumCurrent(apDevNode);
+    pListLink = apDevNode->ChildList.mpHead;
+    if (pListLink == NULL)
+        return;
+    do {
+        pChild = K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink);
+        pListLink = pListLink->mpNext;
+        sRes_EnumAll(pChild);
+    } while (pListLink != NULL);
+}
+
+void Res_Init(void)
+{
+    //
+    // scan dev tree and enumerate already-allocated resources
+    //
+    sRes_EnumAll(gpDev_RootNode);
+}
+
+
 #if 0
-    ACPI_STATUS
-    AcpiGetIrqRoutingTable(
-        ACPI_HANDLE             Device,
-        ACPI_BUFFER             *RetBuffer);
-
-    gets PCI Routing Table _PRT of PCI root bus objects
-#endif
-
 static
 void
 sRes_DiscoveredAcpiIrq(
@@ -140,74 +259,7 @@ Res_AcpiEnumCallback(
         K2_ASSERT(0);
         break;
     }
-         
+
     return AE_OK;
 }
-
-void Res_CreateFromPciDevice(DEV_NODE *apDevNode, DEV_NODE_PCI *apDevPci)
-{
-    Pci_DumpRes(apDevPci);
-}
-
-void Res_EnumAndAdd(DEV_NODE *apDevNode)
-{
-    ACPI_STATUS         acpiStatus;
-    ACPI_HANDLE         hAcpi;
-    ACPI_BUFFER         ResBuffer;
-    DEV_NODE_PCI *      pPci;
-    ENUM_CALLCONTEXT    ctx;
-
-    hAcpi = (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal;
-    if (0 != hAcpi)
-    {
-        //
-        // get ACPI defined resources
-        //
-        ResBuffer.Pointer = NULL;
-        ResBuffer.Length = ACPI_ALLOCATE_LOCAL_BUFFER;
-        ctx.mpDevNode = apDevNode;
-        ctx.mResCount = 0;
-        acpiStatus = AcpiGetCurrentResources(hAcpi, &ResBuffer);
-        if (!ACPI_FAILURE(acpiStatus))
-        {
-            AcpiWalkResourceBuffer(&ResBuffer, Res_AcpiEnumCallback, &ctx);
-            K2OS_HeapFree(ResBuffer.Pointer);
-        }
-    }
-
-    pPci = apDevNode->mpPci;
-    if (NULL != pPci)
-    {
-        //
-        // get PCI defined resources
-        //
-        Res_CreateFromPciDevice(apDevNode, pPci);
-    }
-}
-
-void Res_Create(DEV_NODE *apDevNode)
-{
-    DEV_NODE *      pChild;
-    K2LIST_LINK *   pListLink;
-
-    Res_EnumAndAdd(apDevNode);
-    pListLink = apDevNode->ChildList.mpHead;
-    if (pListLink == NULL)
-        return;
-    do {
-        pChild = K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink);
-        pListLink = pListLink->mpNext;
-        Res_Create(pChild);
-    } while (pListLink != NULL);
-}
-
-void Res_Init(void)
-{
-    //
-    // scan dev tree and enumerate already-allocated resources
-    //
-    K2OSKERN_Debug("Res_Init()\n");
-    Res_Create(gpDev_RootNode);
-
-
-}
+#endif
