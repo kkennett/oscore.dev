@@ -168,6 +168,8 @@ static void sInit_BeforeHal_ScanAcpi(void)
         left -= pScan[1];
         pScan += pScan[1];
     } while (left > 0);
+
+    K2_ASSERT(gpA32Kern_MADT_GICD != NULL);
 }
 
 void sInit_BeforeHal_InitIntr(void)

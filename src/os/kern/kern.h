@@ -907,6 +907,7 @@ struct _KERN_DATA
     UINT32                              mA32StartAreaPhys;      // K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT
 #endif
 #if K2_TARGET_ARCH_IS_INTEL
+    UINT32                              mX32IoApicCount;
 #endif
 };
 

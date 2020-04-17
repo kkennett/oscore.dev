@@ -50,6 +50,7 @@ typedef struct _PCI_SEGMENT     PCI_SEGMENT;
 typedef struct _PCI_DEVICE      PCI_DEVICE;
 typedef struct _DEV_NODE_PCI    DEV_NODE_PCI;
 typedef struct _DEV_NODE        DEV_NODE;
+typedef struct _INTR_LINE       INTR_LINE;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -145,7 +146,6 @@ typedef struct _DEV_NODE_RES_DEVICE DEV_NODE_RES_DEVICE;
 struct _DEV_NODE_RES_DEVICE
 {
     ACPI_BUFFER CurrentAcpiRes;
-    UINT32      mInputIntrIndexToIntrController;
 };
 
 typedef union _DEV_NODE_RES DEV_NODE_RES;
@@ -172,6 +172,9 @@ struct _DEV_NODE
 
     UINT32              mResFlags;
     DEV_NODE_RES        Res;
+
+    INTR_LINE *         mpIntrLine;
+    K2LIST_LINK         IntrLineDevListLink;
 };
 
 void 
@@ -188,6 +191,19 @@ extern DEV_NODE *       gpDev_RootNode;
 void Res_Init(void);
 
 /* ----------------------------------------------------------------------------- */
+
+struct _INTR_LINE
+{
+    UINT32                      mLineIndex;
+    K2OSKERN_IRQ_LINE_CONFIG    LineConfig;
+    K2LIST_ANCHOR               DevList;        // devices using this interrupt line
+};
+
+extern UINT32      gIntr_GlobalTotalLineCount;
+extern INTR_LINE * gpIntr_Lines;
+#if K2_TARGET_ARCH_IS_ARM
+extern BOOL        gIntr_LegacyPic;
+#endif
 
 void Intr_Init(void);
 

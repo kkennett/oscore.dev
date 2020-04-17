@@ -38,6 +38,8 @@ X32_IDTENTRY __attribute__((aligned(16))) gX32Kern_IDT[X32_NUM_IDT_ENTRIES];
 X32_xDTPTR   __attribute__((aligned(16))) gX32Kern_IDTPTR;
 X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_LDT[K2OS_MAX_CPU_COUNT];
 
+K2_STATIC_ASSERT((X32_DEVIRQ_MAX_COUNT + X32KERN_DEVVECTOR_BASE) < X32_NUM_IDT_ENTRIES);
+
 UINT32 volatile                         gX32Kern_PerCoreFS[K2OS_MAX_CPU_COUNT];
 UINT32                                  gX32Kern_KernelPageDirPhysAddr;
 UINT64 *                                gpX32Kern_AcpiTablePtrs = NULL;
@@ -45,14 +47,15 @@ UINT32                                  gX32Kern_AcpiTableCount = 0;
 ACPI_FADT *                             gpX32Kern_FADT = NULL;
 ACPI_MADT *                             gpX32Kern_MADT = NULL;
 ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC *    gpX32Kern_MADT_LocApic[K2OS_MAX_CPU_COUNT];
-ACPI_MADT_SUB_IO_APIC *                 gpX32Kern_MADT_IoApic = NULL;
+ACPI_MADT_SUB_IO_APIC *                 gpX32Kern_MADT_IoApic[K2OS_X32_MAX_IOAPICS_COUNT];
 ACPI_HPET *                             gpX32Kern_HPET = NULL;
 BOOL                                    gX32Kern_ApicReady = FALSE;
 X32_CPUID                               gX32Kern_CpuId01;
 K2OSKERN_SEQLOCK                        gX32Kern_IntrSeqLock;
-UINT16                                  gX32Kern_kkIrqOverrideMap[X32_DEVIRQ_LVT_LAST + 1];
-UINT16                                  gX32Kern_kkIrqOverrideFlags[X32_DEVIRQ_LVT_LAST + 1];
-UINT16                                  gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
+UINT16                                  gX32Kern_GlobalSystemIrqOverrideMap[X32_DEVIRQ_MAX_COUNT];
+UINT16                                  gX32Kern_GlobalSystemIrqOverrideFlags[X32_DEVIRQ_MAX_COUNT];
+UINT16                                  gX32Kern_VectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
+UINT8                                   gX32Kern_IrqToIoApicIndexMap[X32_DEVIRQ_MAX_COUNT];
 
 static void sInit_AtDlxEntry(void)
 {
@@ -152,7 +155,10 @@ static void sInit_BeforeHal_ScanAcpi(void)
     {
         gpX32Kern_MADT_LocApic[left] = NULL;
     }
-    gpX32Kern_MADT_IoApic = NULL;
+    for (left = 0; left < K2OS_X32_MAX_IOAPICS_COUNT; left++)
+    {
+        gpX32Kern_MADT_IoApic[left] = NULL;
+    }
 
     virtBase = gData.mpShared->LoadInfo.mFwTabPagesVirt;
     physBase = gData.mpShared->LoadInfo.mFwTabPagesPhys;
@@ -211,13 +217,14 @@ static void sInit_BeforeHal_ScanAcpi(void)
     //
     for (left = 0; left < X32_DEVIRQ_LVT_LAST; left++)
     {
-        gX32Kern_kkIrqOverrideMap[left] = (UINT16)-1; // this means "not overridden"
-        gX32Kern_kkIrqOverrideFlags[left] = 0;
-        gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
+        gX32Kern_GlobalSystemIrqOverrideMap[left] = (UINT16)-1; // this means "not overridden"
+        gX32Kern_GlobalSystemIrqOverrideFlags[left] = 0;
+        gX32Kern_VectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
     }
     do {
-        gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
+        gX32Kern_VectorToBeforeAnyOverrideIrqMap[left] = (UINT16)-1; // this means "not overridden"
     } while (++left < X32_NUM_IDT_ENTRIES);
+    K2MEM_Set(gX32Kern_IrqToIoApicIndexMap, 0xFF, sizeof(UINT8) * X32_DEVIRQ_MAX_COUNT);
 
     //
     // find MADT
@@ -275,8 +282,10 @@ static void sInit_BeforeHal_ScanAcpi(void)
             }
             else if (*pScan == ACPI_MADT_SUB_TYPE_IO_APIC)
             {
-                K2_ASSERT(gpX32Kern_MADT_IoApic == NULL);
-                gpX32Kern_MADT_IoApic = (ACPI_MADT_SUB_IO_APIC *)pScan;
+                K2_ASSERT(gData.mX32IoApicCount < K2OS_X32_MAX_IOAPICS_COUNT);
+                K2_ASSERT(gpX32Kern_MADT_IoApic[gData.mX32IoApicCount] == NULL);
+                gpX32Kern_MADT_IoApic[gData.mX32IoApicCount] = (ACPI_MADT_SUB_IO_APIC *)pScan;
+                gData.mX32IoApicCount++;
             }
             else if (*pScan == ACPI_MADT_SUB_TYPE_INTERRUPT_SOURCE_OVERRIDE)
             {
@@ -284,11 +293,11 @@ static void sInit_BeforeHal_ScanAcpi(void)
 
                 K2_ASSERT(pIntrOver->GlobalSystemInterrupt < (X32_NUM_IDT_ENTRIES - X32KERN_DEVVECTOR_BASE));
 
-                gX32Kern_kkIrqOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
-                gX32Kern_kkIrqOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
+                gX32Kern_GlobalSystemIrqOverrideMap[pIntrOver->Source] = pIntrOver->GlobalSystemInterrupt;
+                gX32Kern_GlobalSystemIrqOverrideFlags[pIntrOver->Source] = pIntrOver->Flags;
 
                 // now that override is set, the KernArch_DevIrqToVector should work for it
-                gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[KernArch_DevIrqToVector(pIntrOver->Source)] = pIntrOver->Source;
+                gX32Kern_VectorToBeforeAnyOverrideIrqMap[KernArch_DevIrqToVector(pIntrOver->Source)] = pIntrOver->Source;
 
                 K2_ASSERT(KernArch_VectorToDevIrq(KernArch_DevIrqToVector(pIntrOver->Source)) == pIntrOver->Source);
             }
@@ -314,16 +323,20 @@ static void sInit_BeforeHal_ScanAcpi(void)
         //
         // find and configure io apic 
         //
-        if (gpX32Kern_MADT_IoApic != NULL)
+        if (gData.mX32IoApicCount > 0)
         {
-            K2_ASSERT(gpX32Kern_MADT_IoApic->GlobalSystemInterruptBase == 0);
-
-            KernMap_MakeOnePresentPage(gpProc0->mVirtMapKVA, K2OS_KVA_X32_IOAPIC, gpX32Kern_MADT_IoApic->IoApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
-
-            //
-            // initialize IO Apic
-            //
-            X32Kern_IoApicInit();
+            for (left = 0; left < gData.mX32IoApicCount; left++)
+            {
+                //
+                // map and initialize this IO Apic
+                //
+                KernMap_MakeOnePresentPage(
+                    gpProc0->mVirtMapKVA, 
+                    K2OS_KVA_X32_IOAPICS + (left * K2_VA32_MEMPAGE_BYTES), 
+                    gpX32Kern_MADT_IoApic[left]->IoApicAddress, 
+                    K2OS_MAPTYPE_KERN_DEVICEIO);
+                X32Kern_IoApicInit(left);
+            }
         }
     }
 

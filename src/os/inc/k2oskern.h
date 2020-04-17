@@ -231,8 +231,8 @@ struct _K2OSKERN_IRQ_LINE_CONFIG
 {
     BOOL    mIsEdgeTriggered;
     BOOL    mIsActiveLow;
-    BOOL    mSharing;
-    BOOL    mWaking;
+    BOOL    mShareConfig;
+    BOOL    mWakeConfig;
 };
 typedef struct _K2OSKERN_IRQ_LINE_CONFIG K2OSKERN_IRQ_LINE_CONFIG;
 
@@ -320,7 +320,7 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 
 #if K2_TARGET_ARCH_IS_INTEL
 
-#define X32_DEVIRQ_LVT_BASE     24 
+#define X32_DEVIRQ_LVT_BASE     80 
 #define X32_DEVIRQ_LVT_CMCI     (X32_DEVIRQ_LVT_BASE + 0)
 #define X32_DEVIRQ_LVT_TIMER    (X32_DEVIRQ_LVT_BASE + 1)
 #define X32_DEVIRQ_LVT_THERM    (X32_DEVIRQ_LVT_BASE + 2)
@@ -329,6 +329,7 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 #define X32_DEVIRQ_LVT_LINT1    (X32_DEVIRQ_LVT_BASE + 5)
 #define X32_DEVIRQ_LVT_ERROR    (X32_DEVIRQ_LVT_BASE + 6)
 #define X32_DEVIRQ_LVT_LAST     X32_DEVIRQ_LVT_ERROR
+#define X32_DEVIRQ_MAX_COUNT    (X32_DEVIRQ_LVT_LAST + 1)
 
 #endif
 

@@ -168,13 +168,15 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
     pPci = apNode->mpPci;
     if (NULL != pPci)
     {
-        K2OSKERN_Debug("PCI(%d/%d/%d/%d) VID %04X PID %04X\n",
+        K2OSKERN_Debug("PCI(%d/%d/%d/%d) VID %04X PID %04X, Pin %d, Line %d\n",
             pPci->Id.Segment,
             pPci->Id.Bus,
             pPci->Id.Device,
             pPci->Id.Function,
             pPci->PciCfg.AsTypeX.mVendorId,
-            pPci->PciCfg.AsTypeX.mDeviceId
+            pPci->PciCfg.AsTypeX.mDeviceId,
+            pPci->PciCfg.AsTypeX.mInterruptPin,
+            pPci->PciCfg.AsTypeX.mInterruptLine
             );
     }
     else

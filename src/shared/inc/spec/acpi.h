@@ -251,7 +251,7 @@ struct _ACPI_MADT_SUB_IO_APIC
     UINT8   IoApicId;
     UINT8   Reserved;
     UINT32  IoApicAddress;
-    UINT32  GlobalSystemInterruptBase;
+    UINT32  GlobalSystemIrqLineBase;
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _ACPI_MADT_SUB_IO_APIC ACPI_MADT_SUB_IO_APIC;
@@ -338,7 +338,7 @@ struct _ACPI_MADT_SUB_IO_SAPIC
     UINT8   Length;
     UINT8   IoApicId;
     UINT8   Reserved;
-    UINT32  GlobalSystemInterruptBase;
+    UINT32  GlobalSystemIrqLineBase;
     UINT64  IoSapicAddress;
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP

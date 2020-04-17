@@ -257,7 +257,7 @@ X32Kern_InterruptHandler(
             // LVT or external interrupt
             //
             devIrq = KernArch_VectorToDevIrq(aContext.Exception_Vector);
-            K2_ASSERT(devIrq <= X32_DEVIRQ_LVT_LAST);
+            K2_ASSERT(devIrq < X32_DEVIRQ_MAX_COUNT);
             if (sgpIntrObjByIrqIx[devIrq] != NULL)
             {
 //                K2OSKERN_Debug("VECTOR %d -> IRQ %d on core %d\n", aContext.Exception_Vector, devIrq, pThisCore->mCoreIx);
@@ -299,7 +299,7 @@ void KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
-    K2_ASSERT(irqIx <= X32_DEVIRQ_LVT_LAST);
+    K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
     disp = K2OSKERN_SeqIntrLock(&gX32Kern_IntrSeqLock);
 
@@ -317,7 +317,7 @@ void KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask)
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
-    K2_ASSERT(irqIx <= X32_DEVIRQ_LVT_LAST);
+    K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
     disp = K2OSKERN_SeqIntrLock(&gX32Kern_IntrSeqLock);
 
@@ -337,7 +337,7 @@ void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
-    K2_ASSERT(irqIx <= X32_DEVIRQ_LVT_LAST);
+    K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
     disp = K2OSKERN_SeqIntrLock(&gX32Kern_IntrSeqLock);
 

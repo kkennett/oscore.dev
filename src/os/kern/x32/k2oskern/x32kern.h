@@ -44,11 +44,10 @@ K2_STATIC_ASSERT(K2OS_KVA_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA
 /* --------------------------------------------------------------------------------- */
 
 // interrupt vectors 0-31 reserved
-#define X32KERN_DEVVECTOR_BASE            32  // fits with vectors from classic PIC
-#define X32KERN_DEVVECTOR_LAST            55  // 32 + 24 - 1
+#define X32KERN_DEVVECTOR_BASE            32    // MUST BE THIS VALUE. fits with vectors from classic PIC
+#define X32KERN_DEVVECTOR_LAST_ALLOWED    (X32KERN_DEVVECTOR_BASE + X32_DEVIRQ_MAX_COUNT - 1)
 
-#define X32KERN_DEVVECTOR_LVT_BASE        56 
-
+#define X32KERN_DEVVECTOR_LVT_BASE        (X32_DEVIRQ_LVT_BASE + X32KERN_DEVVECTOR_BASE) 
 #define X32KERN_DEVVECTOR_LVT_CMCI        (X32KERN_DEVVECTOR_LVT_BASE + 0)
 #define X32KERN_DEVVECTOR_LVT_TIMER       (X32KERN_DEVVECTOR_LVT_BASE + 1)
 #define X32KERN_DEVVECTOR_LVT_THERM       (X32KERN_DEVVECTOR_LVT_BASE + 2)
@@ -61,8 +60,8 @@ K2_STATIC_ASSERT(K2OS_KVA_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA
 #define X32KERN_VECTOR_ICI_BASE           (X32KERN_DEVVECTOR_LVT_BASE + 8)
 #define X32KERN_VECTOR_ICI_LAST           (X32KERN_VECTOR_ICI_BASE + K2OS_MAX_CPU_COUNT - 1)
 
-K2_STATIC_ASSERT(X32KERN_DEVVECTOR_LVT_BASE == (X32KERN_DEVVECTOR_BASE + X32_DEVIRQ_LVT_BASE));
-
+K2_STATIC_ASSERT(X32KERN_DEVVECTOR_BASE == 32); // no really it has to be this
+K2_STATIC_ASSERT(X32KERN_VECTOR_ICI_LAST < 128);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -119,14 +118,15 @@ extern UINT32                               gX32Kern_AcpiTableCount;
 extern ACPI_FADT *                          gpX32Kern_FADT;
 extern ACPI_MADT *                          gpX32Kern_MADT;
 extern ACPI_MADT_SUB_PROCESSOR_LOCAL_APIC * gpX32Kern_MADT_LocApic[K2OS_MAX_CPU_COUNT];
-extern ACPI_MADT_SUB_IO_APIC *              gpX32Kern_MADT_IoApic;
+extern ACPI_MADT_SUB_IO_APIC *              gpX32Kern_MADT_IoApic[K2OS_X32_MAX_IOAPICS_COUNT];
 extern ACPI_HPET *                          gpX32Kern_HPET;
 extern BOOL                                 gX32Kern_ApicReady;
 extern X32_CPUID                            gX32Kern_CpuId01;
 extern K2OSKERN_SEQLOCK                     gX32Kern_IntrSeqLock;
-extern UINT16                               gX32Kern_kkIrqOverrideMap[X32_DEVIRQ_LVT_LAST + 1];
-extern UINT16                               gX32Kern_kkIrqOverrideFlags[X32_DEVIRQ_LVT_LAST + 1];
-extern UINT16                               gX32Kern_kkVectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
+extern UINT16                               gX32Kern_GlobalSystemIrqOverrideMap[X32_DEVIRQ_MAX_COUNT];
+extern UINT16                               gX32Kern_GlobalSystemIrqOverrideFlags[X32_DEVIRQ_MAX_COUNT];
+extern UINT16                               gX32Kern_VectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
+extern UINT8                                gX32Kern_IrqToIoApicIndexMap[X32_DEVIRQ_MAX_COUNT];
 
 /* --------------------------------------------------------------------------------- */
 
@@ -137,7 +137,7 @@ void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0);
 
 void X32Kern_PICInit(void);
 void X32Kern_APICInit(UINT32 aCpuIx);
-void X32Kern_IoApicInit(void);
+void X32Kern_IoApicInit(UINT32 aIoApicIx);
 
 void K2_CALLCONV_REGS X32Kern_EnterMonitor(UINT32 aESP);
 void K2_CALLCONV_REGS X32Kern_MonitorMainLoop(void);
