@@ -33,6 +33,7 @@
 #define __K2OSHAL_H
 
 #include "k2oskern.h"
+#include "k2osexec.h"
 
 #if __cplusplus
 extern "C" {

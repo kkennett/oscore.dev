@@ -30,7 +30,7 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2osexec.h"
+#include "ik2osexec.h"
 
 UINT32      gIntr_GlobalTotalLineCount;
 INTR_LINE * gpIntr_Lines;

@@ -49,6 +49,7 @@ SOURCE_LIBS += @shared/lib/k2archx32
 # Link to kernel
 #
 KERN_SOURCE_DLX += @os/kern/x32/k2oskern 
+KERN_SOURCE_DLX += @os/kern/k2osexec
 
 include $(K2_ROOT)/src/shared/build/post.make
 

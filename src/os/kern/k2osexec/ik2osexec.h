@@ -30,10 +30,10 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __K2OSEXEC_H
-#define __K2OSEXEC_H
+#ifndef __IK2OSEXEC_H
+#define __IK2OSEXEC_H
 
-#include <k2oskern.h>
+#include <k2osexec.h>
 #include "..\k2osacpi\k2osacpi.h"
 #include "..\kernexec.h"
 #include <lib/k2heap.h>
@@ -213,4 +213,4 @@ void Intr_Init(void);
 }
 #endif
 
-#endif // __K2OSEXEC_H
+#endif // __IK2OSEXEC_H
