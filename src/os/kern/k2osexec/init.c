@@ -75,6 +75,8 @@ K2OSEXEC_Init(
 
     Res_Init();
 
+    Intr_Init();
+
     Handlers_Init2();
 
     Time_Start(apInitInfo);

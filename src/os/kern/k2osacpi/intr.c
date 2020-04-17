@@ -61,8 +61,8 @@ AcpiOsInstallInterruptHandler(
 
     config.mSourceIrq = InterruptNumber;
     config.mDestCoreIx = 0;
-    config.mIsLevelTriggered = TRUE;
-    config.mIsActiveLow = TRUE;
+    config.Line.mIsEdgeTriggered = FALSE;
+    config.Line.mIsActiveLow = TRUE;
 
     stat = K2OSKERN_InstallIntrHandler(&config, ServiceRoutine, Context, &pIntr->mToken);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));

@@ -227,12 +227,20 @@ K2OSKERN_UnmapDevice(
 //------------------------------------------------------------------------
 //
 
+struct _K2OSKERN_IRQ_LINE_CONFIG
+{
+    BOOL    mIsEdgeTriggered;
+    BOOL    mIsActiveLow;
+    BOOL    mSharing;
+    BOOL    mWaking;
+};
+typedef struct _K2OSKERN_IRQ_LINE_CONFIG K2OSKERN_IRQ_LINE_CONFIG;
+
 struct _K2OSKERN_IRQ_CONFIG
 {
-    UINT32  mSourceIrq;
-    UINT32  mDestCoreIx;
-    BOOL    mIsLevelTriggered;
-    BOOL    mIsActiveLow;
+    UINT32                      mSourceIrq;
+    UINT32                      mDestCoreIx;
+    K2OSKERN_IRQ_LINE_CONFIG    Line;
 };
 typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
 

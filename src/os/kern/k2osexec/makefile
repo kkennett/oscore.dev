@@ -56,6 +56,7 @@ SOURCES += time.c
 SOURCES += phys.c
 SOURCES += dev.c
 SOURCES += res.c
+SOURCES += intr.c
 
 SOURCE_LIBS += @shared/lib/k2heap
 

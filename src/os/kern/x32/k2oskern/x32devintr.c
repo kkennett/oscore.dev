@@ -405,15 +405,15 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
 
         redHi = (1 << (X32_IOAPIC_REDHI_DEST_SHIFT + apConfig->mDestCoreIx));
 
-        if (apConfig->mIsActiveLow)
+        if (apConfig->Line.mIsActiveLow)
             redLo = X32_IOAPIC_REDLO_POLARITY_LOW;
         else
             redLo = X32_IOAPIC_REDLO_POLARITY_HIGH;
 
-        if (apConfig->mIsLevelTriggered)
-            redLo |= X32_IOAPIC_REDLO_TRIGGER_LEVEL;
-        else
+        if (apConfig->Line.mIsEdgeTriggered)
             redLo |= X32_IOAPIC_REDLO_TRIGGER_EDGE;
+        else
+            redLo |= X32_IOAPIC_REDLO_TRIGGER_LEVEL;
     }
 
     redLo |= X32_IOAPIC_REDLO_MASK;
