@@ -152,3 +152,18 @@ K2STAT KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *
     return K2STAT_ERROR_NOT_IMPL;
 }
 
+
+K2STAT KernThread_Instantiate(K2OSKERN_OBJ_SEGMENT *apSeg, K2OS_THREADCREATE const *apCreate)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThread)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}

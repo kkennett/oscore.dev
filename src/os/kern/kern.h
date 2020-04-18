@@ -309,6 +309,21 @@ struct _K2OSKERN_SCHED_ITEM
 
 #define K2OS_THREAD_STATE_INIT  0x1000
 
+typedef enum _KernThreadState KernThreadState;
+enum _KernThreadState
+{
+    KernThreadState_PreCreate = 0,
+    KernThreadState_InCreate,
+    KernThreadState_PreStart,
+    KernThreadState_Ready,
+    KernThreadState_Running,
+    KernThreadState_WaitCS,
+    KernThreadState_Waiting,
+    KernThreadState_Paused,
+
+
+};
+
 typedef struct _K2OSKERN_SCHED_THREAD K2OSKERN_SCHED_THREAD;
 struct _K2OSKERN_SCHED_THREAD
 {

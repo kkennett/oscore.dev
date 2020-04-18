@@ -2003,17 +2003,32 @@ void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
 
     pCurThread = K2OSKERN_CURRENT_THREAD;
 
+    //
+    // segment has virtual space but its physical properties may
+    // be indeterminate
+    //
+
     disp = K2OSKERN_SeqIntrLock(&apSeg->mpProc->SegTreeSeqLock);
     
     K2TREE_Remove(&apSeg->mpProc->SegTree, &apSeg->ProcSegTreeNode);
 
-    if (0 != (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
-        pCurThread->mpWorkingSeg = apSeg;
+    pCurThread->mpWorkingSeg = apSeg;
     
     K2OSKERN_SeqIntrUnlock(&apSeg->mpProc->SegTreeSeqLock, disp);
+
+    //
+    // destroy the segment
+    //
+    K2_ASSERT(0);
 
     if (0 != (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
     {
         KernMem_SegFreeFromThread(pCurThread);
+    }
+    else
+    {
+        disp = K2OSKERN_SetIntr(FALSE);
+        pCurThread->mpWorkingSeg = NULL;
+        K2OSKERN_SetIntr(disp);
     }
 }
