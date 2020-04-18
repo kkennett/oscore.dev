@@ -1197,7 +1197,7 @@ static void sInit_BeforeVirt(void)
     gpProc0->SegObjPrimaryThreadStack.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc0->SegObjPrimaryThreadStack.Hdr.mRefCount = 0x7FFFFFFF;
     gpProc0->SegObjPrimaryThreadStack.mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
-    gpProc0->SegObjPrimaryThreadStack.Info.ThreadStack.mpThread = gpThread0;
+    gpProc0->SegObjPrimaryThreadStack.Info.Thread.mpThread = gpThread0;
     stat = K2HEAP_AllocNodeAt(&gData.KernVirtHeap, K2OS_KVA_THREAD0_STACK_LOW_GUARD, K2OS_KVA_THREAD0_AREA_HIGH - K2OS_KVA_THREAD0_STACK_LOW_GUARD, (K2HEAP_NODE **)&pNode);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->mpSegment = &gpProc0->SegObjPrimaryThreadStack;

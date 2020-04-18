@@ -51,17 +51,21 @@ K2OSKERN_MapDevice(
     if (gData.mKernInitStage < KernInitStage_MemReady)
         return K2STAT_ERROR_API_ORDER;
 
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
     pSeg = NULL;
-    stat = KernMem_SegAlloc(&pSeg);
+    stat = KernMem_SegAllocToThread(pCurThread);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
         return stat;
     }
+
+    pSeg = pCurThread->mpWorkingSeg;
+
     K2_ASSERT(pSeg != NULL);
 
     do {
-        pCurThread = K2OSKERN_CURRENT_THREAD;
 
         stat = KernMem_VirtAllocToThread(pCurThread, 0, aPageCount, FALSE);
         if (K2STAT_IS_ERROR(stat))
@@ -80,6 +84,8 @@ K2OSKERN_MapDevice(
         stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
         if (!K2STAT_IS_ERROR(stat))
         {
+            K2_ASSERT(pCurThread->mpWorkingSeg == NULL);
+
             *apRetVirtAddr = pSeg->ProcSegTreeNode.mUserVal;
             K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
             K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
@@ -124,7 +130,7 @@ K2OSKERN_MapDevice(
 
     if (K2STAT_IS_ERROR(stat))
     {
-        KernMem_SegFree(pSeg);
+        KernMem_SegFreeFromThread(pCurThread);
         K2OS_ThreadSetStatus(stat);
     }
 

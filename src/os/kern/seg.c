@@ -54,7 +54,7 @@ void KernSegment_Dump(K2OSKERN_OBJ_SEGMENT *apSeg)
         break;
 
     case K2OS_SEG_ATTR_TYPE_THREAD:
-        K2OSKERN_Debug("  ThreadObj @%08X\n", apSeg->Info.ThreadStack.mpThread);
+        K2OSKERN_Debug("  ThreadObj @%08X\n", apSeg->Info.Thread.mpThread);
         break;
 
     default:

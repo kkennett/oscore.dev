@@ -471,7 +471,7 @@ sLvt_SetDevIrqMask(
     BOOL    aSetMask
 )
 {
-    K2OSKERN_CPUCORE *  pThisCore;
+//    K2OSKERN_CPUCORE *  pThisCore;
     UINT32              offset;
     UINT32              localIrqIx;
     UINT32              reg;

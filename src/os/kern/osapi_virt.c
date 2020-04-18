@@ -47,17 +47,21 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
     K2_ASSERT((useAddr & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
 
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
     pSeg = NULL;
-    stat = KernMem_SegAlloc(&pSeg);
+    stat = KernMem_SegAllocToThread(pCurThread);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
         return FALSE;
     }
+
+    pSeg = pCurThread->mpWorkingSeg;
+
     K2_ASSERT(pSeg != NULL);
 
     do {
-        pCurThread = K2OSKERN_CURRENT_THREAD;
 
         stat = KernMem_VirtAllocToThread(pCurThread, useAddr, aPageCount, (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_TOP_DOWN) ? TRUE : FALSE);
         if (K2STAT_IS_ERROR(stat))
@@ -116,6 +120,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
             if (!K2STAT_IS_ERROR(stat))
             {
+                K2_ASSERT(pCurThread->mpWorkingSeg == NULL);
                 *apAddr = pSeg->ProcSegTreeNode.mUserVal;
                 K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
                 K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
@@ -134,7 +139,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
     if (K2STAT_IS_ERROR(stat))
     {
-        KernMem_SegFree(pSeg);
+        KernMem_SegFreeFromThread(pCurThread);
         K2OS_ThreadSetStatus(stat);
         return FALSE;
     }

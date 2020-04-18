@@ -283,6 +283,7 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE
     //
     K2OSKERN_OBJ_PROCESS *  mpTargetProc;
     K2OS_THREADCREATE       Cret;
+    K2OSKERN_OBJ_SEGMENT *  mpSeg;
 };
 
 union _K2OSKERN_SCHED_ITEM_ARGS
@@ -386,8 +387,8 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 #define K2OS_SEG_ATTR_TYPE_COUNT        0x000A0000
 #define K2OS_SEG_ATTR_TYPE_MASK         0x000F0000
 
-typedef struct _K2OSKERN_SEGMENT_INFO_THREADSTACK K2OSKERN_SEGMENT_INFO_THREADSTACK;
-struct _K2OSKERN_SEGMENT_INFO_THREADSTACK
+typedef struct _K2OSKERN_SEGMENT_INFO_THREAD K2OSKERN_SEGMENT_INFO_THREAD;
+struct _K2OSKERN_SEGMENT_INFO_THREAD
 {
     K2OSKERN_OBJ_THREAD *   mpThread;
 };
@@ -436,7 +437,7 @@ union _K2OSKERN_SEGMENT_INFO
     K2OSKERN_SEGMENT_INFO_DLX_PAGE      DlxPage;
     K2OSKERN_SEGMENT_INFO_DLX_PART      DlxPart;
     K2OSKERN_SEGMENT_INFO_PROCESS       Process;
-    K2OSKERN_SEGMENT_INFO_THREADSTACK   ThreadStack;
+    K2OSKERN_SEGMENT_INFO_THREAD        Thread;
     K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;
     K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;
     K2OSKERN_SEGMENT_INFO_USER          User;
@@ -599,7 +600,7 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                      mTlbFlushBase;
     UINT32                      mTlbFlushPages;
 
-    K2OSKERN_OBJ_SEGMENT *      mpSegCreate;
+    K2OSKERN_OBJ_SEGMENT *      mpWorkingSeg;
 
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
     K2_EXCEPTION_TRAP *         mpUserExTrapStack;
@@ -948,8 +949,8 @@ void   KernMem_VirtFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 K2STAT KernMem_PhysAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aPageCount, KernPhys_Disp aDisp, BOOL aForPageTables);
 void   KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 
-K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg);
-K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg);
+K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread);
+K2STAT KernMem_SegFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 void   KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg);
 
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
@@ -1008,6 +1009,9 @@ void                     KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
 void    K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 K2STAT                   KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
 K2STAT                   KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
+K2STAT                   KernThread_Instantiate(K2OSKERN_OBJ_SEGMENT *apSeg, K2OS_THREADCREATE const *apCreate);
+K2STAT                   KernThread_Start(K2OSKERN_OBJ_THREAD *apThread);
+K2STAT                   KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
 
 UINT32 K2_CALLCONV_REGS  K2OSKERN_Thread0(void *apArg);
 

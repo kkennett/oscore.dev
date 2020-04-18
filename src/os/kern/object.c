@@ -48,6 +48,9 @@ static void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Segment:
         KernMem_SegDispose((K2OSKERN_OBJ_SEGMENT *)apObjHdr);
         break;
+    case K2OS_Obj_Thread:
+        KernThread_Dispose((K2OSKERN_OBJ_THREAD *)apObjHdr);
+        break;
     default:
         K2_ASSERT(0);
         break;

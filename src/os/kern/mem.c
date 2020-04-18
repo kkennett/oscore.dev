@@ -1318,6 +1318,15 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
     K2_ASSERT(apSegSrc->mPagesBytes == 0);
     K2_ASSERT(apSegSrc->mpProc == NULL);
 
+    if (apDst == NULL)
+    {
+        K2_ASSERT(apSegSrc == apCurThread->mpWorkingSeg);
+    }
+    else
+    {
+        K2_ASSERT(apCurThread->mpWorkingSeg == NULL);
+    }
+
     pageCount = apCurThread->mWorkVirt_PageCount;
     
     virtAddr = apCurThread->mWorkVirt_Range;
@@ -1550,6 +1559,12 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
     apSegSrc->mPagesBytes = apCurThread->mWorkVirt_PageCount * K2_VA32_MEMPAGE_BYTES;
     apCurThread->mWorkVirt_PageCount = 0;
 
+    if (apDst == NULL)
+    {
+        K2_ASSERT(apCurThread->mpWorkingSeg == apSegSrc);
+        apCurThread->mpWorkingSeg = NULL;
+    }
+
     K2TREE_Insert(&pTargetProc->SegTree, apSegSrc->ProcSegTreeNode.mUserVal, &apSegSrc->ProcSegTreeNode);
 
     K2OSKERN_SeqIntrUnlock(&apCurThread->mpProc->SegTreeSeqLock, disp);
@@ -1568,38 +1583,34 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
     return K2STAT_NO_ERROR;
 }
 
-K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
+K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_SEGMENT    tempSeg;
-    K2OSKERN_OBJ_THREAD *   pCurThread;
     K2OSKERN_SEGSLAB *      pSlab;
     K2OSKERN_OBJ_SEGMENT *  pSeg;
     BOOL                    ok;
     UINT32                  left;
-
-    K2_ASSERT(apRetSeg != NULL);
+    BOOL                    disp;
 
     ok = K2OS_CritSecEnter(&gData.SegSec);
     K2_ASSERT(ok);
-
-    pCurThread = K2OSKERN_CURRENT_THREAD;
 
     stat = K2STAT_NO_ERROR;
 
     if (gData.SegFreeList.mNodeCount == 0)
     {
         do {
-            stat = KernMem_VirtAllocToThread(pCurThread, 0, 1, TRUE);
+            stat = KernMem_VirtAllocToThread(apCurThread, 0, 1, TRUE);
             if (K2STAT_IS_ERROR(stat))
                 break;
 
             do {
-                stat = KernMem_PhysAllocToThread(pCurThread, 1, KernPhys_Disp_Cached, FALSE);
+                stat = KernMem_PhysAllocToThread(apCurThread, 1, KernPhys_Disp_Cached, FALSE);
                 if (K2STAT_IS_ERROR(stat))
                     break;
 
-                K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount + pCurThread->WorkPages_Clean.mNodeCount > 0);
+                K2_ASSERT(apCurThread->WorkPages_Dirty.mNodeCount + apCurThread->WorkPages_Clean.mNodeCount > 0);
 
                 K2MEM_Zero(&tempSeg, sizeof(tempSeg));
                 tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
@@ -1607,15 +1618,16 @@ K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
                 K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
                 tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_SEG_SLAB;
 
-                pSlab = (K2OSKERN_SEGSLAB *)pCurThread->mWorkVirt_Range; // !not mapped yet!
+                pSlab = (K2OSKERN_SEGSLAB *)apCurThread->mWorkVirt_Range; // !not mapped yet!
 
-                stat = KernMem_CreateSegmentFromThread(pCurThread, &tempSeg, &pSlab->This);
+                stat = KernMem_CreateSegmentFromThread(apCurThread, &tempSeg, &pSlab->This);
                 if (K2STAT_IS_ERROR(stat))
                 {
-                    KernMem_PhysFreeFromThread(pCurThread);
+                    KernMem_PhysFreeFromThread(apCurThread);
                     break;
                 }
 
+                disp = K2OSKERN_SetIntr(FALSE);
                 pSeg = (K2OSKERN_OBJ_SEGMENT *)pSlab->SegStore;
                 left = SEGSTORE_OBJ_COUNT;
                 do {
@@ -1626,15 +1638,16 @@ K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
                 pSlab->mpNextSlab = gData.mpSegSlabs;
                 pSlab->mUseMask = 1;
                 gData.mpSegSlabs = pSlab;
+                K2OSKERN_SetIntr(disp);
 
-                K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
-                K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
+                K2_ASSERT(apCurThread->mWorkVirt_Range == 0);
+                K2_ASSERT(apCurThread->mWorkVirt_PageCount == 0);
 
             } while (0);
 
             if (K2STAT_IS_ERROR(stat))
             {
-                KernMem_VirtFreeFromThread(pCurThread);
+                KernMem_VirtFreeFromThread(apCurThread);
             }
 
         } while (0);
@@ -1644,8 +1657,10 @@ K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
     {
         K2_ASSERT(gData.SegFreeList.mNodeCount > 0);
 
-        *apRetSeg = pSeg = (K2OSKERN_OBJ_SEGMENT *)gData.SegFreeList.mpHead;
+        disp = K2OSKERN_SetIntr(FALSE);
 
+        apCurThread->mpWorkingSeg = pSeg = (K2OSKERN_OBJ_SEGMENT *)gData.SegFreeList.mpHead;
+        
         K2LIST_Remove(&gData.SegFreeList, gData.SegFreeList.mpHead);
 
         //
@@ -1656,9 +1671,11 @@ K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
         //
         // index within the slab is calculated from the offset into the page
         //
-        left = (((UINT32)(*apRetSeg)) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
+        left = (((UINT32)pSeg) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
 
         pSlab->mUseMask |= (1ull << left);
+
+        K2OSKERN_SetIntr(disp);
     }
 
     ok = K2OS_CritSecLeave(&gData.SegSec);
@@ -1667,40 +1684,46 @@ K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT **apRetSeg)
     return stat;
 }
 
-K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
+K2STAT KernMem_SegFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread)
 {
     K2OSKERN_SEGSLAB *          pSlab;
     BOOL                        ok;
     UINT32                      ix;
-    K2OSKERN_OBJ_THREAD *       pCurThread;
     K2OSKERN_PHYSTRACK_PAGE *   pPhysPage;
     K2OSKERN_SEGSLAB *          pPrev;
     K2OSKERN_SEGSLAB *          pLook;
-
-    K2_ASSERT((apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
+    K2OSKERN_OBJ_SEGMENT *      pSeg;
+    BOOL                        disp;
 
     ok = K2OS_CritSecEnter(&gData.SegSec);
     K2_ASSERT(ok);
 
-    pSlab = (K2OSKERN_SEGSLAB *)(((UINT32)apSeg) & K2_VA32_PAGEFRAME_MASK);
+    K2_ASSERT(apCurThread->mpWorkingSeg != NULL);
 
-    ix = (((UINT32)apSeg) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
+    K2_ASSERT((apCurThread->mpWorkingSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
+
+    pSlab = (K2OSKERN_SEGSLAB *)(((UINT32)apCurThread->mpWorkingSeg) & K2_VA32_PAGEFRAME_MASK);
+
+    ix = (((UINT32)apCurThread->mpWorkingSeg) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
 
     K2_ASSERT(ix != 0);
 
-    K2MEM_Zero(apSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
-    K2LIST_AddAtTail(&gData.SegFreeList, (K2LIST_LINK *)apSeg);
+    disp = K2OSKERN_SetIntr(FALSE);
+
+    K2MEM_Zero(apCurThread->mpWorkingSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+    K2LIST_AddAtTail(&gData.SegFreeList, (K2LIST_LINK *)apCurThread->mpWorkingSeg);
     pSlab->mUseMask &= ~(1ull << ix);
+    apCurThread->mpWorkingSeg = NULL;
     if (pSlab->mUseMask == 1)
     {
         //
         // slab is empty. remove segments in it from the free list and deallocate it
         //
-        apSeg = (K2OSKERN_OBJ_SEGMENT *)pSlab->SegStore;
+        pSeg = (K2OSKERN_OBJ_SEGMENT *)pSlab->SegStore;
         ix = SEGSTORE_OBJ_COUNT;
         do {
-            K2LIST_Remove(&gData.SegFreeList, (K2LIST_LINK *)apSeg);
-            apSeg++;
+            K2LIST_Remove(&gData.SegFreeList, (K2LIST_LINK *)pSeg);
+            pSeg++;
         } while (--ix);
 
         pPrev = NULL;
@@ -1721,28 +1744,28 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
             gData.mpSegSlabs = pSlab->mpNextSlab;
         }
 
+        K2OSKERN_SetIntr(disp);
+
         //
         // slab page should be empty and completely unlinked now. zero it so
         // we can add its physical page back to the physical clean page list
         //
         K2MEM_Zero(pSlab, K2_VA32_MEMPAGE_BYTES);
 
-        pCurThread = K2OSKERN_CURRENT_THREAD;
+        apCurThread->mWorkMapAddr = (UINT32)pSlab;
+        K2_ASSERT(apCurThread->mpWorkPage == NULL);
+        K2_ASSERT(apCurThread->mpWorkPtPage == NULL);
 
-        pCurThread->mWorkMapAddr = (UINT32)pSlab;
-        K2_ASSERT(pCurThread->mpWorkPage == NULL);
-        K2_ASSERT(pCurThread->mpWorkPtPage == NULL);
+        apCurThread->mTlbFlushNeeded = TRUE;
+        apCurThread->mTlbFlushBase = (UINT32)pSlab;
+        apCurThread->mTlbFlushPages = 1;
 
-        pCurThread->mTlbFlushNeeded = TRUE;
-        pCurThread->mTlbFlushBase = (UINT32)pSlab;
-        pCurThread->mTlbFlushPages = 1;
-
-        KernMap_BreakOnePageToThread(pCurThread, &pSlab->This, KernPhysPageList_Non_KData, K2OSKERN_PTE_NP_BIT);
+        KernMap_BreakOnePageToThread(apCurThread, &pSlab->This, KernPhysPageList_Non_KData, K2OSKERN_PTE_NP_BIT);
 
         //
-        // pSlab is gone here (unmapped), as is apSeg
+        // pSlab is gone here (unmapped)
         //
-        pPhysPage = pCurThread->mpWorkPage;
+        pPhysPage = apCurThread->mpWorkPage;
         K2_ASSERT(pPhysPage != NULL);
 
         ok = K2OSKERN_SetIntr(FALSE);
@@ -1750,10 +1773,10 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
         pPhysPage->mpOwnerObject = NULL;
         pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
         pPhysPage->mFlags |= (KernPhysPageList_Thread_Clean << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
-        K2LIST_AddAtTail(&pCurThread->WorkPages_Clean, &pPhysPage->ListLink);
-        pCurThread->mpWorkPage = NULL;
+        K2LIST_AddAtTail(&apCurThread->WorkPages_Clean, &pPhysPage->ListLink);
+        apCurThread->mpWorkPage = NULL;
 
-        pPhysPage = pCurThread->mpWorkPtPage;
+        pPhysPage = apCurThread->mpWorkPtPage;
         if (pPhysPage != NULL)
         {
             //
@@ -1762,33 +1785,37 @@ K2STAT KernMem_SegFree(K2OSKERN_OBJ_SEGMENT *apSeg)
             pPhysPage->mpOwnerObject = NULL;
             pPhysPage->mFlags &= ~K2OSKERN_PHYSTRACK_PAGE_LIST_MASK;
             pPhysPage->mFlags |= (KernPhysPageList_Thread_PtClean << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL);
-            K2LIST_AddAtTail(&pCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
-            pCurThread->mpWorkPtPage = NULL;
+            K2LIST_AddAtTail(&apCurThread->WorkPtPages_Clean, &pPhysPage->ListLink);
+            apCurThread->mpWorkPtPage = NULL;
         }
 
         K2OSKERN_SetIntr(ok);
 
-        KernMem_PhysFreeFromThread(pCurThread);
+        KernMem_PhysFreeFromThread(apCurThread);
 
-        if (pCurThread->mTlbFlushNeeded)
+        if (apCurThread->mTlbFlushNeeded)
         {
 #if K2_TARGET_ARCH_IS_ARM
             K2_ASSERT(0);
 #else
-            pCurThread->Sched.Item.mSchedItemType = KernSchedItem_InvalidateTlb;
-            pCurThread->Sched.Item.Args.InvalidateTlb.mpProc = pCurThread->mpProc;
-            pCurThread->Sched.Item.Args.InvalidateTlb.mVirtAddr = pCurThread->mTlbFlushBase;
-            pCurThread->Sched.Item.Args.InvalidateTlb.mPageCount = pCurThread->mTlbFlushPages;
+            apCurThread->Sched.Item.mSchedItemType = KernSchedItem_InvalidateTlb;
+            apCurThread->Sched.Item.Args.InvalidateTlb.mpProc = apCurThread->mpProc;
+            apCurThread->Sched.Item.Args.InvalidateTlb.mVirtAddr = apCurThread->mTlbFlushBase;
+            apCurThread->Sched.Item.Args.InvalidateTlb.mPageCount = apCurThread->mTlbFlushPages;
             KernArch_ThreadCallSched();
 #endif
-            pCurThread->mTlbFlushNeeded = FALSE;
-            pCurThread->mTlbFlushBase = 0;
-            pCurThread->mTlbFlushPages = 0;
+            apCurThread->mTlbFlushNeeded = FALSE;
+            apCurThread->mTlbFlushBase = 0;
+            apCurThread->mTlbFlushPages = 0;
         }
 
-        pCurThread->mWorkVirt_Range = (UINT32)pSlab;
-        pCurThread->mWorkVirt_PageCount = 1;
-        KernMem_VirtFreeFromThread(pCurThread);
+        apCurThread->mWorkVirt_Range = (UINT32)pSlab;
+        apCurThread->mWorkVirt_PageCount = 1;
+        KernMem_VirtFreeFromThread(apCurThread);
+    }
+    else
+    {
+        K2OSKERN_SetIntr(disp);
     }
 
     ok = K2OS_CritSecLeave(&gData.SegSec);
@@ -1969,24 +1996,24 @@ K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
 
 void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
 {
-    BOOL disp;
+    BOOL                    disp;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
 
     K2_ASSERT((apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
 
-    //
-    // decommit/unmap
-    //
-
+    pCurThread = K2OSKERN_CURRENT_THREAD;
 
     disp = K2OSKERN_SeqIntrLock(&apSeg->mpProc->SegTreeSeqLock);
     
     K2TREE_Remove(&apSeg->mpProc->SegTree, &apSeg->ProcSegTreeNode);
+
+    if (0 != (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
+        pCurThread->mpWorkingSeg = apSeg;
     
     K2OSKERN_SeqIntrUnlock(&apSeg->mpProc->SegTreeSeqLock, disp);
 
-
     if (0 != (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
     {
-        KernMem_SegFree(apSeg);
+        KernMem_SegFreeFromThread(pCurThread);
     }
 }

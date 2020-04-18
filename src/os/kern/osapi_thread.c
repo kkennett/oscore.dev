@@ -886,18 +886,24 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadResume(K2OS_TOKEN aThreadToken, UINT3
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *apCreate)
 {
-#if 0
     K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2OSKERN_THREAD_PAGE *  pNewThreadPage;
+    K2OSKERN_OBJ_THREAD *   pNewThread;
     K2OS_THREADCREATE       cret;
     K2STAT                  stat;
+    K2OS_TOKEN              tokThread;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
 
     K2_ASSERT(gData.mKernInitStage >= KernInitStage_MemReady);
 
     if (apCreate->mStructBytes < sizeof(K2OS_THREADCREATE))
     {
-        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARUGMENT);
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return NULL;
     }
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
 
     K2MEM_Copy(&cret, apCreate, sizeof(cret));
 
@@ -909,7 +915,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
         cret.Attr.mPriority = pThisThread->Sched.mBasePrio;
         cret.Attr.mFieldMask |= K2OS_THREADATTR_PRIORITY;
     }
-    
+
     if (0 == (cret.Attr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK))
     {
         cret.Attr.mAffinityMask = pThisThread->Sched.Attr.mAffinityMask;
@@ -922,36 +928,112 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
         cret.Attr.mFieldMask |= K2OS_THREADATTR_QUANTUM;
     }
 
-    pThisThread = K2OSKERN_CURRENT_THREAD;
+    pNewThreadPage = NULL;
+    pNewThread = NULL;
 
-    stat = KernMem_PhysAllocToThread(pThisThread, 0, cret.mStackPages + 1, FALSE);
+    stat = KernMem_SegAllocToThread(pThisThread);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        do {
+            stat = KernMem_VirtAllocToThread(pThisThread, 0, cret.mStackPages + 1, FALSE);
+            if (K2STAT_IS_ERROR(stat))
+                break;
+
+            do {
+                stat = KernMem_PhysAllocToThread(pThisThread, 0, cret.mStackPages, FALSE);
+                if (K2STAT_IS_ERROR(stat))
+                    break;
+
+                do {
+                    pSeg = pThisThread->mpWorkingSeg;
+
+                    //
+                    // these are not mapped yet
+                    //
+                    pNewThreadPage = (K2OSKERN_THREAD_PAGE *)pThisThread->mWorkVirt_Range;
+                    pNewThread = (K2OSKERN_OBJ_THREAD *)&pNewThreadPage->Thread;
+
+                    K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+                    pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+                    pSeg->Hdr.mRefCount = 1;
+                    K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+                    pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
+                    pSeg->Info.Thread.mpThread = pNewThread;
+
+                    tokThread = NULL;
+
+                    stat = KernMem_CreateSegmentFromThread(pThisThread, pSeg, NULL);
+                    if (!K2STAT_IS_ERROR(stat))
+                    {
+                        K2_ASSERT(pThisThread->mpWorkingSeg == NULL);
+                    }
+
+                } while (0);
+
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    KernMem_PhysFreeFromThread(pThisThread);
+                }
+
+            } while (0);
+
+            if (K2STAT_IS_ERROR(stat))
+            {
+                KernMem_VirtFreeFromThread(pThisThread);
+            }
+
+        } while (0);
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            KernMem_SegFreeFromThread(pThisThread);
+        }
+    }
+
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
         return NULL;
     }
 
-    do {
+    //
+    // if we get here, the thread segment is created
+    //
+    K2_ASSERT(pNewThreadPage != NULL);
+    K2_ASSERT(pNewThread == &pNewThreadPage->Thread);
+    tokThread = NULL;
 
-
-    } while (0);
-
-    if (K2STAT_IS_ERROR(stat))
+    stat = KernThread_Instantiate(pSeg, &cret);
+    if (!K2STAT_IS_ERROR(stat))
     {
-        KernMem_PhysFreeFromThread(pThisThread);
+        pObjHdr = &pNewThread->Hdr;
+        stat = KernTok_Create(1, &pObjHdr, &tokThread);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            K2_ASSERT(tokThread != NULL);
+            stat = KernThread_Start(pNewThread);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                K2OS_TokenDestroy(tokThread);
+            }
+        }
+        else
+        {
+            KernThread_Dispose(pNewThread);
+        }
+    }
+    else
+    {
+        //
+        // this should destroy the segment
+        //
+        KernObj_Release(&pSeg->Hdr);
+        K2OS_ThreadSetStatus(stat);
         return NULL;
     }
-    
 
-    K2STAT KernMem_VirtAllocToThread(K2OSKERN_OBJ_THREAD * apCurThread, UINT32 aUseAddr, UINT32 aPageCount, BOOL aTopDown);
-    void   KernMem_VirtFreeFromThread(K2OSKERN_OBJ_THREAD * apCurThread);
+    K2_ASSERT(tokThread != NULL);
 
-
-    K2STAT KernMem_SegAlloc(K2OSKERN_OBJ_SEGMENT * *apRetSeg);
-
-
-#endif
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    return tokThread;
 }
 
