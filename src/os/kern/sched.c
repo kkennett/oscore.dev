@@ -164,7 +164,6 @@ static void sInit_AfterVirt(void)
         K2LIST_Init(&gData.Sched.ReadyThreadsByPrioList[ix]);
     }
 
-    gData.Sched.SchedTimerSchedTimerItem.mIsSchedTimerItem = TRUE;
     //
     // this is only set valid by an actual sched timer expiry
     //
@@ -185,11 +184,6 @@ void KernInit_Sched(void)
     default:
         break;
     }
-}
-
-static void sScheduleThreadsToCores(void)
-{
-    K2_ASSERT(0);
 }
 
 static void sInsertToItemList(K2OSKERN_SCHED_ITEM *apNewItems)
@@ -259,6 +253,7 @@ static BOOL sExecItems(void)
     K2OSKERN_SCHED_ITEM *   pPendNew;
     BOOL                    changedSomething;
     BOOL                    subChangedSomething;
+    BOOL                    processThreadItem;
 
     changedSomething = FALSE;
 
@@ -285,32 +280,32 @@ static BOOL sExecItems(void)
 
             K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType < KernSchedItemType_Count);
 
-            if (gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_SchedTimer)
+            processThreadItem = (gData.Sched.mpActiveItem->mSchedItemType != KernSchedItem_SchedTimer) ? TRUE : FALSE;
+
+            if (!processThreadItem)
             {
                 //
                 // setting this to invalid allows it to be used again. there
                 // should only ever be one of these in flight in the whole
                 // system
                 //
+                K2_ASSERT(gData.Sched.mpActiveItem == &gData.Sched.SchedTimerSchedItem);
                 gData.Sched.SchedTimerSchedItem.mSchedItemType = KernSchedItem_Invalid;
-                //
-                // nothing else happens here. the whole point of the timer
-                // is to get us into the scheduler.  if the scheduler needs to
-                // set another timer it will do so
-                //
             }
-            else
+            
+            subChangedSomething = KernSched_TimePassed(gData.Sched.mpActiveItem->CpuCoreEvent.mEventAbsTimeMs);
+            if (subChangedSomething)
+                changedSomething = TRUE;
+
+            if (processThreadItem)
             {
-                //
-                // all other items come from a thread
-                //
                 gData.Sched.mpActiveItemThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, gData.Sched.mpActiveItem, Sched.Item);
 
                 K2_ASSERT(sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType] != NULL);
 
-                subChangedSomething= sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType]();
-                if (!changedSomething)
-                    changedSomething = subChangedSomething;
+                subChangedSomething = sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType]();
+                if (subChangedSomething)
+                    changedSomething = TRUE;
 
                 gData.Sched.mpActiveItemThread = NULL;
             }
@@ -321,11 +316,33 @@ static BOOL sExecItems(void)
 
     } while (1);
 
-    subChangedSomething = KernSched_TimePassed();
-    if (!changedSomething)
-        changedSomething = subChangedSomething;
+    subChangedSomething = KernSched_TimePassed((UINT64)-1);
+    if (subChangedSomething)
+        changedSomething = TRUE;
 
     return changedSomething;
+}
+
+static void sScheduleThreadsToCores(void)
+{
+//    UINT64  checkQuantumLeft;
+    UINT64  lowestQuantumLeft;
+
+    //
+    // scheduling timer is disabled here
+    //
+    lowestQuantumLeft = gData.Sched.mpTimerItemQueue ? gData.Sched.mpTimerItemQueue->mDeltaT : 0;
+
+
+    K2_ASSERT(0);
+
+
+    //
+    // if there is some reason to arm the scheduling timer
+    // then we arm it here at the end.  this may generate
+    // more items that need to be processed
+    if (lowestQuantumLeft != 0)
+        KernSched_ArmSchedTimer(lowestQuantumLeft);
 }
 
 void KernSched_Exec(void)
@@ -334,18 +351,54 @@ void KernSched_Exec(void)
     K2OSKERN_CPUCORE *      pCpuCore;
     K2OSKERN_OBJ_THREAD *   pThread;
     BOOL                    somethingChanged;
+    BOOL                    localChange;
+    BOOL                    disarmed;
 
     /* execute any scheduler items queued and give debugger a chance to run */
     sgpItemList = sgpItemListEnd = NULL;
-    do {
-        somethingChanged = sExecItems();
 
-        if (!gData.mDebuggerActive)
-            break;
+    somethingChanged = FALSE;
 
-        somethingChanged = KernDebug_Service(somethingChanged);
+    if (!gData.mDebuggerActive)
+    {
+        if (sExecItems())
+        {
+            somethingChanged = TRUE;
+            if (gData.Sched.mpTimerItemQueue != NULL)
+            {
+                KernSched_ArmSchedTimer(0);
+                sExecItems();
+            }
+        }
+    }
+    else
+    {
+        //
+        // debugger is active
+        //
+        disarmed = FALSE;
+        do {
+            if (sExecItems())
+            {
+                somethingChanged = TRUE;
+                localChange = TRUE;
+                if (gData.Sched.mpTimerItemQueue != NULL)
+                {
+                    disarmed = TRUE;
+                    KernSched_ArmSchedTimer(0);
+                    sExecItems();
+                }
+            }
 
-    } while (somethingChanged);
+            if (!KernDebug_Service(localChange))
+                break;
+
+            localChange = FALSE;
+            somethingChanged = TRUE;
+            if ((!disarmed) && (gData.Sched.mpTimerItemQueue != NULL))
+                KernSched_ArmSchedTimer(0);
+        } while (1);
+    }
 
     /* put threads onto cores */
     if (somethingChanged)
@@ -499,7 +552,7 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore)
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore)
 {
     //
-    // timer fire time is in the gData.Sched.SchedTimerSchedItem.Event.mAbsTime
+    // timer fire time is in the gData.Sched.SchedTimerSchedItem.CpuCoreEvent.mEventAbsTime
     //
     K2_ASSERT(gData.Sched.SchedTimerSchedItem.mSchedItemType == KernSchedItem_Invalid);
     gData.Sched.SchedTimerSchedItem.mSchedItemType = KernSchedItem_SchedTimer;

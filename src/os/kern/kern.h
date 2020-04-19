@@ -122,8 +122,8 @@ struct _K2OSKERN_CPUCORE_EVENT
 typedef struct _K2OSKERN_SCHED_CPUCORE K2OSKERN_SCHED_CPUCORE;
 struct _K2OSKERN_SCHED_CPUCORE
 {
-    K2OSKERN_OBJ_THREAD *   mpRunThread;
     UINT64                  mLastStopAbsTimeMs;
+    K2OSKERN_OBJ_THREAD *   mpRunThread;
     K2LIST_LINK             PrioListLink;
     UINT32                  mActivePrio;
 };
@@ -211,13 +211,20 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE;
 
+typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
+enum _KernSchedTimerItemType
+{
+    KernSchedTimerItemType_Error = 0,
+    KernSchedTimerItemType_Wait,
+    KernSchedTimerItemType_Alarm
+};
 
 struct _K2OSKERN_SCHED_TIMERITEM
 {
-    UINT16                      mIsSchedTimerItem;
-    UINT16                      mOnQueue;
+    KernSchedTimerItemType      mType;
+    UINT32                      mOnQueue;
     K2OSKERN_SCHED_TIMERITEM *  mpNext;
-    UINT64                      mAbsTimeMs;
+    UINT64                      mDeltaT;
 };
 
 struct _K2OSKERN_SCHED_WAITENTRY
@@ -342,8 +349,9 @@ typedef struct _K2OSKERN_SCHED_THREAD K2OSKERN_SCHED_THREAD;
 struct _K2OSKERN_SCHED_THREAD
 {
     UINT32              mBasePrio;
-    UINT64              mLastAbsTimeMs;
     UINT32              mQuantumLeft;
+    UINT64              mLastAbsTimeMs;
+    UINT64              mTotalRunTimeMs;
     K2OS_THREADATTR     Attr;       // current priority, affinity mask, quantum
     K2OSKERN_SCHED_ITEM Item;
     K2OSKERN_CRITSEC *  mpActionSec;
@@ -356,6 +364,8 @@ struct _K2OSKERN_SCHED_THREAD
 typedef struct _K2OSKERN_SCHED K2OSKERN_SCHED;
 struct _K2OSKERN_SCHED
 {
+    UINT64                          mCurrentAbsTime;
+
     K2LIST_ANCHOR                   CpuCorePrioList;
 
     K2LIST_ANCHOR                   ReadyThreadsByPrioList[K2OS_THREADPRIO_LEVELS];
@@ -365,7 +375,6 @@ struct _K2OSKERN_SCHED
     UINT32 volatile                 mReq;
     K2OSKERN_SCHED_ITEM * volatile  mpPendingItemListHead;
 
-    K2OSKERN_SCHED_TIMERITEM        SchedTimerSchedTimerItem;
     K2OSKERN_SCHED_ITEM             SchedTimerSchedItem;
     K2OSKERN_SCHED_TIMERITEM *      mpTimerItemQueue;
 
@@ -1065,7 +1074,7 @@ BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);
 BOOL KernSched_Exec_ThreadCreate(void);
-BOOL KernSched_TimePassed(void);
+BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_TlbInvalidateAcrossCores(void);
