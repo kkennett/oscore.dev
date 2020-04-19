@@ -740,8 +740,7 @@ static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABL
             *apResult = K2STAT_ERROR_BAD_ARGUMENT;
             return TRUE;
         }
-        // STATE: return aObjWait.mpThread->Info.mLifeStage >= KernThreadLifeStage_Exited;
-        return FALSE;
+        return aObjWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited;
 
     case K2OS_Obj_Semaphore:
         if (gData.mKernInitStage < KernInitStage_MultiThreaded)

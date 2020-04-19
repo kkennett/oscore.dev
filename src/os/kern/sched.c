@@ -149,7 +149,6 @@ void KernSched_AddCurrentCore(void)
     pThisCore->Sched.mActivePrio = pThread->Sched.mActivePrio;
     KernSched_InsertCore(pThisCore, TRUE);
 
-    // STATE: set thread state as running
     pThisCore->mpActiveThread = pThread;
     K2_CpuWriteBarrier();
 }
@@ -356,7 +355,7 @@ void KernSched_Exec(void)
             pThread = pCpuCore->Sched.mpRunThread;
             if (pThread != NULL)
             {
-                // STATE: ASSERT THREAD IS IN RUNNING STATE
+                K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Running);
 
                 pCpuCore->mpActiveThread = pThread;
                 K2_CpuWriteBarrier();

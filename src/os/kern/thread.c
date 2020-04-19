@@ -58,8 +58,6 @@ static void sInit_BeforeVirt(void)
     pThread->Env.mId = 1;
     pThread->mIsKernelThread = TRUE;
     pThread->mIsInKernelMode = TRUE;
-    // STATE: Set up public thread state
-    // pThread->Info.mThreadState = K2OS_Thread_Init;
     pThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;
@@ -163,8 +161,6 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
 
     pNewThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pNewThread->Info.mProcessId = apProc->mId;
-    // STATE: set up public thread state
-//    pNewThread->Info.mThreadState = K2OS_Thread_Init;
     K2MEM_Copy(&pNewThread->Info.CreateInfo, apCreate, sizeof(K2OS_THREADCREATE));
 
     disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);

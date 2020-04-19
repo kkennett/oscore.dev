@@ -43,13 +43,6 @@ BOOL KernSched_Exec_ThreadCreate(void)
     K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
 
     //
-    // thread life stage moves to started, it starts as ready, and is not stopped
-    //
-    pNewThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
-    pNewThread->Sched.State.mRunState = KernThreadRunState_Ready;
-    pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
-
-    //
     // a thread that is not in a purgeable state holds a reference to itself.
     //
     KernObj_AddRef(&pNewThread->Hdr);
@@ -58,6 +51,13 @@ BOOL KernSched_Exec_ThreadCreate(void)
     // get ready to run
     //
     KernArch_PrepareThread(pNewThread);
+
+    //
+    // thread life stage moves to started, it starts as ready, and is not stopped
+    //
+    pNewThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
+    pNewThread->Sched.State.mRunState = KernThreadRunState_Ready;
+    pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
 
     gData.Sched.mSysWideThreadCount++;
 

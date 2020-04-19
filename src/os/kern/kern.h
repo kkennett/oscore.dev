@@ -307,8 +307,8 @@ enum _KernThreadLifeStage
 {
     KernThreadLifeStage_Init = 0,
     KernThreadLifeStage_Instantiated,
-    KernThreadLifeStage_Started,
-    KernThreadLifeStage_Exited,
+    KernThreadLifeStage_Started,        // not signalled at this stage or before
+    KernThreadLifeStage_Exited,         // signalled at this stage or higher
     KernThreadLifeStage_Killed,
     KernThreadLifeStage_Cleanup
 };
