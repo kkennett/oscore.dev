@@ -34,9 +34,39 @@
 
 BOOL KernSched_Exec_ThreadCreate(void)
 {
+    K2OSKERN_OBJ_THREAD *   pNewThread;
+
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadCreate);
 
-    K2_ASSERT(0);
+    pNewThread = gData.Sched.mpActiveItem->Args.ThreadCreate.mpThread;
 
-    return FALSE;  // if something changes scheduling-wise, return true
+    K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
+
+    //
+    // thread life stage moves to started, it starts as ready, and is not stopped
+    //
+    pNewThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
+    pNewThread->Sched.State.mRunState = KernThreadRunState_Ready;
+    pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
+
+    //
+    // a thread that is not in a purgeable state holds a reference to itself.
+    //
+    KernObj_AddRef(&pNewThread->Hdr);
+
+    //
+    // get ready to run
+    //
+    KernArch_PrepareThread(pNewThread);
+
+    gData.Sched.mSysWideThreadCount++;
+
+    //
+    // add to ready thread prio list
+    //
+    KernSched_InsertThreadToReadyList(pNewThread);
+
+    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+
+    return TRUE;  // if something changes scheduling-wise, return true
 }

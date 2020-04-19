@@ -58,7 +58,8 @@ static void sInit_BeforeVirt(void)
     pThread->Env.mId = 1;
     pThread->mIsKernelThread = TRUE;
     pThread->mIsInKernelMode = TRUE;
-    pThread->Info.mThreadState = K2OS_Thread_Init;
+    // STATE: Set up public thread state
+    // pThread->Info.mThreadState = K2OS_Thread_Init;
     pThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;
@@ -128,18 +129,85 @@ K2STAT KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-
-K2STAT KernThread_Instantiate(K2OSKERN_OBJ_SEGMENT *apSeg, K2OS_THREADCREATE const *apCreate)
+void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_THREAD_PAGE *  pNewThreadPage;
+    K2OSKERN_OBJ_THREAD *   pNewThread;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    BOOL                    disp;
+    
+    pSeg = apThisThread->mpThreadCreateSeg;
+    K2_ASSERT(pSeg != NULL);
+
+    pNewThreadPage = (K2OSKERN_THREAD_PAGE *)
+        (pSeg->ProcSegTreeNode.mUserVal + (pSeg->mPagesBytes - K2_VA32_MEMPAGE_BYTES));
+
+    pNewThread = (K2OSKERN_OBJ_THREAD *)&pNewThreadPage->Thread;
+    
+    K2MEM_Zero(pNewThread, sizeof(K2OSKERN_OBJ_THREAD));
+
+    K2_ASSERT(pSeg->Info.Thread.mpThread == pNewThread);
+
+    pNewThread->Hdr.mObjType = K2OS_Obj_Thread;
+    pNewThread->Hdr.mRefCount = 1;
+    K2LIST_Init(&pNewThread->Hdr.WaitingThreadsPrioList);
+    pNewThread->mpProc = apProc;
+    pNewThread->mpStackSeg = pSeg;
+    pNewThread->mIsKernelThread = (((UINT32)apCreate->mEntrypoint) >= K2OS_KVA_KERN_BASE) ? TRUE : FALSE;
+    pNewThread->mIsInKernelMode = TRUE;
+
+    K2LIST_Init(&pNewThread->WorkPages_Dirty);
+    K2LIST_Init(&pNewThread->WorkPages_Clean);
+    K2LIST_Init(&pNewThread->WorkPtPages_Dirty);
+    K2LIST_Init(&pNewThread->WorkPtPages_Clean);
+
+    pNewThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
+    pNewThread->Info.mProcessId = apProc->mId;
+    // STATE: set up public thread state
+//    pNewThread->Info.mThreadState = K2OS_Thread_Init;
+    K2MEM_Copy(&pNewThread->Info.CreateInfo, apCreate, sizeof(K2OS_THREADCREATE));
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
+    K2OSKERN_SeqIntrLock(&apProc->ThreadListSeqLock);
+
+    K2LIST_AddAtTail(&apProc->ThreadList, &pNewThread->ProcThreadListLink);
+
+    pNewThread->Sched.State.mLifeStage = KernThreadLifeStage_Instantiated;
+    pNewThread->Sched.State.mRunState = KernThreadRunState_None;
+    pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
+
+    apThisThread->mpThreadCreateSeg = NULL;
+
+    K2OSKERN_SeqIntrUnlock(&apProc->ThreadListSeqLock, FALSE);
+    K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
 }
 
-K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThread)
+K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
+    K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_None);
+    K2_ASSERT(apThread->Sched.State.mStopFlags == KERNTHREAD_STOP_FLAG_NONE);
+
+    apThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadCreate;
+    apThisThread->Sched.Item.Args.ThreadCreate.mpThread = apThread;
+    
+    KernArch_ThreadCallSched();
+
+    return apThisThread->Sched.Item.mResult;
 }
 
 K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
 {
+    //
+    // thread cannot be in created state 
+    //
+    if ((apThread->Sched.State.mLifeStage == KernThreadLifeStage_Init) &&
+        (apThread->Sched.State.mLifeStage == KernThreadLifeStage_Started))
+    {
+        K2OSKERN_Panic("*** Invalid thread disposal\n");
+    }
+
+    K2_ASSERT(0);
+
     return K2STAT_ERROR_NOT_IMPL;
 }

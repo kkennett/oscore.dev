@@ -61,7 +61,7 @@ K2OSKERN_MapDevice(
         return stat;
     }
 
-    pSeg = pCurThread->mpWorkingSeg;
+    pSeg = pCurThread->mpWorkSeg;
 
     K2_ASSERT(pSeg != NULL);
 
@@ -84,7 +84,7 @@ K2OSKERN_MapDevice(
         stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
         if (!K2STAT_IS_ERROR(stat))
         {
-            K2_ASSERT(pCurThread->mpWorkingSeg == NULL);
+            K2_ASSERT(pCurThread->mpWorkSeg == NULL);
 
             *apRetVirtAddr = pSeg->ProcSegTreeNode.mUserVal;
             K2_ASSERT(pCurThread->mWorkVirt_Range == 0);

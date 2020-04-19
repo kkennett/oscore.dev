@@ -740,7 +740,8 @@ static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABL
             *apResult = K2STAT_ERROR_BAD_ARGUMENT;
             return TRUE;
         }
-        return aObjWait.mpThread->Info.mThreadState >= K2OS_Thread_Exited;
+        // STATE: return aObjWait.mpThread->Info.mLifeStage >= KernThreadLifeStage_Exited;
+        return FALSE;
 
     case K2OS_Obj_Semaphore:
         if (gData.mKernInitStage < KernInitStage_MultiThreaded)
@@ -946,12 +947,13 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                     break;
 
                 do {
-                    pSeg = pThisThread->mpWorkingSeg;
+                    pSeg = pThisThread->mpWorkSeg;
 
                     //
                     // these are not mapped yet
                     //
-                    pNewThreadPage = (K2OSKERN_THREAD_PAGE *)pThisThread->mWorkVirt_Range;
+                    pNewThreadPage = (K2OSKERN_THREAD_PAGE *)
+                        (pThisThread->mWorkVirt_Range + ((pThisThread->mWorkVirt_PageCount - 1) * K2_VA32_MEMPAGE_BYTES));
                     pNewThread = (K2OSKERN_OBJ_THREAD *)&pNewThreadPage->Thread;
 
                     K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
@@ -966,7 +968,12 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                     stat = KernMem_CreateSegmentFromThread(pThisThread, pSeg, NULL);
                     if (!K2STAT_IS_ERROR(stat))
                     {
-                        K2_ASSERT(pThisThread->mpWorkingSeg == NULL);
+                        K2_ASSERT(pThisThread->mpWorkSeg == NULL);
+                        //
+                        // creating a *thread* segment will add it to the owner
+                        // process and move it to the thread's create segment pointer
+                        //
+                        K2_ASSERT(pThisThread->mpThreadCreateSeg != NULL);
                     }
 
                 } while (0);
@@ -988,6 +995,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
         if (K2STAT_IS_ERROR(stat))
         {
             KernMem_SegFreeFromThread(pThisThread);
+            K2_ASSERT(pThisThread->mpWorkSeg == NULL);
         }
     }
 
@@ -1000,40 +1008,50 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
     //
     // if we get here, the thread segment is created
     //
+    K2_ASSERT(pThisThread->mpThreadCreateSeg != NULL);
     K2_ASSERT(pNewThreadPage != NULL);
     K2_ASSERT(pNewThread == &pNewThreadPage->Thread);
     tokThread = NULL;
 
-    stat = KernThread_Instantiate(pSeg, &cret);
+    KernThread_Instantiate(pThisThread, pThisThread->mpProc, &cret);
+
+    //
+    // instantiated thread holds the segment reference at this point
+    //
+    K2_ASSERT(pThisThread->mpThreadCreateSeg == NULL);
+
+    pObjHdr = &pNewThread->Hdr;
+    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
     if (!K2STAT_IS_ERROR(stat))
     {
-        pObjHdr = &pNewThread->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
-        if (!K2STAT_IS_ERROR(stat))
+        K2_ASSERT(tokThread != NULL);
+        stat = KernThread_Start(pThisThread, pNewThread);
+        if (K2STAT_IS_ERROR(stat))
         {
-            K2_ASSERT(tokThread != NULL);
-            stat = KernThread_Start(pNewThread);
-            if (K2STAT_IS_ERROR(stat))
-            {
-                K2OS_TokenDestroy(tokThread);
-            }
+            //
+            // for a non-started thread, the only reference
+            // is the one we have here in creating it
+            //
+            K2OS_TokenDestroy(tokThread);
+            tokThread = NULL;
         }
-        else
-        {
-            KernThread_Dispose(pNewThread);
-        }
+        //
+        // thread holds a reference to itself once it is started
+        // it also holds a reference to its own segment
+        //
     }
     else
     {
-        //
-        // this should destroy the segment
-        //
-        KernObj_Release(&pSeg->Hdr);
+        K2_ASSERT(tokThread == NULL);
+        KernThread_Dispose(pNewThread);
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2_ASSERT(tokThread == NULL);
         K2OS_ThreadSetStatus(stat);
         return NULL;
     }
-
-    K2_ASSERT(tokThread != NULL);
 
     return tokThread;
 }

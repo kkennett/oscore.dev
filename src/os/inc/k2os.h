@@ -129,18 +129,6 @@ K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken);
 //------------------------------------------------------------------------
 //
 
-typedef enum _K2OS_ThreadState K2OS_ThreadState;
-enum _K2OS_ThreadState
-{
-    K2OS_Thread_Init = 0,
-    K2OS_Thread_Running,
-    K2OS_Thread_Ready,
-    K2OS_Thread_Paused,
-    K2OS_Thread_Blocked,
-    K2OS_Thread_Exited,
-    K2OS_Thread_Killed
-};
-
 #define K2OS_THREADATTR_PRIORITY            1
 #define K2OS_THREADATTR_AFFINITYMASK        2
 #define K2OS_THREADATTR_QUANTUM             4
@@ -173,7 +161,6 @@ struct _K2OS_THREADINFO
     UINT32              mProcessId;
     UINT32              mLastStatus;
     UINT32              mExitCode;
-    K2OS_ThreadState    mThreadState;
     UINT32              mPauseCount;
     UINT32              mTotalRunTimeMs;
     K2OS_THREADCREATE   CreateInfo;

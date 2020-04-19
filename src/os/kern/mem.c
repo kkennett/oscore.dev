@@ -1321,11 +1321,11 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
     if (apDst == NULL)
     {
-        K2_ASSERT(apSegSrc == apCurThread->mpWorkingSeg);
+        K2_ASSERT(apSegSrc == apCurThread->mpWorkSeg);
     }
     else
     {
-        K2_ASSERT(apCurThread->mpWorkingSeg == NULL);
+        K2_ASSERT(apCurThread->mpWorkSeg == NULL);
     }
 
     pageCount = apCurThread->mWorkVirt_PageCount;
@@ -1564,8 +1564,13 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
     if (apDst == NULL)
     {
-        K2_ASSERT(apCurThread->mpWorkingSeg == apSegSrc);
-        apCurThread->mpWorkingSeg = NULL;
+        K2_ASSERT(apCurThread->mpWorkSeg == apSegSrc);
+        if (segType == K2OSKERN_SEG_ATTR_TYPE_THREAD)
+        {
+            K2_ASSERT(apCurThread->mpThreadCreateSeg == NULL);
+            apCurThread->mpThreadCreateSeg = apCurThread->mpWorkSeg;
+        }
+        apCurThread->mpWorkSeg = NULL;
     }
 
     K2TREE_Insert(&pTargetProc->SegTree, apSegSrc->ProcSegTreeNode.mUserVal, &apSegSrc->ProcSegTreeNode);
@@ -1662,7 +1667,7 @@ K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread)
 
         disp = K2OSKERN_SetIntr(FALSE);
 
-        apCurThread->mpWorkingSeg = pSeg = (K2OSKERN_OBJ_SEGMENT *)gData.SegFreeList.mpHead;
+        apCurThread->mpWorkSeg = pSeg = (K2OSKERN_OBJ_SEGMENT *)gData.SegFreeList.mpHead;
         
         K2LIST_Remove(&gData.SegFreeList, gData.SegFreeList.mpHead);
 
@@ -1701,22 +1706,22 @@ K2STAT KernMem_SegFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread)
     ok = K2OS_CritSecEnter(&gData.SegSec);
     K2_ASSERT(ok);
 
-    K2_ASSERT(apCurThread->mpWorkingSeg != NULL);
+    K2_ASSERT(apCurThread->mpWorkSeg != NULL);
 
-    K2_ASSERT((apCurThread->mpWorkingSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
+    K2_ASSERT((apCurThread->mpWorkSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
 
-    pSlab = (K2OSKERN_SEGSLAB *)(((UINT32)apCurThread->mpWorkingSeg) & K2_VA32_PAGEFRAME_MASK);
+    pSlab = (K2OSKERN_SEGSLAB *)(((UINT32)apCurThread->mpWorkSeg) & K2_VA32_PAGEFRAME_MASK);
 
-    ix = (((UINT32)apCurThread->mpWorkingSeg) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
+    ix = (((UINT32)apCurThread->mpWorkSeg) & K2_VA32_MEMPAGE_OFFSET_MASK) / sizeof(K2OSKERN_OBJ_SEGMENT);
 
     K2_ASSERT(ix != 0);
 
     disp = K2OSKERN_SetIntr(FALSE);
 
-    K2MEM_Zero(apCurThread->mpWorkingSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
-    K2LIST_AddAtTail(&gData.SegFreeList, (K2LIST_LINK *)apCurThread->mpWorkingSeg);
+    K2MEM_Zero(apCurThread->mpWorkSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+    K2LIST_AddAtTail(&gData.SegFreeList, (K2LIST_LINK *)apCurThread->mpWorkSeg);
     pSlab->mUseMask &= ~(1ull << ix);
-    apCurThread->mpWorkingSeg = NULL;
+    apCurThread->mpWorkSeg = NULL;
     if (pSlab->mUseMask == 1)
     {
         //
@@ -2066,7 +2071,7 @@ void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
 
     K2TREE_Remove(&apSeg->mpProc->SegTree, &apSeg->ProcSegTreeNode);
 
-    pCurThread->mpWorkingSeg = apSeg;
+    pCurThread->mpWorkSeg = apSeg;
 
     K2OSKERN_SeqIntrUnlock(&apSeg->mpProc->SegTreeSeqLock, disp);
 
@@ -2112,7 +2117,7 @@ void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
     else
     {
         disp = K2OSKERN_SetIntr(FALSE);
-        pCurThread->mpWorkingSeg = NULL;
+        pCurThread->mpWorkSeg = NULL;
         K2OSKERN_SetIntr(disp);
     }
 }

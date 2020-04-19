@@ -65,7 +65,7 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore)
 
     pThread = apThisCore->mpActiveThread;
     K2_ASSERT(pThread != NULL);
-    K2_ASSERT(pThread->Info.mThreadState == K2OS_Thread_Running);
+    // STATE: assert thread is in running state
 
     pProc = pThread->mpProc;
     pOldProc = apThisCore->mpActiveProc;

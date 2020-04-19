@@ -278,12 +278,7 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE
 {
-    //
-    // calling thread is creator
-    //
-    K2OSKERN_OBJ_PROCESS *  mpTargetProc;
-    K2OS_THREADCREATE       Cret;
-    K2OSKERN_OBJ_SEGMENT *  mpSeg;
+    K2OSKERN_OBJ_THREAD *   mpThread;
 };
 
 union _K2OSKERN_SCHED_ITEM_ARGS
@@ -307,21 +302,39 @@ struct _K2OSKERN_SCHED_ITEM
     K2OSKERN_SCHED_ITEM_ARGS        Args;
 };
 
-#define K2OS_THREAD_STATE_INIT  0x1000
-
-typedef enum _KernThreadState KernThreadState;
-enum _KernThreadState
+typedef enum _KernThreadLifeStage KernThreadLifeStage;
+enum _KernThreadLifeStage
 {
-    KernThreadState_PreCreate = 0,
-    KernThreadState_InCreate,
-    KernThreadState_PreStart,
-    KernThreadState_Ready,
-    KernThreadState_Running,
-    KernThreadState_WaitCS,
-    KernThreadState_Waiting,
-    KernThreadState_Paused,
+    KernThreadLifeStage_Init = 0,
+    KernThreadLifeStage_Instantiated,
+    KernThreadLifeStage_Started,
+    KernThreadLifeStage_Exited,
+    KernThreadLifeStage_Killed,
+    KernThreadLifeStage_Cleanup
+};
 
+typedef enum _KernThreadRunState KernThreadRunState;
+enum _KernThreadRunState
+{
+    KernThreadRunState_None=0,
+    KernThreadRunState_Ready,
+    KernThreadRunState_Running,
+    KernThreadRunState_Blocked_CS,
+    KernThreadRunState_Waiting
+};
 
+#define KERNTHREAD_STOP_FLAG_NONE       0   // not stopped
+#define KERNTHREAD_STOP_FLAG_DEBUG      1   // process in debug state
+#define KERNTHREAD_STOP_FLAG_PAGEFAULT  2   // normal pagefault
+#define KERNTHREAD_STOP_FLAG_EXCEPTION  4   // unhandled exception
+#define KERNTHREAD_STOP_FLAG_PROC_EXIT  8   // process exiting
+
+typedef struct _KernThreadState KernThreadState;
+struct _KernThreadState
+{
+    KernThreadLifeStage mLifeStage;
+    KernThreadRunState  mRunState;
+    UINT32              mStopFlags; // nonzero = not stopped
 };
 
 typedef struct _K2OSKERN_SCHED_THREAD K2OSKERN_SCHED_THREAD;
@@ -336,6 +349,7 @@ struct _K2OSKERN_SCHED_THREAD
     UINT32              mActivePrio;
     K2LIST_LINK         PrioListLink;
     K2LIST_ANCHOR       OwnedCritSecList;
+    KernThreadState     State;
 };
 
 typedef struct _K2OSKERN_SCHED K2OSKERN_SCHED;
@@ -615,7 +629,8 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                      mTlbFlushBase;
     UINT32                      mTlbFlushPages;
 
-    K2OSKERN_OBJ_SEGMENT *      mpWorkingSeg;
+    K2OSKERN_OBJ_SEGMENT *      mpWorkSeg;
+    K2OSKERN_OBJ_SEGMENT *      mpThreadCreateSeg;
 
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
     K2_EXCEPTION_TRAP *         mpUserExTrapStack;
@@ -1025,8 +1040,8 @@ void                     KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
 void    K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 K2STAT                   KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
 K2STAT                   KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
-K2STAT                   KernThread_Instantiate(K2OSKERN_OBJ_SEGMENT *apSeg, K2OS_THREADCREATE const *apCreate);
-K2STAT                   KernThread_Start(K2OSKERN_OBJ_THREAD *apThread);
+void                     KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
+K2STAT                   KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
 K2STAT                   KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
 
 UINT32 K2_CALLCONV_REGS  K2OSKERN_Thread0(void *apArg);
@@ -1055,6 +1070,7 @@ void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
+void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread);
 
 /* --------------------------------------------------------------------------------- */
 

@@ -125,13 +125,22 @@ void KernSched_AddCurrentCore(void)
     pThread = gpThread0;
 
     K2_ASSERT(pThread->Info.CreateInfo.Attr.mFieldMask == K2OS_THREADATTR_VALID_MASK);
+
     pThread->Sched.Attr = pThread->Info.CreateInfo.Attr;
     pThread->Sched.mBasePrio = pThread->Sched.Attr.mPriority;
     pThread->Sched.mQuantumLeft = pThread->Sched.Attr.mQuantum;
     pThread->Sched.mActivePrio = pThread->Sched.mBasePrio;
+
+    pThread->Sched.State.mLifeStage = KernThreadLifeStage_Instantiated;
+    pThread->Sched.State.mRunState = KernThreadRunState_None;
+    pThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
+
     K2LIST_Init(&pThread->Sched.OwnedCritSecList);
 
     KernArch_PrepareThread(pThread);
+
+    pThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
+    pThread->Sched.State.mRunState = KernThreadRunState_Running;
 
     gData.Sched.mSysWideThreadCount = 1;
 
@@ -140,7 +149,7 @@ void KernSched_AddCurrentCore(void)
     pThisCore->Sched.mActivePrio = pThread->Sched.mActivePrio;
     KernSched_InsertCore(pThisCore, TRUE);
 
-    pThread->Info.mThreadState = K2OS_Thread_Running;
+    // STATE: set thread state as running
     pThisCore->mpActiveThread = pThread;
     K2_CpuWriteBarrier();
 }
@@ -347,7 +356,7 @@ void KernSched_Exec(void)
             pThread = pCpuCore->Sched.mpRunThread;
             if (pThread != NULL)
             {
-                K2_ASSERT(pThread->Info.mThreadState == K2OS_Thread_Running);
+                // STATE: ASSERT THREAD IS IN RUNNING STATE
 
                 pCpuCore->mpActiveThread = pThread;
                 K2_CpuWriteBarrier();
@@ -489,4 +498,9 @@ void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore)
     K2_ASSERT(gData.Sched.SchedTimerSchedItem.mSchedItemType == KernSchedItem_Invalid);
     gData.Sched.SchedTimerSchedItem.mSchedItemType = KernSchedItem_SchedTimer;
     sQueueSchedItem(&gData.Sched.SchedTimerSchedItem);
+}
+
+void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread)
+{
+    K2_ASSERT(0);
 }

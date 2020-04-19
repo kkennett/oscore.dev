@@ -57,7 +57,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
         return FALSE;
     }
 
-    pSeg = pCurThread->mpWorkingSeg;
+    pSeg = pCurThread->mpWorkSeg;
 
     K2_ASSERT(pSeg != NULL);
 
@@ -120,7 +120,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
 
             if (!K2STAT_IS_ERROR(stat))
             {
-                K2_ASSERT(pCurThread->mpWorkingSeg == NULL);
+                K2_ASSERT(pCurThread->mpWorkSeg == NULL);
                 *apAddr = pSeg->ProcSegTreeNode.mUserVal;
                 K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
                 K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);

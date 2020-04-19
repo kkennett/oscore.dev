@@ -40,7 +40,7 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
 
     K2_ASSERT(apThread != NULL);
     K2_ASSERT(apThread->Info.CreateInfo.mEntrypoint != NULL);
-    K2_ASSERT(apThread->Info.mThreadState == K2OS_Thread_Init);
+    // STATE: Assert thread is being created
 
     pThreadPage = K2_GET_CONTAINER(K2OSKERN_THREAD_PAGE, apThread, Thread);
 
