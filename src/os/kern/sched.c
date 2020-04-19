@@ -155,8 +155,15 @@ void KernSched_AddCurrentCore(void)
 
 static void sInit_AfterVirt(void)
 {
+    UINT32 ix;
+
     K2LIST_Init(&gData.Sched.CpuCorePrioList);
-    K2LIST_Init(&gData.Sched.ReadyThreadPrioList);
+
+    for (ix = 0; ix < K2OS_THREADPRIO_LEVELS; ix++)
+    {
+        K2LIST_Init(&gData.Sched.ReadyThreadsByPrioList[ix]);
+    }
+
     gData.Sched.SchedTimerSchedTimerItem.mIsSchedTimerItem = TRUE;
     //
     // this is only set valid by an actual sched timer expiry
@@ -499,7 +506,24 @@ void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore)
     sQueueSchedItem(&gData.Sched.SchedTimerSchedItem);
 }
 
-void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread)
+void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio)
 {
-    K2_ASSERT(0);
+    UINT32          activePrio;
+    K2LIST_ANCHOR * pAnchor;
+    K2LIST_LINK *   pListLink;
+
+    activePrio = apThread->Sched.mActivePrio;
+    K2_ASSERT(activePrio < K2OS_THREADPRIO_LEVELS);
+
+    K2_ASSERT(apThread->Sched.State.mLifeStage < KernThreadLifeStage_Exited);
+    K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Ready);
+    K2_ASSERT(apThread->Sched.State.mStopFlags == 0);
+
+    pAnchor = &gData.Sched.ReadyThreadsByPrioList[activePrio];
+    pListLink = &apThread->Sched.PrioListLink;
+
+    if (aEndOfListAtPrio)
+        K2LIST_AddAtTail(pAnchor, pListLink);
+    else
+        K2LIST_AddAtHead(pAnchor, pListLink);
 }

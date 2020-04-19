@@ -173,10 +173,11 @@
 #define K2OS_THREAD_ENV_TLS_COUNT                   16
 
 #define K2OS_THREADPRIO_HIGHEST                     0
-#define K2OS_THREADPRIO_ABOVE_NORMAL                100
-#define K2OS_THREADPRIO_NORMAL                      200
-#define K2OS_THREADPRIO_BELOW_NORMAL                300
-#define K2OS_THREADPRIO_IDLE                        1000
+#define K2OS_THREADPRIO_ABOVE_NORMAL                4
+#define K2OS_THREADPRIO_NORMAL                      8
+#define K2OS_THREADPRIO_BELOW_NORMAL                12
+#define K2OS_THREADPRIO_IDLE                        15
+#define K2OS_THREADPRIO_LEVELS                      16
 
 #define K2OS_THREAD_DEFAULT_QUANTUM                 10
 #define K2OS_THREAD_INFINITE_QUANTUM                0xFFFFFFFF

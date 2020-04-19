@@ -64,7 +64,7 @@ BOOL KernSched_Exec_ThreadCreate(void)
     //
     // add to ready thread prio list
     //
-    KernSched_InsertThreadToReadyList(pNewThread);
+    KernSched_InsertThreadToReadyList(pNewThread, TRUE);
 
     gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 

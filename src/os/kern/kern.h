@@ -356,7 +356,8 @@ typedef struct _K2OSKERN_SCHED K2OSKERN_SCHED;
 struct _K2OSKERN_SCHED
 {
     K2LIST_ANCHOR                   CpuCorePrioList;
-    K2LIST_ANCHOR                   ReadyThreadPrioList;
+
+    K2LIST_ANCHOR                   ReadyThreadsByPrioList[K2OS_THREADPRIO_LEVELS];
 
     UINT32                          mSysWideThreadCount;
 
@@ -1070,7 +1071,7 @@ void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
-void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread);
+void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
 
 /* --------------------------------------------------------------------------------- */
 

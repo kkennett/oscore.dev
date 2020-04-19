@@ -393,7 +393,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo)
     return TRUE;
 }
 
-void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode)
+void K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode)
 {
     K2OSKERN_OBJ_THREAD * pThisThread;
 
@@ -452,7 +452,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aF
     return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR const *apAttr)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR const *apAttr)
 {
     K2STAT                  stat;
     K2STAT                  stat2;
@@ -473,6 +473,27 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS
 
     K2MEM_Copy(&newAttr, apAttr, sizeof(K2OS_THREADATTR));
 
+    if ((newAttr.mFieldMask & K2OS_THREADATTR_PRIORITY) &&
+        (newAttr.mPriority >= K2OS_THREADPRIO_LEVELS))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+    
+    if ((newAttr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK) &&
+        (0 == (newAttr.mAffinityMask & ((1 << gData.mCpuCount) - 1))))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    if ((newAttr.mFieldMask & K2OS_THREADATTR_QUANTUM) &&
+        (0 == newAttr.mQuantum))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
     stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
     if (!K2STAT_IS_ERROR(stat))
     {
@@ -486,13 +507,13 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS
 
             if (newAttr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK)
             {
-                if (newAttr.mPriority == pThreadObj->Sched.Attr.mAffinityMask)
+                if (newAttr.mAffinityMask == pThreadObj->Sched.Attr.mAffinityMask)
                     newAttr.mFieldMask &= ~K2OS_THREADATTR_AFFINITYMASK;
             }
 
             if (newAttr.mFieldMask & K2OS_THREADATTR_QUANTUM)
             {
-                if (newAttr.mPriority == pThreadObj->Sched.Attr.mQuantum)
+                if (newAttr.mQuantum == pThreadObj->Sched.Attr.mQuantum)
                     newAttr.mFieldMask &= ~K2OS_THREADATTR_QUANTUM;
             }
 
@@ -521,7 +542,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS
     return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR *apRetAttr)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_THREADATTR *apRetAttr)
 {
     K2STAT                  stat;
     K2STAT                  stat2;
@@ -571,7 +592,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS
     return TRUE;
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apAttr)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apAttr)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_THREAD *   pThisThread;
@@ -589,19 +610,35 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetOwnAttr(K2OS_THREADATTR const *apA
 
     if (newAttr.mFieldMask & K2OS_THREADATTR_PRIORITY)
     {
+        if (newAttr.mPriority >= K2OS_THREADPRIO_LEVELS)
+        {
+            K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+            return FALSE;
+        }
         if (newAttr.mPriority == pThisThread->Sched.mBasePrio)
             newAttr.mFieldMask &= ~K2OS_THREADATTR_PRIORITY;
     }
 
     if (newAttr.mFieldMask & K2OS_THREADATTR_AFFINITYMASK)
     {
-        if (newAttr.mPriority == pThisThread->Sched.Attr.mAffinityMask)
+        if (0 == (newAttr.mAffinityMask & ((1 << gData.mCpuCount) - 1)))
+        {
+            K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+            return FALSE;
+        }
+        if (newAttr.mAffinityMask == pThisThread->Sched.Attr.mAffinityMask)
             newAttr.mFieldMask &= ~K2OS_THREADATTR_AFFINITYMASK;
     }
 
     if (newAttr.mFieldMask & K2OS_THREADATTR_QUANTUM)
     {
-        if (newAttr.mPriority == pThisThread->Sched.Attr.mQuantum)
+        if (0 == newAttr.mQuantum)
+        {
+            K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+            return FALSE;
+        }
+
+        if (newAttr.mQuantum == pThisThread->Sched.Attr.mQuantum)
             newAttr.mFieldMask &= ~K2OS_THREADATTR_QUANTUM;
     }
 
