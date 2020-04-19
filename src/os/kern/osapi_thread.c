@@ -325,6 +325,20 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_T
         if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
         {
             K2MEM_Copy(apRetInfo, &pThreadObj->Info, sizeof(K2OS_THREADINFO));
+
+            if (pThreadObj->Sched.State.mStopFlags != 0)
+                apRetInfo->mState = K2OS_ThreadState_Stopped;
+            else if (pThreadObj->Sched.State.mLifeStage >= KernThreadLifeStage_Exited)
+                apRetInfo->mState = K2OS_ThreadState_Dead;
+            else
+            {
+                if (pThreadObj->Sched.State.mRunState == KernThreadRunState_Running)
+                    apRetInfo->mState = K2OS_ThreadState_Running;
+                else if (pThreadObj->Sched.State.mRunState == KernThreadRunState_Ready)
+                    apRetInfo->mState = K2OS_ThreadState_Ready;
+                else
+                    apRetInfo->mState = K2OS_ThreadState_Waiting;
+            }
         }
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
@@ -361,6 +375,20 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnInfo(K2OS_THREADINFO *apRetInfo)
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     K2MEM_Copy(apRetInfo, &pThisThread->Info, sizeof(K2OS_THREADINFO));
+
+    if (pThisThread->Sched.State.mStopFlags != 0)
+        apRetInfo->mState = K2OS_ThreadState_Stopped;
+    else if (pThisThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited)
+        apRetInfo->mState = K2OS_ThreadState_Dead;
+    else
+    {
+        if (pThisThread->Sched.State.mRunState == KernThreadRunState_Running)
+            apRetInfo->mState = K2OS_ThreadState_Running;
+        else if (pThisThread->Sched.State.mRunState == KernThreadRunState_Ready)
+            apRetInfo->mState = K2OS_ThreadState_Ready;
+        else
+            apRetInfo->mState = K2OS_ThreadState_Waiting;
+    }
 
     return TRUE;
 }
