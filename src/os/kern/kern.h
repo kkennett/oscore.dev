@@ -995,7 +995,7 @@ void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *ap
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 BOOL    KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMustHaveAttr);
 UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr);
-void    KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread, UINT32 aUserModeStackPtr);
+void    KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread);
 void    KernArch_LaunchCores(void);
 void    KernArch_ThreadCallSched(void);
 void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore);

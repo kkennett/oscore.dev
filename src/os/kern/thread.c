@@ -49,14 +49,15 @@ static void sInit_BeforeVirt(void)
     // 
     pThread = gpThread0;
     K2MEM_Zero(pThread, sizeof(K2OSKERN_OBJ_THREAD));
-    K2LIST_AddAtTail(&gpProc0->ThreadList, &pThread->ProcThreadListLink);
     pThread->Hdr.mObjType = K2OS_Obj_Thread;
     pThread->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     pThread->Hdr.mRefCount = 0x7FFFFFFF;
     pThread->mpProc = gpProc0;
+    K2LIST_AddAtTail(&gpProc0->ThreadList, &pThread->ProcThreadListLink);
     pThread->mpStackSeg = &gpProc0->SegObjPrimaryThreadStack;
     pThread->Env.mId = 1;
     pThread->mIsKernelThread = TRUE;
+    pThread->mIsInKernelMode = TRUE;
     pThread->Info.mThreadState = K2OS_Thread_Init;
     pThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);

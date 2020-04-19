@@ -131,7 +131,7 @@ void KernSched_AddCurrentCore(void)
     pThread->Sched.mActivePrio = pThread->Sched.mBasePrio;
     K2LIST_Init(&pThread->Sched.OwnedCritSecList);
 
-    KernArch_PrepareThread(pThread, 0);
+    KernArch_PrepareThread(pThread);
 
     gData.Sched.mSysWideThreadCount = 1;
 

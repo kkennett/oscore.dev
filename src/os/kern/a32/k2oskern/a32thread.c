@@ -32,7 +32,7 @@
 
 #include "a32kern.h"
 
-void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread, UINT32 aUserModeStackPtr)
+void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
 {
     K2OSKERN_THREAD_PAGE *  pThreadPage;
     A32_EXCEPTION_CONTEXT * pInitCtx;
