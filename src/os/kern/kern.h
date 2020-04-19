@@ -307,7 +307,7 @@ enum _KernThreadLifeStage
 {
     KernThreadLifeStage_Init = 0,
     KernThreadLifeStage_Instantiated,
-    KernThreadLifeStage_Started,        // not signalled at this stage or before
+    KernThreadLifeStage_Run,            // not signalled at this stage or before
     KernThreadLifeStage_Exited,         // signalled at this stage or higher
     KernThreadLifeStage_Killed,
     KernThreadLifeStage_Cleanup
@@ -317,6 +317,7 @@ typedef enum _KernThreadRunState KernThreadRunState;
 enum _KernThreadRunState
 {
     KernThreadRunState_None=0,
+    KernThreadRunState_Transition,
     KernThreadRunState_Ready,
     KernThreadRunState_Running,
     KernThreadRunState_Blocked_CS,
@@ -1071,7 +1072,7 @@ void KernSched_TlbInvalidateAcrossCores(void);
 void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
-void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
+void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
 
 /* --------------------------------------------------------------------------------- */
 

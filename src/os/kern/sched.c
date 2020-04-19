@@ -139,7 +139,7 @@ void KernSched_AddCurrentCore(void)
 
     KernArch_PrepareThread(pThread);
 
-    pThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
+    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Transition);
     pThread->Sched.State.mRunState = KernThreadRunState_Running;
 
     gData.Sched.mSysWideThreadCount = 1;
@@ -506,7 +506,7 @@ void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore)
     sQueueSchedItem(&gData.Sched.SchedTimerSchedItem);
 }
 
-void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio)
+void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio)
 {
     UINT32          activePrio;
     K2LIST_ANCHOR * pAnchor;
@@ -515,13 +515,14 @@ void KernSched_InsertThreadToReadyList(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndO
     activePrio = apThread->Sched.mActivePrio;
     K2_ASSERT(activePrio < K2OS_THREADPRIO_LEVELS);
 
-    K2_ASSERT(apThread->Sched.State.mLifeStage < KernThreadLifeStage_Exited);
-    K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Ready);
+    K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Run);
+    K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Transition);
     K2_ASSERT(apThread->Sched.State.mStopFlags == 0);
 
     pAnchor = &gData.Sched.ReadyThreadsByPrioList[activePrio];
     pListLink = &apThread->Sched.PrioListLink;
 
+    apThread->Sched.State.mRunState = KernThreadRunState_Ready;
     if (aEndOfListAtPrio)
         K2LIST_AddAtTail(pAnchor, pListLink);
     else

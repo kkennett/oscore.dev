@@ -44,7 +44,7 @@ ifeq ($(TARGET_TYPE),OBJ)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 else
 ifeq ($(TARGET_TYPE),LIB)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)
+K2_TARGET_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)
 else
 ifeq ($(TARGET_TYPE),DLX)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
@@ -65,21 +65,41 @@ endif
 
 .PHONY: default clean
 
+#========================================================================================
+# SOURCE LIBRARIES, DLX
+#========================================================================================
+
 OBJECT_FROM_SOURCE = $(K2_OBJECT_PATH)/$(addsuffix .o, $(basename $(source)))
 OBJECTS = $(foreach source, $(SOURCES), $(OBJECT_FROM_SOURCE))
 ONE_OBJECT = $(foreach source, $(firstword $(SOURCES)), $(OBJECT_FROM_SOURCE))
 
-REF_ONE_K2_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(notdir $(1)).lib
-REF_ONE_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_LIB,$(subst @,,$(libdep))),$(libdep))
+REF_ONE_K2_SRC_LIB = $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/$(notdir $(1)).lib
+REF_ONE_SRC_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_SRC_LIB,$(subst @,,$(libdep))),$(libdep))
 
-REF_ONE_K2_KERN_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/kern/$(notdir $(1)).lib
-REF_ONE_KERN_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_KERN_LIB,$(subst @,,$(libdep))),$(libdep))
+REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(REF_ONE_SRC_LIB))
+REFSRCDLX_LIBS = $(foreach libdep,$(SOURCE_DLX),$(REF_ONE_SRC_LIB))
 
-REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(REF_ONE_LIB))
-REFTRG_LIBS = $(foreach libdep,$(TARGET_LIBS),$(REF_ONE_LIB))
-REFKRN_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(REF_ONE_KERN_LIB))
-REFKRNDLX_LIBS = $(foreach libdep,$(KERN_SOURCE_DLX),$(REF_ONE_KERN_LIB))
-REFDLX_LIBS = $(foreach libdep,$(SOURCE_DLX),$(REF_ONE_LIB))
+REF_ONE_K2_KERN_SRC_LIB = $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/kern/$(notdir $(1)).lib
+REF_ONE_KERN_SRC_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_KERN_SRC_LIB,$(subst @,,$(libdep))),$(libdep))
+
+REFKRNSRC_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(REF_ONE_KERN_SRC_LIB))
+REFKRNSRCDLX_LIBS = $(foreach libdep,$(KERN_SOURCE_DLX),$(REF_ONE_KERN_SRC_LIB))
+
+#========================================================================================
+# TARGET LIBRARIES, DLX
+#========================================================================================
+
+REF_ONE_K2_TRG_LIB = $(K2_TARGET_PRE)/lib/$(K2_BUILD_SPEC)/$(notdir $(1)).lib
+REF_ONE_TRG_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_TRG_LIB,$(subst @,,$(libdep))),$(libdep))
+
+REFTRG_LIBS = $(foreach libdep,$(TARGET_LIBS),$(REF_ONE_TRG_LIB))
+REFTRGDLX_LIBS = $(foreach libdep,$(TARGET_DLX),$(REF_ONE_TRG_LIB))
+
+REF_ONE_K2_KERN_TRG_LIB = $(K2_TARGET_PRE)/lib/$(K2_BUILD_SPEC)/kern/$(notdir $(1)).lib
+REF_ONE_KERN_TRG_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_KERN_TRG_LIB,$(subst @,,$(libdep))),$(libdep))
+
+REFKRNTRG_LIBS = $(foreach libdep,$(KERN_TARGET_LIBS),$(REF_ONE_KERN_TRG_LIB))
+REFKRNTRGDLX_LIBS = $(foreach libdep,$(KERN_TARGET_DLX),$(REF_ONE_KERN_TRG_LIB))
 
 #========================================================================================
 # DEFAULT OPTIONS
@@ -162,10 +182,10 @@ default: $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(K2_TARGET_FULL_SPEC)
 $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS):
 	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
 
-$(K2_TARGET_FULL_SPEC): $(OBJECTS) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS)
+$(K2_TARGET_FULL_SPEC): $(OBJECTS) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRNSRC_LIBS) $(REFKRNTRG_LIBS)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@echo --------Creating ELF $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRNSRC_LIBS) $(REFKRNTRG_LIBS) -)
 	
 endif
 
@@ -193,9 +213,17 @@ LDENTRY := -e __K2OS_dlx_crt
 CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crtstub/crtstub.o
 
 ifneq ($(K2_KERNEL),)
+#ifeq ($(K2_USE_CRT_SRC),)
+#KERN_TARGET_DLX += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
+#else
 KERN_SOURCE_DLX += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
+#endif
 else
+#ifeq ($(K2_USE_CRT_SRC),)
+#TARGET_DLX += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
+#else
 SOURCE_DLX += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
+#endif
 endif
 
 endif
@@ -208,9 +236,9 @@ K2_TARGET_ELFNAME_SPEC := $(K2_TARGET_NAME).elf
 K2_TARGET_ELFFULL_SPEC := $(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)/$(K2_TARGET_ELFNAME_SPEC)
 
 ifneq ($(K2_KERNEL),)
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/kern
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/kern
 else
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)
 endif
 
 ifeq ($(DLX_STACK),)
@@ -221,7 +249,7 @@ ifeq ($(DLX_INF),)
 $(error No DLX_INF specified)
 else
 DLX_INF_O := $(K2_OBJECT_PATH)/exp_$(K2_TARGET_NAME).o
-EXPORT_CMD := k2export -i $(DLX_INF) -o $(DLX_INF_O) $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS)
+EXPORT_CMD := k2export -i $(DLX_INF) -o $(DLX_INF_O) $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) 
 endif
 
 CHECK_REFSRC_ONE_K2_LIB = checkref_$(1)
@@ -237,7 +265,7 @@ default: $(CHECK_REFSRC_LIBS) $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_KERN_LIBS) $(C
 $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX):
 	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
 
-$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF)
+$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(DLX_INF)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH)) md $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)) md $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH))
@@ -245,7 +273,7 @@ $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/
 	@echo -------- Create Exports from ELF for DLX $@ --------
 	@$(EXPORT_CMD)
 	@echo -------- Linking ELF for DLX $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(CRT_OBJ) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRN_LIBS) $(REFKRNDLX_LIBS) $(REFDLX_LIBS) $(DLX_INF_O) $(CRTSTUB_OBJ) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(CRT_OBJ) $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(DLX_INF_O) $(CRTSTUB_OBJ) -)
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------

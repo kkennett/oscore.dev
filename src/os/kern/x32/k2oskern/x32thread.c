@@ -65,6 +65,9 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
     apThread->mIsInKernelMode = TRUE;
 
     apThread->mStackPtr_Kernel = stackPtr;
+
+    apThread->Sched.State.mLifeStage = KernThreadLifeStage_Run;
+    apThread->Sched.State.mRunState = KernThreadRunState_Transition;
 }
 
 void X32Kern_ThreadCallSched(X32_EXCEPTION_CONTEXT aContext)

@@ -55,16 +55,16 @@ BOOL KernSched_Exec_ThreadCreate(void)
     //
     // thread life stage moves to started, it starts as ready, and is not stopped
     //
-    pNewThread->Sched.State.mLifeStage = KernThreadLifeStage_Started;
-    pNewThread->Sched.State.mRunState = KernThreadRunState_Ready;
-    pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
+    K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Run);
+    K2_ASSERT(pNewThread->Sched.State.mRunState == KernThreadRunState_Transition);
+    K2_ASSERT(pNewThread->Sched.State.mStopFlags == KERNTHREAD_STOP_FLAG_NONE);
 
     gData.Sched.mSysWideThreadCount++;
 
     //
     // add to ready thread prio list
     //
-    KernSched_InsertThreadToReadyList(pNewThread, TRUE);
+    KernSched_MakeThreadReady(pNewThread, TRUE);
 
     gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 

@@ -198,7 +198,7 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
     // thread cannot be in created state 
     //
     if ((apThread->Sched.State.mLifeStage == KernThreadLifeStage_Init) &&
-        (apThread->Sched.State.mLifeStage == KernThreadLifeStage_Started))
+        (apThread->Sched.State.mLifeStage == KernThreadLifeStage_Run))
     {
         K2OSKERN_Panic("*** Invalid thread disposal\n");
     }
