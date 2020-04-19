@@ -1108,9 +1108,9 @@ void   KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj);
 
 /* --------------------------------------------------------------------------------- */
 
-K2STAT      KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
+K2STAT      KernTok_CreateNoAddRef(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
 K2STAT      KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
-K2OS_TOKEN  KernTok_CreateFromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType);
+K2OS_TOKEN  KernTok_CreateNoAddRef_FromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType);
 
 /* --------------------------------------------------------------------------------- */
 

@@ -173,7 +173,7 @@ struct _K2OS_THREADINFO
     UINT32              mProcessId;
     UINT32              mLastStatus;
     UINT32              mExitCode;
-    K2OS_ThreadState    mState;
+    K2OS_ThreadState    mThreadState;
     UINT32              mPauseCount;
     UINT32              mTotalRunTimeMs;
     K2OS_THREADCREATE   CreateInfo;

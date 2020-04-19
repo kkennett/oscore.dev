@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-K2STAT KernTok_Create(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens)
+K2STAT KernTok_CreateNoAddRef(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_PROCESS *  pCurProcess;
@@ -361,7 +361,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
     return stat;
 }
 
-K2OS_TOKEN KernTok_CreateFromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType)
+K2OS_TOKEN KernTok_CreateNoAddRef_FromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType)
 {
     K2STAT                  stat;
     K2STAT                  stat2;
@@ -408,7 +408,7 @@ K2OS_TOKEN KernTok_CreateFromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType 
                 //
                 // creating a token will ***NOT*** add a reference
                 //
-                stat = KernTok_Create(1, &pRefObj, &tokObject);
+                stat = KernTok_CreateNoAddRef(1, &pRefObj, &tokObject);
                 if (K2STAT_IS_ERROR(stat))
                 {
                     stat2 = KernObj_Release(pRefObj);

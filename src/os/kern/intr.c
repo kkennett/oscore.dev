@@ -109,7 +109,7 @@ K2OSKERN_InstallIntrHandler(
     else
     {
         pObjHdr = &pIntr->Hdr;
-        stat = KernTok_Create(1, &pObjHdr, &tokIntr);
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokIntr);
         K2_ASSERT(tokIntr != NULL);
 
         //

@@ -414,7 +414,7 @@ UINT32 KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *
 
     K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
 
-#if !K2_TARGET_ARCH_IS_ARM
+#if K2_TARGET_ARCH_IS_INTEL
     if (emptyPt)
     {
         //

@@ -616,7 +616,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetAttr
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateFromNamedObject(aNameToken, K2OS_Obj_Thread);
+    return KernTok_CreateNoAddRef_FromNamedObject(aNameToken, K2OS_Obj_Thread);
 }
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
@@ -678,10 +678,11 @@ K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
     }
 
     //
-    // creating a token will ***NOT*** add a reference
+    // reference to thread was added above. this is for the new token
+    // if it is able to be created
     //
     pRefObj = &pThread->Hdr;
-    stat = KernTok_Create(1, &pRefObj, &tokThread);
+    stat = KernTok_CreateNoAddRef(1, &pRefObj, &tokThread);
     if (K2STAT_IS_ERROR(stat))
     {
         stat = KernObj_Release(pRefObj);
@@ -739,7 +740,7 @@ static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABL
             *apResult = K2STAT_ERROR_BAD_ARGUMENT;
             return TRUE;
         }
-        return aObjWait.mpThread->Info.mState >= K2OS_Thread_Exited;
+        return aObjWait.mpThread->Info.mThreadState >= K2OS_Thread_Exited;
 
     case K2OS_Obj_Semaphore:
         if (gData.mKernInitStage < KernInitStage_MultiThreaded)
@@ -1007,7 +1008,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
     if (!K2STAT_IS_ERROR(stat))
     {
         pObjHdr = &pNewThread->Hdr;
-        stat = KernTok_Create(1, &pObjHdr, &tokThread);
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
         if (!K2STAT_IS_ERROR(stat))
         {
             K2_ASSERT(tokThread != NULL);

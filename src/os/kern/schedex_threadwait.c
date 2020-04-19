@@ -100,7 +100,7 @@ BOOL KernSched_Exec_ThreadWait(void)
             break;
 
         case K2OS_Obj_Thread:
-            if (objWait.mpThread->Info.mState >= K2OS_Thread_Exited)
+            if (objWait.mpThread->Info.mThreadState >= K2OS_Thread_Exited)
             {
                 isSatisfied = TRUE;
             }

@@ -40,7 +40,7 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread, UINT32 aUserModeStack
 
     K2_ASSERT(apThread != NULL);
     K2_ASSERT(apThread->Info.CreateInfo.mEntrypoint != NULL);
-    K2_ASSERT(apThread->Info.mState == K2OS_Thread_Init);
+    K2_ASSERT(apThread->Info.mThreadState == K2OS_Thread_Init);
 
     pThreadPage = K2_GET_CONTAINER(K2OSKERN_THREAD_PAGE, apThread, Thread);
 

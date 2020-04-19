@@ -35,31 +35,6 @@
 void KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread)
 {
     K2OSKERN_Debug("DUMP THREAD %08X\n", apThread);
-    K2OSKERN_Debug("  Hdr.mObjType = %d\n", apThread->Hdr.mObjType);
-    K2OSKERN_Debug("  Hdr.mObjFlags = %08X\n", apThread->Hdr.mObjFlags);
-    K2OSKERN_Debug("  Hdr.mRefCount = %08X\n", apThread->Hdr.mRefCount);
-    K2OSKERN_Debug("  mpProc = %08X\n", apThread->mpProc);
-    K2OSKERN_Debug("  mpStackSeg = %08X\n", apThread->mpStackSeg);
-    K2OSKERN_Debug("  Info:\n");
-    K2OSKERN_Debug("    mStructBytes = %d\n", apThread->Info.mStructBytes);
-    K2OSKERN_Debug("    mProcessId = %d\n", apThread->Info.mProcessId);
-    K2OSKERN_Debug("    mLastStatus = %d\n", apThread->Info.mLastStatus);
-    K2OSKERN_Debug("    mExitCode = %08X\n", apThread->Info.mExitCode);
-    K2OSKERN_Debug("    CreateInfo:\n");
-    K2OSKERN_Debug("      mStructBytes = %d\n", apThread->Info.CreateInfo.mStructBytes);
-    K2OSKERN_Debug("      mEntrypoint = %08X\n", apThread->Info.CreateInfo.mEntrypoint);
-    K2OSKERN_Debug("      mpArg = %08X\n", apThread->Info.CreateInfo.mpArg);
-    K2OSKERN_Debug("      mStackPages = %d\n", apThread->Info.CreateInfo.mStackPages);
-    K2OSKERN_Debug("      Attr:\n");
-    K2OSKERN_Debug("        mFieldMask = %08X\n", apThread->Info.CreateInfo.Attr.mFieldMask);
-    K2OSKERN_Debug("        mPriority = %d\n", apThread->Info.CreateInfo.Attr.mPriority);
-    K2OSKERN_Debug("        mAffinityMask = %08X\n", apThread->Info.CreateInfo.Attr.mAffinityMask);
-    K2OSKERN_Debug("        mQuantum = %d\n", apThread->Info.CreateInfo.Attr.mQuantum);
-    K2OSKERN_Debug("    mState = %d\n", apThread->Info.mState);
-    K2OSKERN_Debug("    mPauseCount = %d\n", apThread->Info.mPauseCount);
-    K2OSKERN_Debug("    mTotalRunTimeMs = %d\n", apThread->Info.mTotalRunTimeMs);
-    K2OSKERN_Debug("  mStackPtr_Kernel = %08X\n", apThread->mStackPtr_Kernel);
-    K2OSKERN_Debug("  mStackPtr_User = %08X\n", apThread->mStackPtr_User);
 }
 
 static void sInit_BeforeVirt(void)
@@ -82,7 +57,7 @@ static void sInit_BeforeVirt(void)
     pThread->mpStackSeg = &gpProc0->SegObjPrimaryThreadStack;
     pThread->Env.mId = 1;
     pThread->mIsKernelThread = TRUE;
-    pThread->Info.mState = K2OS_Thread_Init;
+    pThread->Info.mThreadState = K2OS_Thread_Init;
     pThread->Info.mStructBytes = sizeof(K2OS_THREADINFO);
     pThread->Info.CreateInfo.mStructBytes = sizeof(K2OS_THREADCREATE);
     pThread->Info.CreateInfo.mEntrypoint = K2OSKERN_Thread0;
