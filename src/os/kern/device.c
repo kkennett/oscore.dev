@@ -75,7 +75,7 @@ K2OSKERN_MapDevice(
         pSeg->Hdr.mObjType = K2OS_Obj_Segment;
         pSeg->Hdr.mRefCount = 1;
         K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
-        pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_DEVMAP | K2OS_MAPTYPE_KERN_DEVICEIO;
+        pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_DEVMAP | K2OS_MAPTYPE_KERN_DEVICEIO;
         pSeg->Info.DeviceMap.mPhysDeviceAddr = aPhysDeviceAddr;
 
         K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
@@ -144,11 +144,7 @@ K2OSKERN_UnmapDevice(
 {
     K2OSKERN_OBJ_SEGMENT *  pSeg;
     K2TREE_NODE *           pTreeNode;
-    UINT32                  physAddr;
     BOOL                    disp;
-    UINT32                  chunkLeft;
-    UINT32                  pageCount;
-    UINT32                  unmapPhys;
 
     if (gData.mKernInitStage < KernInitStage_MemReady)
         return K2STAT_ERROR_API_ORDER;
@@ -176,39 +172,15 @@ K2OSKERN_UnmapDevice(
         return K2STAT_ERROR_NOT_FOUND;
     }
 
-    //
-    // unmap all pages in the segment
-    //
-    chunkLeft = DEVMAP_CHUNK;
-    pageCount = pSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
-    physAddr = pSeg->Info.DeviceMap.mPhysDeviceAddr;
-
-    disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
-
-    do {
-        unmapPhys = KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, aVirtDeviceAddr, K2OSKERN_PTE_NP_BIT);
-        
-        K2_ASSERT(unmapPhys == physAddr);
-
-        aVirtDeviceAddr += K2_VA32_MEMPAGE_BYTES;
-        physAddr += K2_VA32_MEMPAGE_BYTES;
-
-        if (--chunkLeft == 0)
-        {
-            if (pageCount > 1)
-            {
-                K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
-                disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
-                chunkLeft = DEVMAP_CHUNK;
-            }
-        }
-
-    } while (--pageCount);
-
-    K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+    if ((pSeg->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK) != K2OSKERN_SEG_ATTR_TYPE_DEVMAP)
+    {
+        KernObj_Release(&pSeg->Hdr);
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return K2STAT_ERROR_BAD_ARGUMENT;
+    }
 
     //
-    // now we can double-release the segment
+    // double-release the segment
     //
     KernObj_Release(&pSeg->Hdr);    // caller reference
     KernObj_Release(&pSeg->Hdr);    // local reference

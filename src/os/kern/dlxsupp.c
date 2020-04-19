@@ -72,7 +72,7 @@ sInitBuiltInDlx(
         }
         else
         {
-            apDlxObj->SegObj[ix].mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_DLX_PART | sSegToAttr(ix);
+            apDlxObj->SegObj[ix].mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_DLX_PART | sSegToAttr(ix);
             apDlxObj->SegObj[ix].Info.DlxPart.mpDlxObj = apDlxObj;
         }
     }
@@ -83,7 +83,7 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.mpProc = gpProc0;
     apDlxObj->PageSeg.ProcSegTreeNode.mUserVal = pageAddr;
     apDlxObj->PageSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
-    apDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OS_SEG_ATTR_TYPE_DLX_PAGE;
+    apDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE;
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
 }
 
@@ -242,9 +242,9 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
         //
         // what type of segment is this?
         //
-        switch (pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK)
+        switch (pSeg->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK)
         {
-        case K2OS_SEG_ATTR_TYPE_DLX_PART:
+        case K2OSKERN_SEG_ATTR_TYPE_DLX_PART:
             pDlxObj = pSeg->Info.DlxPart.mpDlxObj;
             K2_ASSERT(pDlxObj != NULL);
             stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
@@ -252,28 +252,28 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
             K2_ASSERT(&pDlxObj->SegObj[pSeg->Info.DlxPart.mSegmentIndex] == pSeg);
             DLX_AddrToName(pDlxObj->mpDlx, aAddr, pSeg->Info.DlxPart.mSegmentIndex, apRetSymName, aRetSymNameBufLen);
             break;
-        case K2OS_SEG_ATTR_TYPE_PROCESS:
+        case K2OSKERN_SEG_ATTR_TYPE_PROCESS:
             pStockStr = "PROCESS_AREA";
             break;
-        case K2OS_SEG_ATTR_TYPE_THREAD:
+        case K2OSKERN_SEG_ATTR_TYPE_THREAD:
             pStockStr = "THREAD_STACK";
             break;
-        case K2OS_SEG_ATTR_TYPE_HEAP_TRACK:
+        case K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK:
             pStockStr = "HEAP_TRACK";
             break;
-        case K2OS_SEG_ATTR_TYPE_USER:
-            pStockStr = "USER_VIRTALLOC";
+        case K2OSKERN_SEG_ATTR_TYPE_SPARSE:
+            pStockStr = "SPARSE_VIRTALLOC";
             break;
-        case K2OS_SEG_ATTR_TYPE_DEVMAP:
+        case K2OSKERN_SEG_ATTR_TYPE_DEVMAP:
             pStockStr = "DEVICEMAP";
             break;
-        case K2OS_SEG_ATTR_TYPE_PHYSBUF:
+        case K2OSKERN_SEG_ATTR_TYPE_PHYSBUF:
             pStockStr = "PHYSBUF";
             break;
-        case K2OS_SEG_ATTR_TYPE_DLX_PAGE:
+        case K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE:
             pStockStr = "DLX_PAGE";
             break;
-        case K2OS_SEG_ATTR_TYPE_SEG_SLAB:
+        case K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB:
             pStockStr = "SEG_SLAB";
             break;
 

@@ -390,17 +390,17 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 //
 // these coexist in the same UINT32 with K2OS_MEMPAGE_ATTR_xxx
 //
-#define K2OS_SEG_ATTR_TYPE_DLX_PART     0x00010000
-#define K2OS_SEG_ATTR_TYPE_PROCESS      0x00020000
-#define K2OS_SEG_ATTR_TYPE_THREAD       0x00030000
-#define K2OS_SEG_ATTR_TYPE_HEAP_TRACK   0x00040000
-#define K2OS_SEG_ATTR_TYPE_USER         0x00050000
-#define K2OS_SEG_ATTR_TYPE_DEVMAP       0x00060000
-#define K2OS_SEG_ATTR_TYPE_PHYSBUF      0x00070000
-#define K2OS_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
-#define K2OS_SEG_ATTR_TYPE_SEG_SLAB     0x00090000
-#define K2OS_SEG_ATTR_TYPE_COUNT        0x000A0000
-#define K2OS_SEG_ATTR_TYPE_MASK         0x000F0000
+#define K2OSKERN_SEG_ATTR_TYPE_DLX_PART     0x00010000
+#define K2OSKERN_SEG_ATTR_TYPE_PROCESS      0x00020000
+#define K2OSKERN_SEG_ATTR_TYPE_THREAD       0x00030000
+#define K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK   0x00040000
+#define K2OSKERN_SEG_ATTR_TYPE_SPARSE       0x00050000
+#define K2OSKERN_SEG_ATTR_TYPE_DEVMAP       0x00060000
+#define K2OSKERN_SEG_ATTR_TYPE_PHYSBUF      0x00070000
+#define K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
+#define K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB     0x00090000
+#define K2OSKERN_SEG_ATTR_TYPE_COUNT        0x000A0000
+#define K2OSKERN_SEG_ATTR_TYPE_MASK         0x000F0000
 
 typedef struct _K2OSKERN_SEGMENT_INFO_THREAD K2OSKERN_SEGMENT_INFO_THREAD;
 struct _K2OSKERN_SEGMENT_INFO_THREAD
@@ -971,8 +971,7 @@ void   KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg);
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags);
-K2STAT KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount);
-
+void   KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, BOOL aClearNp);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -982,10 +981,12 @@ void   KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
 
 void   KernMap_MakeOnePageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apPhysPageOwner, KernPhysPageList aTargetList);
-void   KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPageOwner, KernPhysPageList aMatchList, UINT32 aNpFlags);
+UINT32 KernMap_BreakOnePageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *apMatchPageOwner, KernPhysPageList aMatchList, UINT32 aNpFlags);
 
 BOOL   KernMap_SegRangeNotMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount);
 BOOL   KernMap_SegRangeMapped(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSeg, UINT32 aPageOffset, UINT32 aPageCount);
+
+void   KernMap_FindMapped(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aVirtAddr, UINT32 aPageCount, UINT32 *apScanIx, UINT32 *apFoundCount);
 
 /* --------------------------------------------------------------------------------- */
 

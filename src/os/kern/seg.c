@@ -41,19 +41,19 @@ void KernSegment_Dump(K2OSKERN_OBJ_SEGMENT *apSeg)
         apSeg->mSegAndMemPageAttr,
         apSeg->ProcSegTreeNode.mUserVal,
         apSeg->mPagesBytes);
-    switch (apSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK)
+    switch (apSeg->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK)
     {
-    case K2OS_SEG_ATTR_TYPE_DLX_PART:
+    case K2OSKERN_SEG_ATTR_TYPE_DLX_PART:
         K2OSKERN_Debug("  DlxObj @%08X\n", apSeg->Info.DlxPart.mpDlxObj);
         K2OSKERN_Debug("   SegIx  %d\n", apSeg->Info.DlxPart.mSegmentIndex);
         K2OSKERN_Debug("  Actual  %08X\n", apSeg->Info.DlxPart.DlxSegmentInfo.mMemActualBytes);
         break;
 
-    case K2OS_SEG_ATTR_TYPE_PROCESS:
+    case K2OSKERN_SEG_ATTR_TYPE_PROCESS:
         K2OSKERN_Debug("  ProcObj @%08X\n", apSeg->Info.Process.mpProc);
         break;
 
-    case K2OS_SEG_ATTR_TYPE_THREAD:
+    case K2OSKERN_SEG_ATTR_TYPE_THREAD:
         K2OSKERN_Debug("  ThreadObj @%08X\n", apSeg->Info.Thread.mpThread);
         break;
 

@@ -940,7 +940,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                 break;
 
             do {
-                stat = KernMem_PhysAllocToThread(pThisThread, 0, cret.mStackPages, FALSE);
+                stat = KernMem_PhysAllocToThread(pThisThread, cret.mStackPages, KernPhys_Disp_Cached, FALSE);
                 if (K2STAT_IS_ERROR(stat))
                     break;
 
@@ -957,7 +957,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                     pSeg->Hdr.mObjType = K2OS_Obj_Segment;
                     pSeg->Hdr.mRefCount = 1;
                     K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
-                    pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
+                    pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
                     pSeg->Info.Thread.mpThread = pNewThread;
 
                     tokThread = NULL;

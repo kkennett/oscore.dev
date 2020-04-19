@@ -80,7 +80,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
             {
                 aPageAttrFlags &= ~K2OS_MEMPAGE_ATTR_KERNEL;
             }
-            pSeg->mSegAndMemPageAttr = K2OS_SEG_ATTR_TYPE_USER | aPageAttrFlags;
+            pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_SPARSE | aPageAttrFlags;
 
             if (aVirtAllocFlags & K2OS_VIRTALLOCFLAG_ALSO_COMMIT)
             {
@@ -244,7 +244,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         return FALSE;
     }
 
-    if ((pSeg->mSegAndMemPageAttr & K2OS_SEG_ATTR_TYPE_MASK) != K2OS_SEG_ATTR_TYPE_USER)
+    if ((pSeg->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK) != K2OSKERN_SEG_ATTR_TYPE_SPARSE)
         aPageAttrFlags = pSeg->mSegAndMemPageAttr;
     
     if (pSeg->ProcSegTreeNode.mUserVal >= K2OS_KVA_KERN_BASE)
@@ -412,9 +412,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
             break;
         }
 
-        stat = KernMem_UnmapSegPagesToThread(pCurThread, pSeg, segOffset, aPageCount);
-        if (K2STAT_IS_ERROR(stat))
-            break;
+        KernMem_UnmapSegPagesToThread(pCurThread, pSeg, segOffset, aPageCount, FALSE);
 
         KernMem_PhysFreeFromThread(pCurThread);
 
