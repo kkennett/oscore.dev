@@ -44,17 +44,11 @@ UINT32 sElapseQuanta(UINT64 *apMaxElapsed)
     K2LIST_LINK *           pScan;
     K2OSKERN_CPUCORE *      pCpuCore;
     K2OSKERN_OBJ_THREAD *   pRunningThread;
-    BOOL                    quantumExpired;
-    BOOL                    changedSomething;
-    BOOL                    subChangedSomething;
     BOOL                    threadsWithNonZeroQuantumLeft;
-    UINT64                  threadElapsed;
     UINT32                  actualElapsed;
     UINT32                  threadLeft;
 
     actualElapsed = (UINT32)(*apMaxElapsed);
-
-    threadsWithNonZeroQuantumLeft = FALSE;
 
     //
     // find the actual amount of time to expire based on 
@@ -63,7 +57,7 @@ UINT32 sElapseQuanta(UINT64 *apMaxElapsed)
     pScan = gData.Sched.CpuCorePrioList.mpHead;
     K2_ASSERT(pScan != NULL);
     do {
-        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pScan, Sched.PrioListLink);
+        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pScan, Sched.CpuCoreListLink);
         pScan = pScan->mpNext;
 
         pRunningThread = pCpuCore->Sched.mpRunThread;
@@ -80,17 +74,20 @@ UINT32 sElapseQuanta(UINT64 *apMaxElapsed)
 
     K2_ASSERT(actualElapsed > 0);
 
+    threadsWithNonZeroQuantumLeft = FALSE;
+
     //
-    // update all quanta before firing events for their expiry
+    // update all thread run times and quantum remaining
     //
     do {
-        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pScan, Sched.PrioListLink);
+        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pScan, Sched.CpuCoreListLink);
         pScan = pScan->mpNext;
 
         pRunningThread = pCpuCore->Sched.mpRunThread;
         if (pRunningThread != NULL)
         {
             pRunningThread->Sched.mTotalRunTimeMs += actualElapsed;
+
             threadLeft = pRunningThread->Sched.mQuantumLeft;
             if (threadLeft > 0)
             {
@@ -121,11 +118,13 @@ BOOL sSignalTimerItem(K2OSKERN_SCHED_TIMERITEM * apItem)
         //
         // wait timed out
         //
+        K2_ASSERT(0);
         break;
     case KernSchedTimerItemType_Alarm:
         //
         // alarm expired
         //
+        K2_ASSERT(0);
         break;
     default:
         K2OSKERN_Panic("***Unknown timer item signalled\n");
@@ -224,6 +223,91 @@ BOOL KernSched_TimePassed(UINT64 aSchedAbsTime)
     K2_ASSERT(gData.Sched.mCurrentAbsTime == aSchedAbsTime);
 
     return changedSomething;
+}
+
+BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitStartTime, UINT64 aWaitMs)
+{
+    //
+    // if the timeritem is already expired, then we need to signal it immediately and
+    // return TRUE.
+    //
+    K2OSKERN_SCHED_TIMERITEM *  pPrev;
+    K2OSKERN_SCHED_TIMERITEM *  pLook;
+    UINT64                      lostTime;
+
+    if (aAbsWaitStartTime < gData.Sched.mCurrentAbsTime)
+    {
+        lostTime = gData.Sched.mCurrentAbsTime - aAbsWaitStartTime;
+        if (lostTime >= aWaitMs)
+        {
+            return sSignalTimerItem(apItem);
+        }
+
+        aWaitMs -= lostTime;
+    }
+    else
+    {
+        aWaitMs += (aAbsWaitStartTime - gData.Sched.mCurrentAbsTime);
+    }
+
+    //
+    // insert the iterm into the timer queue
+    //
+    apItem->mDeltaT = aWaitMs;
+    apItem->mpNext = NULL;
+
+    pPrev = NULL;
+    pLook = gData.Sched.mpTimerItemQueue;
+    if (pLook != NULL)
+    {
+        do {
+            if (pLook->mDeltaT >= apItem->mDeltaT)
+                break;
+            apItem->mDeltaT -= pLook->mDeltaT;
+            pPrev = pLook;
+            pLook = pLook->mpNext;
+        } while (pLook);
+    }
+    apItem->mpNext = pLook;
+    if (pLook != NULL)
+        pLook->mDeltaT -= apItem->mDeltaT;
+    if (pPrev != NULL)
+        pPrev->mpNext = apItem;
+    else
+        gData.Sched.mpTimerItemQueue = apItem;
+
+    apItem->mOnQueue = TRUE;
+
+    return FALSE;
+}
+
+void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem)
+{
+    K2OSKERN_SCHED_TIMERITEM * pLook;
+    K2OSKERN_SCHED_TIMERITEM * pPrev;
+    K2OSKERN_SCHED_TIMERITEM * pNext;
+
+    K2_ASSERT(apItem->mOnQueue);
+
+    pPrev = NULL;
+    pLook = gData.Sched.mpTimerItemQueue;
+    do {
+        if (pLook == apItem)
+            break;
+        pPrev = pLook;
+        pLook = pLook->mpNext;
+    } while (pLook);
+    K2_ASSERT(pLook != NULL);
+
+    pNext = apItem->mpNext;
+    if (pNext != NULL)
+        pNext->mDeltaT += apItem->mDeltaT;
+    if (pPrev != NULL)
+        pPrev->mpNext = pNext;
+    else
+        gData.Sched.mpTimerItemQueue = pNext;
+
+    apItem->mOnQueue = FALSE;
 }
 
 UINT32 KernSched_SystemTickInterrupt(void *apContext)

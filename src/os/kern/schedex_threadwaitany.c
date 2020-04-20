@@ -32,34 +32,63 @@
 
 #include "kern.h"
 
-#define K2OS_TIMEOUT_INFINITE   ((UINT32)-1)
+void
+sWaitList_Insert(
+    K2OSKERN_OBJ_THREAD *       apWaitThread,
+    K2OSKERN_SCHED_WAITENTRY *  apEntry
+)
+{
+    K2OSKERN_OBJ_THREAD *       pOtherThread;
+    K2LIST_ANCHOR *             pAnchor;
+    K2LIST_LINK *               pListLink;
+    K2OSKERN_SCHED_MACROWAIT *  pOtherWait;
+    K2OSKERN_SCHED_WAITENTRY *  pOtherEntry;
 
-#define K2OS_WAIT_MAX_TOKENS    64
-#define K2OS_WAIT_SIGNALLED_0   0
-#define K2OS_WAIT_ABANDONED_0   K2OS_WAIT_MAX_TOKENS
-#define K2OS_WAIT_SUCCEEDED(x)  ((K2OS_WAIT_SIGNALLED_0 <= (x)) && ((x) < K2OS_WAIT_ABANDONED_0))
+    pAnchor = &apEntry->mWaitObj.mpHdr->WaitingThreadsPrioList;
+    if (pAnchor->mNodeCount == 0)
+    {
+        K2LIST_AddAtHead(pAnchor, &apEntry->WaitPrioListLink);
+        return;
+    }
 
-//    struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT
-//        UINT32 mTimeoutMs;
-//        UINT32 mMacroResult;
+    pListLink = pAnchor->mpHead;
+    do {
+        pOtherEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+        pOtherWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pOtherEntry, SchedWaitEntry[pOtherEntry->mMacroIndex]);
+        pOtherThread = pOtherWait->mpWaitingThread;
+        if (pOtherThread->Sched.mActivePrio > apWaitThread->Sched.mActivePrio)
+            break;
+        pListLink = pListLink->mpNext;
+    } while (pListLink != NULL);
 
-BOOL KernSched_Exec_ThreadWait(void)
+    //
+    // pOtherThread is of lower priority than apWaitThread
+    //
+    if (pListLink != NULL)
+        K2LIST_AddBefore(pAnchor, &apEntry->WaitPrioListLink, &pOtherEntry->WaitPrioListLink);
+    else
+        K2LIST_AddAtTail(pAnchor, &apEntry->WaitPrioListLink);
+}
+
+BOOL KernSched_Exec_ThreadWaitAny(void)
 {
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2OSKERN_SCHED_WAITENTRY *  pEntry;
     K2OSKERN_OBJ_WAITABLE       objWait;
     UINT32                      ix;
-    BOOL                        isSatisfied;
+    BOOL                        isSatisfiedWithoutChange;
 
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWait);
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWaitAny);
 
     pWait = gData.Sched.mpActiveItem->Args.ThreadWait.mpMacroWait;
 
     K2_ASSERT(pWait->mNumEntries <= K2OS_WAIT_MAX_TOKENS);
 
-    K2OSKERN_Debug("SCHED:Wait(%d, %d)\n", pWait->mNumEntries, gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
+    K2_ASSERT(FALSE == pWait->mWaitAll);
 
-    isSatisfied = FALSE;
+    K2OSKERN_Debug("SCHED:WaitAny(%d, %d)\n", pWait->mNumEntries, gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
+
+    isSatisfiedWithoutChange = FALSE;
 
     for (ix = 0; ix < pWait->mNumEntries; ix++)
     {
@@ -77,32 +106,32 @@ BOOL KernSched_Exec_ThreadWait(void)
                 if (objWait.mpEvent->mIsAutoReset)
                 {
                     //
-                    // nobody is waiting, or it would be signalled
+                    // nobody is waiting, or it would not be signalled
                     //
                     objWait.mpEvent->mIsSignaled = FALSE;
                 }
-                isSatisfied = TRUE;
+                isSatisfiedWithoutChange = TRUE;
             }
             break;
 
         case K2OS_Obj_Name:
             if (objWait.mpName->Event_IsOwned.mIsSignaled)
             {
-                isSatisfied = TRUE;
+                isSatisfiedWithoutChange = TRUE;
             }
             break;
 
         case K2OS_Obj_Process:
             if (objWait.mpProc->mState >= KernProcState_Done)
             {
-                isSatisfied = TRUE;
+                isSatisfiedWithoutChange = TRUE;
             }
             break;
 
         case K2OS_Obj_Thread:
             if (objWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited)
             {
-                isSatisfied = TRUE;
+                isSatisfiedWithoutChange = TRUE;
             }
             break;
 
@@ -110,7 +139,7 @@ BOOL KernSched_Exec_ThreadWait(void)
             if (objWait.mpSem->mCurCount > 0)
             {
                 objWait.mpSem->mCurCount--;
-                isSatisfied = TRUE;
+                isSatisfiedWithoutChange = TRUE;
             }
             break;
 
@@ -119,7 +148,7 @@ BOOL KernSched_Exec_ThreadWait(void)
             break;
         }
         
-        if (isSatisfied)
+        if (isSatisfiedWithoutChange)
             break;
 
         //
@@ -129,7 +158,7 @@ BOOL KernSched_Exec_ThreadWait(void)
         pEntry->mStickyPulseStatus = 0;
     }
 
-    if (isSatisfied)
+    if (isSatisfiedWithoutChange)
     {
         gData.Sched.mpActiveItem->mResult = K2OS_WAIT_SIGNALLED_0 + ix;
         return FALSE;
@@ -145,11 +174,46 @@ BOOL KernSched_Exec_ThreadWait(void)
     }
 
     //
-    // doing the wait, with a timeout
+    // doing the wait, possibly with a timeout.  thread loses its quantum
+    // here regardless
     //
-    K2_ASSERT(0);
+    gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
+
+    gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
+
+    //
+    // thread transitions to waiting state
+    //
+    KernSched_MakeThreadInactive(gData.Sched.mpActiveItemThread, KernThreadRunState_Waiting);
 
     pWait->mpWaitingThread = gData.Sched.mpActiveItemThread;
+
+    //
+    // mount the wait to the waitlists of the objects it is waiting on
+    //
+    for (ix = 0; ix < pWait->mNumEntries; ix++)
+    {
+        pEntry = &pWait->SchedWaitEntry[ix];
+        sWaitList_Insert(pWait->mpWaitingThread, pEntry);
+    }
+
+    if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs != K2OS_TIMEOUT_INFINITE)
+    {
+        //
+        // mount the timer item for the timeout.  This is done last in case the timeout
+        // is already expired and the wait is completed
+        //
+        pWait->SchedTimerItem.mType = KernSchedTimerItemType_Wait;
+        KernSched_AddTimerItem(
+            &pWait->SchedTimerItem,
+            gData.Sched.mpActiveItemThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs,
+            gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs
+        );
+    }
+    else
+    {
+        pWait->SchedTimerItem.mType = KernSchedTimerItemType_Error;
+    }
 
     return TRUE;  // if something changes scheduling-wise, return true
 }

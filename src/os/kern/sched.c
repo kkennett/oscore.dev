@@ -41,7 +41,7 @@ sgSchedHandlers[KernSchedItemType_Count] =
     NULL,                               // KernSchedItem_SchedTimer - not done through pointer call
     KernSched_Exec_EnterDebug,          // KernSchedItem_EnterDebug
     KernSched_Exec_ThreadExit,          // KernSchedItem_ThreadExit
-    KernSched_Exec_ThreadWait,          // KernSchedItem_ThreadWait
+    KernSched_Exec_ThreadWaitAny,       // KernSchedItem_ThreadWaitAny
     KernSched_Exec_Contended_CritSec,   // KernSchedItem_Contended_Critsec
     KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
@@ -62,7 +62,7 @@ void KernSched_InsertCore(K2OSKERN_CPUCORE *apCore, BOOL aInsertAtTailOfSamePrio
     pFind = gData.Sched.CpuCorePrioList.mpHead;
     if (pFind == NULL)
     {
-        K2LIST_AddAtHead(&gData.Sched.CpuCorePrioList, &apCore->Sched.PrioListLink);
+        K2LIST_AddAtHead(&gData.Sched.CpuCorePrioList, &apCore->Sched.CpuCoreListLink);
 
         return;
     }
@@ -70,31 +70,31 @@ void KernSched_InsertCore(K2OSKERN_CPUCORE *apCore, BOOL aInsertAtTailOfSamePrio
     if (aInsertAtTailOfSamePrio)
     {
         do {
-            pOther = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pFind, Sched.PrioListLink);
+            pOther = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pFind, Sched.CpuCoreListLink);
             if (apCore->Sched.mActivePrio <= pOther->Sched.mActivePrio)
             {
-                K2LIST_AddBefore(&gData.Sched.CpuCorePrioList, &apCore->Sched.PrioListLink, pFind);
+                K2LIST_AddBefore(&gData.Sched.CpuCorePrioList, &apCore->Sched.CpuCoreListLink, pFind);
                 return;
             }
             pFind = pFind->mpNext;
         } while (pFind != NULL);
 
-        K2LIST_AddAtTail(&gData.Sched.CpuCorePrioList, &apCore->Sched.PrioListLink);
+        K2LIST_AddAtTail(&gData.Sched.CpuCorePrioList, &apCore->Sched.CpuCoreListLink);
 
         return;
     }
 
     do {
-        pOther = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pFind, Sched.PrioListLink);
+        pOther = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pFind, Sched.CpuCoreListLink);
         if (apCore->Sched.mActivePrio < pOther->Sched.mActivePrio)
         {
-            K2LIST_AddBefore(&gData.Sched.CpuCorePrioList, &apCore->Sched.PrioListLink, pFind);
+            K2LIST_AddBefore(&gData.Sched.CpuCorePrioList, &apCore->Sched.CpuCoreListLink, pFind);
             return;
         }
         pFind = pFind->mpNext;
     } while (pFind != NULL);
 
-    K2LIST_AddAtTail(&gData.Sched.CpuCorePrioList, &apCore->Sched.PrioListLink);
+    K2LIST_AddAtTail(&gData.Sched.CpuCorePrioList, &apCore->Sched.CpuCoreListLink);
 }
 
 void KernSched_AddCurrentCore(void)
@@ -139,11 +139,10 @@ void KernSched_AddCurrentCore(void)
 
     KernArch_PrepareThread(pThread);
 
-    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Transition);
-    pThread->Sched.State.mRunState = KernThreadRunState_Running;
-
     gData.Sched.mSysWideThreadCount = 1;
 
+    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Transition);
+    pThread->Sched.State.mRunState = KernThreadRunState_Running;
     pThisCore->Sched.mpRunThread = pThread;
 
     pThisCore->Sched.mActivePrio = pThread->Sched.mActivePrio;
@@ -323,26 +322,115 @@ static BOOL sExecItems(void)
     return changedSomething;
 }
 
-static void sScheduleThreadsToCores(void)
+void sScheduleThreadsToCores(void)
 {
-//    UINT64  checkQuantumLeft;
-    UINT64  lowestQuantumLeft;
+    UINT64                  lowestQuantumLeft;
+    UINT32                  workPrio;
+    K2LIST_LINK *           pThreadListLink;
+    K2LIST_LINK *           pCoreListLink;
+    K2OSKERN_OBJ_THREAD *   pWorkThread;
+    K2OSKERN_CPUCORE *      pWorkCore;
 
     //
-    // scheduling timer is disabled here
+    // scheduling timer has been disabled
     //
+
     lowestQuantumLeft = gData.Sched.mpTimerItemQueue ? gData.Sched.mpTimerItemQueue->mDeltaT : 0;
+    do {
+        if (0 == gData.Sched.mReadyThreadCount)
+            break;
+
+        //
+        // something to check on for scheduling
+        //
+        workPrio = 0;
+        do {
+            pThreadListLink = gData.Sched.ReadyThreadsByPrioList[workPrio].mpHead;
+            if (pThreadListLink != NULL)
+                break;
+            workPrio++;
+        } while (workPrio < K2OS_THREADPRIO_LEVELS);
+        K2_ASSERT(workPrio < K2OS_THREADPRIO_LEVELS);
+
+        //
+        // skip cores that are already running something higher than this priority
+        //
+        pCoreListLink = gData.Sched.CpuCorePrioList.mpHead;
+        do {
+            pWorkCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pCoreListLink, CpuCoreListLink);
+
+            if (pWorkCore->Sched.mActivePrio > workPrio)
+                break;
+
+            if (pWorkCore->Sched.mActivePrio == workPrio)
+            {
+                //
+                // if currently running thread's quantum is expired then stop here
+                // otherwise keep looking
+                //
+                if (pWorkCore->Sched.mpRunThread == NULL)
+                    break;
+
+                if (pWorkCore->Sched.mpRunThread->Sched.mQuantumLeft == 0)
+                    break;
+
+                //
+                // core is running something of the same prio but there
+                // is quantum left on the thread so we are not going to 
+                // preempt it
+                //
+            }
+            //
+            // else we are letting what is running on this core continue to run
+            // because there is nothing of higher priority
+            //
+
+            pCoreListLink = pCoreListLink->mpNext;
+
+        } while (pCoreListLink != NULL);
+
+        if (pCoreListLink == NULL)
+        {
+            //
+            // there are no cores we want to preempt
+            //
+            break;
+        }
+
+        //
+        // we are going to change what is running somehow
+        //
+        // 'pWorkCore' is first core we can preempt
+        // 'pThreadListLink' is first ready thread and is
+        //      set at priority level 'workPrio'
+        pWorkThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, pThreadListLink, Sched.ReadyListLink);
+        K2_ASSERT(pWorkThread->Sched.mActivePrio == workPrio);
 
 
-    K2_ASSERT(0);
 
 
-    //
-    // if there is some reason to arm the scheduling timer
-    // then we arm it here at the end.  this may generate
-    // more items that need to be processed
+
+
+
+
+    } while (0);
+
     if (lowestQuantumLeft != 0)
         KernSched_ArmSchedTimer(lowestQuantumLeft);
+
+
+
+            //
+            // remove the thread from the ready list because we are going
+            // to stick it onto a core
+            //
+            pThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, pThreadListLink, Sched.ReadyListLink);
+            pThreadListLink = pThreadListLink->mpNext;
+            K2LIST_Remove(&gData.Sched.ReadyThreadsByPrioList[workPrio], &pThread->Sched.ReadyListLink);
+            gData.Sched.mReadyThreadCount--;
+            pThread->Sched.State.mRunState = KernThreadRunState_Transition;
+
+
 }
 
 void KernSched_Exec(void)
@@ -408,7 +496,7 @@ void KernSched_Exec(void)
     pLink = gData.Sched.CpuCorePrioList.mpHead;
     do
     {
-        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pLink, Sched.PrioListLink);
+        pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pLink, Sched.CpuCoreListLink);
 
         if (pCpuCore->mpActiveThread == NULL)
         {
@@ -573,11 +661,102 @@ void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtP
     K2_ASSERT(apThread->Sched.State.mStopFlags == 0);
 
     pAnchor = &gData.Sched.ReadyThreadsByPrioList[activePrio];
-    pListLink = &apThread->Sched.PrioListLink;
+    pListLink = &apThread->Sched.ReadyListLink;
 
     apThread->Sched.State.mRunState = KernThreadRunState_Ready;
     if (aEndOfListAtPrio)
         K2LIST_AddAtTail(pAnchor, pListLink);
     else
         K2LIST_AddAtHead(pAnchor, pListLink);
+
+    gData.Sched.mReadyThreadCount++;
 }
+
+void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewRunState)
+{
+    K2LIST_LINK *           pScan;
+    K2OSKERN_CPUCORE *      pCpuCore;
+    K2OSKERN_OBJ_THREAD *   pCheck;
+
+    K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Run);
+
+    K2_ASSERT(aNewRunState != KernThreadRunState_None);
+    K2_ASSERT(aNewRunState != KernThreadRunState_Ready);
+    K2_ASSERT(aNewRunState != KernThreadRunState_Running);
+
+    if (apThread->Sched.State.mRunState == KernThreadRunState_Running)
+    {
+        //
+        // take thread off of its core
+        //
+        pScan = gData.Sched.CpuCorePrioList.mpHead;
+        K2_ASSERT(pScan != NULL);
+        do {
+            pCpuCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pScan, Sched.CpuCoreListLink);
+            if (pCpuCore->Sched.mpRunThread == apThread)
+                break;
+            pScan = pScan->mpNext;
+        } while (pScan != NULL);
+        K2_ASSERT(pScan != NULL);
+
+        pCpuCore->Sched.mpRunThread = NULL;
+        // next state state set below unconditionally for all
+
+        if (pCpuCore == gData.Sched.mpSchedulingCore)
+        {
+            //
+            // same core as the one executing this code.
+            // core will have set active thread to NULL
+            // when it called into the scheduler
+            //
+            K2_ASSERT(pCpuCore->mpActiveThread == NULL);
+        }
+        else
+        {
+            //
+            // thread is running on some other core
+            //
+            KernCpuCore_SendIciToOneCore(gData.Sched.mpSchedulingCore, pCpuCore->mCoreIx, KernCpuCoreEvent_Ici_Stop);
+            K2_CpuReadBarrier();
+            do {
+                pCheck = pCpuCore->mpActiveThread;
+                K2_CpuReadBarrier();
+                if (pCheck != apThread)
+                    break;
+                K2OSKERN_MicroStall(10);
+            } while (1);
+
+            //
+            // we force-stopped the thread.  we need to update its quantum drain and
+            // its total run time
+            //
+            if (gData.Sched.mCurrentAbsTime < apThread->Sched.mAbsTimeAtStop)
+            {
+                apThread->Sched.mQuantumLeft = 0;
+                apThread->Sched.mTotalRunTimeMs += apThread->Sched.mAbsTimeAtStop - gData.Sched.mCurrentAbsTime;
+            }
+        }
+
+        //
+        // move core on core priority list to idle
+        //
+        pCpuCore->Sched.mActivePrio = K2OS_THREADPRIO_IDLE;
+        if (pCpuCore->Sched.CpuCoreListLink.mpNext != NULL)
+        {
+            K2LIST_Remove(&gData.Sched.CpuCorePrioList, &pCpuCore->Sched.CpuCoreListLink);
+            K2LIST_AddAtTail(&gData.Sched.CpuCorePrioList, &pCpuCore->Sched.CpuCoreListLink);
+        }
+    }
+    else if (apThread->Sched.State.mRunState == KernThreadRunState_Ready)
+    {
+        K2LIST_Remove(&gData.Sched.ReadyThreadsByPrioList[apThread->Sched.mActivePrio], &apThread->Sched.ReadyListLink);
+        gData.Sched.mReadyThreadCount--;
+    }
+    else
+    {
+        K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Transition);
+    }
+
+    apThread->Sched.State.mRunState = aNewRunState;
+}
+

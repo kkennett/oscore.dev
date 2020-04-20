@@ -38,7 +38,7 @@ UINT32 K2_CALLCONV_REGS MsgThread(void *apParam)
     return (UINT32)0xAABBCCDD;
 }
 
-static
+//static
 void
 sCreateMsgThread(
     void
@@ -63,19 +63,14 @@ K2OSEXEC_Run(
     void
 )
 {
-    sCreateMsgThread();
+//    sCreateMsgThread();
 
 #if 1
-    UINT64          last, newTick;
     K2OSKERN_Debug("Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
     while (1)
     {
-        do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
+        K2OS_ThreadSleep(1000);
+        K2OSKERN_Debug("Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
     }
 #endif
 }

@@ -773,7 +773,7 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     wait.mNumEntries = 0;
     wait.mWaitAll = FALSE;
 
-    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
     pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
     pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aMilliseconds;
     
@@ -786,7 +786,7 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     }
 }
 
-static BOOL sCheckNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, UINT32 *apResult)
+static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, UINT32 *apResult)
 {
     switch (aObjWait.mpHdr->mObjType)
     {
@@ -853,13 +853,13 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTi
 
     do {
         result = K2OS_WAIT_SIGNALLED_0;
-        if (sCheckNoWait(pThisThread, objWait, &result))
+        if (sCheckNotAllNoWait(pThisThread, objWait, &result))
             break;
 
         wait.mNumEntries = 1; 
         wait.mWaitAll = FALSE;
         wait.SchedWaitEntry[0].mWaitObj.mpHdr = objWait.mpHdr;
-        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
+        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
         pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
         pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
         KernArch_ThreadCallSched();

@@ -124,7 +124,7 @@ struct _K2OSKERN_SCHED_CPUCORE
 {
     UINT64                  mLastStopAbsTimeMs;
     K2OSKERN_OBJ_THREAD *   mpRunThread;
-    K2LIST_LINK             PrioListLink;
+    K2LIST_LINK             CpuCoreListLink;
     UINT32                  mActivePrio;
 };
 
@@ -191,7 +191,7 @@ enum _KernSchedItemType
     KernSchedItem_EnterDebug,
 
     KernSchedItem_ThreadExit,
-    KernSchedItem_ThreadWait,
+    KernSchedItem_ThreadWaitAny,
     KernSchedItem_Contended_Critsec,
     KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
@@ -350,13 +350,13 @@ struct _K2OSKERN_SCHED_THREAD
 {
     UINT32              mBasePrio;
     UINT32              mQuantumLeft;
-    UINT64              mLastAbsTimeMs;
+    UINT64              mAbsTimeAtStop;
     UINT64              mTotalRunTimeMs;
     K2OS_THREADATTR     Attr;       // current priority, affinity mask, quantum
     K2OSKERN_SCHED_ITEM Item;
     K2OSKERN_CRITSEC *  mpActionSec;
     UINT32              mActivePrio;
-    K2LIST_LINK         PrioListLink;
+    K2LIST_LINK         ReadyListLink;
     K2LIST_ANCHOR       OwnedCritSecList;
     KernThreadState     State;
 };
@@ -369,6 +369,7 @@ struct _K2OSKERN_SCHED
     K2LIST_ANCHOR                   CpuCorePrioList;
 
     K2LIST_ANCHOR                   ReadyThreadsByPrioList[K2OS_THREADPRIO_LEVELS];
+    UINT32                          mReadyThreadCount;
 
     UINT32                          mSysWideThreadCount;
 
@@ -1066,7 +1067,7 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore);
 typedef BOOL(*KernSched_pf_Handler)(void);
 
 BOOL KernSched_Exec_ThreadExit(void);
-BOOL KernSched_Exec_ThreadWait(void);
+BOOL KernSched_Exec_ThreadWaitAny(void);
 BOOL KernSched_Exec_Contended_CritSec(void);
 BOOL KernSched_Exec_EnterDebug(void);
 BOOL KernSched_Exec_Destroy_CritSec(void);
@@ -1082,6 +1083,9 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
+void KernSched_MakeThreadWaiting(K2OSKERN_OBJ_THREAD *apThread);
+BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitStartTime, UINT64 aWaitMs);
+void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
 
 /* --------------------------------------------------------------------------------- */
 

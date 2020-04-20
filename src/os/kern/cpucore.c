@@ -66,7 +66,8 @@ static
 void
 sProcessOneCpuCoreEvent(
     K2OSKERN_CPUCORE *      apThisCore,
-    KernCpuCoreEventType    aEventType
+    KernCpuCoreEventType    aEventType,
+    UINT64                  aEventTime
 )
 {
 //    K2OSKERN_Debug("!Core %d: Event %d\n", apThisCore->mCoreIx,aEventType);
@@ -85,7 +86,13 @@ sProcessOneCpuCoreEvent(
         //
         break;
     case KernCpuCoreEvent_Ici_Stop:
-        K2_ASSERT(0);
+        if (apThisCore->mpActiveThread != NULL)
+        {
+            apThisCore->Sched.mLastStopAbsTimeMs = aEventTime;
+            apThisCore->mpActiveThread->Sched.mAbsTimeAtStop = aEventTime;
+            apThisCore->mpActiveThread = NULL;
+            K2_CpuWriteBarrier();
+        }
         break;
     case KernCpuCoreEvent_Ici_TlbInv:
         KernSched_PerCpuTlbInvEvent(apThisCore);
@@ -113,6 +120,7 @@ void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore)
     K2OSKERN_CPUCORE_EVENT volatile *   pPendNew;
     K2OSKERN_CPUCORE_EVENT volatile *   pIns;
     KernCpuCoreEventType                eventType;
+    UINT64                              eventTime;
 
     pEventList = pEventListEnd = NULL;
     do
@@ -172,13 +180,14 @@ void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore)
         // as 'received by target', where 'target' is this core
         //
         eventType = pEvent->mEventType;
+        eventTime = pEvent->mEventAbsTimeMs;
         pEvent->mpNext = NULL;
         K2_ASSERT(eventType != KernCpuCoreEvent_None);
         K2_ASSERT(eventType < KernCpuCoreEventType_Count);
         pEvent->mEventType = KernCpuCoreEvent_None;
         K2_CpuWriteBarrier();
 
-        sProcessOneCpuCoreEvent(apThisCore, eventType);
+        sProcessOneCpuCoreEvent(apThisCore, eventType, eventTime);
 
     } while (1);
 }
