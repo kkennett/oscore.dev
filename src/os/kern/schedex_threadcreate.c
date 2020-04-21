@@ -63,9 +63,9 @@ BOOL KernSched_Exec_ThreadCreate(void)
     gData.Sched.mSysWideThreadCount++;
 
     //
-    // add to ready thread prio list
+    // make thread ready or running
     //
-    KernSched_MakeThreadReady(pNewThread, TRUE);
+    KernSched_MakeThreadActive(pNewThread, TRUE);
 
     gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 

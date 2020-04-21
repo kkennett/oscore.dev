@@ -159,17 +159,14 @@ BOOL sReschedQuantaNowZero(void)
 
 BOOL sSignalTimerItem(K2OSKERN_SCHED_TIMERITEM * apItem)
 {
-    BOOL changedSomething;
+    BOOL    changedSomething;
 
     changedSomething = FALSE;
 
     switch (apItem->mType)
     {
     case KernSchedTimerItemType_Wait:
-        //
-        // wait timed out
-        //
-        K2_ASSERT(0);
+        changedSomething = KernSched_WaitTimedOut(K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, apItem, SchedTimerItem));
         break;
     case KernSchedTimerItemType_Alarm:
         //
@@ -226,7 +223,9 @@ BOOL KernSched_TimePassed(UINT64 aSchedAbsTime)
             nextDelta = elapsed;
 
         if (!allHitZero)
+        {
             allHitZero = sElapseQuanta(&nextDelta, &someHitZero);
+        }
 
         if (gData.Sched.mpTimerItemQueue != NULL)
         {
@@ -413,7 +412,7 @@ void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig)
     K2STAT stat;
 
     sgTickCounter = 0;
-    sgTicksLeft = gpThread0->Sched.mQuantumLeft;
+    sgTicksLeft = 0;
 
     K2_CpuWriteBarrier();
 

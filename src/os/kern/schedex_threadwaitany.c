@@ -70,17 +70,31 @@ sWaitList_Insert(
         K2LIST_AddAtTail(pAnchor, &apEntry->WaitPrioListLink);
 }
 
+BOOL
+sWaitList_Remove(
+    K2OSKERN_OBJ_THREAD *       apWaitThread,
+    K2OSKERN_SCHED_WAITENTRY *  apEntry
+)
+{
+    K2_ASSERT(0);
+    return TRUE;
+}
+
 BOOL KernSched_Exec_ThreadWaitAny(void)
 {
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2OSKERN_SCHED_WAITENTRY *  pEntry;
+    K2OSKERN_OBJ_THREAD *       pThread;
     K2OSKERN_OBJ_WAITABLE       objWait;
     UINT32                      ix;
     BOOL                        isSatisfiedWithoutChange;
+    KernThreadRunState          nextRunState;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWaitAny);
 
     pWait = gData.Sched.mpActiveItem->Args.ThreadWait.mpMacroWait;
+
+    pThread = gData.Sched.mpActiveItemThread;
 
     K2_ASSERT(pWait->mNumEntries <= K2OS_WAIT_MAX_TOKENS);
 
@@ -164,6 +178,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
         return FALSE;
     }
 
+    nextRunState = KernThreadRunState_Waiting;
+
     if (pWait->mNumEntries != 0)
     {
         if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0)
@@ -175,67 +191,68 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             return FALSE;
         }
     }
+    else
+    {
+        if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0)
+            nextRunState = KernThreadRunState_Ready;
+    }
 
     //
     // if we get here, no matter what thread loses the rest of its quantum
     //
+    gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
 
-    gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
-    
-    apCore->Sched.mExecFlags |= K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
-
-    if (gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Running)
+    if (pThread->Sched.State.mRunState == KernThreadRunState_Running)
     {
-        KernSched_StopThread(gData.Sched.mpActiveItemThread, NULL, KernThreadState_Ready, TRUE);
-    }
+        pThread->Sched.mQuantumLeft = 0;
 
-    //
-    // thread is guaranteed to not be running
-    //
+        // this will set K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED on the core the thread was running on
+        KernSched_StopThread(pThread, NULL, nextRunState, TRUE);
 
-
-
-    K2_ASSERT(gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Ready);
-
-
-
-
-    if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0)
-    {
-        K2_ASSERT(pWait->mNumEntries != 0);
-
-
-
-
-        //
-        // nothing thread was testing for wait was signalled, and no timeout. 
-        // thread just gives up remainder of its timeslice
-        //
-        if (gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Running)
+        if (nextRunState == KernThreadRunState_Ready)
         {
-            gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
-            KernSched_StopThread(gData.Sched.mpActiveItemThread, NULL, KernThreadState_Ready, TRUE);
+            //
+            // thread is sleeping for 0 milliseconds. so all we did was stop it
+            //
+            K2_ASSERT(pWait->mNumEntries == 0);
+            K2_ASSERT(gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0);
             return TRUE;
         }
+    }
+    else
+    {
+        if (pThread->Sched.State.mRunState == KernThreadRunState_Ready)
+        {
+            if (nextRunState == KernThreadRunState_Ready)
+            {
+                //
+                // thread is sleeping for 0 milliseconds. it was already made ready so this is a no-op
+                //
+                K2_ASSERT(pWait->mNumEntries == 0);
+                K2_ASSERT(gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0);
+                return TRUE;
+            }
 
-        gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_TIMEOUT;
-        return FALSE;
+            K2LIST_Remove(
+                &gData.Sched.ReadyThreadsByPrioList[pThread->Sched.mActivePrio],
+                &pThread->Sched.ReadyListLink
+            );
+            gData.Sched.mReadyThreadCount--;
+        }
+        else
+        {
+            K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Transition);
+        }
+
+        pThread->Sched.State.mRunState = nextRunState;
     }
 
-    //
-    // doing the wait, possibly with a timeout.  thread loses its quantum
-    // here regardless
-    //
-    gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
+    K2_ASSERT(pThread->Sched.State.mRunState = KernThreadRunState_Waiting);
+    K2_ASSERT((pWait->mNumEntries > 0) || (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs > 0));
 
     gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
 
-    //
-    // thread transitions to waiting state
-    //
-    KernSched_MakeThreadInactive(gData.Sched.mpActiveItemThread, KernThreadRunState_Waiting);
-
-    pWait->mpWaitingThread = gData.Sched.mpActiveItemThread;
+    pWait->mpWaitingThread = pThread;
 
     //
     // mount the wait to the waitlists of the objects it is waiting on
@@ -255,7 +272,7 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
         pWait->SchedTimerItem.mType = KernSchedTimerItemType_Wait;
         KernSched_AddTimerItem(
             &pWait->SchedTimerItem,
-            gData.Sched.mpActiveItemThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs,
+            pThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs,
             gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs
         );
     }
@@ -265,4 +282,35 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     }
 
     return TRUE;  // if something changes scheduling-wise, return true
+}
+
+BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait)
+{
+    K2OSKERN_OBJ_THREAD *   pThread;
+    K2OSKERN_SCHED_ITEM *   pItem;
+    UINT32                  ix;
+
+    //
+    // timer item has already been removed from timer queue
+    //
+    pThread = apWait->mpWaitingThread;
+
+    pThread->Sched.State.mRunState = KernThreadRunState_Transition;
+
+    pItem = &pThread->Sched.Item;
+    K2_ASSERT(pItem->Args.ThreadWait.mpMacroWait == apWait);
+
+    for (ix = 0; ix < apWait->mNumEntries; ix++)
+    {
+        sWaitList_Remove(pThread, &apWait->SchedWaitEntry[ix]);
+    }
+
+    pItem->mResult = K2STAT_ERROR_TIMEOUT;
+
+    //
+    // thread goes onto ready list
+    //
+    KernSched_MakeThreadActive(pThread, TRUE);
+
+    return TRUE;
 }

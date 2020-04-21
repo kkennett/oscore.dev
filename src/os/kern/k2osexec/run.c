@@ -65,7 +65,7 @@ K2OSEXEC_Run(
 {
 //    sCreateMsgThread();
 
-#if 0
+#if 1
     K2OSKERN_Debug("Sleep Hang ints on\n");
     while (1)
     {
