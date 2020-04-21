@@ -269,7 +269,7 @@ static BOOL sExecItems(void)
     do {
         pWorkCore = K2_GET_CONTAINER(K2OSKERN_CPUCORE, pCoreListLink, Sched.CpuCoreListLink);
         pCoreListLink = pCoreListLink->mpNext;
-        pWorkCore->Sched.mQuantaFlags = 0;
+        pWorkCore->Sched.mExecFlags = 0;
     } while (pCoreListLink != NULL);
 
     do
@@ -561,7 +561,7 @@ void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtP
     gData.Sched.mReadyThreadCount++;
 }
 
-void sStopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle)
+void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle)
 {
     K2LIST_LINK *           pScan;
     K2OSKERN_OBJ_THREAD *   pCheck;
@@ -621,10 +621,10 @@ void sStopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, Ker
 
     //
     // move core on core priority list to idle
+    // only increment idle core count if making core idle
     //
     apCpuCore->Sched.mpRunThread = NULL;
-    // only increment idle core count if making core idle
-
+    apCpuCore->Sched.mExecFlags |= K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED;
     if (aSetCoreIdle)
     {
         gData.Sched.mIdleCoreCount++;
@@ -672,7 +672,7 @@ void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunSt
 
 #define AUDIT_PRIO_ON_QUANTUM_EXPIRY 1
 
-BOOL KernSched_QuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread)
+BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread)
 {
 #if AUDIT_PRIO_ON_QUANTUM_EXPIRY
     UINT32                  checkPrio;
@@ -691,11 +691,11 @@ BOOL KernSched_QuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apR
         //
         apRunningThread->Sched.mQuantumLeft = apRunningThread->Sched.Attr.mQuantum;
         //
-        // quanta flags reset since we didn't change threads on this core. this means
+        // quanta flag reset since we didn't change threads on this core. this means
         // the running thread will continue to get charged quantum and have its run
         // time increased
         //
-        apCore->Sched.mQuantaFlags = 0;
+        apCore->Sched.mExecFlags &= ~K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
         return FALSE;
     }
 
@@ -749,7 +749,7 @@ BOOL KernSched_QuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apR
         // so recharge the quantum and clear the quanta flags on the core
         //
         apRunningThread->Sched.mQuantumLeft = apRunningThread->Sched.Attr.mQuantum;
-        apCore->Sched.mQuantaFlags = 0;
+        apCore->Sched.mExecFlags &= ~K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
         return FALSE;
     }
 
@@ -758,7 +758,7 @@ BOOL KernSched_QuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apR
     // thread's quantum.  leave the quanta flags set so that the new thread is not
     // charged for any scheduled time until it runs
     //
-    sStopThread(apRunningThread, apCore, KernThreadRunState_Ready, FALSE);
+    KernSched_StopThread(apRunningThread, apCore, KernThreadRunState_Ready, FALSE);
 
     // idle core count was never incremented because of FALSE in sStopThread call
     // where we did not make the core idle, so we don't have to decrement the idle cound

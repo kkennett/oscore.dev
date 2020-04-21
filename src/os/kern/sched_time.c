@@ -72,7 +72,7 @@ BOOL sElapseQuanta(UINT64 *apMaxElapsed, BOOL *apRetSomeNowZero)
         if (pRunningThread == NULL)
             break;
 
-        if (0 == (pCpuCore->Sched.mQuantaFlags & K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_HIT_ZERO))
+        if (0 == (pCpuCore->Sched.mExecFlags & K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED))
         {
             allHitZero = FALSE;
             //
@@ -107,7 +107,7 @@ BOOL sElapseQuanta(UINT64 *apMaxElapsed, BOOL *apRetSomeNowZero)
         if (pRunningThread == NULL)
             break;
 
-        if (0 == (pCpuCore->Sched.mQuantaFlags & K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_HIT_ZERO))
+        if (0 == (pCpuCore->Sched.mExecFlags & K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED))
         {
             pRunningThread->Sched.mTotalRunTimeMs += actualElapsed;
             threadLeft = pRunningThread->Sched.mQuantumLeft;
@@ -115,7 +115,7 @@ BOOL sElapseQuanta(UINT64 *apMaxElapsed, BOOL *apRetSomeNowZero)
             pRunningThread->Sched.mQuantumLeft -= actualElapsed;
             if (threadLeft == actualElapsed)
             {
-                pCpuCore->Sched.mQuantaFlags = K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_NOW_ZERO;
+                pCpuCore->Sched.mExecFlags = K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
                 *apRetSomeNowZero = TRUE;
             }
         }
@@ -144,13 +144,11 @@ BOOL sReschedQuantaNowZero(void)
         if (pRunningThread == NULL)
             break;
 
-        if (pCpuCore->Sched.mQuantaFlags & K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_NOW_ZERO)
+        if (pCpuCore->Sched.mExecFlags & K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO)
         {
-            pCpuCore->Sched.mQuantaFlags |= K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_HIT_ZERO;
-
             K2_ASSERT(pRunningThread->Sched.mQuantumLeft == 0);
 
-            if (KernSched_QuantumExpired(pCpuCore, pRunningThread))
+            if (KernSched_RunningThreadQuantumExpired(pCpuCore, pRunningThread))
                 changedSomething = TRUE;
         }
 

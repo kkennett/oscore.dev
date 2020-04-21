@@ -164,11 +164,60 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
         return FALSE;
     }
 
+    if (pWait->mNumEntries != 0)
+    {
+        if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0)
+        {
+            //
+            // tested stuff, but nothing is signalled
+            //
+            gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_TIMEOUT;
+            return FALSE;
+        }
+    }
+
     //
-    // if we get here, we are doing the wait unless timeout is zero
+    // if we get here, no matter what thread loses the rest of its quantum
     //
+
+    gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
+    
+    apCore->Sched.mExecFlags |= K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
+
+    if (gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Running)
+    {
+        KernSched_StopThread(gData.Sched.mpActiveItemThread, NULL, KernThreadState_Ready, TRUE);
+    }
+
+    //
+    // thread is guaranteed to not be running
+    //
+
+
+
+    K2_ASSERT(gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Ready);
+
+
+
+
     if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0)
     {
+        K2_ASSERT(pWait->mNumEntries != 0);
+
+
+
+
+        //
+        // nothing thread was testing for wait was signalled, and no timeout. 
+        // thread just gives up remainder of its timeslice
+        //
+        if (gData.Sched.mpActiveItemThread->Sched.State.mThreadRunState == KernThreadRunState_Running)
+        {
+            gData.Sched.mpActiveItemThread->Sched.mQuantumLeft = 0;
+            KernSched_StopThread(gData.Sched.mpActiveItemThread, NULL, KernThreadState_Ready, TRUE);
+            return TRUE;
+        }
+
         gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_TIMEOUT;
         return FALSE;
     }
