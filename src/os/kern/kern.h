@@ -372,6 +372,7 @@ struct _K2OSKERN_SCHED
     UINT64                          mCurrentAbsTime;
 
     K2LIST_ANCHOR                   CpuCorePrioList;
+    UINT32                          mIdleCoreCount;
 
     K2LIST_ANCHOR                   ReadyThreadsByPrioList[K2OS_THREADPRIO_LEVELS];
     UINT32                          mReadyThreadCount;
