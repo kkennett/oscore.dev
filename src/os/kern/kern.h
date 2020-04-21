@@ -119,6 +119,9 @@ struct _K2OSKERN_CPUCORE_EVENT
     K2OSKERN_CPUCORE_EVENT volatile *   mpNext;
 };
 
+#define K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_HIT_ZERO  2
+#define K2OSKERN_SCHED_CPUCORE_QUANTAFLAG_NOW_ZERO  1
+
 typedef struct _K2OSKERN_SCHED_CPUCORE K2OSKERN_SCHED_CPUCORE;
 struct _K2OSKERN_SCHED_CPUCORE
 {
@@ -126,6 +129,7 @@ struct _K2OSKERN_SCHED_CPUCORE
     K2OSKERN_OBJ_THREAD *   mpRunThread;
     K2LIST_LINK             CpuCoreListLink;
     UINT32                  mActivePrio;
+    UINT32                  mQuantaFlags;
 };
 
 struct _K2OSKERN_CPUCORE
@@ -356,6 +360,7 @@ struct _K2OSKERN_SCHED_THREAD
     K2OSKERN_SCHED_ITEM Item;
     K2OSKERN_CRITSEC *  mpActionSec;
     UINT32              mActivePrio;
+    UINT32              mLastRunCoreIx;
     K2LIST_LINK         ReadyListLink;
     K2LIST_ANCHOR       OwnedCritSecList;
     KernThreadState     State;
@@ -1083,9 +1088,11 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 void KernSched_MakeThreadReady(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
-void KernSched_MakeThreadWaiting(K2OSKERN_OBJ_THREAD *apThread);
+void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewState);
+
 BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitStartTime, UINT64 aWaitMs);
 void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
+BOOL KernSched_QuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread);
 
 /* --------------------------------------------------------------------------------- */
 

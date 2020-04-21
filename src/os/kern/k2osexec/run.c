@@ -57,7 +57,7 @@ sCreateMsgThread(
         K2OSKERN_Debug("ThreadCreate for MsgThread failed\n");
     }
 }
-
+ 
 void
 K2OSEXEC_Run(
     void
@@ -65,14 +65,27 @@ K2OSEXEC_Run(
 {
 //    sCreateMsgThread();
 
-#if 1
-    K2OSKERN_Debug("Hang ints on\n");
+#if 0
+    K2OSKERN_Debug("Sleep Hang ints on\n");
     while (1)
     {
         K2OS_ThreadSleep(1000);
         K2OSKERN_Debug("Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
     }
+#else
+    UINT64          last, newTick;
+    K2OSKERN_Debug("Stall Hang ints on\n");
+    last = K2OS_SysUpTimeMs();
+    while (1)
+    {
+        do {
+            newTick = K2OS_SysUpTimeMs();
+        } while (newTick - last < 1000);
+        last = newTick;
+        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
+    }
 #endif
+
 }
 
 #if 0

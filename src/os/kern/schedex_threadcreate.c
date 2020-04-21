@@ -51,6 +51,7 @@ BOOL KernSched_Exec_ThreadCreate(void)
     // get ready to run
     //
     KernArch_PrepareThread(pNewThread);
+    pNewThread->Sched.mLastRunCoreIx = gData.mCpuCount;
 
     //
     // thread life stage moves to started, it starts as ready, and is not stopped

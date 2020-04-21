@@ -212,11 +212,11 @@ X32Kern_InterruptHandler(
     KernCpuCoreEventType                eventType;
     K2OSKERN_OBJ_THREAD *               pActiveThread;
     UINT32                              devIrq;
-    BOOL                                enterMonitor;
+    BOOL                                forceEnterMonitor;
     BOOL                                threadFaulted;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
-    enterMonitor = FALSE;
+    forceEnterMonitor = FALSE;
 
     if (sgInIntr[pThisCore->mCoreIx])
     {
@@ -231,7 +231,7 @@ X32Kern_InterruptHandler(
     {
         threadFaulted = sX32Kern_Exception(pThisCore, pActiveThread, &aContext);
         if (threadFaulted)
-            enterMonitor = TRUE;
+            forceEnterMonitor = TRUE;
     }
     else
     {
@@ -249,7 +249,6 @@ X32Kern_InterruptHandler(
             K2_ASSERT((eventType >= KernCpuCoreEvent_Ici_Wakeup) && (eventType <= KernCpuCoreEvent_Ici_Debug));
 
             KernIntr_QueueCpuCoreEvent(pThisCore, pCoreEvent);
-            enterMonitor = TRUE;
         }
         else
         {
@@ -275,7 +274,8 @@ X32Kern_InterruptHandler(
         X32Kern_EOI(aContext.Exception_Vector);
     }
 
-    if (enterMonitor)
+    if ((forceEnterMonitor) ||
+        (pThisCore->mpPendingEventListHead != NULL))
     {
         if (pActiveThread != NULL)
         {
