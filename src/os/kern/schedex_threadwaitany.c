@@ -104,7 +104,11 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
 
     K2_ASSERT(FALSE == pWait->mWaitAll);
 
-    K2OSKERN_Debug("SCHED:WaitAny(%d, %d)\n", pWait->mNumEntries, gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
+//    K2OSKERN_Debug("%6d.Core %d: SCHED:Exec WaitAny(%d, %d)\n", 
+//        gData.Sched.mpSchedulingCore->mCoreIx, 
+//        (UINT32)K2OS_SysUpTimeMs(), 
+//        pWait->mNumEntries, 
+//        gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
 
     isSatisfiedWithoutChange = FALSE;
 

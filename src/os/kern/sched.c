@@ -378,7 +378,7 @@ BOOL sExecItems(void)
         // this will NOT get called and threads just run until 
         // something comes into the scheduler again
         // 
-        K2OSKERN_Debug("ArmSchedTimer(%d)\n", (UINT32)armTimerMs);
+//        K2OSKERN_Debug("%6d.Core %d: ArmSchedTimer(%d)\n", (UINT32)K2OS_SysUpTimeMs(), gData.Sched.mpSchedulingCore->mCoreIx, (UINT32)armTimerMs);
         KernSched_ArmSchedTimer((UINT32)armTimerMs);
     }
 
@@ -467,7 +467,7 @@ void KernSched_Check(K2OSKERN_CPUCORE *apThisCore)
     //
     // if we get here we are the scheduling core 
     //
-//    K2OSKERN_Debug("!Core %d: Entered Scheduler\n", apThisCore->mCoreIx);
+//    K2OSKERN_Debug("%6d.Core %d: Entered Scheduler\n", (UINT32)K2OS_SysUpTimeMs(), apThisCore->mCoreIx);
 
     gData.Sched.mpSchedulingCore = apThisCore;
 
@@ -499,7 +499,7 @@ void KernSched_Check(K2OSKERN_CPUCORE *apThisCore)
     // 
     // if we got here we left the scheduler
     //
-//    K2OSKERN_Debug("!Core %d: Left Scheduler\n", apThisCore->mCoreIx);
+//    K2OSKERN_Debug("%6d.Core %d: Left Scheduler\n", (UINT32)K2OS_SysUpTimeMs(), apThisCore->mCoreIx);
 }
 
 static
@@ -582,8 +582,8 @@ void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunn
     K2_ASSERT(apRunningThread->Sched.State.mRunState == KernThreadRunState_Running);
     K2_ASSERT((apNextThread->Sched.State.mRunState == KernThreadRunState_Ready) || (apNextThread->Sched.State.mRunState == KernThreadRunState_Transition));
 
-    K2OSKERN_Debug("Preempt Core %d with next thread %d, instead of current thread %d that is going to state %d\n", 
-        apCore->mCoreIx, apNextThread->Env.mId, apRunningThread->Env.mId, aNewState);
+//    K2OSKERN_Debug("Preempt Core %d with next thread %d, instead of current thread %d that is going to state %d\n", 
+//        apCore->mCoreIx, apNextThread->Env.mId, apRunningThread->Env.mId, aNewState);
 
     KernSched_StopThread(apRunningThread, apCore, aNewState, FALSE);
 
@@ -780,7 +780,7 @@ void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpu
         apCpuCore = K2OSKERN_COREIX_TO_CPUCORE(apThread->Sched.mLastRunCoreIx);
     }
 
-    K2OSKERN_Debug("Stop thread %d on core %d\n", apThread->Env.mId, apCpuCore->mCoreIx);
+//    K2OSKERN_Debug("Stop thread %d on core %d\n", apThread->Env.mId, apCpuCore->mCoreIx);
 
     if (apCpuCore == gData.Sched.mpSchedulingCore)
     {
@@ -888,7 +888,7 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
     if ((gData.Sched.mReadyThreadCount == 0) ||
         (gData.Sched.mIdleCoreCount > 0))
     {
-        K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - nobody ready or idle cores\n", apRunningThread->Env.mId);
+//        K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - nobody ready or idle cores\n", apRunningThread->Env.mId);
 
         //
         // no ready threads, or there are cores idle
@@ -956,14 +956,14 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
         // no other thread of equal priority is affinitized for the same core and is ready
         // so recharge the quantum and clear the quanta flags on the core
         //
-        K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - recharge %d\n", apRunningThread->Env.mId, apRunningThread->Sched.Attr.mQuantum);
+//        K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - recharge %d\n", apRunningThread->Env.mId, apRunningThread->Sched.Attr.mQuantum);
 
         apRunningThread->Sched.mQuantumLeft = apRunningThread->Sched.Attr.mQuantum;
         apCore->Sched.mExecFlags &= ~K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
         return FALSE;
     }
 
-    K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - preempt with %d\n", apRunningThread->Env.mId, pReadyThread->Env.mId);
+//    K2OSKERN_Debug("RunningThreadQuantumExpired(%d) - preempt with %d\n", apRunningThread->Env.mId, pReadyThread->Env.mId);
     KernSched_PreemptCore(apCore, apRunningThread, KernThreadRunState_Ready, pReadyThread);
 
     return TRUE;
