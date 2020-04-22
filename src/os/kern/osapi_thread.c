@@ -681,7 +681,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetAttr
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateNoAddRef_FromNamedObject(aNameToken, K2OS_Obj_Thread);
+    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Thread);
 }
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
@@ -791,10 +791,10 @@ static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_W
     switch (aObjWait.mpHdr->mObjType)
     {
     case K2OS_Obj_Event:
-        return aObjWait.mpEvent->mIsSignaled;
+        return aObjWait.mpEvent->mIsSignalled;
 
     case K2OS_Obj_Name:
-        return aObjWait.mpName->Event_IsOwned.mIsSignaled;
+        return aObjWait.mpName->Event_IsOwned.mIsSignalled;
 
     case K2OS_Obj_Process:
         return aObjWait.mpProc->mState >= KernProcState_Done;

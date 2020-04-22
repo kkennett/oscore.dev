@@ -153,5 +153,5 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, 
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateNoAddRef_FromNamedObject(aNameToken, K2OS_Obj_Semaphore);
+    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Semaphore);
 }

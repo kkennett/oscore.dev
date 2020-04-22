@@ -70,6 +70,8 @@ SOURCES += token.c
 SOURCES += sem.c
 SOURCES += thread0.c
 SOURCES += schedex_threadcreate.c
+SOURCES += mailbox.c
+SOURCES += schedex_event.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 

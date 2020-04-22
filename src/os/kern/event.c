@@ -32,20 +32,71 @@
 
 #include "kern.h"
 
-K2STAT KernEvent_Set(K2OSKERN_OBJ_EVENT *apEvtObj)
+K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, BOOL aAutoReset, BOOL aInitialState)
 {
-    K2_ASSERT(0);
-    return K2STAT_ERROR_NOT_IMPL;
+    K2STAT stat;
+
+    K2_ASSERT(apEvent != NULL);
+
+    if (apName != NULL)
+    {
+        stat = KernObj_AddRef(&apName->Hdr);
+        if (K2STAT_IS_ERROR(stat))
+            return stat;
+    }
+
+    K2MEM_Zero(apEvent, sizeof(K2OSKERN_OBJ_EVENT));
+
+    apEvent->Hdr.mObjType = K2OS_Obj_Event;
+    apEvent->Hdr.mObjFlags = 0;
+    apEvent->Hdr.mpName = NULL;
+    apEvent->Hdr.mRefCount = 1;
+
+    K2LIST_Init(&apEvent->Hdr.WaitingThreadsPrioList);
+
+    apEvent->mIsAutoReset = aAutoReset;
+    apEvent->mIsSignalled = aInitialState;
+
+    stat = KernObj_Add(&apEvent->Hdr, apName);
+
+    if (apName != NULL)
+    {
+        KernObj_Release(&apName->Hdr);
+    }
+
+    return stat;
 }
 
-K2STAT KernEvent_Reset(K2OSKERN_OBJ_EVENT *apEvtObj)
+K2STAT KernEvent_Change(K2OSKERN_OBJ_EVENT *apEvtObj, BOOL aSetReset)
 {
-    K2_ASSERT(0);
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_THREAD *pThisThread;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_EventChange;
+    pThisThread->Sched.Item.Args.EventChange.mpEvent = apEvtObj;
+    pThisThread->Sched.Item.Args.EventChange.mSetReset = aSetReset;
+    KernArch_ThreadCallSched();
+    return pThisThread->Sched.Item.mResult;
 }
 
-void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj)
+void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvent)
 {
-    K2_ASSERT(0);
+    BOOL check;
+
+    K2_ASSERT(apEvent != NULL);
+    K2_ASSERT(apEvent->Hdr.mObjType == K2OS_Obj_Event);
+    K2_ASSERT(apEvent->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+
+    check = !(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    K2MEM_Zero(apEvent, sizeof(K2OSKERN_OBJ_EVENT));
+
+    if (check)
+    {
+        check = K2OS_HeapFree(apEvent);
+        K2_ASSERT(check);
+    }
 }
 

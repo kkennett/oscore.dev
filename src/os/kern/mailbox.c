@@ -29,29 +29,51 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OSEXEC_H
-#define __K2OSEXEC_H
 
-#include "k2oskern.h"
+#include "kern.h"
 
-#if __cplusplus
-extern "C" {
-#endif
+K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT16 aId)
+{
+    K2STAT stat;
 
-//
-//------------------------------------------------------------------------
-//
+    K2_ASSERT(apMailbox != NULL);
 
+    K2MEM_Zero(apMailbox, sizeof(K2OSKERN_OBJ_MAILBOX));
 
-extern K2_GUID128 const gK2OSEXEC_MailslotGuid;
-extern char const *     gpK2OSEXEC_MailslotGuidStr;
+    apMailbox->Hdr.mObjType = K2OS_Obj_Mailbox;
+    apMailbox->Hdr.mObjFlags = 0;
+    apMailbox->Hdr.mpName = NULL;
+    apMailbox->Hdr.mRefCount = 1;
+    K2LIST_Init(&apMailbox->Hdr.WaitingThreadsPrioList);
 
-//
-//------------------------------------------------------------------------
-//
+    apMailbox->mId = aId;
 
-#if __cplusplus
+    stat = KernEvent_Create(&apMailbox->Event, NULL, TRUE, FALSE);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    apMailbox->Event.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+
+    stat = KernObj_Add(&apMailbox->Hdr, NULL);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernObj_Release(&apMailbox->Event.Hdr);
+    }
+
+    return stat;
 }
-#endif
 
-#endif // __K2OSKERN_H
+K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo, UINT32 *apRetRequestId)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRetRespIo)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
+{
+    K2_ASSERT(0);
+}

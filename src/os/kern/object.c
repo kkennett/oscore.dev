@@ -201,7 +201,7 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
 
     if (apObjName != NULL)
     {
-        KernEvent_Set(&apObjName->Event_IsOwned);
+        KernEvent_Change(&apObjName->Event_IsOwned, TRUE);
 
         K2OS_CritSecLeave(&apObjName->OwnerSec);
     }
@@ -325,7 +325,7 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
 
         pName->mpObject = NULL;
 
-        KernEvent_Reset(&pName->Event_IsOwned);
+        KernEvent_Change(&pName->Event_IsOwned, FALSE);
 
         K2OS_CritSecLeave(&pName->OwnerSec);
 

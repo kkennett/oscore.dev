@@ -29,29 +29,53 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OSEXEC_H
-#define __K2OSEXEC_H
 
-#include "k2oskern.h"
+#include "kern.h"
 
-#if __cplusplus
-extern "C" {
-#endif
+BOOL KernSched_Exec_EventChange(void)
+{
+    K2OSKERN_OBJ_EVENT *    pEvent;
+    BOOL                    setReset;
 
-//
-//------------------------------------------------------------------------
-//
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_EventChange);
 
+    pEvent = gData.Sched.mpActiveItem->Args.EventChange.mpEvent;
+    setReset = gData.Sched.mpActiveItem->Args.EventChange.mSetReset;
 
-extern K2_GUID128 const gK2OSEXEC_MailslotGuid;
-extern char const *     gpK2OSEXEC_MailslotGuidStr;
+    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
 
-//
-//------------------------------------------------------------------------
-//
+    if (setReset == FALSE)
+    {
+        //
+        // either event is set and nothing is waiting on it
+        // or event is not set and we're doing nothing
+        //
+        pEvent->mIsSignalled = FALSE;
+        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        return FALSE;
+    }
 
-#if __cplusplus
+    //
+    // setting the event
+    //
+
+    if (pEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0)
+    {
+        //
+        // either event is already set and nobody is waiting on it
+        // or event is not set and nobody is waiting on it, so we
+        // can just set it to signalled.  
+        pEvent->mIsSignalled = TRUE;
+        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        return FALSE;
+    }
+
+    //
+    // going to release a waiting thread
+    //
+    K2_ASSERT(0);
+
+    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+
+    return TRUE;
 }
-#endif
-
-#endif // __K2OSKERN_H

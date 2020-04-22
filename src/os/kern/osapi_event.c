@@ -32,26 +32,118 @@
 
 #include "kern.h"
 
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aAutoReset, BOOL aInitialState)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_NAME *     pNameObj;
+    K2OSKERN_OBJ_EVENT *    pEventObj;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2OS_TOKEN              tokEvent;
+
+    tokEvent = NULL;
+
+    pNameObj = NULL;
+    if (aNameToken != NULL)
+    {
+        stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
+            {
+                KernObj_Release(&pNameObj->Hdr);
+                stat = K2STAT_ERROR_BAD_TOKEN;
+            }
+        }
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return FALSE;
+        }
+    }
+
+    do {
+        pEventObj = (K2OSKERN_OBJ_EVENT *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_EVENT));
+        if (pEventObj == NULL)
+        {
+            stat = K2OS_ThreadGetStatus();
+            break;
+        }
+
+        stat = KernEvent_Create(pEventObj, pNameObj, aAutoReset, aInitialState);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_HeapFree(pEventObj);
+            break;
+        }
+
+        pObjHdr = &pEventObj->Hdr;
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokEvent);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            KernObj_Release(&pEventObj->Hdr);
+        }
+
+    } while (0);
+
+    if (aNameToken != NULL)
+    {
+        K2_ASSERT(pNameObj != NULL);
+        KernObj_Release(&pNameObj->Hdr);
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokEvent;
 }
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken)
+static BOOL sSetOrReset(K2OS_TOKEN aTokEvent, BOOL aSetReset)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_EVENT *    pEventObj;
+
+    if (aTokEvent == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokEvent, (K2OSKERN_OBJ_HEADER **)&pEventObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pEventObj->Hdr.mObjType == K2OS_Obj_Event)
+            stat = KernEvent_Change(pEventObj, aSetReset);
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+
+        stat2 = KernObj_Release(&pEventObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
-BOOL    K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    return sSetOrReset(aEventToken, TRUE);
 }
 
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    return sSetOrReset(aEventToken, FALSE);
+}
+
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken)
+{
+    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Event);
 }

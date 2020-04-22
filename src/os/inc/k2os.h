@@ -263,7 +263,7 @@ BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO 
 //------------------------------------------------------------------------
 //
 
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aInitialState, BOOL aAutoReset);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aAutoReset, BOOL aInitialState);
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken);
 BOOL        K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken);
 BOOL        K2_CALLCONV_CALLERCLEANS K2OS_EventReset(K2OS_TOKEN aEventToken);
@@ -301,7 +301,7 @@ struct _K2OS_MSGIO
     union {
         UINT32 mOpCode;
         UINT32 mStatus;
-    } Hdr;
+    };
     UINT32 mPayload[7];
 };
 K2_STATIC_ASSERT(sizeof(K2OS_MSGIO) == (8 * sizeof(UINT32)));

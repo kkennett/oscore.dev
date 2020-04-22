@@ -31,52 +31,13 @@
 //
 
 #include "ik2osexec.h"
-
-UINT32 K2_CALLCONV_REGS MsgThread(void *apParam)
-{
-    K2OSKERN_Debug("In MsgThread\n");
-
-    K2OS_ThreadSleep(500);
-
-    while (1)
-    {
-        K2OS_ThreadSleep(1000);
-        K2OSKERN_Debug("Msg Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
-    }
-
-    return (UINT32)0xAABBCCDD;
-}
-
-//static
-void
-sCreateMsgThread(
-    void
-)
-{
-    K2OS_TOKEN          tokThread;
-    K2OS_THREADCREATE   cret;
-
-    K2MEM_Zero(&cret, sizeof(cret));
-    cret.mStructBytes = sizeof(cret);
-    cret.mEntrypoint = MsgThread;
-
-    tokThread = K2OS_ThreadCreate(&cret);
-    if (NULL == tokThread)
-    {
-        K2OSKERN_Debug("ThreadCreate for MsgThread failed\n");
-    }
-    else
-    {
-        K2OSKERN_Debug("tokThread = %08X\n", tokThread);
-    }
-}
  
 void
 K2OSEXEC_Run(
     void
 )
 {
-    sCreateMsgThread();
+    Msg_Init();
 
 #if 1
     K2OSKERN_Debug("Sleep Hang ints on\n");

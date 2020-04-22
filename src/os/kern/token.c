@@ -361,7 +361,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
     return stat;
 }
 
-K2OS_TOKEN KernTok_CreateNoAddRef_FromNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType)
+K2OS_TOKEN KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType)
 {
     K2STAT                  stat;
     K2STAT                  stat2;

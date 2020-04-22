@@ -47,8 +47,8 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
     KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
     KernSched_Exec_SemRelease,          // KernSchedItem_SemRelease
-    KernSched_Exec_ThreadCreate         // KernSchedItem_ThreadCreate
-
+    KernSched_Exec_ThreadCreate,        // KernSchedItem_ThreadCreate
+    KernSched_Exec_EventChange          // KernSchedItem_EventChange
 };
 
 static K2OSKERN_SCHED_ITEM * sgpItemList;

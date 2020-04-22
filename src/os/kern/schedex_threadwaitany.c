@@ -123,21 +123,21 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
         switch (objWait.mpHdr->mObjType)
         {
         case K2OS_Obj_Event:
-            if (objWait.mpEvent->mIsSignaled)
+            if (objWait.mpEvent->mIsSignalled)
             {
                 if (objWait.mpEvent->mIsAutoReset)
                 {
                     //
                     // nobody is waiting, or it would not be signalled
                     //
-                    objWait.mpEvent->mIsSignaled = FALSE;
+                    objWait.mpEvent->mIsSignalled = FALSE;
                 }
                 isSatisfiedWithoutChange = TRUE;
             }
             break;
 
         case K2OS_Obj_Name:
-            if (objWait.mpName->Event_IsOwned.mIsSignaled)
+            if (objWait.mpName->Event_IsOwned.mIsSignalled)
             {
                 isSatisfiedWithoutChange = TRUE;
             }
