@@ -94,6 +94,8 @@ union _K2OSKERN_OBJ_WAITABLE
     K2OSKERN_OBJ_THREAD *   mpThread;
     K2OSKERN_OBJ_SEM *      mpSem;
     K2OSKERN_OBJ_INTR *     mpIntr;
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
+    K2OSKERN_OBJ_MSG *      mpMsg;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -207,6 +209,9 @@ enum _KernSchedItemType
     KernSchedItem_SemRelease,
     KernSchedItem_ThreadCreate,
     KernSchedItem_EventChange,
+    KernSchedItem_SlotBlock,
+    KernSchedItem_SlotBoxes,
+    KernSchedItem_SlotPurge,
 
     // more here
     KernSchedItemType_Count
@@ -220,6 +225,9 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE       K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE;
 
 typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
 enum _KernSchedTimerItemType
@@ -304,6 +312,27 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE
     BOOL                    mSetReset;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK
+{
+    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
+    BOOL                    mSetBlock;
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES
+{
+    BOOL                    mAttach;
+    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
+    UINT32                  mBoxCount;
+    K2OSKERN_OBJ_MAILBOX ** mppMailbox;
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE
+{
+    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
+    UINT32                  mObjCount;
+    K2OSKERN_OBJ_HEADER **  mppObj;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -314,6 +343,9 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        SemRelease;
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      ThreadCreate;
     K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE       EventChange;
+    K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         SlotBlock;
+    K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         SlotBoxes;
+    K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         SlotPurge;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -930,6 +962,8 @@ struct _K2OSKERN_OBJ_MSG
     volatile UINT32         mRequestId;
 
     K2OS_MSGIO              Io;
+
+    K2OSKERN_OBJ_EVENT      Event;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1153,6 +1187,9 @@ BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);
 BOOL KernSched_Exec_ThreadCreate(void);
 BOOL KernSched_Exec_EventChange(void);
+BOOL KernSched_Exec_SlotBlock(void);
+BOOL KernSched_Exec_SlotBoxes(void);
+BOOL KernSched_Exec_SlotPurge(void);
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
@@ -1169,6 +1206,8 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
 void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle);
 BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait);
 void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread, KernThreadRunState aNewState, K2OSKERN_OBJ_THREAD *apReadyThread);
+
+BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
 
 /* --------------------------------------------------------------------------------- */
 

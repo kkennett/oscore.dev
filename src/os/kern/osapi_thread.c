@@ -820,12 +820,12 @@ static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_W
         *apResult = K2STAT_THREAD_WAITED;
         return FALSE;
 
-//    case K2OS_Obj_Alarm:
-//    case K2OS_Obj_RwLock:
-//    case K2OS_Obj_Mailbox:
-//    case K2OS_Obj_Mailslot:
-//    case K2OS_Obj_Msg:
-//    case K2OS_Obj_RwLockReq:
+    case K2OS_Obj_Mailbox:
+        return aObjWait.mpMailbox->Event.mIsSignalled;
+
+    case K2OS_Obj_Msg:
+        return aObjWait.mpMsg->Event.mIsSignalled;
+
     default:
         K2_ASSERT(0);
         break;

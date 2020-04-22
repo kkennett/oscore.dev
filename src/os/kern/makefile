@@ -71,7 +71,9 @@ SOURCES += sem.c
 SOURCES += thread0.c
 SOURCES += schedex_threadcreate.c
 SOURCES += mailbox.c
-SOURCES += schedex_event.c
+SOURCES += schedex_Event.c
+SOURCES += mailslot.c
+SOURCES += schedex_slot.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 

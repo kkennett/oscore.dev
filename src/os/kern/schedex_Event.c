@@ -32,26 +32,15 @@
 
 #include "kern.h"
 
-BOOL KernSched_Exec_EventChange(void)
+BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
 {
-    K2OSKERN_OBJ_EVENT *    pEvent;
-    BOOL                    setReset;
-
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_EventChange);
-
-    pEvent = gData.Sched.mpActiveItem->Args.EventChange.mpEvent;
-    setReset = gData.Sched.mpActiveItem->Args.EventChange.mSetReset;
-
-    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
-
-    if (setReset == FALSE)
+    if (aSignal == FALSE)
     {
         //
         // either event is set and nothing is waiting on it
         // or event is not set and we're doing nothing
         //
-        pEvent->mIsSignalled = FALSE;
-        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        apEvent->mIsSignalled = FALSE;
         return FALSE;
     }
 
@@ -59,14 +48,13 @@ BOOL KernSched_Exec_EventChange(void)
     // setting the event
     //
 
-    if (pEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0)
+    if (apEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0)
     {
         //
         // either event is already set and nobody is waiting on it
         // or event is not set and nobody is waiting on it, so we
         // can just set it to signalled.  
-        pEvent->mIsSignalled = TRUE;
-        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        apEvent->mIsSignalled = TRUE;
         return FALSE;
     }
 
@@ -75,7 +63,25 @@ BOOL KernSched_Exec_EventChange(void)
     //
     K2_ASSERT(0);
 
+    return TRUE;
+}
+
+BOOL KernSched_Exec_EventChange(void)
+{
+    K2OSKERN_OBJ_EVENT *    pEvent;
+    BOOL                    setReset;
+    BOOL                    result;
+
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_EventChange);
+
+    pEvent = gData.Sched.mpActiveItem->Args.EventChange.mpEvent;
+    setReset = gData.Sched.mpActiveItem->Args.EventChange.mSetReset;
+
+    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
+
+    result = KernSched_EventChange(pEvent, setReset);
+
     gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
 
-    return TRUE;
+    return result;
 }
