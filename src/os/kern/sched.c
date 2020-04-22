@@ -414,7 +414,7 @@ void KernSched_Exec(void)
                 K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Running);
 
                 pThread->Sched.mLastRunCoreIx = pCpuCore->mCoreIx;
-                pCpuCore->mpActiveThread = pThread;
+                pCpuCore->mpAssignThread = pThread; // assign can only happen when mpActiveThread is NULL
                 K2_CpuWriteBarrier();
 
                 if (pCpuCore != gData.Sched.mpSchedulingCore)
@@ -663,7 +663,7 @@ void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAt
         if ((pCpuCore->Sched.mpRunThread == NULL) &&
             ((1 << pCpuCore->mCoreIx) & apThread->Sched.Attr.mAffinityMask))
         {
-            K2OSKERN_Debug("MakeThreadActive(%d) - back onto core %d (last, idle)\n", apThread->Env.mId, pCpuCore->mCoreIx);
+//            K2OSKERN_Debug("MakeThreadActive(%d) - back onto core %d (last, idle)\n", apThread->Env.mId, pCpuCore->mCoreIx);
             sPutThreadOntoIdleCore(pCpuCore, apThread, FALSE);
             return;
         }
@@ -686,7 +686,7 @@ void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAt
         do {
             if ((1 << pCpuCore->mCoreIx) & apThread->Sched.Attr.mAffinityMask)
             {
-                K2OSKERN_Debug("MakeThreadActive(%d) - onto idle core %d\n", apThread->Env.mId, pCpuCore->mCoreIx);
+//                K2OSKERN_Debug("MakeThreadActive(%d) - onto idle core %d\n", apThread->Env.mId, pCpuCore->mCoreIx);
                 sPutThreadOntoIdleCore(pCpuCore, apThread, FALSE);
                 return;
             }
@@ -752,7 +752,7 @@ void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAt
             //
             // preempt thread on this core
             //
-            K2OSKERN_Debug("MakeThreadActive(%d) - preempt core %d\n", apThread->Env.mId, pCpuCore->mCoreIx);
+//            K2OSKERN_Debug("MakeThreadActive(%d) - preempt core %d\n", apThread->Env.mId, pCpuCore->mCoreIx);
             KernSched_PreemptCore(pCpuCore, pCpuCore->Sched.mpRunThread, KernThreadRunState_Ready, apThread);
             return;
         }
@@ -761,7 +761,7 @@ void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAt
     //
     // thread does not preempt anybody and goes onto ready list
     //
-    K2OSKERN_Debug("MakeThreadActive(%d) - to ready list\n", apThread->Env.mId);
+//    K2OSKERN_Debug("MakeThreadActive(%d) - to ready list\n", apThread->Env.mId);
     apThread->Sched.State.mRunState = KernThreadRunState_Ready;
     sPutReadyThreadOnReadyList(apThread, aEndOfListAtPrio);
 }

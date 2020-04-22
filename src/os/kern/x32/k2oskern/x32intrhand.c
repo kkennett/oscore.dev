@@ -148,13 +148,13 @@ static
 BOOL 
 sX32Kern_Exception(
     K2OSKERN_CPUCORE volatile * apThisCore,
-    K2OSKERN_OBJ_THREAD *       apCurThread,
     X32_EXCEPTION_CONTEXT *     apContext
 )
 {
-    K2_EXCEPTION_TRAP *pExTrap;
+    K2_EXCEPTION_TRAP *     pExTrap;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
 
-    if (apCurThread == NULL)
+    if (apThisCore->mIsInMonitor)
     {
         sX32Kern_DumpKernelModeExceptionContext(apThisCore->mCoreIx, apContext);
         sX32Kern_DumpStackTrace(
@@ -165,15 +165,18 @@ sX32Kern_Exception(
         K2OSKERN_Panic("Exception %d in Monitor\n", apContext->Exception_Vector);
     }
 
+    pCurThread = apThisCore->mpActiveThread;
+    K2_ASSERT(pCurThread != NULL);
+
     K2OSKERN_Debug("Exception %d in %s Mode while running Thread %d, Context @ 0x%08X\n",
         apContext->Exception_Vector,
-        apCurThread->mIsInKernelMode ? "Kernel" : "User",
-        apCurThread->Info.mThreadId,
+        pCurThread->mIsInKernelMode ? "Kernel" : "User",
+        pCurThread->Env.mId,
         apContext);
 
-    if (apCurThread->mIsInKernelMode)
+    if (pCurThread->mIsInKernelMode)
     {
-        pExTrap = apCurThread->mpKernExTrapStack;
+        pExTrap = pCurThread->mpKernExTrapStack;
         if (pExTrap == NULL)
         {
             sX32Kern_DumpKernelModeExceptionContext(apThisCore->mCoreIx, apContext);
@@ -229,7 +232,7 @@ X32Kern_InterruptHandler(
 
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
-        threadFaulted = sX32Kern_Exception(pThisCore, pActiveThread, &aContext);
+        threadFaulted = sX32Kern_Exception(pThisCore, &aContext);
         if (threadFaulted)
             forceEnterMonitor = TRUE;
     }

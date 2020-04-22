@@ -78,6 +78,20 @@ void KernMonitor_Run(void)
                 pThread = pThisCore->mpActiveThread;
                 if (pThread == NULL)
                 {
+                    pThread = pThisCore->mpAssignThread;
+                    if (pThread != NULL)
+                    {
+                        pThisCore->mpActiveThread = pThread;
+                        pThisCore->mpAssignThread = NULL;
+                    }
+                }
+                else
+                {
+                    K2_ASSERT(pThisCore->mpAssignThread == NULL);
+                }
+
+                if (pThread == NULL)
+                {
                     pThisCore->mIsIdle = TRUE;
 //                    K2OSKERN_Debug("!Core %d: Enter idle\n", pThisCore->mCoreIx);
                     //

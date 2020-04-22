@@ -146,6 +146,7 @@ struct _K2OSKERN_CPUCORE
     BOOL                                mGoToMonitorAfterIntr;
 
     K2OSKERN_OBJ_PROCESS *              mpActiveProc;
+    K2OSKERN_OBJ_THREAD * volatile      mpAssignThread;
     K2OSKERN_OBJ_THREAD * volatile      mpActiveThread;
 
     K2OSKERN_SCHED_CPUCORE              Sched;

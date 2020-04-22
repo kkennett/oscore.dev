@@ -82,7 +82,7 @@ sProcessOneCpuCoreEvent(
         break;
     case KernCpuCoreEvent_Ici_Wakeup:
         //
-        // no-op. we just brought the core out of idle into the monitor
+        // no-op. we just brought the core out of idle into its monitor
         //
         break;
     case KernCpuCoreEvent_Ici_Stop:
