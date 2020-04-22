@@ -128,7 +128,7 @@ struct _K2OSKERN_SCHED_CPUCORE
     UINT64                  mLastStopAbsTimeMs;
     K2OSKERN_OBJ_THREAD *   mpRunThread;
     K2LIST_LINK             CpuCoreListLink;
-    UINT32                  mActivePrio;
+    UINT32                  mCoreActivePrio;
     UINT32                  mExecFlags;
 };
 
@@ -359,7 +359,7 @@ struct _K2OSKERN_SCHED_THREAD
     K2OS_THREADATTR     Attr;       // current priority, affinity mask, quantum
     K2OSKERN_SCHED_ITEM Item;
     K2OSKERN_CRITSEC *  mpActionSec;
-    UINT32              mActivePrio;
+    UINT32              mThreadActivePrio;
     UINT32              mLastRunCoreIx;
     K2LIST_LINK         ReadyListLink;
     K2LIST_ANCHOR       OwnedCritSecList;
@@ -378,6 +378,7 @@ struct _K2OSKERN_SCHED
     UINT32                          mReadyThreadCount;
 
     UINT32                          mSysWideThreadCount;
+    UINT32                          mNextThreadId;
 
     UINT32 volatile                 mReq;
     K2OSKERN_SCHED_ITEM * volatile  mpPendingItemListHead;
@@ -1096,6 +1097,7 @@ void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
 BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread);
 void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle);
 BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait);
+void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread, KernThreadRunState aNewState, K2OSKERN_OBJ_THREAD *apReadyThread);
 
 /* --------------------------------------------------------------------------------- */
 

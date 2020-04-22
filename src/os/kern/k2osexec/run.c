@@ -35,6 +35,7 @@
 UINT32 K2_CALLCONV_REGS MsgThread(void *apParam)
 {
     K2OSKERN_Debug("In MsgThread\n");
+    while (1);
     return (UINT32)0xAABBCCDD;
 }
 
@@ -56,6 +57,10 @@ sCreateMsgThread(
     {
         K2OSKERN_Debug("ThreadCreate for MsgThread failed\n");
     }
+    else
+    {
+        K2OSKERN_Debug("tokThread = %08X\n", tokThread);
+    }
 }
  
 void
@@ -63,9 +68,9 @@ K2OSEXEC_Run(
     void
 )
 {
-//    sCreateMsgThread();
+    sCreateMsgThread();
 
-#if 1
+#if 0
     K2OSKERN_Debug("Sleep Hang ints on\n");
     while (1)
     {

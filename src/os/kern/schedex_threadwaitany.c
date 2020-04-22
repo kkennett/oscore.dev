@@ -56,7 +56,7 @@ sWaitList_Insert(
         pOtherEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
         pOtherWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pOtherEntry, SchedWaitEntry[pOtherEntry->mMacroIndex]);
         pOtherThread = pOtherWait->mpWaitingThread;
-        if (pOtherThread->Sched.mActivePrio > apWaitThread->Sched.mActivePrio)
+        if (pOtherThread->Sched.mThreadActivePrio > apWaitThread->Sched.mThreadActivePrio)
             break;
         pListLink = pListLink->mpNext;
     } while (pListLink != NULL);
@@ -89,6 +89,10 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     UINT32                      ix;
     BOOL                        isSatisfiedWithoutChange;
     KernThreadRunState          nextRunState;
+    K2OSKERN_CPUCORE *          pCore;
+    UINT32                      workPrio;
+    K2LIST_LINK *               pListLink;
+    K2OSKERN_OBJ_THREAD *       pReadyThread;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWaitAny);
 
@@ -202,12 +206,12 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     //
     gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
 
+    K2_ASSERT(pThread->Sched.mLastRunCoreIx < gData.mCpuCount);
+    pCore = K2OSKERN_COREIX_TO_CPUCORE(pThread->Sched.mLastRunCoreIx);
+
     if (pThread->Sched.State.mRunState == KernThreadRunState_Running)
     {
         pThread->Sched.mQuantumLeft = 0;
-
-        // this will set K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED on the core the thread was running on
-        KernSched_StopThread(pThread, NULL, nextRunState, TRUE);
 
         if (nextRunState == KernThreadRunState_Ready)
         {
@@ -216,7 +220,46 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             //
             K2_ASSERT(pWait->mNumEntries == 0);
             K2_ASSERT(gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs == 0);
-            return TRUE;
+
+            pCore->Sched.mExecFlags |= K2OSKERN_SCHED_CPUCORE_EXECFLAG_QUANTUM_ZERO;
+
+            return KernSched_RunningThreadQuantumExpired(pCore, pThread);
+        }
+
+        //
+        // we are stopping this thread so it can wait, and need to give the core something
+        // else to do.  if the core goes idle we just stop the thread but other wise we
+        // preempt it with something
+        //
+        K2_ASSERT(nextRunState == KernThreadRunState_Waiting);
+        pListLink = NULL;
+        if (gData.Sched.mReadyThreadCount > 0)
+        {
+            workPrio = 0;
+            do {
+                if (gData.Sched.ReadyThreadsByPrioList[workPrio].mNodeCount > 0)
+                {
+                    pListLink = gData.Sched.ReadyThreadsByPrioList[workPrio].mpHead;
+                    do {
+                        pReadyThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, pListLink, Sched.ReadyListLink);
+                        if (pReadyThread->Sched.Attr.mAffinityMask & (1 << pCore->mCoreIx))
+                            break;
+                        pListLink = pListLink->mpNext;
+                    } while (pListLink != NULL);
+                    if (pListLink != NULL)
+                        break;
+                }
+                ++workPrio;
+            } while (workPrio < K2OS_THREADPRIO_LEVELS);
+        }
+
+        if (pListLink == NULL)
+        {
+            KernSched_StopThread(pThread, pCore, KernThreadRunState_Waiting, TRUE);
+        }
+        else
+        {
+            KernSched_PreemptCore(pCore, pThread, KernThreadRunState_Waiting, pReadyThread);
         }
     }
     else
@@ -234,7 +277,7 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             }
 
             K2LIST_Remove(
-                &gData.Sched.ReadyThreadsByPrioList[pThread->Sched.mActivePrio],
+                &gData.Sched.ReadyThreadsByPrioList[pThread->Sched.mThreadActivePrio],
                 &pThread->Sched.ReadyListLink
             );
             gData.Sched.mReadyThreadCount--;

@@ -42,10 +42,20 @@ BOOL KernSched_Exec_ThreadCreate(void)
 
     K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
 
+    K2_ASSERT(pNewThread->Sched.Attr.mPriority < K2OS_THREADPRIO_LEVELS);
+    pNewThread->Sched.mBasePrio = pNewThread->Sched.Attr.mPriority;
+    pNewThread->Sched.mThreadActivePrio = pNewThread->Sched.mBasePrio;
+    K2_ASSERT(pNewThread->Sched.mThreadActivePrio < K2OS_THREADPRIO_LEVELS);
+
+    K2_ASSERT(pNewThread->Sched.Attr.mQuantum > 0);
+    K2_ASSERT(pNewThread->Sched.Attr.mAffinityMask != 0);
+
     //
     // a thread that is not in a purgeable state holds a reference to itself.
     //
     KernObj_AddRef(&pNewThread->Hdr);
+
+    pNewThread->Env.mId = gData.Sched.mNextThreadId++;
 
     //
     // get ready to run

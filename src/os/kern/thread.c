@@ -172,6 +172,8 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
     pNewThread->Sched.State.mRunState = KernThreadRunState_None;
     pNewThread->Sched.State.mStopFlags = KERNTHREAD_STOP_FLAG_NONE;
 
+    pNewThread->Sched.Attr = apCreate->Attr;
+
     apThisThread->mpThreadCreateSeg = NULL;
 
     K2OSKERN_SeqIntrUnlock(&apProc->ThreadListSeqLock, FALSE);
