@@ -79,7 +79,7 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
     }
 
     do {
-        waitResult = K2OS_ThreadWaitOne(sgTokMailbox, 3000); //  K2OS_TIMEOUT_INFINITE);
+        waitResult = K2OS_ThreadWaitOne(sgTokMailbox, K2OS_TIMEOUT_INFINITE);
         K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
         requestId = 0;
         ok = K2OS_MailboxRecv(sgTokMailbox, &msgIo, &requestId);

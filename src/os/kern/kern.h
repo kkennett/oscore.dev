@@ -212,6 +212,9 @@ enum _KernSchedItemType
     KernSchedItem_SlotBlock,
     KernSchedItem_SlotBoxes,
     KernSchedItem_SlotPurge,
+    KernSchedItem_MboxRecv,
+    KernSchedItem_MboxRespond,
+    KernSchedItem_MboxPurge,
 
     // more here
     KernSchedItemType_Count
@@ -228,6 +231,9 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE       K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE;
 
 typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
 enum _KernSchedTimerItemType
@@ -333,6 +339,29 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE
     K2OSKERN_OBJ_HEADER **  mppObj;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV
+{
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
+    UINT32                  mRetRequestId;
+    K2OS_MSGIO *            mpRetMsgIo;
+    K2OSKERN_OBJ_MSG *      mpRetMsgRecv;
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND
+{
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
+    UINT32                  mRequestId;
+    K2OS_MSGIO const *      mpRespMsgIo;
+    K2OSKERN_OBJ_MSG *      mpRetMsg1;
+    K2OSKERN_OBJ_MSG *      mpRetMsg2;
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE
+{
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
+    K2OSKERN_OBJ_MSG *      mpRetMsgPurge;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -346,6 +375,9 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         SlotBlock;
     K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         SlotBoxes;
     K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         SlotPurge;
+    K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          MboxRecv;
+    K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       MboxRespond;
+    K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         MboxPurge;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -1190,6 +1222,9 @@ BOOL KernSched_Exec_EventChange(void);
 BOOL KernSched_Exec_SlotBlock(void);
 BOOL KernSched_Exec_SlotBoxes(void);
 BOOL KernSched_Exec_SlotPurge(void);
+BOOL KernSched_Exec_MboxRecv(void);
+BOOL KernSched_Exec_MboxRespond(void);
+BOOL KernSched_Exec_MboxPurge(void);
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);

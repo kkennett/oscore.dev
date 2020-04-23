@@ -76,8 +76,14 @@ sWaitList_Remove(
     K2OSKERN_SCHED_WAITENTRY *  apEntry
 )
 {
-    K2_ASSERT(0);
-    return TRUE;
+    K2LIST_ANCHOR *             pAnchor;
+
+    pAnchor = &apEntry->mWaitObj.mpHdr->WaitingThreadsPrioList;
+    K2_ASSERT(pAnchor->mNodeCount != 0);
+
+    K2LIST_Remove(pAnchor, &apEntry->WaitPrioListLink);
+
+    return FALSE;
 }
 
 BOOL KernSched_Exec_ThreadWaitAny(void)

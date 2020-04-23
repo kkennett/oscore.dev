@@ -65,15 +65,114 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT16 aId)
 
 K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo, UINT32 *apRetRequestId)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_MSG *      pMsg;
+
+    if (apMailbox->mState == K2OSKERN_MAILBOX_EMPTY)
+    {
+        return K2STAT_ERROR_EMPTY;
+    }
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxRecv;
+
+    pThisThread->Sched.Item.Args.MboxRecv.mpMailbox = apMailbox;
+    pThisThread->Sched.Item.Args.MboxRecv.mRetRequestId = 0;
+    pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgIo = apRetMsgIo;
+    pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgRecv = NULL;
+    KernArch_ThreadCallSched();
+    stat = pThisThread->Sched.Item.mResult;
+
+    pMsg = pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgRecv;
+    if (pMsg != NULL)
+    {
+        stat2 = KernObj_Release(&pMsg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    return stat;
 }
 
-K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRetRespIo)
+K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRespIo)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_MSG *      pMsg;
+
+    if ((aRequestId == 0) || (apRespIo == NULL))
+        return K2STAT_ERROR_BAD_ARGUMENT;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxRecv;
+
+    pThisThread->Sched.Item.Args.MboxRespond.mpMailbox = apMailbox;
+    pThisThread->Sched.Item.Args.MboxRespond.mRequestId = 0;
+    pThisThread->Sched.Item.Args.MboxRespond.mpRespMsgIo = apRespIo;
+    pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg1 = NULL;
+    pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg2 = NULL;
+    KernArch_ThreadCallSched();
+    stat = pThisThread->Sched.Item.mResult;
+
+    pMsg = pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg1;
+    if (pMsg != NULL)
+    {
+        stat2 = KernObj_Release(&pMsg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    pMsg = pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg2;
+    if (pMsg != NULL)
+    {
+        stat2 = KernObj_Release(&pMsg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    return stat;
 }
 
 void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
 {
-    K2_ASSERT(0);
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_MSG *      pMsg;
+    BOOL                    check;
+
+    K2_ASSERT(apMailbox->Hdr.mObjType == K2OS_Obj_Mailbox);
+    K2_ASSERT(apMailbox->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+
+    K2_ASSERT(apMailbox->mpSlot == NULL);
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxPurge;
+
+    pThisThread->Sched.Item.Args.MboxPurge.mpMailbox = apMailbox;
+    pThisThread->Sched.Item.Args.MboxPurge.mpRetMsgPurge = NULL;
+    KernArch_ThreadCallSched();
+    stat = pThisThread->Sched.Item.mResult;
+
+    pMsg = pThisThread->Sched.Item.Args.MboxPurge.mpRetMsgPurge;
+    if (pMsg != NULL)
+    {
+        stat = KernObj_Release(&pMsg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    }
+
+    KernObj_Release(&apMailbox->Event.Hdr);
+
+    check = !(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    K2MEM_Zero(apMailbox, sizeof(K2OSKERN_OBJ_MAILBOX));
+
+    if (check)
+    {
+        check = K2OS_HeapFree(apMailbox);
+        K2_ASSERT(check);
+    }
 }

@@ -135,14 +135,94 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(UINT32 aMailboxCount, K2OS_TOKE
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGIO *apRetMsgIo, UINT32 *apRetRequestId)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_MAILBOX *  pMailboxObj;
+    K2OS_MSGIO              actMsgIo;
+    UINT32                  actReqId;
+
+    if (aTokMailbox == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    if ((apRetRequestId == NULL) ||
+        (apRetMsgIo == NULL))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Zero(apRetMsgIo, sizeof(K2OS_MSGIO));
+    *apRetRequestId = 0;
+
+    K2MEM_Zero(&actMsgIo, sizeof(actMsgIo));
+    actReqId = 0;
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
+            stat = KernMailbox_Recv(pMailboxObj, &actMsgIo, &actReqId);
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    *apRetMsgIo = actMsgIo;
+    *apRetRequestId = actReqId;
+
+    return TRUE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRespIo)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_MAILBOX *  pMailboxObj;
+    K2OS_MSGIO              msgIo;
+
+    if (aTokMailbox == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    if ((aRequestId == 0) ||
+        (apRespIo == NULL))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Copy(&msgIo, apRespIo, sizeof(K2OS_MSGIO));
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
+            stat = KernMailbox_Respond(pMailboxObj, aRequestId, &msgIo);
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 
