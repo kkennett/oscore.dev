@@ -145,6 +145,7 @@ void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
     K2_ASSERT(apMailbox->Hdr.mObjType == K2OS_Obj_Mailbox);
     K2_ASSERT(apMailbox->Hdr.mRefCount == 0);
     K2_ASSERT(!(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apMailbox->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
 
     K2_ASSERT(apMailbox->mpSlot == NULL);
 

@@ -205,6 +205,8 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
         K2OSKERN_Panic("*** Invalid thread disposal\n");
     }
 
+    K2_ASSERT(apThread->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+
     K2_ASSERT(0);
 
     return K2STAT_ERROR_NOT_IMPL;

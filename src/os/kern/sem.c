@@ -131,6 +131,7 @@ void KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem)
     K2_ASSERT(apSem->Hdr.mObjType == K2OS_Obj_Semaphore);
     K2_ASSERT(apSem->Hdr.mRefCount == 0);
     K2_ASSERT(!(apSem->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apSem->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
 
     //
     // shouldnt need to do any cleanup as no references to this remain

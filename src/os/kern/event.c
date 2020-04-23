@@ -88,6 +88,7 @@ void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvent)
     K2_ASSERT(apEvent->Hdr.mObjType == K2OS_Obj_Event);
     K2_ASSERT(apEvent->Hdr.mRefCount == 0);
     K2_ASSERT(!(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
 
     check = !(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

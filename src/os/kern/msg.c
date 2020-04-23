@@ -68,7 +68,28 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, 
 
 K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+
+    if (apMsg->Event.mIsSignalled)
+        return K2STAT_NO_ERROR;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MsgAbort;
+    pThisThread->Sched.Item.Args.MsgAbort.mpMsgInOut = apMsg;
+    KernArch_ThreadCallSched();
+    stat = pThisThread->Sched.Item.mResult;
+
+    apMsg = pThisThread->Sched.Item.Args.MsgAbort.mpMsgInOut;
+    if (apMsg != NULL)
+    {
+        stat2 = KernObj_Release(&apMsg->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    return stat;
 }
 
 K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear)
@@ -78,6 +99,26 @@ K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, B
 
 void KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg)
 {
-    K2_ASSERT(0);
+    BOOL check;
+
+    K2_ASSERT(apMsg->Hdr.mObjType == K2OS_Obj_Msg);
+    K2_ASSERT(apMsg->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apMsg->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+
+    K2_ASSERT(apMsg->mpPendingOnSlot == NULL);
+    K2_ASSERT(apMsg->mpSittingInMailbox == NULL);
+
+    KernObj_Release(&apMsg->Event.Hdr);
+
+    check = !(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    K2MEM_Zero(apMsg, sizeof(K2OSKERN_OBJ_MSG));
+
+    if (check)
+    {
+        check = K2OS_HeapFree(apMsg);
+        K2_ASSERT(check);
+    }
 }
 

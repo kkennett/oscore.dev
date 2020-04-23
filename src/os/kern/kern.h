@@ -370,20 +370,23 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND
 {
-    K2OSKERN_OBJ_MSG *  mpMsg;
-
+    K2OSKERN_OBJ_MAILSLOT * mpSlot;
+    K2OSKERN_OBJ_MSG *      mpMsg;
+    K2OS_MSGIO const *      mpIo;
+    BOOL                    mResponseRequired;
+    K2OSKERN_OBJ_MSG *      mpRetRelMsg;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT
 {
-    K2OSKERN_OBJ_MSG *  mpMsg;
-
+    K2OSKERN_OBJ_MSG *  mpMsgInOut;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP
 {
     K2OSKERN_OBJ_MSG *  mpMsg;
-
+    K2OS_MSGIO *        mpIo;
+    BOOL                mClear;
 };
 
 union _K2OSKERN_SCHED_ITEM_ARGS
