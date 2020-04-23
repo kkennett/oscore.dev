@@ -51,6 +51,15 @@ static void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Thread:
         KernThread_Dispose((K2OSKERN_OBJ_THREAD *)apObjHdr);
         break;
+    case K2OS_Obj_Mailslot:
+        KernMailslot_Dispose((K2OSKERN_OBJ_MAILSLOT *)apObjHdr);
+        break;
+    case K2OS_Obj_Mailbox:
+        KernMailbox_Dispose((K2OSKERN_OBJ_MAILBOX *)apObjHdr);
+        break;
+    case K2OS_Obj_Msg:
+        KernMsg_Dispose((K2OSKERN_OBJ_MSG *)apObjHdr);
+        break;
     default:
         K2_ASSERT(0);
         break;

@@ -126,11 +126,8 @@ K2OS_MailboxRecv
 K2OS_MailboxRespond
 K2OS_MsgCreate
 K2OS_MsgSend
-K2OS_MsgWait
-K2OS_MsgSendAndWait
 K2OS_MsgAbort
 K2OS_MsgReadResponse
-K2OS_MsgTransact
 K2OS_HeapAlloc
 K2OS_HeapFree
 K2OS_HeapGetState

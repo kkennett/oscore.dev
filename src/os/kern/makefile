@@ -75,6 +75,7 @@ SOURCES += schedex_Event.c
 SOURCES += mailslot.c
 SOURCES += schedex_slot.c
 SOURCES += schedex_mbox.c
+SOURCES += msg.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 
