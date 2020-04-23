@@ -215,6 +215,9 @@ enum _KernSchedItemType
     KernSchedItem_MboxRecv,
     KernSchedItem_MboxRespond,
     KernSchedItem_MboxPurge,
+    KernSchedItem_MsgSend,
+    KernSchedItem_MsgAbort,
+    KernSchedItem_MsgReadResp,
 
     // more here
     KernSchedItemType_Count
@@ -234,6 +237,9 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP;
 
 typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
 enum _KernSchedTimerItemType
@@ -362,6 +368,24 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE
     K2OSKERN_OBJ_MSG *      mpRetMsgPurge;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND
+{
+    K2OSKERN_OBJ_MSG *  mpMsg;
+
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT
+{
+    K2OSKERN_OBJ_MSG *  mpMsg;
+
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP
+{
+    K2OSKERN_OBJ_MSG *  mpMsg;
+
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -378,6 +402,9 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          MboxRecv;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       MboxRespond;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         MboxPurge;
+    K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           MsgSend;
+    K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          MsgAbort;
+    K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      MsgReadResp;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -1225,6 +1252,10 @@ BOOL KernSched_Exec_SlotPurge(void);
 BOOL KernSched_Exec_MboxRecv(void);
 BOOL KernSched_Exec_MboxRespond(void);
 BOOL KernSched_Exec_MboxPurge(void);
+BOOL KernSched_Exec_MsgSend(void);
+BOOL KernSched_Exec_MsgAbort(void);
+BOOL KernSched_Exec_MsgReadResp(void);
+
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
 void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);

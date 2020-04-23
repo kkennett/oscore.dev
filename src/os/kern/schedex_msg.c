@@ -32,52 +32,20 @@
 
 #include "kern.h"
 
-K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
-{
-    K2STAT stat;
-
-    K2_ASSERT(apMsg != NULL);
-
-    K2MEM_Zero(apMsg, sizeof(K2OSKERN_OBJ_MSG));
-
-    apMsg->Hdr.mObjType = K2OS_Obj_Msg;
-    apMsg->Hdr.mObjFlags = 0;
-    apMsg->Hdr.mpName = NULL;
-    apMsg->Hdr.mRefCount = 1;
-    K2LIST_Init(&apMsg->Hdr.WaitingThreadsPrioList);
-
-    stat = KernEvent_Create(&apMsg->Event, NULL, TRUE, TRUE);
-    if (K2STAT_IS_ERROR(stat))
-        return stat;
-
-    apMsg->Event.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
-
-    stat = KernObj_Add(&apMsg->Hdr, NULL);
-    if (K2STAT_IS_ERROR(stat))
-    {
-        KernObj_Release(&apMsg->Event.Hdr);
-    }
-
-    return stat;
-}
-
-K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aResponseRequired)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-void KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg)
+BOOL KernSched_Exec_MsgSend(void)
 {
     K2_ASSERT(0);
+    return FALSE;
 }
 
+BOOL KernSched_Exec_MsgAbort(void)
+{
+    K2_ASSERT(0);
+    return FALSE;
+}
+
+BOOL KernSched_Exec_MsgReadResp(void)
+{
+    K2_ASSERT(0);
+    return FALSE;
+}
