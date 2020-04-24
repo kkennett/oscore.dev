@@ -70,8 +70,7 @@ sWaitList_Insert(
         K2LIST_AddAtTail(pAnchor, &apEntry->WaitPrioListLink);
 }
 
-BOOL
-sWaitList_Remove(
+void sWaitList_Remove(
     K2OSKERN_OBJ_THREAD *       apWaitThread,
     K2OSKERN_SCHED_WAITENTRY *  apEntry
 )
@@ -82,8 +81,39 @@ sWaitList_Remove(
     K2_ASSERT(pAnchor->mNodeCount != 0);
 
     K2LIST_Remove(pAnchor, &apEntry->WaitPrioListLink);
+}
 
-    return FALSE;
+void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT * apWait, UINT32 aWaitResult)
+{
+    UINT32                  ix;
+    K2OSKERN_OBJ_THREAD *   pThread;
+
+    pThread = apWait->mpWaitingThread;
+
+    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Waiting);
+
+    pThread->Sched.State.mRunState = KernThreadRunState_Transition;
+
+    K2_ASSERT(pThread->Sched.Item.Args.ThreadWait.mpMacroWait == apWait);
+
+    for (ix = 0; ix < apWait->mNumEntries; ix++)
+    {
+        sWaitList_Remove(pThread, &apWait->SchedWaitEntry[ix]);
+    }
+
+    if (aWaitResult != K2STAT_ERROR_TIMEOUT)
+    {
+        if (apWait->SchedTimerItem.mOnQueue)
+        {
+            KernSched_DelTimerItem(&apWait->SchedTimerItem);
+        }
+    }
+
+    apWait->mWaitResult = aWaitResult;
+
+    K2_ASSERT(pThread->Sched.Item.mSchedCallResult == K2STAT_THREAD_WAITED);
+
+    KernSched_MakeThreadActive(pThread, TRUE);
 }
 
 BOOL KernSched_Exec_ThreadWaitAny(void)
@@ -109,7 +139,7 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     pWait->mWaitResult = K2OS_WAIT_ERROR;
 
     K2_ASSERT(pWait->mNumEntries <= K2OS_WAIT_MAX_TOKENS);
-
+    
     K2_ASSERT(FALSE == pWait->mWaitAll);
 
 //    K2OSKERN_Debug("%6d.Core %d: SCHED:Exec WaitAny(%d, %d)\n", 
@@ -340,6 +370,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
         sWaitList_Insert(pWait->mpWaitingThread, pEntry);
     }
 
+    pWait->SchedTimerItem.mOnQueue = FALSE;
+
     if (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs != K2OS_TIMEOUT_INFINITE)
     {
         //
@@ -359,37 +391,4 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     }
 
     return TRUE;  // if something changes scheduling-wise, return true
-}
-
-BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait)
-{
-    K2OSKERN_OBJ_THREAD *   pThread;
-    K2OSKERN_SCHED_ITEM *   pItem;
-    UINT32                  ix;
-
-    //
-    // timer item has already been removed from timer queue
-    //
-    pThread = apWait->mpWaitingThread;
-
-    pThread->Sched.State.mRunState = KernThreadRunState_Transition;
-
-    pItem = &pThread->Sched.Item;
-    K2_ASSERT(pItem->Args.ThreadWait.mpMacroWait == apWait);
-
-    for (ix = 0; ix < apWait->mNumEntries; ix++)
-    {
-        sWaitList_Remove(pThread, &apWait->SchedWaitEntry[ix]);
-    }
-
-    apWait->mWaitResult = K2STAT_ERROR_TIMEOUT;
-
-    K2_ASSERT(pThread->Sched.Item.mSchedCallResult == K2STAT_THREAD_WAITED);
-
-    //
-    // thread goes onto ready list
-    //
-    KernSched_MakeThreadActive(pThread, TRUE);
-
-    return TRUE;
 }

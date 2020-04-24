@@ -973,3 +973,8 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
     return TRUE;
 }
 
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry)
+{
+    K2_ASSERT(0);
+    return FALSE;
+}

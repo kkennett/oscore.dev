@@ -166,7 +166,10 @@ BOOL sSignalTimerItem(K2OSKERN_SCHED_TIMERITEM * apItem)
     switch (apItem->mType)
     {
     case KernSchedTimerItemType_Wait:
-        changedSomething = KernSched_WaitTimedOut(K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, apItem, SchedTimerItem));
+        KernSched_EndThreadWait(
+            K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, apItem, SchedTimerItem),
+            K2STAT_ERROR_TIMEOUT);
+        changedSomething = TRUE;
         break;
     case KernSchedTimerItemType_Alarm:
         //

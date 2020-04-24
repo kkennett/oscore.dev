@@ -34,6 +34,11 @@
 
 BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
 {
+    K2OSKERN_SCHED_WAITENTRY *  pEntry;
+    K2OSKERN_SCHED_MACROWAIT *  pWait;
+    K2LIST_ANCHOR *             pAnchor;
+    K2LIST_LINK *               pListLink;
+
     if (aSignal == FALSE)
     {
         //
@@ -47,6 +52,10 @@ BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
     //
     // setting the event
     //
+    if (apEvent->mIsSignalled)
+    {
+        return FALSE;
+    }
 
     if (apEvent->Hdr.WaitEntryPrioList.mNodeCount == 0)
     {
@@ -58,10 +67,76 @@ BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
         return FALSE;
     }
 
+    pAnchor = &apEvent->Hdr.WaitEntryPrioList;
+    K2_ASSERT(pAnchor->mNodeCount > 0);
+
+    pListLink = pAnchor->mpHead;
+
+    if (apEvent->mIsAutoReset)
+    {
+        //
+        // try to release a single thread
+        //
+        do {
+            pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+            pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+
+            if (!pWait->mWaitAll)
+                break;
+
+            if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                return TRUE;
+
+            pListLink = pListLink->mpNext;
+
+        } while (pListLink != NULL);
+
+        if (pListLink == NULL)
+        {
+            //
+            // could not release a single thread - only stuff waiting was WaitAll
+            // 
+            apEvent->mIsSignalled = TRUE;
+            return FALSE;
+        }
+
+        KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+
+        return TRUE;
+    }
+
     //
-    // going to release a waiting thread
+    // not an auto-reset event. open the gates
     //
-    K2_ASSERT(0);
+    apEvent->mIsSignalled = TRUE;
+
+    //
+    // release everything we can
+    //
+    do {
+        pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+        pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+
+        pListLink = pListLink->mpNext;
+
+        if (pWait->mWaitAll)
+        {
+            //
+            // this *MAY* remove pEntry from the list.  we have already moved 
+            // the link to the next link
+            //
+            KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry);
+        }
+        else
+        {
+            //
+            // this will remove pEntry from the list.  we have already moved 
+            // the link to the next link
+            //
+            KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+        }
+
+    } while (pListLink != NULL);
 
     return TRUE;
 }

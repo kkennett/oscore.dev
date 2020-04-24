@@ -1260,10 +1260,13 @@ BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitSta
 void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
 BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread);
 void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle);
-BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait);
 void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread, KernThreadRunState aNewState, K2OSKERN_OBJ_THREAD *apReadyThread);
 
 BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
+
+void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT *apWait, UINT32 aWaitResult);
+
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry);
 
 /* --------------------------------------------------------------------------------- */
 

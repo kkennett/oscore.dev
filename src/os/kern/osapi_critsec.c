@@ -151,9 +151,11 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         K2_ASSERT(pSec->Event.Hdr.WaitEntryPrioList.mNodeCount == 0);
         pSec->Event.mIsSignalled = FALSE;
         gotIntoSec = TRUE;
+        K2OSKERN_Debug("%6d.Thread %d ENTER\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
     }
     else
     {
+        K2OSKERN_Debug("%6d.Thread %d BLOCKS*****\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }
@@ -164,6 +166,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         result = KernThread_WaitOne(&pSec->Event.Hdr, K2OS_TIMEOUT_INFINITE);
         if (result == K2OS_WAIT_SIGNALLED_0)
         {
+            K2OSKERN_Debug("%6d.Thread %d ENTER ON UNBLOCK\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
             gotIntoSec = TRUE;
         }
 
@@ -235,6 +238,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
     disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
     if (pSec->mWaitingThreadsCount == 0)
     {
+        K2OSKERN_Debug("%6d.Thread %d LEAVE NOBODY WAITING\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->Event.mIsSignalled = TRUE;
         leftSec = TRUE;
     }
@@ -246,6 +250,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
 
     if (!leftSec)
     {
+        K2OSKERN_Debug("%6d.Thread %d LEAVE TRANSFERRED\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         stat = KernEvent_Change(&pSec->Event, TRUE);
         if (K2STAT_IS_ERROR(stat))
         {

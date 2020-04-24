@@ -31,20 +31,56 @@
 //
 
 #include "ik2osexec.h"
- 
+
+K2OS_CRITSEC sec;
+
+UINT32 K2_CALLCONV_REGS testThread(void *apParam)
+{
+    do {
+        K2OS_CritSecEnter(&sec);
+        K2OS_ThreadSleep(200);
+        K2OS_CritSecLeave(&sec);
+    } while (1);
+}
+
+void sThreader(void)
+{
+    K2OS_TOKEN          tokThread;
+    K2OS_THREADCREATE   cret;
+
+    K2MEM_Zero(&cret, sizeof(cret));
+    cret.mStructBytes = sizeof(cret);
+    cret.mEntrypoint = testThread;
+
+    tokThread = K2OS_ThreadCreate(&cret);
+    K2_ASSERT(NULL != tokThread);
+}
+
 void
 K2OSEXEC_Run(
     void
 )
 {
-    Msg_Init();
+    BOOL once = TRUE;
+
+    K2OS_CritSecInit(&sec);
+
+//    Msg_Init();
 
 #if 1
     K2OSKERN_Debug("Sleep Hang ints on\n");
     while (1)
     {
-        K2OS_ThreadSleep(1000);
-        K2OSKERN_Debug("Main Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
+        K2OS_CritSecEnter(&sec);
+        if (once)
+        {
+            sThreader();
+            once = FALSE;
+        }
+        K2OS_ThreadSleep(700);
+        K2OS_CritSecLeave(&sec);
+        K2OS_ThreadSleep(100);
+//        K2OSKERN_Debug("Main Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
     }
 #else
     UINT64          last, newTick;
