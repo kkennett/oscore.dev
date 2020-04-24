@@ -98,8 +98,7 @@ BOOL KernSched_Exec_MboxRecv(void)
                 //
                 // no next message to retrieve. put mailbox back on slot empty list
                 //
-                if (KernEvent_Change(&pMailbox->Event, FALSE))
-                    changedSomething = TRUE;
+                KernSchedEx_EventChange(&pMailbox->Event, FALSE);
                 K2LIST_Remove(&pSlot->FullMailboxList, &pMailbox->SlotListLink);
                 K2LIST_AddAtTail(&pSlot->EmptyMailboxList, &pMailbox->SlotListLink);
                 pMailbox->mState = K2OSKERN_MAILBOX_EMPTY;
@@ -143,7 +142,7 @@ BOOL KernSched_Exec_MboxRecv(void)
                     K2_ASSERT(pMsg->mRequestId == 0);
                     K2_ASSERT(pMsg->mpSittingInMailbox == NULL);
 
-                    if (KernEvent_Change(&pMsg->Event, TRUE))
+                    if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
                         changedSomething = TRUE;
 
                     //
@@ -151,6 +150,9 @@ BOOL KernSched_Exec_MboxRecv(void)
                     //
                     gData.Sched.mpActiveItem->Args.MboxRecv.mpRetMsgRecv = pMsg;
                 }
+
+                if (KernSchedEx_EventChange(&pMailbox->Event, TRUE))
+                    changedSomething = TRUE;
             }
         }
     }
@@ -177,7 +179,7 @@ BOOL KernSched_Exec_MboxRespond(void)
     requestId = gData.Sched.mpActiveItem->Args.MboxRespond.mRequestId;
     pRespMsgIo = gData.Sched.mpActiveItem->Args.MboxRespond.mpRespMsgIo;
 
-//    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
+    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
 
     changedSomething = FALSE;
 
@@ -221,8 +223,12 @@ BOOL KernSched_Exec_MboxRespond(void)
             //
             K2MEM_Copy(&pMsg->Io, pRespMsgIo, sizeof(K2OS_MSGIO));
             pMsg->mpSittingInMailbox = NULL;
-            if (KernSched_EventChange(&pMsg->Event, TRUE))
+            K2OSKERN_Debug("Setting msg event (response)\n");
+            if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
+            {
+                K2OSKERN_Debug("released thread that was waiting on msg\n");
                 changedSomething = TRUE;
+            }
 
             //
             // release msg below as we detached it from the message box
@@ -238,8 +244,7 @@ BOOL KernSched_Exec_MboxRespond(void)
             //
             // no next message to retrieve. put mailbox back on slot empty list
             //
-            if (KernSched_EventChange(&pMailbox->Event, FALSE))
-                changedSomething = TRUE;
+            KernSchedEx_EventChange(&pMailbox->Event, FALSE);
             K2LIST_Remove(&pSlot->FullMailboxList, &pMailbox->SlotListLink);
             K2LIST_AddAtTail(&pSlot->EmptyMailboxList, &pMailbox->SlotListLink);
             pMailbox->mState = K2OSKERN_MAILBOX_EMPTY;
@@ -282,7 +287,7 @@ BOOL KernSched_Exec_MboxRespond(void)
 
                 K2_ASSERT(pMsg->mRequestId == 0);
                 K2_ASSERT(pMsg->mpSittingInMailbox == NULL);
-                if (KernSched_EventChange(&pMsg->Event, TRUE))
+                if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
                     changedSomething = TRUE;
 
                 //
@@ -290,6 +295,9 @@ BOOL KernSched_Exec_MboxRespond(void)
                 //
                 gData.Sched.mpActiveItem->Args.MboxRespond.mpRetMsg2 = pMsg;
             }
+
+            if (KernSchedEx_EventChange(&pMailbox->Event, TRUE))
+                changedSomething = TRUE;
         }
     }
 
@@ -320,7 +328,7 @@ BOOL KernSched_Exec_MboxPurge(void)
         pMailbox->mState = K2OSKERN_MAILBOX_EMPTY;
         pMsg->Io.mStatus = K2STAT_ERROR_ABANDONED;
         pMsg->mpSittingInMailbox = NULL;
-        changedSomething = KernEvent_Change(&pMsg->Event, TRUE);
+        changedSomething = KernSchedEx_EventChange(&pMsg->Event, TRUE);
     }
 
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;

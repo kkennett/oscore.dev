@@ -52,7 +52,10 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_SlotPurge,           // KernSchedItem_SlotPurge
     KernSched_Exec_MboxRecv,            // KernSchedItem_MboxRecv
     KernSched_Exec_MboxRespond,         // KernSchedItem_MboxRespond
-    KernSched_Exec_MboxPurge            // KernSchedItem_MboxPurge
+    KernSched_Exec_MboxPurge,           // KernSchedItem_MboxPurge
+    KernSched_Exec_MsgSend,             // KernSchedItem_MsgSend
+    KernSched_Exec_MsgAbort,            // KernSchedItem_MsgAbort
+    KernSched_Exec_MsgReadResp          // KernSchedItem_MsgReadResp
 };
 
 static K2OSKERN_SCHED_ITEM * sgpItemList;

@@ -102,7 +102,7 @@ BOOL KernSched_Exec_MsgSend(void)
             {
                 reqId |= pMailbox->mId;
 
-                if (KernEvent_Change(&pMsg->Event, FALSE))
+                if (KernSchedEx_EventChange(&pMsg->Event, FALSE))
                     changedSomething = TRUE;
                 pMsg->mpSittingInMailbox = pMailbox;
                 pMsg->mRequestId = reqId;
@@ -125,7 +125,7 @@ BOOL KernSched_Exec_MsgSend(void)
                 K2_ASSERT(pMailbox->mInSvcRequestId == 0);
             }
 
-            if (KernEvent_Change(&pMailbox->Event, TRUE))
+            if (KernSchedEx_EventChange(&pMailbox->Event, TRUE))
                 changedSomething = TRUE;
         }
         else
@@ -133,8 +133,7 @@ BOOL KernSched_Exec_MsgSend(void)
             //
             // no emptry mailboxes. need to queue message on the slot
             //
-            if (KernEvent_Change(&pMsg->Event, FALSE))
-                changedSomething = TRUE;
+            KernSchedEx_EventChange(&pMsg->Event, FALSE);
 
             pMsg->Io = *pMsgIo;
             pMsg->mRequestId = reqId;
@@ -209,7 +208,7 @@ BOOL KernSched_Exec_MsgAbort(void)
         pMsg->mRequestId = 0;
         pMsg->Io.mStatus = K2STAT_ERROR_ABANDONED;
 
-        if (KernEvent_Change(&pMsg->Event, TRUE))
+        if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
             changedSomething = TRUE;
     }
 
@@ -244,7 +243,10 @@ BOOL KernSched_Exec_MsgReadResp(void)
     {
         K2MEM_Copy(gData.Sched.mpActiveItem->Args.MsgReadResp.mpIo, &pMsg->Io, sizeof(K2OS_MSGIO));
         if (gData.Sched.mpActiveItem->Args.MsgReadResp.mClear)
+        {
             pMsg->mRequestId = 0;
+            KernSchedEx_EventChange(&pMsg->Event, FALSE);
+        }
 
         stat = K2STAT_NO_ERROR;
     }

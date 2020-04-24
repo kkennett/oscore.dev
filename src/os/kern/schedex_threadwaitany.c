@@ -174,13 +174,6 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             }
             break;
 
-        case K2OS_Obj_Name:
-            if (objWait.mpName->Event_IsOwned.mIsSignalled)
-            {
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
-
         case K2OS_Obj_Process:
             if (objWait.mpProc->mState >= KernProcState_Done)
             {
@@ -199,26 +192,6 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             if (objWait.mpSem->mCurCount > 0)
             {
                 objWait.mpSem->mCurCount--;
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
-
-        case K2OS_Obj_Mailbox:
-            if (objWait.mpMailbox->Event.mIsSignalled)
-            {
-                //
-                // nobody is waiting, or it would not be signalled
-                //
-                K2_ASSERT(objWait.mpMailbox->Event.mIsAutoReset == TRUE);
-                objWait.mpMailbox->Event.mIsSignalled = FALSE;
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
-
-        case K2OS_Obj_Msg:
-            if (objWait.mpMsg->Event.mIsSignalled)
-            {
-                K2_ASSERT(objWait.mpMailbox->Event.mIsAutoReset == FALSE);
                 isSatisfiedWithoutChange = TRUE;
             }
             break;

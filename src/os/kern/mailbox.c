@@ -75,6 +75,8 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
         return K2STAT_ERROR_EMPTY;
     }
 
+    *apRetRequestId = 0;
+
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxRecv;
@@ -93,6 +95,11 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        *apRetRequestId = pThisThread->Sched.Item.Args.MboxRecv.mRetRequestId;
+    }
+
     return stat;
 }
 
@@ -108,10 +115,10 @@ K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K
 
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
-    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxRecv;
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MboxRespond;
 
     pThisThread->Sched.Item.Args.MboxRespond.mpMailbox = apMailbox;
-    pThisThread->Sched.Item.Args.MboxRespond.mRequestId = 0;
+    pThisThread->Sched.Item.Args.MboxRespond.mRequestId = aRequestId;
     pThisThread->Sched.Item.Args.MboxRespond.mpRespMsgIo = apRespIo;
     pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg1 = NULL;
     pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg2 = NULL;

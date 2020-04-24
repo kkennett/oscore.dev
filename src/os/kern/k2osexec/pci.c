@@ -443,8 +443,8 @@ void Pci_Init(void)
                     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
                     pPciSeg = (PCI_SEGMENT *)K2OS_HeapAlloc(sizeof(PCI_SEGMENT));
-                    K2MEM_Zero(pPciSeg, sizeof(PCI_SEGMENT));
                     K2_ASSERT(pPciSeg != NULL);
+                    K2MEM_Zero(pPciSeg, sizeof(PCI_SEGMENT));
                     pPciSeg->mpMcfgAlloc = pAlloc;
                     pPciSeg->mpPhysHeapNode = pPhysNode;
                     K2TREE_Init(&pPciSeg->PciDevTree, NULL);

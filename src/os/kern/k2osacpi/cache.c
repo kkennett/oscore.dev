@@ -369,7 +369,6 @@ AcpiOsAcquireObject(
         blockBytes = CACHE_BLOCK_BYTES(pCache->mBlockExpandItemCount, alignedPayloadBytes);
 
         pBlock = (CACHE_BLOCK_HDR *)K2OS_HeapAlloc(blockBytes);
-
         if (pBlock == NULL)
             return NULL;
 

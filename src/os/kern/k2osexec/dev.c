@@ -215,6 +215,7 @@ void Dev_Init(void)
     K2MEM_Zero(&walkCtx, sizeof(walkCtx));
 
     gpDev_RootNode = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
+    K2_ASSERT(gpDev_RootNode != NULL);
     K2MEM_Zero(gpDev_RootNode, sizeof(DEV_NODE));
     K2LIST_Init(&gpDev_RootNode->ChildList);
     K2TREE_Insert(&gDev_Tree, gpDev_RootNode->DevTreeNode.mUserVal, &gpDev_RootNode->DevTreeNode);

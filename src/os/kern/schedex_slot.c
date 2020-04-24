@@ -185,7 +185,7 @@ BOOL KernSched_Exec_SlotPurge(void)
 
         if (!pMsg->Event.mIsSignalled)
         {
-            if (KernSched_EventChange(&pMsg->Event, TRUE))
+            if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
                 somethingChanged = TRUE;
         }
 

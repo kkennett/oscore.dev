@@ -56,6 +56,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecInit(K2OS_CRITSEC *apSec)
     if (K2STAT_IS_ERROR(stat))
         return FALSE;
 
+    pSec->Event.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+
     return TRUE;
 }
 

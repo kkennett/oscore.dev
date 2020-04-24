@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
+BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
 {
     K2OSKERN_SCHED_WAITENTRY *  pEntry;
     K2OSKERN_SCHED_MACROWAIT *  pWait;
@@ -154,7 +154,7 @@ BOOL KernSched_Exec_EventChange(void)
 
 //    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
 
-    result = KernSched_EventChange(pEvent, setReset);
+    result = KernSchedEx_EventChange(pEvent, setReset);
 
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
