@@ -80,6 +80,11 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore)
 
     apThisCore->mIsInMonitor = FALSE;
 
+    //
+    // Kernel DS must be segment pointed to by stack base, or something is wrong
+    //
+    K2_ASSERT((*((UINT32 *)pThread->mStackPtr_Kernel)) == (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL));
+
     X32Kern_InterruptReturn(
         pThread->mStackPtr_Kernel,
         (apThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);

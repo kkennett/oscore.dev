@@ -38,9 +38,8 @@ UINT32 K2_CALLCONV_REGS testThread(void *apParam)
 {
     do {
         K2OS_CritSecEnter(&sec);
-        K2OS_ThreadSleep(330);
+        K2OS_ThreadSleep(300);
         K2OS_CritSecLeave(&sec);
-        K2OS_ThreadSleep(245);
     } while (1);
 }
 
@@ -78,9 +77,8 @@ K2OSEXEC_Run(
             sThreader();
             once = FALSE;
         }
-        K2OS_ThreadSleep(510);
+        K2OS_ThreadSleep(700);
         K2OS_CritSecLeave(&sec);
-        K2OS_ThreadSleep(470);
 //        K2OSKERN_Debug("Main Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
     }
 #else

@@ -45,6 +45,9 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
     pThreadPage = K2_GET_CONTAINER(K2OSKERN_THREAD_PAGE, apThread, Thread);
 
     stackPtr = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - sizeof(UINT32)]);
+    *((UINT32 *)stackPtr) = 0;
+    stackPtr -= sizeof(UINT32);
+    *((UINT32 *)stackPtr) = 0;
 
     if (apThread->mIsKernelThread == FALSE)
     {
@@ -91,6 +94,10 @@ void X32Kern_ThreadCallSched(X32_EXCEPTION_CONTEXT aContext)
     pActiveThread->Sched.Item.CpuCoreEvent.mSrcCoreIx = pThisCore->mCoreIx;
 
     KernIntr_QueueCpuCoreEvent(pThisCore, &pActiveThread->Sched.Item.CpuCoreEvent);
+
+    //
+    // interrupts are off here, so we can do this
+    //
 
     pThisCore->mIsInMonitor = TRUE;
     X32Kern_EnterMonitor(pThisCore->TSS.mESP0);

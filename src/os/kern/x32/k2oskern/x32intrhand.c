@@ -140,7 +140,7 @@ void sX32Kern_DumpKernelModeExceptionContext(
 }
 
 BOOL 
-sX32Kern_Exception(
+sIsUnhandledThreadException(
     K2OSKERN_CPUCORE volatile * apThisCore,
     X32_EXCEPTION_CONTEXT *     apContext
 )
@@ -149,6 +149,7 @@ sX32Kern_Exception(
     K2OSKERN_OBJ_THREAD *   pCurThread;
 
     K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
+    K2OSKERN_Debug("Before Exception StackPtr was %08X\n", ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
     K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
 
     if (apThisCore->mIsInMonitor)
@@ -209,10 +210,8 @@ X32Kern_InterruptHandler(
     K2OSKERN_CPUCORE *                  pThisCore;
     K2OSKERN_CPUCORE_EVENT volatile *   pCoreEvent;
     KernCpuCoreEventType                eventType;
-    K2OSKERN_OBJ_THREAD *               pActiveThread;
     UINT32                              devIrq;
     BOOL                                forceEnterMonitor;
-    BOOL                                threadFaulted;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
     forceEnterMonitor = FALSE;
@@ -224,17 +223,14 @@ X32Kern_InterruptHandler(
     }
     sgInIntr[pThisCore->mCoreIx] = TRUE;
 
-    pActiveThread = pThisCore->mpActiveThread;
-
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
-        threadFaulted = sX32Kern_Exception(pThisCore, &aContext);
-        if (threadFaulted)
+        if (sIsUnhandledThreadException(pThisCore, &aContext))
             forceEnterMonitor = TRUE;
     }
     else
     {
-//        K2OSKERN_Debug("Core %d Vector %d\n", pThisCore->mCoreIx, aContext.Exception_Vector);
+//        K2OSKERN_Debug("Core %d Context %08X Vector %d\n", pThisCore->mCoreIx, &aContext, aContext.Exception_Vector);
         if (aContext.Exception_Vector >= X32KERN_VECTOR_ICI_BASE)
         {
             //
@@ -273,19 +269,21 @@ X32Kern_InterruptHandler(
         X32Kern_EOI(aContext.Exception_Vector);
     }
 
-    if ((forceEnterMonitor) ||
-        (pThisCore->mpPendingEventListHead != NULL))
+    if (!pThisCore->mIsInMonitor)
     {
-        if (pActiveThread != NULL)
+        if ((forceEnterMonitor) ||
+            (pThisCore->mpPendingEventListHead != NULL))
         {
-            pActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
+            pThisCore->mpActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
+            pThisCore->mIsInMonitor = TRUE;
+
+            sgInIntr[pThisCore->mCoreIx] = FALSE;
+
+            X32Kern_EnterMonitor(pThisCore->TSS.mESP0);
+
+            // should never return here
+            K2_ASSERT(0);
         }
-
-        pThisCore->mIsInMonitor = TRUE;
-
-        sgInIntr[pThisCore->mCoreIx] = FALSE;
-
-        X32Kern_EnterMonitor(pThisCore->TSS.mESP0);
     }
 
     sgInIntr[pThisCore->mCoreIx] = FALSE;

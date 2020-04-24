@@ -128,11 +128,14 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     X32_GDTENTRY *                  pTSSEntry;
     X32_EXCEPTION_CONTEXT *         pInitCtx;
     UINT32                          stackPtr;
+    UINT8                           initCtx[X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT + 4];
 
     /* we are on our own core stack */
     pCorePage = ((K2OSKERN_COREPAGE volatile *)(K2OS_KVA_COREPAGES_BASE + ((aCpuCoreIndex)* K2_VA32_MEMPAGE_BYTES)));
 
     K2_ASSERT(pCorePage->CpuCore.mCoreIx == aCpuCoreIndex);
+
+    pCorePage->CpuCore.mIsInMonitor = TRUE;
 
     /* set up TSS selector in GDT */
     pTSS = &pCorePage->CpuCore.TSS;
@@ -145,7 +148,12 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     pTSSEntry->mBaseHigh8 = (UINT8)((((UINT32)pTSS) & 0xFF000000) >> 24);
 
     /* set up the TSS itself along with the proper ring 0 stack pointer address */
-    X32Kern_TSSSetup((X32_TSS *)pTSS, ((UINT32)pCorePage) + (K2_VA32_MEMPAGE_BYTES - 4));
+    stackPtr = ((UINT32)pCorePage) + (K2_VA32_MEMPAGE_BYTES - 4);
+    *((UINT32 *)stackPtr) = 0;
+    stackPtr -= sizeof(UINT32);
+    *((UINT32 *)stackPtr) = 0;
+
+    X32Kern_TSSSetup((X32_TSS *)pTSS, stackPtr);
 
     /* flush the GDT with the TSS entry changes and valid TSS it points to */
     X32Kern_GDTFlush();
@@ -166,8 +174,7 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     //
     K2_CpuWriteBarrier();
 
-    stackPtr = pTSS->mESP0;
-    stackPtr -= X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT;
+    stackPtr = ((UINT32)&initCtx);
     pInitCtx = (X32_EXCEPTION_CONTEXT *)stackPtr;
     pInitCtx->DS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
     pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_Vector;
@@ -179,7 +186,6 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     else
         pInitCtx->KernelMode.EIP = (UINT32)X32Kern_MonitorMainLoop;
 
-    pCorePage->CpuCore.mIsInMonitor = TRUE;
     pCorePage->CpuCore.mIsExecuting = TRUE;
     K2_CpuWriteBarrier();
 

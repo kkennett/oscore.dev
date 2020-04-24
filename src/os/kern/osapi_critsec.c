@@ -153,12 +153,12 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         gotIntoSec = TRUE;
         if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
         {
-            K2OSKERN_Debug("%6d.CS_ENTER1(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+            K2OSKERN_Debug("%6d.CS_ENTERING(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         }
     }
     else
     {
-        K2OSKERN_Debug("%6d.CS_BLOCK(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        K2OSKERN_Debug("%6d.CS_ENTER_BLOCKED(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }
@@ -171,7 +171,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         {
             if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
             {
-                K2OSKERN_Debug("%6d.CS_ENTER2(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+                K2OSKERN_Debug("%6d.CS_ENTERED-UNBLOCKED(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
             }
             gotIntoSec = TRUE;
         }
@@ -248,21 +248,21 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
         leftSec = TRUE;
         if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
         {
-            K2OSKERN_Debug("%6d.CS_LEAVE1(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+            K2OSKERN_Debug("%6d.CS_LEAVING(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         }
     }
     else
     {
+        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
+        {
+            K2OSKERN_Debug("%6d.CS_LEAVING(%d)-RELEASING\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        }
         leftSec = FALSE;
     }
     K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
 
     if (!leftSec)
     {
-        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
-        {
-            K2OSKERN_Debug("%6d.CS_LEAVE2(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-        }
         stat = KernEvent_Change(&pSec->Event, TRUE);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
