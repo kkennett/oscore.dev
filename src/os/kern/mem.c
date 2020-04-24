@@ -441,7 +441,7 @@ void KernMem_Start(void)
     tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
     tempSeg.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     tempSeg.Hdr.mRefCount = 0x7FFFFFFF;
-    K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&tempSeg.Hdr.WaitEntryPrioList);
     tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK;
 
     pHeapTrackPage = (K2OSKERN_HEAPTRACKPAGE *)pCurThread->mWorkVirt_Range; // !not mapped yet!
@@ -577,7 +577,7 @@ K2STAT KernMem_VirtAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread, UINT32 aUseAd
         tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
         tempSeg.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
         tempSeg.Hdr.mRefCount = 0x7FFFFFFF;
-        K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
+        K2LIST_Init(&tempSeg.Hdr.WaitEntryPrioList);
         tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK;
 
         pPage = (K2OSKERN_HEAPTRACKPAGE *)apCurThread->mWorkVirt_Range; // !not mapped yet!
@@ -1623,7 +1623,7 @@ K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread)
                 K2MEM_Zero(&tempSeg, sizeof(tempSeg));
                 tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
                 tempSeg.Hdr.mRefCount = 1;
-                K2LIST_Init(&tempSeg.Hdr.WaitingThreadsPrioList);
+                K2LIST_Init(&tempSeg.Hdr.WaitEntryPrioList);
                 tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB;
 
                 pSlab = (K2OSKERN_SEGSLAB *)apCurThread->mWorkVirt_Range; // !not mapped yet!

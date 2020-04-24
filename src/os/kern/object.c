@@ -81,7 +81,7 @@ K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetA
     K2_ASSERT(appRetActual != NULL);
     *appRetActual = NULL;
 
-    K2LIST_Init(&apNewName->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&apNewName->Hdr.WaitEntryPrioList);
 
     disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
 
@@ -174,7 +174,7 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
     // the name owner sec is locked here
     //
 
-    K2LIST_Init(&apObjHdr->WaitingThreadsPrioList);
+    K2LIST_Init(&apObjHdr->WaitEntryPrioList);
 
     disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
 

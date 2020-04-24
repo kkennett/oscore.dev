@@ -48,7 +48,7 @@ BOOL KernSched_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
     // setting the event
     //
 
-    if (apEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0)
+    if (apEvent->Hdr.WaitEntryPrioList.mNodeCount == 0)
     {
         //
         // either event is already set and nobody is waiting on it
@@ -81,7 +81,7 @@ BOOL KernSched_Exec_EventChange(void)
 
     result = KernSched_EventChange(pEvent, setReset);
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return result;
 }

@@ -42,8 +42,6 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_EnterDebug,          // KernSchedItem_EnterDebug
     KernSched_Exec_ThreadExit,          // KernSchedItem_ThreadExit
     KernSched_Exec_ThreadWaitAny,       // KernSchedItem_ThreadWaitAny
-    KernSched_Exec_Contended_CritSec,   // KernSchedItem_Contended_Critsec
-    KernSched_Exec_Destroy_CritSec,     // KernSchedItem_Destroy_Critsec
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
     KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
     KernSched_Exec_SemRelease,          // KernSchedItem_SemRelease
@@ -517,7 +515,7 @@ sQueueSchedItem(
     K2OSKERN_SCHED_ITEM * pHead;
     K2OSKERN_SCHED_ITEM * pOld;
 
-    apItem->mResult = K2STAT_ERROR_UNKNOWN;
+    apItem->mSchedCallResult = K2STAT_ERROR_UNKNOWN;
 
     //
     // lockless add to sched item list

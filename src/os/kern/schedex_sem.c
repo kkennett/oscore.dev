@@ -50,20 +50,20 @@ BOOL KernSched_Exec_SemRelease(void)
     if ((pSem->mCurCount + relCount) > pSem->mMaxCount)
     {
         K2OSKERN_Debug("**Failed to release sem - count would exceed max\n");
-        gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_BAD_ARGUMENT;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_BAD_ARGUMENT;
     }
-    else if ((pSem->mCurCount == 0) && (pSem->Hdr.WaitingThreadsPrioList.mNodeCount > 0))
+    else if ((pSem->mCurCount == 0) && (pSem->Hdr.WaitEntryPrioList.mNodeCount > 0))
     {
         //
         // we need to release threads that are waiting, up to 'relCount' of them.
         //
         K2_ASSERT(0);
-        gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_UNKNOWN;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_UNKNOWN;
         result = TRUE;
     }
     else
     {
-        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
     }
 
     pSem->mCurCount += relCount;

@@ -58,7 +58,7 @@ K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32
     apSem->Hdr.mObjFlags = 0;
     apSem->Hdr.mpName = NULL;
     apSem->Hdr.mRefCount = 1;
-    K2LIST_Init(&apSem->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&apSem->Hdr.WaitEntryPrioList);
     apSem->mCurCount = aInitCount;
     apSem->mMaxCount = aMaxCount;
 
@@ -108,7 +108,7 @@ K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewC
             pCurThread->Sched.Item.Args.SemRelease.mpSem = apSem;
             pCurThread->Sched.Item.Args.SemRelease.mCount = aCount;
             KernArch_ThreadCallSched();
-            stat = pCurThread->Sched.Item.mResult;
+            stat = pCurThread->Sched.Item.mSchedCallResult;
             if ((!K2STAT_IS_ERROR(stat)) && (apRetNewCount != NULL))
             {
                 *apRetNewCount = pCurThread->Sched.Item.Args.SemRelease.mRetNewCount;
@@ -131,7 +131,7 @@ void KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem)
     K2_ASSERT(apSem->Hdr.mObjType == K2OS_Obj_Semaphore);
     K2_ASSERT(apSem->Hdr.mRefCount == 0);
     K2_ASSERT(!(apSem->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
-    K2_ASSERT(apSem->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+    K2_ASSERT(apSem->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
     //
     // shouldnt need to do any cleanup as no references to this remain

@@ -768,6 +768,9 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
 
     K2_ASSERT(aMilliseconds != K2OS_TIMEOUT_INFINITE);
 
+    if (FALSE == K2OSKERN_GetIntr())
+        K2OSKERN_Panic("Interrupts disabled at ThreadSleep!\n");
+
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     wait.mNumEntries = 0;
@@ -779,100 +782,32 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     
     KernArch_ThreadCallSched();
 
-    stat = pThisThread->Sched.Item.mResult;
+    stat = pThisThread->Sched.Item.mSchedCallResult;
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
     }
 }
 
-static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, UINT32 *apResult)
-{
-    switch (aObjWait.mpHdr->mObjType)
-    {
-    case K2OS_Obj_Event:
-        return aObjWait.mpEvent->mIsSignalled;
-
-    case K2OS_Obj_Name:
-        return aObjWait.mpName->Event_IsOwned.mIsSignalled;
-
-    case K2OS_Obj_Process:
-        return aObjWait.mpProc->mState >= KernProcState_Done;
-
-    case K2OS_Obj_Thread:
-        if (aObjWait.mpThread == apThisThread)
-        {
-            *apResult = K2STAT_ERROR_BAD_ARGUMENT;
-            return TRUE;
-        }
-        return aObjWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited;
-
-    case K2OS_Obj_Semaphore:
-        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
-        {
-            //
-            // very special case - changing the object and returning no wait
-            //
-            K2_ASSERT(aObjWait.mpSem->mCurCount > 0);
-            aObjWait.mpSem->mCurCount--;
-            return TRUE;
-        }
-        *apResult = K2STAT_THREAD_WAITED;
-        return FALSE;
-
-    case K2OS_Obj_Mailbox:
-        return aObjWait.mpMailbox->Event.mIsSignalled;
-
-    case K2OS_Obj_Msg:
-        return aObjWait.mpMsg->Event.mIsSignalled;
-
-    default:
-        K2_ASSERT(0);
-        break;
-    }
-
-    return FALSE;
-}
-
 UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs)
 {
-    K2OSKERN_SCHED_MACROWAIT    wait;
-    K2OSKERN_OBJ_THREAD *       pThisThread;
-    K2OSKERN_OBJ_WAITABLE       objWait;
-    K2STAT                      stat;
-    UINT32                      result;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2STAT                  stat;
+    UINT32                  result;
 
-    pThisThread = K2OSKERN_CURRENT_THREAD;
+    if (FALSE == K2OSKERN_GetIntr())
+        K2OSKERN_Panic("Interrupts disabled at ThreadWaitOne!\n");
 
-    result = KernTok_TranslateToAddRefObjs(1, &aToken, (K2OSKERN_OBJ_HEADER **)&objWait);
+    result = KernTok_TranslateToAddRefObjs(1, &aToken, (K2OSKERN_OBJ_HEADER **)&pObjHdr);
     if (K2STAT_IS_ERROR(result))
     {
         K2OS_ThreadSetStatus(result);
         return result;
     }
 
-    do {
-        result = K2OS_WAIT_SIGNALLED_0;
-        if (sCheckNotAllNoWait(pThisThread, objWait, &result))
-            break;
+    result = KernThread_WaitOne(pObjHdr, aTimeoutMs);
 
-        wait.mNumEntries = 1; 
-        wait.mWaitAll = FALSE;
-        wait.SchedWaitEntry[0].mWaitObj.mpHdr = objWait.mpHdr;
-        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
-        pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
-        pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
-        KernArch_ThreadCallSched();
-
-        result = pThisThread->Sched.Item.mResult;
-        if (K2STAT_IS_ERROR(result))
-        {
-            K2OS_ThreadSetStatus(result);
-        }
-
-    } while (0);
-
-    stat = KernObj_Release(objWait.mpHdr);
+    stat = KernObj_Release(pObjHdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     return result;
@@ -1029,7 +964,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                     K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
                     pSeg->Hdr.mObjType = K2OS_Obj_Segment;
                     pSeg->Hdr.mRefCount = 1;
-                    K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+                    K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
                     pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
                     pSeg->Info.Thread.mpThread = pNewThread;
 

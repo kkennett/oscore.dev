@@ -46,7 +46,7 @@ Win32_EXTRAP_Dismount(
     K2_EXCEPTION_TRAP *apTrap
     )
 {
-    return apTrap->mResult;
+    return apTrap->mTrapResult;
 }
 
 K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount = Win32_EXTRAP_Mount;

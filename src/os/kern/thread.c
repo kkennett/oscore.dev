@@ -148,7 +148,7 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
 
     pNewThread->Hdr.mObjType = K2OS_Obj_Thread;
     pNewThread->Hdr.mRefCount = 1;
-    K2LIST_Init(&pNewThread->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&pNewThread->Hdr.WaitEntryPrioList);
     pNewThread->mpProc = apProc;
     pNewThread->mpStackSeg = pSeg;
     pNewThread->mIsKernelThread = (((UINT32)apCreate->mEntrypoint) >= K2OS_KVA_KERN_BASE) ? TRUE : FALSE;
@@ -191,7 +191,7 @@ K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *
     
     KernArch_ThreadCallSched();
 
-    return apThisThread->Sched.Item.mResult;
+    return apThisThread->Sched.Item.mSchedCallResult;
 }
 
 K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
@@ -205,9 +205,98 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
         K2OSKERN_Panic("*** Invalid thread disposal\n");
     }
 
-    K2_ASSERT(apThread->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+    K2_ASSERT(apThread->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
     K2_ASSERT(0);
 
     return K2STAT_ERROR_NOT_IMPL;
+}
+
+static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, K2STAT *apStat)
+{
+    switch (aObjWait.mpHdr->mObjType)
+    {
+    case K2OS_Obj_Event:
+        return aObjWait.mpEvent->mIsSignalled;
+
+    case K2OS_Obj_Name:
+        return aObjWait.mpName->Event_IsOwned.mIsSignalled;
+
+    case K2OS_Obj_Process:
+        return aObjWait.mpProc->mState >= KernProcState_Done;
+
+    case K2OS_Obj_Thread:
+        if (aObjWait.mpThread == apThisThread)
+        {
+            *apStat = K2STAT_ERROR_BAD_ARGUMENT;
+            return TRUE;
+        }
+        return aObjWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited;
+
+    case K2OS_Obj_Semaphore:
+        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+        {
+            //
+            // very special case - changing the object and returning no wait
+            //
+            K2_ASSERT(aObjWait.mpSem->mCurCount > 0);
+            aObjWait.mpSem->mCurCount--;
+            return TRUE;
+        }
+        *apStat = K2STAT_THREAD_WAITED;
+        return FALSE;
+
+    case K2OS_Obj_Mailbox:
+        return aObjWait.mpMailbox->Event.mIsSignalled;
+
+    case K2OS_Obj_Msg:
+        return aObjWait.mpMsg->Event.mIsSignalled;
+
+    default:
+        K2_ASSERT(0);
+        break;
+    }
+
+    return FALSE;
+}
+
+UINT32 KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs)
+{
+    K2OSKERN_OBJ_WAITABLE       objWait;
+    K2OSKERN_OBJ_THREAD *       pThisThread;
+    K2STAT                      stat;
+    K2OSKERN_SCHED_MACROWAIT    wait;
+
+    objWait.mpHdr = apObjHdr;
+
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+
+    stat = K2STAT_NO_ERROR;
+    
+    if (sCheckNotAllNoWait(pThisThread, objWait, &stat))
+    {
+        return K2OS_WAIT_SIGNALLED_0;
+    }
+
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        wait.mNumEntries = 1;
+        wait.mWaitAll = FALSE;
+        wait.SchedWaitEntry[0].mWaitObj.mpHdr = apObjHdr;
+        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
+        pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
+        pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
+        pThisThread->Sched.Item.Args.ThreadWait.mWaitResult = 0;
+        KernArch_ThreadCallSched();
+
+        stat = pThisThread->Sched.Item.mSchedCallResult;
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return K2OS_WAIT_ERROR;
+    }
+
+    return pThisThread->Sched.Item.Args.ThreadWait.mWaitResult;
 }

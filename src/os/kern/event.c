@@ -52,7 +52,7 @@ K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, 
     apEvent->Hdr.mpName = NULL;
     apEvent->Hdr.mRefCount = 1;
 
-    K2LIST_Init(&apEvent->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&apEvent->Hdr.WaitEntryPrioList);
 
     apEvent->mIsAutoReset = aAutoReset;
     apEvent->mIsSignalled = aInitialState;
@@ -77,7 +77,7 @@ K2STAT KernEvent_Change(K2OSKERN_OBJ_EVENT *apEvtObj, BOOL aSetReset)
     pThisThread->Sched.Item.Args.EventChange.mpEvent = apEvtObj;
     pThisThread->Sched.Item.Args.EventChange.mSetReset = aSetReset;
     KernArch_ThreadCallSched();
-    return pThisThread->Sched.Item.mResult;
+    return pThisThread->Sched.Item.mSchedCallResult;
 }
 
 void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvent)
@@ -88,7 +88,7 @@ void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvent)
     K2_ASSERT(apEvent->Hdr.mObjType == K2OS_Obj_Event);
     K2_ASSERT(apEvent->Hdr.mRefCount == 0);
     K2_ASSERT(!(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
-    K2_ASSERT(apEvent->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+    K2_ASSERT(apEvent->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
     check = !(apEvent->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

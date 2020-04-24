@@ -44,7 +44,7 @@ sWaitList_Insert(
     K2OSKERN_SCHED_MACROWAIT *  pOtherWait;
     K2OSKERN_SCHED_WAITENTRY *  pOtherEntry;
 
-    pAnchor = &apEntry->mWaitObj.mpHdr->WaitingThreadsPrioList;
+    pAnchor = &apEntry->mWaitObj.mpHdr->WaitEntryPrioList;
     if (pAnchor->mNodeCount == 0)
     {
         K2LIST_AddAtHead(pAnchor, &apEntry->WaitPrioListLink);
@@ -78,7 +78,7 @@ sWaitList_Remove(
 {
     K2LIST_ANCHOR *             pAnchor;
 
-    pAnchor = &apEntry->mWaitObj.mpHdr->WaitingThreadsPrioList;
+    pAnchor = &apEntry->mWaitObj.mpHdr->WaitEntryPrioList;
     K2_ASSERT(pAnchor->mNodeCount != 0);
 
     K2LIST_Remove(pAnchor, &apEntry->WaitPrioListLink);
@@ -105,6 +105,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     pWait = gData.Sched.mpActiveItem->Args.ThreadWait.mpMacroWait;
 
     pThread = gData.Sched.mpActiveItemThread;
+
+    pWait->mWaitResult = K2OS_WAIT_ERROR;
 
     K2_ASSERT(pWait->mNumEntries <= K2OS_WAIT_MAX_TOKENS);
 
@@ -208,7 +210,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
 
     if (isSatisfiedWithoutChange)
     {
-        gData.Sched.mpActiveItem->mResult = K2OS_WAIT_SIGNALLED_0 + ix;
+        pWait->mWaitResult = K2OS_WAIT_SIGNALLED_0 + ix;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
         return FALSE;
     }
 
@@ -221,7 +224,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             //
             // tested stuff, but nothing is signalled
             //
-            gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_TIMEOUT;
+            pWait->mWaitResult = K2STAT_ERROR_TIMEOUT;
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
             return FALSE;
         }
     }
@@ -234,8 +238,8 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     //
     // if we get here, no matter what thread loses the rest of its quantum
     //
-    gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
-
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_THREAD_WAITED;
+    
     K2_ASSERT(pThread->Sched.mLastRunCoreIx < gData.mCpuCount);
     pCore = K2OSKERN_COREIX_TO_CPUCORE(pThread->Sched.mLastRunCoreIx);
 
@@ -323,7 +327,7 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     K2_ASSERT(pThread->Sched.State.mRunState = KernThreadRunState_Waiting);
     K2_ASSERT((pWait->mNumEntries > 0) || (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs > 0));
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_THREAD_WAITED;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_THREAD_WAITED;
 
     pWait->mpWaitingThread = pThread;
 
@@ -378,7 +382,9 @@ BOOL KernSched_WaitTimedOut(K2OSKERN_SCHED_MACROWAIT *apWait)
         sWaitList_Remove(pThread, &apWait->SchedWaitEntry[ix]);
     }
 
-    pItem->mResult = K2STAT_ERROR_TIMEOUT;
+    apWait->mWaitResult = K2STAT_ERROR_TIMEOUT;
+
+    K2_ASSERT(pThread->Sched.Item.mSchedCallResult == K2STAT_THREAD_WAITED);
 
     //
     // thread goes onto ready list

@@ -71,7 +71,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesAlloc(UINT32 *apAddr, UINT32 aPageCo
             K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
             pSeg->Hdr.mObjType = K2OS_Obj_Segment;
             pSeg->Hdr.mRefCount = 1;
-            K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+            K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
             if (pCurThread->mWorkVirt_Range >= K2OS_KVA_KERN_BASE)
             {
                 aPageAttrFlags |= K2OS_MEMPAGE_ATTR_KERNEL;

@@ -155,7 +155,7 @@ BOOL KernSched_Exec_MboxRecv(void)
         }
     }
 
-    gData.Sched.mpActiveItem->mResult = stat;
+    gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return changedSomething;
 }
@@ -293,7 +293,7 @@ BOOL KernSched_Exec_MboxRespond(void)
         }
     }
 
-    gData.Sched.mpActiveItem->mResult = stat;
+    gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return changedSomething;
 }
@@ -323,7 +323,7 @@ BOOL KernSched_Exec_MboxPurge(void)
         changedSomething = KernEvent_Change(&pMsg->Event, TRUE);
     }
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return changedSomething;
 }

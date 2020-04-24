@@ -86,7 +86,7 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
             apMailslot->Hdr.mObjFlags = 0;
             apMailslot->Hdr.mpName = NULL;
             apMailslot->Hdr.mRefCount = 1;
-            K2LIST_Init(&apMailslot->Hdr.WaitingThreadsPrioList);
+            K2LIST_Init(&apMailslot->Hdr.WaitEntryPrioList);
 
             K2LIST_Init(&apMailslot->PendingMsgList);
             apMailslot->mNextRequestSeq = ((UINT32)apMailslot) & K2OSKERN_MAILBOX_REQUESTSEQ_MASK;
@@ -103,7 +103,7 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
             pThisThread->Sched.Item.Args.SlotBoxes.mBoxCount = aMailboxCount;
             pThisThread->Sched.Item.Args.SlotBoxes.mppMailbox = appMailbox;
             KernArch_ThreadCallSched();
-            stat = pThisThread->Sched.Item.mResult;
+            stat = pThisThread->Sched.Item.mSchedCallResult;
 
             if (K2STAT_IS_ERROR(stat))
                 break;
@@ -124,7 +124,7 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
                 pThisThread->Sched.Item.Args.SlotBlock.mpMailslot = apMailslot;
                 pThisThread->Sched.Item.Args.SlotBlock.mSetBlock = FALSE;
                 KernArch_ThreadCallSched();
-                K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mResult));
+                K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mSchedCallResult));
 
             } while (0);
 
@@ -136,7 +136,7 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
                 pThisThread->Sched.Item.Args.SlotBoxes.mBoxCount = aMailboxCount;
                 pThisThread->Sched.Item.Args.SlotBoxes.mppMailbox = appMailbox;
                 KernArch_ThreadCallSched();
-                K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mResult));
+                K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mSchedCallResult));
             }
 
         } while (0);
@@ -167,7 +167,7 @@ K2STAT KernMailslot_SetBlock(K2OSKERN_OBJ_MAILSLOT *apMailslot, BOOL aBlock)
     pThisThread->Sched.Item.Args.SlotBlock.mpMailslot = apMailslot;
     pThisThread->Sched.Item.Args.SlotBlock.mSetBlock = aBlock;
     KernArch_ThreadCallSched();
-    return pThisThread->Sched.Item.mResult;
+    return pThisThread->Sched.Item.mSchedCallResult;
 }
 
 void KernMailslot_Dispose(K2OSKERN_OBJ_MAILSLOT *apMailslot)
@@ -200,7 +200,7 @@ void KernMailslot_Dispose(K2OSKERN_OBJ_MAILSLOT *apMailslot)
     pThisThread->Sched.Item.Args.SlotPurge.mObjCount = objCount;
     pThisThread->Sched.Item.Args.SlotPurge.mppObj = ppObj;
     KernArch_ThreadCallSched();
-    K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mResult));
+    K2_ASSERT(!K2STAT_IS_ERROR(pThisThread->Sched.Item.mSchedCallResult));
 
     for (ix = 0; ix < objCount; ix++)
     {

@@ -82,11 +82,11 @@ BOOL KernSched_Exec_PurgePT(void)
     do {
         if (pPtPageCount[ptIndex] != 0)
         {
-            gData.Sched.mpActiveItem->mResult = K2STAT_ERROR_IN_USE;
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_IN_USE;
             break;
         }
 
-        gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
         physPtAddr = KernMap_BreakOnePage(pUseProc->mVirtMapKVA, virtPtAddr, 0);
 

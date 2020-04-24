@@ -77,7 +77,7 @@ BOOL KernSched_Exec_ThreadCreate(void)
     //
     KernSched_MakeThreadActive(pNewThread, TRUE);
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return TRUE;  // if something changes scheduling-wise, return true
 }

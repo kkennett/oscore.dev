@@ -97,7 +97,7 @@ typedef struct _K2_EXCEPTION_TRAP K2_EXCEPTION_TRAP;
 struct _K2_EXCEPTION_TRAP
 {
     K2_EXCEPTION_TRAP * mpNextTrap;
-    K2STAT              mResult;
+    K2STAT              mTrapResult;
     K2_TRAP_CONTEXT     SavedContext;
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
@@ -125,8 +125,8 @@ extern K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount;
 extern K2_pf_RAISE_EXCEPTION   K2_RaiseException;
 
 #define K2_EXTRAP(pTrap, Func)  (K2_ExTrap_Mount(pTrap) ? \
-        (pTrap)->mResult : \
-        ((pTrap)->mResult = (Func), K2_ExTrap_Dismount(pTrap)))
+        (pTrap)->mTrapResult : \
+        ((pTrap)->mTrapResult = (Func), K2_ExTrap_Dismount(pTrap)))
 
 #ifdef __cplusplus
 }

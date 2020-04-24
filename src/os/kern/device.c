@@ -74,7 +74,7 @@ K2OSKERN_MapDevice(
         K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
         pSeg->Hdr.mObjType = K2OS_Obj_Segment;
         pSeg->Hdr.mRefCount = 1;
-        K2LIST_Init(&pSeg->Hdr.WaitingThreadsPrioList);
+        K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
         pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_DEVMAP | K2OS_MAPTYPE_KERN_DEVICEIO;
         pSeg->Info.DeviceMap.mPhysDeviceAddr = aPhysDeviceAddr;
 

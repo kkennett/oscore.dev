@@ -188,7 +188,7 @@ struct _K2OSKERN_OBJ_HEADER
     INT32 volatile      mRefCount;
     K2TREE_NODE         ObjTreeNode;
     K2OSKERN_OBJ_NAME * mpName;
-    K2LIST_ANCHOR       WaitingThreadsPrioList;
+    K2LIST_ANCHOR       WaitEntryPrioList;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -202,8 +202,6 @@ enum _KernSchedItemType
 
     KernSchedItem_ThreadExit,
     KernSchedItem_ThreadWaitAny,
-    KernSchedItem_Contended_Critsec,
-    KernSchedItem_Destroy_Critsec,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
     KernSchedItem_SemRelease,
@@ -225,7 +223,6 @@ enum _KernSchedItemType
 
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
@@ -271,6 +268,7 @@ struct _K2OSKERN_SCHED_MACROWAIT
     K2OSKERN_OBJ_THREAD *       mpWaitingThread;    /* thread that is using this macrowait */
     UINT32                      mNumEntries;
     BOOL                        mWaitAll;
+    UINT32                      mWaitResult;
     K2OSKERN_SCHED_TIMERITEM    SchedTimerItem;    /* of type 'MACROWAIT' (may be unused) */
     K2OSKERN_SCHED_WAITENTRY    SchedWaitEntry[1]; /* 'mNumEntries' entries */
 };
@@ -284,13 +282,7 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT
 {
     UINT32                      mTimeoutMs;
     K2OSKERN_SCHED_MACROWAIT *  mpMacroWait;
-};
-
-struct _K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC
-{
-    // thread can only trap on one Critsec at a time */
-    // which is pThread->Sched.mpActionSec
-    BOOL  mEntering;
+    UINT32                      mWaitResult;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT
@@ -393,7 +385,6 @@ union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT        ThreadWait;      
-    K2OSKERN_SCHED_ITEM_ARGS_CONTENDED_CRITSEC  ContendedCritSec;
     K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT           PurgePt;
     K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     InvalidateTlb;
     K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        SemRelease;
@@ -416,7 +407,7 @@ struct _K2OSKERN_SCHED_ITEM
     KernSchedItemType               mSchedItemType;
     K2OSKERN_SCHED_ITEM *           mpPrev;
     K2OSKERN_SCHED_ITEM *           mpNext;
-    UINT32                          mResult;
+    UINT32                          mSchedCallResult;
     K2OSKERN_SCHED_ITEM_ARGS        Args;
 };
 
@@ -465,7 +456,6 @@ struct _K2OSKERN_SCHED_THREAD
     UINT64              mTotalRunTimeMs;
     K2OS_THREADATTR     Attr;       // current priority, affinity mask, quantum
     K2OSKERN_SCHED_ITEM Item;
-    K2OSKERN_CRITSEC *  mpActionSec;
     UINT32              mThreadActivePrio;
     UINT32              mLastRunCoreIx;
     K2LIST_LINK         ReadyListLink;
@@ -511,19 +501,26 @@ struct _K2OSKERN_SCHED
 
 /* --------------------------------------------------------------------------------- */
 
+struct _K2OSKERN_OBJ_EVENT
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+    BOOL                    mIsAutoReset;
+    BOOL                    mIsSignalled;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 struct _K2OSKERN_CRITSEC
 {
-    // high 16 of lockval is count of threads entering
-    // low 16 is id of current owner
-    // only atomic operationg are used to change this value
-    UINT32 volatile         mLockVal;                
-    UINT32                  mRecursionCount;         
+    K2OSKERN_SEQLOCK        SeqLock;
+    UINT32                  mWaitingThreadsCount;   // only accessed under seqlock
+
     K2OSKERN_OBJ_THREAD *   mpOwner;
-    K2LIST_LINK             ThreadOwnedCritSecLink;  
-    K2LIST_ANCHOR           WaitingThreadPrioList;   
-    UINT32                  mSentinel;
+    K2LIST_LINK             ThreadOwnedCritSecLink;
+    UINT32                  mRecursionCount;
+
+    K2OSKERN_OBJ_EVENT      Event;
 };
-K2_STATIC_ASSERT(sizeof(K2OSKERN_CRITSEC) <= K2OS_MAX_CACHELINE_BYTES);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -783,15 +780,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_THREAD_PAGE) == K2_VA32_MEMPAGE_BYTES);
 #else
 #error !!!Unsupported Architecture
 #endif
-
-/* --------------------------------------------------------------------------------- */
-
-struct _K2OSKERN_OBJ_EVENT
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-    BOOL                    mIsAutoReset;
-    BOOL                    mIsSignalled;
-};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1221,15 +1209,16 @@ void    KernProc_Dump(K2OSKERN_OBJ_PROCESS *apProc);
 
 /* --------------------------------------------------------------------------------- */
 
-void                     KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
-void    K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
-K2STAT                   KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
-K2STAT                   KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
-void                     KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
-K2STAT                   KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
-K2STAT                   KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
+void                    KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
+void   K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
+K2STAT                  KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
+K2STAT                  KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
+void                    KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
+K2STAT                  KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
+K2STAT                  KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
+UINT32                  KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs);
 
-UINT32 K2_CALLCONV_REGS  K2OSKERN_Thread0(void *apArg);
+UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1241,9 +1230,7 @@ typedef BOOL(*KernSched_pf_Handler)(void);
 
 BOOL KernSched_Exec_ThreadExit(void);
 BOOL KernSched_Exec_ThreadWaitAny(void);
-BOOL KernSched_Exec_Contended_CritSec(void);
 BOOL KernSched_Exec_EnterDebug(void);
-BOOL KernSched_Exec_Destroy_CritSec(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);

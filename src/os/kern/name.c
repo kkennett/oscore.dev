@@ -60,7 +60,7 @@ K2STAT KernName_Define(K2OSKERN_OBJ_NAME *apName, char const *apString, K2OSKERN
     apName->Hdr.mObjFlags = 0;
     apName->Hdr.mpName = NULL;
     apName->Hdr.mRefCount = 1;
-    K2LIST_Init(&apName->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&apName->Hdr.WaitEntryPrioList);
 
     apName->mpObject = NULL;
     K2ASC_CopyLen(apName->NameBuffer, apString, K2OS_NAME_MAX_LEN);

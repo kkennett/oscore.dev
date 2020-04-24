@@ -35,370 +35,221 @@
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecInit(K2OS_CRITSEC *apSec)
 {
     K2STAT              stat;
-    BOOL                result;
     K2OSKERN_CRITSEC *  pSec;
 
-    do {
-        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    K2_ASSERT(gData.mKernInitStage > KernInitStage_dlx_entry);
+    K2_ASSERT(apSec != NULL);
+    K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
+    if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
 
-        K2_ASSERT(apSec != NULL);
-        K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
-            break;
+    pSec = (K2OSKERN_CRITSEC *)apSec;
 
-        //
-        // align up to cache line
-        //
-        pSec = (K2OSKERN_CRITSEC *)(((((UINT32)apSec) + (K2OS_MAX_CACHELINE_BYTES - 1)) / K2OS_MAX_CACHELINE_BYTES) * K2OS_MAX_CACHELINE_BYTES);
+    K2MEM_Zero(pSec, sizeof(K2OSKERN_CRITSEC));
 
-        //
-        // init
-        //
-        pSec->mLockVal = 0;
-        pSec->mRecursionCount = 0;
-        pSec->mpOwner = NULL;
-        pSec->ThreadOwnedCritSecLink.mpPrev = NULL;
-        pSec->ThreadOwnedCritSecLink.mpNext = NULL;
-        pSec->WaitingThreadPrioList.mpHead = NULL;
-        pSec->WaitingThreadPrioList.mpTail = NULL;
-        pSec->mSentinel = (UINT32)pSec;
-        K2_CpuWriteBarrier();
+    K2OSKERN_SeqIntrInit(&pSec->SeqLock);
 
-        stat = K2STAT_NO_ERROR;
+    stat = KernEvent_Create(&pSec->Event, NULL, TRUE, TRUE);
+    if (K2STAT_IS_ERROR(stat))
+        return FALSE;
 
-    } while (0);
-
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-
-    return result;
+    return TRUE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecTryEnter(K2OS_CRITSEC *apSec)
 {
-    K2STAT                  stat;
-    BOOL                    result;
-    K2OSKERN_CRITSEC *      pSec;
     K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2OSKERN_CRITSEC *      pSec;
+    BOOL                    disp;
+    BOOL                    gotIntoSec;
 
     if (FALSE == K2OSKERN_GetIntr())
-        K2OSKERN_Panic("Interrupts disabled at CritSecEnter!\n");
+        K2OSKERN_Panic("Interrupts disabled at CritSecTryEnter!\n");
 
-    do {
-        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+    K2_ASSERT(apSec != NULL);
+    K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
+    if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
 
-        K2_ASSERT(apSec != NULL);
-        K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
-            break;
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+    pSec = (K2OSKERN_CRITSEC *)apSec;
 
-        pThisThread = K2OSKERN_CURRENT_THREAD;
+    if (pSec->mpOwner == pThisThread)
+    {
+        pSec->mRecursionCount++;
+        return TRUE;
+    }
 
+    disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+    if (pSec->Event.mIsSignalled)
+    {
         //
-        // align up to cache line
+        // auto-reset event is signalled. better not be anything waiting.
         //
-        pSec = (K2OSKERN_CRITSEC *)(((((UINT32)apSec) + (K2OS_MAX_CACHELINE_BYTES - 1)) / K2OS_MAX_CACHELINE_BYTES) * K2OS_MAX_CACHELINE_BYTES);
-        if (pSec->mSentinel != (UINT32)pSec)
-        {
-            stat = K2STAT_ERROR_NOT_IN_USE;
-            break;
-        }
+        K2_ASSERT(pSec->Event.Hdr.WaitEntryPrioList.mNodeCount == 0);
+        pSec->Event.mIsSignalled = FALSE;
+        gotIntoSec = TRUE;
+    }
+    else
+        gotIntoSec = FALSE;
+    K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
 
-        if ((pSec->mLockVal & 0xFFFF) == pThisThread->Env.mId)
-        {
-            //
-            // recursive enter
-            //
-            K2_ASSERT(pSec->mpOwner == pThisThread);
-            pSec->mRecursionCount++;
-            K2_CpuWriteBarrier();
-            stat = K2STAT_NO_ERROR;
-            break;
-        }
+    if (gotIntoSec)
+    {
+        pSec->mpOwner = pThisThread;
+        K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
+        pSec->mRecursionCount = 1;
+        return TRUE;
+    }
 
-        //
-        // not a recursive enter - try to enter uncontended
-        //
-        if (0 != K2ATOMIC_CompareExchange(&pSec->mLockVal, pThisThread->Env.mId, 0))
-        {
-            stat = K2STAT_ERROR_IN_USE;
-            break;
-        }
-
-        stat = K2STAT_NO_ERROR;
-
-    } while (0);
-
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-
-    return result;
+    K2OS_ThreadSetStatus(K2STAT_ERROR_OWNED);
+    return FALSE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
 {
-    K2STAT                  stat;
-    BOOL                    result;
-    K2OSKERN_CRITSEC *      pSec;
     K2OSKERN_OBJ_THREAD *   pThisThread;
-    UINT32                  v;
+    K2OSKERN_CRITSEC *      pSec;
+    BOOL                    disp;
+    BOOL                    gotIntoSec;
+    UINT32                  result;
 
     if (FALSE == K2OSKERN_GetIntr())
         K2OSKERN_Panic("Interrupts disabled at CritSecEnter!\n");
 
-    do {
-        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+    K2_ASSERT(apSec != NULL);
+    K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
+    if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
 
-        K2_ASSERT(apSec != NULL);
-        K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
-            break;
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+    pSec = (K2OSKERN_CRITSEC *)apSec;
 
-        pThisThread = K2OSKERN_CURRENT_THREAD;
+    if (pSec->mpOwner == pThisThread)
+    {
+        pSec->mRecursionCount++;
+        return TRUE;
+    }
 
+    disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+    if (pSec->Event.mIsSignalled)
+    {
         //
-        // align up to cache line
+        // auto-reset event is signalled. better not be anything waiting.
         //
-        pSec = (K2OSKERN_CRITSEC *)(((((UINT32)apSec) + (K2OS_MAX_CACHELINE_BYTES - 1)) / K2OS_MAX_CACHELINE_BYTES) * K2OS_MAX_CACHELINE_BYTES);
-        if (pSec->mSentinel != (UINT32)pSec)
+        K2_ASSERT(pSec->Event.Hdr.WaitEntryPrioList.mNodeCount == 0);
+        pSec->Event.mIsSignalled = FALSE;
+        gotIntoSec = TRUE;
+    }
+    else
+    {
+        pSec->mWaitingThreadsCount++;
+        gotIntoSec = FALSE;
+    }
+    K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
+
+    if (!gotIntoSec)
+    {
+        result = KernThread_WaitOne(&pSec->Event.Hdr, K2OS_TIMEOUT_INFINITE);
+        if (result == K2OS_WAIT_SIGNALLED_0)
         {
-            stat = K2STAT_ERROR_NOT_IN_USE;
-            break;
+            gotIntoSec = TRUE;
         }
 
-        if ((pSec->mLockVal & 0xFFFF) == pThisThread->Env.mId)
-        {
-            //
-            // recursive enter
-            //
-            K2_ASSERT(pSec->mpOwner == pThisThread);
-            pSec->mRecursionCount++;
-            stat = K2STAT_NO_ERROR;
-            break;
-        }
+        disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+        pSec->mWaitingThreadsCount--;
+        K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
+    }
 
-        //
-        // not a recursive enter
-        //
+    if (gotIntoSec)
+    {
+        pSec->mpOwner = pThisThread;
+        K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
+        pSec->mRecursionCount = 1;
+        return TRUE;
+    }
 
-        pThisThread->Sched.mpActionSec = pSec;
-
-        do {
-            if (pSec->mSentinel != (UINT32)pSec)
-            {
-                stat = K2STAT_ERROR_NOT_IN_USE;
-                break;
-            }
-
-            v = pSec->mLockVal;
-            K2_CpuReadBarrier();
-            if (v == 0)
-            {
-                //
-                // try to get in uncontended
-                //
-                if (0 == K2ATOMIC_CompareExchange(&pSec->mLockVal, pThisThread->Env.mId, 0))
-                {
-                    //
-                    // we got in uncontended
-                    //
-                    K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
-                    pThisThread->Sched.mpActionSec = NULL;
-                    pSec->mpOwner = pThisThread;
-                    pSec->mRecursionCount = 1;
-                    stat = K2STAT_NO_ERROR;
-                    break;
-                }
-            }
-
-            //
-            // try to latch our contention
-            //
-            if (v == K2ATOMIC_CompareExchange(&pSec->mLockVal, v + 0x10000, v))
-            {
-                //
-                // we successfully latched in our contention
-                // so we must now enter the scheduler no matter what
-                //
-                pThisThread->Sched.Item.mSchedItemType = KernSchedItem_Contended_Critsec;
-                pThisThread->Sched.Item.Args.ContendedCritSec.mEntering = TRUE;
-                KernArch_ThreadCallSched();
-                //
-                // entry can fail if section is destroyed
-                // while we are waiting for it
-                //
-                stat = pThisThread->Sched.Item.mResult;
-                break;
-            }
-
-            //
-            // did not latch - go around again
-            //
-        } while (1);
-
-        if (!K2STAT_IS_ERROR(stat))
-        {
-            K2_ASSERT(pSec->mRecursionCount == 1);
-            K2_ASSERT(pThisThread->Sched.mpActionSec == NULL);
-            K2_ASSERT((pSec->mLockVal & 0xFFFF) == pThisThread->Env.mId);
-            K2_ASSERT(pSec->mpOwner == pThisThread);
-        }
-
-    } while (0);
-
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-
-    return result;
+    return FALSE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
 {
-    K2STAT                  stat;
-    BOOL                    result;
-    K2OSKERN_CRITSEC *      pSec;
     K2OSKERN_OBJ_THREAD *   pThisThread;
-    UINT32                  v;
+    K2OSKERN_CRITSEC *      pSec;
+    BOOL                    disp;
+    K2STAT                  stat;
 
-    do {
-        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    if (FALSE == K2OSKERN_GetIntr())
+        K2OSKERN_Panic("Interrupts disabled at CritSecLeave!\n");
 
-        K2_ASSERT(apSec != NULL);
-        K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
-        if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
-            break;
+    K2_ASSERT(gData.mKernInitStage >= KernInitStage_Threaded);
+    K2_ASSERT(apSec != NULL);
+    K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
+    if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
 
-        pThisThread = K2OSKERN_CURRENT_THREAD;
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+    pSec = (K2OSKERN_CRITSEC *)apSec;
 
-        //
-        // align up to cache line
-        //
-        pSec = (K2OSKERN_CRITSEC *)(((((UINT32)apSec) + (K2OS_MAX_CACHELINE_BYTES - 1)) / K2OS_MAX_CACHELINE_BYTES) * K2OS_MAX_CACHELINE_BYTES);
-        if (pSec->mSentinel != (UINT32)pSec)
-        {
-            stat = K2STAT_ERROR_NOT_IN_USE;
-            break;
-        }
+    if (pSec->mpOwner != pThisThread)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_OWNED);
+        return FALSE;
+    }
 
-        v = pSec->mLockVal;
-        K2_CpuReadBarrier();
+    K2_ASSERT(pSec->Event.mIsSignalled == FALSE);
 
-        if ((v & 0xFFFF) != pThisThread->Env.mId)
-        {
-            K2_ASSERT(pSec->mpOwner != pThisThread);
-            stat = K2STAT_ERROR_NOT_OWNED;
-            break;
-        }
+    if (0 != --pSec->mRecursionCount)
+    {
+        return TRUE;
+    }
 
-        K2_ASSERT(pSec->mpOwner == pThisThread);
+    pSec->mpOwner = NULL;
+    K2LIST_Remove(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
 
-        if (0 != --pSec->mRecursionCount)
-        {
-            //
-            // nested leave
-            //
-            stat = K2STAT_NO_ERROR;
-            break;
-        }
+    disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+    if (pSec->mWaitingThreadsCount == 0)
+    {
+        pSec->Event.mIsSignalled = TRUE;
+        pSec = NULL;
+    }
+    K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
 
-        //
-        // not a nested leave, recursion count already decremented
-        //
-        if ((v & 0xFFFF0000) == 0)
-        {
-            //
-            // no contention right now - try to get out without entering scheduler
-            //
-            K2LIST_Remove(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
-            pSec->mpOwner = NULL;
-
-            if (v == K2ATOMIC_CompareExchange(&pSec->mLockVal, 0, v))
-            {
-                //
-                // got out of uncontended sec
-                //
-                stat = K2STAT_NO_ERROR;
-                break;
-            }
-
-            //
-            // failed to get out without entering scheduler
-            //
-            pSec->mpOwner = pThisThread;
-            K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
-        }
-
-        //
-        // leaving contended sec. must enter scheduler
-        //
-        pThisThread->Sched.mpActionSec = pSec;
-        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_Contended_Critsec;
-        pThisThread->Sched.Item.Args.ContendedCritSec.mEntering = FALSE;
-        KernArch_ThreadCallSched();
-        stat = pThisThread->Sched.Item.mResult;
+    if (pSec != NULL)
+    {
+        stat = KernEvent_Change(&pSec->Event, TRUE);
         if (K2STAT_IS_ERROR(stat))
         {
             //
-            // failed to leave - !!!
+            // failed to leave
             //
+            pSec->mpOwner = pThisThread;
+            K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
             pSec->mRecursionCount = 1;
-            break;
+            return FALSE;
         }
+    }
 
-        K2_ASSERT(pThisThread->Sched.mpActionSec == NULL);
-        K2_ASSERT((pSec->mLockVal & 0xFFFF) != pThisThread->Env.mId);
-        K2_ASSERT(pSec->mpOwner != pThisThread);
-
-    } while (0);
-
-    result = (!K2STAT_IS_ERROR(stat));
-    if (!result)
-        K2OS_ThreadSetStatus(stat);
-
-    return result;
+    return TRUE;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec)
 {
-    BOOL                    result;
-    K2OSKERN_CRITSEC *      pSec;
-    K2OSKERN_OBJ_THREAD *   pThisThread;
-    UINT32                  v;
-
-    result = K2OS_CritSecTryEnter(apSec);
-    if (result)
-    {
-        //
-        // we own the sec. try to kill it now
-        //
-        pThisThread = K2OSKERN_CURRENT_THREAD;
-        pSec = (K2OSKERN_CRITSEC *)(((((UINT32)apSec) + (K2OS_MAX_CACHELINE_BYTES - 1)) / K2OS_MAX_CACHELINE_BYTES) * K2OS_MAX_CACHELINE_BYTES);
-        pSec->mSentinel = 0;
-        K2_CpuWriteBarrier();
-        v = K2ATOMIC_And(&pSec->mLockVal, 0xFFFF0000);
-        if (v != 0)
-        {
-            //
-            // somebody is trying to get into the sec that is being destroyed. must destroy sec via scheduler
-            // to get the entering threads to fail their scheduled enter operation.
-            //
-            pThisThread->Sched.mpActionSec = pSec;
-            pThisThread->Sched.Item.mSchedItemType = KernSchedItem_Destroy_Critsec;
-            KernArch_ThreadCallSched();
-            K2_ASSERT(pThisThread->Sched.mpActionSec == NULL);
-            K2_ASSERT(pSec->mpOwner != pThisThread);
-        }
-        else
-        {
-            pSec->mpOwner = NULL;
-            K2_CpuWriteBarrier();
-        }
-    }
-
-    return result;
+    return FALSE;
 }
 
 

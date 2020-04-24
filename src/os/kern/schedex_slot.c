@@ -46,7 +46,7 @@ BOOL KernSched_Exec_SlotBlock(void)
 
     pMailslot->mBlocked = setBlock;
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return FALSE;
 }
@@ -126,7 +126,7 @@ BOOL KernSched_Exec_SlotBoxes(void)
         }
     }
 
-    gData.Sched.mpActiveItem->mResult = stat;
+    gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return FALSE;
 }
@@ -194,7 +194,7 @@ BOOL KernSched_Exec_SlotPurge(void)
 
     K2_ASSERT(objCount == ix);
 
-    gData.Sched.mpActiveItem->mResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return somethingChanged;
 }

@@ -44,7 +44,7 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT16 aId)
     apMailbox->Hdr.mObjFlags = 0;
     apMailbox->Hdr.mpName = NULL;
     apMailbox->Hdr.mRefCount = 1;
-    K2LIST_Init(&apMailbox->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&apMailbox->Hdr.WaitEntryPrioList);
 
     apMailbox->mId = aId;
 
@@ -84,7 +84,7 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
     pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgIo = apRetMsgIo;
     pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgRecv = NULL;
     KernArch_ThreadCallSched();
-    stat = pThisThread->Sched.Item.mResult;
+    stat = pThisThread->Sched.Item.mSchedCallResult;
 
     pMsg = pThisThread->Sched.Item.Args.MboxRecv.mpRetMsgRecv;
     if (pMsg != NULL)
@@ -116,7 +116,7 @@ K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K
     pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg1 = NULL;
     pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg2 = NULL;
     KernArch_ThreadCallSched();
-    stat = pThisThread->Sched.Item.mResult;
+    stat = pThisThread->Sched.Item.mSchedCallResult;
 
     pMsg = pThisThread->Sched.Item.Args.MboxRespond.mpRetMsg1;
     if (pMsg != NULL)
@@ -145,7 +145,7 @@ void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
     K2_ASSERT(apMailbox->Hdr.mObjType == K2OS_Obj_Mailbox);
     K2_ASSERT(apMailbox->Hdr.mRefCount == 0);
     K2_ASSERT(!(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
-    K2_ASSERT(apMailbox->Hdr.WaitingThreadsPrioList.mNodeCount == 0);
+    K2_ASSERT(apMailbox->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
     K2_ASSERT(apMailbox->mpSlot == NULL);
 
@@ -156,7 +156,7 @@ void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
     pThisThread->Sched.Item.Args.MboxPurge.mpMailbox = apMailbox;
     pThisThread->Sched.Item.Args.MboxPurge.mpRetMsgPurge = NULL;
     KernArch_ThreadCallSched();
-    stat = pThisThread->Sched.Item.mResult;
+    stat = pThisThread->Sched.Item.mSchedCallResult;
 
     pMsg = pThisThread->Sched.Item.Args.MboxPurge.mpRetMsgPurge;
     if (pMsg != NULL)

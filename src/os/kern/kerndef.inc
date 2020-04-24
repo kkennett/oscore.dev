@@ -86,4 +86,10 @@
 
 /* --------------------------------------------------------------------------------- */
 
+#define K2OSKERN_CS_VALID_FLAG              0x80000000
+#define K2OSKERN_CS_LOCKER_MASK             0xFFFFF000
+#define K2OSKERN_CS_COUNTER_MASK            0x00000FFF
+
+/* --------------------------------------------------------------------------------- */
+
 #endif // __KERNDEF_INC

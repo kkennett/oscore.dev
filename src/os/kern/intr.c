@@ -77,7 +77,7 @@ K2OSKERN_InstallIntrHandler(
     K2MEM_Zero(pIntr, sizeof(K2OSKERN_OBJ_INTR));
     pIntr->Hdr.mObjType = K2OS_Obj_Interrupt;
     pIntr->Hdr.mRefCount = 1;
-    K2LIST_Init(&pIntr->Hdr.WaitingThreadsPrioList);
+    K2LIST_Init(&pIntr->Hdr.WaitEntryPrioList);
     pIntr->mIsSignalled = FALSE;
     pIntr->mfHandler = aHandler;
     pIntr->mpHandlerContext = apContext;
