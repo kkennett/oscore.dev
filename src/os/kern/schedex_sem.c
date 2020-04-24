@@ -42,8 +42,8 @@ BOOL KernSched_Exec_SemRelease(void)
 
     pSem = gData.Sched.mpActiveItem->Args.SemRelease.mpSem;
     relCount = gData.Sched.mpActiveItem->Args.SemRelease.mCount;
-
-    K2OSKERN_Debug("SCHED:SemRelease(%08X,%d)\n", pSem, relCount);
+    
+//    K2OSKERN_Debug("SCHED:SemRelease(%08X,%d)\n", pSem, relCount);
 
     result = FALSE;
 

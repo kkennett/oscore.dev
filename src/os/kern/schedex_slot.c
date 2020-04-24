@@ -41,8 +41,8 @@ BOOL KernSched_Exec_SlotBlock(void)
 
     pMailslot = gData.Sched.mpActiveItem->Args.SlotBlock.mpMailslot;
     setBlock = gData.Sched.mpActiveItem->Args.SlotBlock.mSetBlock;
-
-    K2OSKERN_Debug("SCHED:SlotBlock(%08X,%d)\n", pMailslot, setBlock);
+    
+//    K2OSKERN_Debug("SCHED:SlotBlock(%08X,%d)\n", pMailslot, setBlock);
 
     pMailslot->mBlocked = setBlock;
 
@@ -67,7 +67,7 @@ BOOL KernSched_Exec_SlotBoxes(void)
     boxCount = gData.Sched.mpActiveItem->Args.SlotBoxes.mBoxCount;
     ppMailbox = gData.Sched.mpActiveItem->Args.SlotBoxes.mppMailbox;
 
-    K2OSKERN_Debug("SCHED:SlotBoxes(%08X,%d)\n", pMailslot, doAttach);
+//    K2OSKERN_Debug("SCHED:SlotBoxes(%08X,%d)\n", pMailslot, doAttach);
 
     stat = K2STAT_NO_ERROR;
 

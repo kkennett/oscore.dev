@@ -53,7 +53,7 @@ BOOL KernSched_Exec_MsgSend(void)
 
     gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg = NULL;
     
-    K2OSKERN_Debug("SCHED:MsgSend(%08X)\n", pMsg);
+//    K2OSKERN_Debug("SCHED:MsgSend(%08X)\n", pMsg);
 
     changedSomething = FALSE;
 
@@ -169,7 +169,7 @@ BOOL KernSched_Exec_MsgAbort(void)
     pMsg = gData.Sched.mpActiveItem->Args.MsgAbort.mpMsgInOut;
     gData.Sched.mpActiveItem->Args.MsgAbort.mpMsgInOut = NULL;
 
-    K2OSKERN_Debug("SCHED:MsgAbort(%08X)\n", pMsg);
+//    K2OSKERN_Debug("SCHED:MsgAbort(%08X)\n", pMsg);
 
     changedSomething = FALSE;
 
@@ -230,7 +230,7 @@ BOOL KernSched_Exec_MsgReadResp(void)
 
     pMsg = gData.Sched.mpActiveItem->Args.MsgReadResp.mpMsg;
 
-    K2OSKERN_Debug("SCHED:MsgReadResp(%08X)\n", pMsg);
+//    K2OSKERN_Debug("SCHED:MsgReadResp(%08X)\n", pMsg);
 
     stat = K2STAT_NO_ERROR;
 

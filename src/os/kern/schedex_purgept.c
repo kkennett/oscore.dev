@@ -50,7 +50,7 @@ BOOL KernSched_Exec_PurgePT(void)
 
     ptIndex = gData.Sched.mpActiveItem->Args.PurgePt.mPtIndex;
 
-    K2OSKERN_Debug("SCHED:PurgePT(%d)\n", ptIndex);
+//    K2OSKERN_Debug("SCHED:PurgePT(%d)\n", ptIndex);
 
     virtAddrInPtRange = ptIndex * K2_VA32_PAGETABLE_MAP_BYTES;
 

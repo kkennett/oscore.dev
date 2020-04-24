@@ -45,7 +45,7 @@ BOOL KernSched_Exec_MboxRecv(void)
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxRecv.mpMailbox;
 
-    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
+//    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
 
     stat = K2STAT_NO_ERROR;
 
@@ -177,7 +177,7 @@ BOOL KernSched_Exec_MboxRespond(void)
     requestId = gData.Sched.mpActiveItem->Args.MboxRespond.mRequestId;
     pRespMsgIo = gData.Sched.mpActiveItem->Args.MboxRespond.mpRespMsgIo;
 
-    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
+//    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
 
     changedSomething = FALSE;
 
@@ -308,7 +308,7 @@ BOOL KernSched_Exec_MboxPurge(void)
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxPurge.mpMailbox;
 
-    K2OSKERN_Debug("SCHED:MboxPurge(%08X)\n", pMailbox);
+//    K2OSKERN_Debug("SCHED:MboxPurge(%08X)\n", pMailbox);
 
     changedSomething = FALSE;
 

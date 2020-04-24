@@ -151,14 +151,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         K2_ASSERT(pSec->Event.Hdr.WaitEntryPrioList.mNodeCount == 0);
         pSec->Event.mIsSignalled = FALSE;
         gotIntoSec = TRUE;
-        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
-        {
-            K2OSKERN_Debug("%6d.CS_ENTERING(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-        }
     }
     else
     {
-        K2OSKERN_Debug("%6d.CS_ENTER_BLOCKED(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }
@@ -169,10 +164,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         result = KernThread_WaitOne(&pSec->Event.Hdr, K2OS_TIMEOUT_INFINITE);
         if (result == K2OS_WAIT_SIGNALLED_0)
         {
-            if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
-            {
-                K2OSKERN_Debug("%6d.CS_ENTERED-UNBLOCKED(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-            }
             gotIntoSec = TRUE;
         }
 
@@ -246,17 +237,9 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
     {
         pSec->Event.mIsSignalled = TRUE;
         leftSec = TRUE;
-        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
-        {
-            K2OSKERN_Debug("%6d.CS_LEAVING(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-        }
     }
     else
     {
-        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
-        {
-            K2OSKERN_Debug("%6d.CS_LEAVING(%d)-RELEASING\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-        }
         leftSec = FALSE;
     }
     K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);

@@ -152,7 +152,7 @@ BOOL KernSched_Exec_EventChange(void)
     pEvent = gData.Sched.mpActiveItem->Args.EventChange.mpEvent;
     setReset = gData.Sched.mpActiveItem->Args.EventChange.mSetReset;
 
-    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
+//    K2OSKERN_Debug("SCHED:EventSetReset(%08X,%d)\n", pEvent, setReset);
 
     result = KernSched_EventChange(pEvent, setReset);
 
