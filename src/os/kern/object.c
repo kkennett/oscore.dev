@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-static void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
+void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     switch (apObjHdr->mObjType)
     {

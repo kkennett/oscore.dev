@@ -177,7 +177,6 @@ void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
     K2OSKERN_SetIntr(disp);
 }
 
-static
 void
 sPic_SetDevIrqMask(
     UINT32  aDevIrq,
@@ -322,7 +321,6 @@ UINT32 KernArch_VectorToDevIrq(UINT32 aVector)
     return ret;
 }
 
-static
 void
 sIoApic_SetDevIrqMask(
     UINT32  aIrqIx,
@@ -464,7 +462,6 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDHI(redIx), redHi);
 }
 
-static
 void
 sLvt_SetDevIrqMask(
     UINT32  aDevIrq,

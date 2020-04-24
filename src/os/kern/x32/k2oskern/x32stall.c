@@ -47,12 +47,12 @@ typedef UINT32 (*pfTimerRead)(void);
 static pfTimerRead  sgfTimerRead = NULL;
 static UINT64       sgTimerDiv = 0;
 
-static UINT32 sReadHPET(void)
+UINT32 sReadHPET(void)
 {
     return MMREG_READ32(sgHPET, HPET_OFFSET_COUNT);
 }
 
-static UINT32 sReadPmTimer(void)
+UINT32 sReadPmTimer(void)
 {
     UINT32 v;
     v = X32_IoRead32(sgPmTimerPort);

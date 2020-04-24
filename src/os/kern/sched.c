@@ -574,6 +574,7 @@ void sPutThreadOntoIdleCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apThr
     apCore->Sched.mCoreActivePrio = apThread->Sched.mThreadActivePrio;
     apCore->Sched.mExecFlags = K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED;
     apCore->Sched.mpRunThread = apThread;
+    gData.Sched.mIdleCoreCount--;
     apThread->Sched.State.mRunState = KernThreadRunState_Running;
     apThread->Sched.mQuantumLeft = apThread->Sched.Attr.mQuantum;
 

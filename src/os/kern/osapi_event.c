@@ -100,7 +100,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL
     return tokEvent;
 }
 
-static BOOL sSetOrReset(K2OS_TOKEN aTokEvent, BOOL aSetReset)
+BOOL sSetOrReset(K2OS_TOKEN aTokEvent, BOOL aSetReset)
 {
     K2STAT                  stat;
     K2STAT                  stat2;

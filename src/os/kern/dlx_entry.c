@@ -47,7 +47,6 @@ KERN_DATA gData;
 //
 void KernInit_Stage(KernInitStage aStage);
 
-static
 int
 sNameCompare(
     UINT32          aKey,

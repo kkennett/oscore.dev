@@ -62,7 +62,6 @@ void KernInit_CpuCore(void)
     }
 }
 
-static
 void
 sProcessOneCpuCoreEvent(
     K2OSKERN_CPUCORE *      apThisCore,

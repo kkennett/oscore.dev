@@ -69,11 +69,14 @@ K2OSKERN_Panic(
 
     K2OSKERN_Debug("\n\n-------------------\nCore %d PANIC:\n  ", pThisCore->mCoreIx);
     
-    K2_VASTART(vList, apFormat);
-    
-    KernDebug_OutputWithArgs(apFormat, vList);
+    if (apFormat != NULL)
+    {
+        K2_VASTART(vList, apFormat);
 
-    K2_VAEND(vList);
+        KernDebug_OutputWithArgs(apFormat, vList);
+
+        K2_VAEND(vList);
+    }
 
     if (gData.mCpuCount > 1)
     {
@@ -85,7 +88,7 @@ K2OSKERN_Panic(
         } while (gData.mCoresInPanic < gData.mCpuCount);
     }
 
-    KernArch_Panic(pThisCore);
+    KernArch_Panic(pThisCore, (apFormat == NULL) ? FALSE : TRUE);
 
     while (1);
 }

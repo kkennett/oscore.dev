@@ -36,7 +36,6 @@
 
 static char sgSymDump[SYM_NAME_MAX_LEN * K2OS_MAX_CPU_COUNT];
 
-static
 void 
 sEmitSymbolName(
     K2OSKERN_CPUCORE volatile * apThisCore,
@@ -52,7 +51,6 @@ sEmitSymbolName(
     K2OSKERN_Debug("%s", &sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN]);
 }
 
-static
 void 
 sX32Kern_DumpStackTrace(
     K2OSKERN_CPUCORE volatile * apThisCore,
@@ -96,7 +94,6 @@ sX32Kern_DumpStackTrace(
     } while (1);
 }
 
-static
 void sX32Kern_sDumpCommonExceptionContext(
     X32_EXCEPTION_CONTEXT *apContext
 )
@@ -114,7 +111,6 @@ void sX32Kern_sDumpCommonExceptionContext(
     K2OSKERN_Debug("DS      0x%08X\n", apContext->DS);
 }
 
-static
 void sX32Kern_DumpUserModeExceptionContext(
     X32_EXCEPTION_CONTEXT *apContext
 )
@@ -129,7 +125,6 @@ void sX32Kern_DumpUserModeExceptionContext(
     K2OSKERN_Debug("SS      0x%08X\n", apContext->UserMode.SS);
 }
 
-static
 void sX32Kern_DumpKernelModeExceptionContext(
     UINT32                  aCoreIx, 
     X32_EXCEPTION_CONTEXT * apContext
@@ -144,7 +139,6 @@ void sX32Kern_DumpKernelModeExceptionContext(
     K2OSKERN_Debug("------------------\n");
 }
 
-static 
 BOOL 
 sX32Kern_Exception(
     K2OSKERN_CPUCORE volatile * apThisCore,
@@ -154,25 +148,27 @@ sX32Kern_Exception(
     K2_EXCEPTION_TRAP *     pExTrap;
     K2OSKERN_OBJ_THREAD *   pCurThread;
 
+    K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
+    K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
+
     if (apThisCore->mIsInMonitor)
     {
+        K2OSKERN_Debug("IN MONITOR\n");
         sX32Kern_DumpKernelModeExceptionContext(apThisCore->mCoreIx, apContext);
         sX32Kern_DumpStackTrace(
             apThisCore,
             apContext->KernelMode.EIP,
             apContext->REGS.EBP,
             ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
-        K2OSKERN_Panic("Exception %d in Monitor\n", apContext->Exception_Vector);
+        K2OSKERN_Panic(NULL);
     }
 
     pCurThread = apThisCore->mpActiveThread;
     K2_ASSERT(pCurThread != NULL);
 
-    K2OSKERN_Debug("Exception %d in %s Mode while running Thread %d, Context @ 0x%08X\n",
-        apContext->Exception_Vector,
-        pCurThread->mIsInKernelMode ? "Kernel" : "User",
+    K2OSKERN_Debug("ON THREAD %d IN %s MODE\n",
         pCurThread->Env.mId,
-        apContext);
+        pCurThread->mIsInKernelMode ? "Kernel" : "User");
 
     if (pCurThread->mIsInKernelMode)
     {
@@ -351,13 +347,16 @@ void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
     K2OSKERN_SeqIntrUnlock(&gX32Kern_IntrSeqLock, disp);
 }
 
-void KernArch_Panic(K2OSKERN_CPUCORE *apThisCore)
+void KernArch_Panic(K2OSKERN_CPUCORE *apThisCore, BOOL aDumpStack)
 {
-    sX32Kern_DumpStackTrace(
-        apThisCore,
-        (UINT32)K2_RETURN_ADDRESS,
-        X32_ReadEBP(),
-        X32_ReadESP()
-    );
+    if (aDumpStack)
+    {
+        sX32Kern_DumpStackTrace(
+            apThisCore,
+            (UINT32)K2_RETURN_ADDRESS,
+            X32_ReadEBP(),
+            X32_ReadESP()
+        );
+    }
     while (1);
 }

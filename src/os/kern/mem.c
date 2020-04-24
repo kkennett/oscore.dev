@@ -34,7 +34,7 @@
 
 #define MAX_DLX_NAME_LEN    64
 
-static void sDumpList(K2LIST_ANCHOR *apList)
+void sDumpList(K2LIST_ANCHOR *apList)
 {
     K2LIST_LINK *pListLink;
 
@@ -53,7 +53,6 @@ static void sDumpList(K2LIST_ANCHOR *apList)
     K2OSKERN_Debug("-----------------------\n");
 }
 
-static
 void
 sDumpHeapNode(
     K2HEAP_ANCHOR * apHeap,
@@ -230,7 +229,7 @@ sDumpHeapNode(
     }
 }
 
-static void sDumpPhys(void)
+void sDumpPhys(void)
 {
     UINT32                      flags;
     UINT32                      pageCount;
@@ -295,7 +294,7 @@ static void sDumpPhys(void)
     K2OSKERN_SeqIntrUnlock(&gData.PhysMemSeqLock, intrDisp);
 }
 
-static void sDumpVirt(void)
+void sDumpVirt(void)
 {
     BOOL intrDisp;
 
@@ -310,7 +309,7 @@ static void sDumpVirt(void)
     K2_ASSERT(intrDisp);
 }
 
-static void sDumpSeg(void)
+void sDumpSeg(void)
 {
     BOOL                    intrDisp;
     K2TREE_NODE *           pTreeNode;
@@ -331,14 +330,14 @@ static void sDumpSeg(void)
     K2OSKERN_SeqIntrUnlock(&gpProc0->SegTreeSeqLock, intrDisp);
 }
 
-static void sDumpAll(void)
+void sDumpAll(void)
 {
     sDumpPhys();
     sDumpVirt();
     sDumpSeg();
 }
 
-static UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
+UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
 {
     BOOL ok;
     ok = K2OS_CritSecEnter(&gData.KernVirtHeapSec);
@@ -346,14 +345,14 @@ static UINT32 sRamHeapLock(K2OS_RAMHEAP *apRamHeap)
     return 0;
 }
 
-static void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
+void sRamHeapUnlock(K2OS_RAMHEAP *apRamHeap, UINT32 aDisp)
 {
     BOOL ok;
     ok = K2OS_CritSecLeave(&gData.KernVirtHeapSec);
     K2_ASSERT(ok);
 }
 
-static K2HEAP_NODE * sKernVirtHeapAcquireNode(K2HEAP_ANCHOR *apHeap)
+K2HEAP_NODE * sKernVirtHeapAcquireNode(K2HEAP_ANCHOR *apHeap)
 {
     K2HEAP_NODE * pRet;
 
@@ -370,7 +369,7 @@ static K2HEAP_NODE * sKernVirtHeapAcquireNode(K2HEAP_ANCHOR *apHeap)
     return pRet;
 }
 
-static void sKernVirtHeapReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+void sKernVirtHeapReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
 {
     K2_ASSERT(apHeap == &gData.KernVirtHeap);
 

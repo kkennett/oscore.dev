@@ -1197,7 +1197,7 @@ void    KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 
-void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore);
+void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore, BOOL aDumpStack);
 
 /* --------------------------------------------------------------------------------- */
 

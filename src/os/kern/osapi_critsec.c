@@ -151,11 +151,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         K2_ASSERT(pSec->Event.Hdr.WaitEntryPrioList.mNodeCount == 0);
         pSec->Event.mIsSignalled = FALSE;
         gotIntoSec = TRUE;
-        K2OSKERN_Debug("%6d.Thread %d ENTER\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
+        {
+            K2OSKERN_Debug("%6d.CS_ENTER1(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        }
     }
     else
     {
-        K2OSKERN_Debug("%6d.Thread %d BLOCKS*****\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        K2OSKERN_Debug("%6d.CS_BLOCK(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }
@@ -166,7 +169,10 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
         result = KernThread_WaitOne(&pSec->Event.Hdr, K2OS_TIMEOUT_INFINITE);
         if (result == K2OS_WAIT_SIGNALLED_0)
         {
-            K2OSKERN_Debug("%6d.Thread %d ENTER ON UNBLOCK\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+            if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
+            {
+                K2OSKERN_Debug("%6d.CS_ENTER2(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+            }
             gotIntoSec = TRUE;
         }
 
@@ -238,9 +244,12 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
     disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
     if (pSec->mWaitingThreadsCount == 0)
     {
-        K2OSKERN_Debug("%6d.Thread %d LEAVE NOBODY WAITING\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         pSec->Event.mIsSignalled = TRUE;
         leftSec = TRUE;
+        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
+        {
+            K2OSKERN_Debug("%6d.CS_LEAVE1(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
+        }
     }
     else
     {
@@ -250,18 +259,12 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
 
     if (!leftSec)
     {
-        K2OSKERN_Debug("%6d.Thread %d LEAVE TRANSFERRED\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
-        stat = KernEvent_Change(&pSec->Event, TRUE);
-        if (K2STAT_IS_ERROR(stat))
+        if (gData.mKernInitStage >= KernInitStage_MultiThreaded)
         {
-            //
-            // failed to leave
-            //
-            pSec->mpOwner = pThisThread;
-            K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
-            pSec->mRecursionCount = 1;
-            return FALSE;
+            K2OSKERN_Debug("%6d.CS_LEAVE2(%d)\n", (UINT32)K2OS_SysUpTimeMs(), pThisThread->Env.mId);
         }
+        stat = KernEvent_Change(&pSec->Event, TRUE);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
 
     return TRUE;

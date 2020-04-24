@@ -232,8 +232,10 @@ BOOL KernSched_TimePassed(UINT64 aSchedAbsTime)
 
         if (gData.Sched.mpTimerItemQueue != NULL)
         {
+            pItem = gData.Sched.mpTimerItemQueue;
             do {
-                timerQueueItemTicks = gData.Sched.mpTimerItemQueue->mDeltaT;
+                K2_ASSERT(pItem != NULL);
+                timerQueueItemTicks = pItem->mDeltaT;
                 if (nextDelta < timerQueueItemTicks)
                 {
                     gData.Sched.mpTimerItemQueue->mDeltaT = timerQueueItemTicks - nextDelta;
@@ -249,13 +251,20 @@ BOOL KernSched_TimePassed(UINT64 aSchedAbsTime)
                 gData.Sched.mCurrentAbsTime += timerQueueItemTicks;
                 elapsed -= timerQueueItemTicks;
 
-                pItem = gData.Sched.mpTimerItemQueue;
-                gData.Sched.mpTimerItemQueue = pItem->mpNext;
-                pItem->mpNext = NULL;
-                pItem->mOnQueue = FALSE;
+                //
+                // could be multiple things expiring simultaneously
+                // so timer items can have deltaT of zero.
+                //
+                do {
+                    gData.Sched.mpTimerItemQueue = pItem->mpNext;
+                    pItem->mpNext = NULL;
+                    pItem->mOnQueue = FALSE;
 
-                if (sSignalTimerItem(pItem))
-                    changedSomething = TRUE;
+                    if (sSignalTimerItem(pItem))
+                        changedSomething = TRUE;
+
+                    pItem = gData.Sched.mpTimerItemQueue;
+                } while ((pItem != NULL) && (pItem->mDeltaT == 0));
 
             } while (nextDelta > 0);
         }

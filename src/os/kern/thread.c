@@ -212,7 +212,7 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-static BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, K2STAT *apStat)
+BOOL sCheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, K2STAT *apStat)
 {
     switch (aObjWait.mpHdr->mObjType)
     {

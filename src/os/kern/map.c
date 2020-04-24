@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-static UINT32 * sGetPTE(UINT32 aVirtMapBase, UINT32 aVirtAddr)
+UINT32 * sGetPTE(UINT32 aVirtMapBase, UINT32 aVirtAddr)
 {
     UINT32* pPTE;
 
