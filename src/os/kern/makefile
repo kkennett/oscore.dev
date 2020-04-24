@@ -54,7 +54,6 @@ SOURCES += cpucore.c
 SOURCES += monitor.c 
 SOURCES += schedex_threadexit.c 
 SOURCES += schedex_threadwaitany.c 
-SOURCES += schedex_critsec.c 
 SOURCES += schedex_debug.c
 SOURCES += schedex_invtlb.c
 SOURCES += schedex_purgept.c

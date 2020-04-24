@@ -167,9 +167,19 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
             gotIntoSec = TRUE;
         }
 
-        disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
-        pSec->mWaitingThreadsCount--;
-        K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
+        //
+        // wait will be error if section was abandoned (owner called 
+        // critsec_done while holding the sec and people waiting on it)
+        // if that's the case then the sec is GONE
+        //
+        if (result != K2OS_WAIT_ERROR)
+        {
+            disp = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+            pSec->mWaitingThreadsCount--;
+            K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
+        }
+        else
+            pSec = NULL;
     }
 
     if (gotIntoSec)
@@ -189,6 +199,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
     K2OSKERN_CRITSEC *      pSec;
     BOOL                    disp;
     K2STAT                  stat;
+    BOOL                    leftSec;
 
     if (FALSE == K2OSKERN_GetIntr())
         K2OSKERN_Panic("Interrupts disabled at CritSecLeave!\n");
@@ -225,11 +236,15 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
     if (pSec->mWaitingThreadsCount == 0)
     {
         pSec->Event.mIsSignalled = TRUE;
-        pSec = NULL;
+        leftSec = TRUE;
+    }
+    else
+    {
+        leftSec = FALSE;
     }
     K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, disp);
 
-    if (pSec != NULL)
+    if (!leftSec)
     {
         stat = KernEvent_Change(&pSec->Event, TRUE);
         if (K2STAT_IS_ERROR(stat))
@@ -249,7 +264,49 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec)
 {
-    return FALSE;
+    K2OSKERN_CRITSEC *  pSec;
+    BOOL                ok;
+    K2STAT              stat;
+
+    ok = K2OS_CritSecEnter(apSec);
+    if (!ok)
+        return FALSE;
+
+    //
+    // critsec done in the kernel must be done carefully
+    // by the critsec users. all users except the one calling
+    // done must have been shut down and not use the sec
+    // any more.  There are two asserts here trying to catch
+    // cases where other users are waiting either before or
+    // after the sec event is destroyed.  if the second one
+    // fires then somebody is using the sec after their wait
+    // has failed
+    //
+
+    pSec = (K2OSKERN_CRITSEC *)apSec;
+
+    ok = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+    
+    K2_ASSERT(pSec->mWaitingThreadsCount == 0);
+    
+    K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, ok);
+
+    //
+    // this should make anything waiting on the sec fail their wait
+    // with K2OS_WAIT_ERROR
+    //
+    stat = KernObj_Release(&pSec->Event.Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    ok = K2OSKERN_SeqIntrLock(&pSec->SeqLock);
+
+    K2_ASSERT(pSec->mWaitingThreadsCount == 0);
+
+    K2OSKERN_SeqIntrUnlock(&pSec->SeqLock, ok);
+
+    K2MEM_Zero(pSec, sizeof(K2OSKERN_CRITSEC));
+
+    return TRUE;
 }
 
 

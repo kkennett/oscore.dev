@@ -49,7 +49,7 @@ sExTrapDismount(
     K2_EXCEPTION_TRAP *apTrap
     )
 {
-    return apTrap->mResult;
+    return apTrap->mTrapResult;
 }
 K2_pf_EXTRAP_DISMOUNT K2_ExTrap_Dismount = sExTrapDismount;
 
