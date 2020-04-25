@@ -46,7 +46,6 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRet
         (apRetTokMsgs == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        K2OSKERN_Debug("%d\n", __LINE__);
         return FALSE;
     }
 

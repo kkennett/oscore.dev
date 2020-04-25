@@ -209,10 +209,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
-        {
             stat = KernMailbox_Respond(pMailboxObj, aRequestId, &msgIo);
-            K2OSKERN_Debug("%d(%08X)\n", __LINE__, stat);
-        }
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
         stat2 = KernObj_Release(&pMailboxObj->Hdr);

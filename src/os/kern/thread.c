@@ -270,16 +270,16 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
 
     case K2OS_Obj_Mailbox:
         K2_ASSERT(aObjWait.mpMailbox->Event.mIsAutoReset == TRUE);
-        if (!aObjWait.mpEvent->mIsSignalled)
-            return aObjWait.mpHdr;
-
-        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+        if (aObjWait.mpMailbox->Event.mIsSignalled)
         {
-            //
-            // very special case - changing the object and returning no wait
-            //
-            aObjWait.mpMailbox->Event.mIsSignalled = FALSE;
-            return NULL;
+            if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+            {
+                //
+                // very special case - changing the object and returning no wait
+                //
+                aObjWait.mpMailbox->Event.mIsSignalled = FALSE;
+                return NULL;
+            }
         }
 
         //
@@ -290,16 +290,16 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
     case K2OS_Obj_Msg:
         K2_ASSERT(aObjWait.mpMsg->Event.mIsAutoReset == TRUE);
 
-        if (!aObjWait.mpEvent->mIsSignalled)
-            return aObjWait.mpHdr;
-
-        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+        if (aObjWait.mpMsg->Event.mIsSignalled)
         {
-            //
-            // very special case - changing the object and returning no wait
-            //
-            aObjWait.mpMsg->Event.mIsSignalled = FALSE;
-            return NULL;
+            if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+            {
+                //
+                // very special case - changing the object and returning no wait
+                //
+                aObjWait.mpMsg->Event.mIsSignalled = FALSE;
+                return NULL;
+            }
         }
 
         //

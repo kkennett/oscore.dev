@@ -179,7 +179,7 @@ BOOL KernSched_Exec_MboxRespond(void)
     requestId = gData.Sched.mpActiveItem->Args.MboxRespond.mRequestId;
     pRespMsgIo = gData.Sched.mpActiveItem->Args.MboxRespond.mpRespMsgIo;
 
-    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
+//    K2OSKERN_Debug("SCHED:MboxRespond(%08X)\n", pMailbox);
 
     changedSomething = FALSE;
 
@@ -223,10 +223,8 @@ BOOL KernSched_Exec_MboxRespond(void)
             //
             K2MEM_Copy(&pMsg->Io, pRespMsgIo, sizeof(K2OS_MSGIO));
             pMsg->mpSittingInMailbox = NULL;
-            K2OSKERN_Debug("Setting msg event (response)\n");
             if (KernSchedEx_EventChange(&pMsg->Event, TRUE))
             {
-                K2OSKERN_Debug("released thread that was waiting on msg\n");
                 changedSomething = TRUE;
             }
 

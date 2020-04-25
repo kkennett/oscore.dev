@@ -104,20 +104,7 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
 void Msg_Init(void)
 {
     K2OS_TOKEN          tokThread;
-    K2OS_TOKEN          tokName;
-    K2OS_TOKEN          tokMsg;
-    BOOL                ok;
     K2OS_THREADCREATE   cret;
-    K2OS_MSGIO          ioIn;
-    K2OS_MSGIO          ioOut;
-    UINT32              waitResult;
-
-    tokName = K2OS_NameDefine(gpK2OSEXEC_MailslotGuidStr);
-    K2_ASSERT(tokName != NULL);
-
-    ok = K2OS_MsgCreate(1, &tokMsg);
-    K2_ASSERT(ok);
-    ioIn.mOpCode = 1;
 
     K2MEM_Zero(&cret, sizeof(cret));
     cret.mStructBytes = sizeof(cret);
@@ -126,29 +113,6 @@ void Msg_Init(void)
     tokThread = K2OS_ThreadCreate(&cret);
     K2_ASSERT(NULL != tokThread);
 
-    waitResult = K2OS_ThreadWaitOne(tokName, K2OS_TIMEOUT_INFINITE);
-    K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
-
-    ok = K2OS_MsgSend(tokName, tokMsg, &ioIn, TRUE);
-    K2_ASSERT(ok);
-
-    waitResult = K2OS_ThreadWaitOne(tokMsg, K2OS_TIMEOUT_INFINITE);
-    K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
-
-    K2OSKERN_Debug("%d read response\n", __LINE__);
-    ok = K2OS_MsgReadResponse(tokMsg, &ioOut, TRUE);
-    K2_ASSERT(ok);
-
-    K2OSKERN_Debug("%d got response\n", __LINE__);
-    K2OS_TokenDestroy(tokMsg);
-
-    K2OSKERN_Debug("%d\n", __LINE__);
-    K2OS_TokenDestroy(tokName);
-
-    K2OSKERN_Debug("%d\n", __LINE__);
     K2OS_TokenDestroy(tokThread);
-
-    K2OSKERN_Debug("%d\n", __LINE__);
-    K2OSKERN_Debug("ioOut.Status = %08X\n", ioOut.mStatus);
 }
  
