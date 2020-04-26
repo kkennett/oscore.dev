@@ -33,11 +33,93 @@
 #include "ik2osexec.h"
 
 void
+sScanForHw(
+    DEV_NODE *  apDevNode,
+    UINT32      aLevel
+)
+{
+    K2LIST_LINK *       pListLink;
+    ACPI_DEVICE_INFO *  pAcpi;
+    DEV_NODE_PCI *      pPci;
+    char                nameBuffer[8];
+    RES_IO_HEAPNODE *   pResIo;
+    PHYS_HEAPNODE *     pPhys;
+
+    if ((apDevNode->mpIntrLine) ||
+        (apDevNode->IoList.mNodeCount) ||
+        (apDevNode->PhysList.mNodeCount))
+    {
+        pAcpi = apDevNode->mpAcpiInfo;
+        if (NULL != pAcpi)
+        {
+            K2MEM_Copy(nameBuffer, &pAcpi->Name, sizeof(UINT32));
+            nameBuffer[4] = 0;
+            K2OSKERN_Debug("HW %d ACPI Name \"%s\" VALID %04X HID(%s)\n",
+                aLevel,
+                nameBuffer,
+                pAcpi->Valid,
+                (pAcpi->Valid & ACPI_VALID_HID) ? pAcpi->HardwareId.String : "<NONE>");
+            if (apDevNode->mpIntrLine != NULL)
+            {
+                K2OSKERN_Debug("  INTR_LINE %d\n", apDevNode->mpIntrLine->mLineIndex);
+            }
+            pListLink = apDevNode->IoList.mpHead;
+            if (pListLink != NULL)
+            {
+                do {
+                    pResIo = K2_GET_CONTAINER(RES_IO_HEAPNODE, pListLink, DevNodeIoListLink);
+                    K2OSKERN_Debug("  IO   %04X     %04X\n",
+                        pResIo->HeapNode.AddrTreeNode.mUserVal,
+                        pResIo->HeapNode.SizeTreeNode.mUserVal);
+                    pListLink = pListLink->mpNext;
+                } while (pListLink != NULL);
+            }
+            if (apDevNode->PhysList.mNodeCount)
+            {
+                do {
+                    pPhys = K2_GET_CONTAINER(PHYS_HEAPNODE, pListLink, DevNodePhysListLink);
+                    K2OSKERN_Debug("  PHYS %08X %08X\n",
+                        pPhys->HeapNode.AddrTreeNode.mUserVal,
+                        pPhys->HeapNode.SizeTreeNode.mUserVal);
+                    pListLink = pListLink->mpNext;
+                } while (pListLink != NULL);
+            }
+        }
+        else
+        {
+            pPci = apDevNode->mpPci;
+            if (NULL != pPci)
+            {
+                K2OSKERN_Debug("HW %d PCI  Vendor %04X Device %04X\n",
+                    aLevel,
+                    pPci->PciCfg.AsTypeX.mVendorId,
+                    pPci->PciCfg.AsTypeX.mDeviceId);
+            }
+        }
+    }
+    else
+    {
+        pListLink = apDevNode->ChildList.mpHead;
+        if (pListLink != NULL)
+        {
+            do {
+                sScanForHw(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aLevel+1);
+                pListLink = pListLink->mpNext;
+            } while (pListLink != NULL);
+        }
+    }
+}
+
+void
 K2OSEXEC_Run(
     void
 )
 {
     Msg_Init();
+
+    K2OSKERN_Debug("\nUnparented Hardware:\n------------------------------------\n");
+    sScanForHw(gpDev_RootNode, 0);
+    K2OSKERN_Debug("------------------------------------\n\n");
 
 #if 1
     K2OSKERN_Debug("Sleep Hang ints on\n");
