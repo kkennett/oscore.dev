@@ -81,6 +81,8 @@ sInitialDeviceWalkCallback(
 
                 K2MEM_Zero(pDevNode, sizeof(DEV_NODE));
                 K2LIST_Init(&pDevNode->ChildList);
+                K2LIST_Init(&pDevNode->PhysList);
+                K2LIST_Init(&pDevNode->IoList);
                 pDevNode->mpParent = pWalkCtx->Working[pWalkCtx->mLevel - 1];
                 pDevNode->mpAcpiInfo = pDevInfo;
                 pDevNode->DevTreeNode.mUserVal = (UINT32)Object;
@@ -218,6 +220,8 @@ void Dev_Init(void)
     K2_ASSERT(gpDev_RootNode != NULL);
     K2MEM_Zero(gpDev_RootNode, sizeof(DEV_NODE));
     K2LIST_Init(&gpDev_RootNode->ChildList);
+    K2LIST_Init(&gpDev_RootNode->PhysList);
+    K2LIST_Init(&gpDev_RootNode->IoList);
     K2TREE_Insert(&gDev_Tree, gpDev_RootNode->DevTreeNode.mUserVal, &gpDev_RootNode->DevTreeNode);
 
     walkCtx.Working[0] = gpDev_RootNode;

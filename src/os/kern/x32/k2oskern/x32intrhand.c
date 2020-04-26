@@ -88,8 +88,9 @@ sX32Kern_DumpStackTrace(
             return;
         }
         K2OSKERN_Debug("%08X ", pBackPtr[1]);
-        if (pBackPtr[1] != 0)
-            sEmitSymbolName(apThisCore, pBackPtr[1]);
+        if (pBackPtr[1] == 0)
+            break;
+        sEmitSymbolName(apThisCore, pBackPtr[1]);
         K2OSKERN_Debug("\n");
     } while (1);
 }
@@ -182,7 +183,7 @@ sIsUnhandledThreadException(
                 apContext->KernelMode.EIP,
                 apContext->REGS.EBP,
                 ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT);
-            K2OSKERN_Panic("Untrapped Exception\n");
+            K2OSKERN_Panic(NULL);
         }
     }
     else

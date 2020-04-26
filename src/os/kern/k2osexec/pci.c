@@ -515,11 +515,14 @@ sDiscoveredChildPciDevice(
         pChildDev = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
         K2_ASSERT(pChildDev != NULL);
         K2MEM_Zero(pChildDev, sizeof(DEV_NODE));
-
+        
         pChildDev->mpPci = apChildPci;
 
         pChildDev->mpParent = apParentDev;
         K2LIST_Init(&pChildDev->ChildList);
+        K2LIST_Init(&pChildDev->PhysList);
+        K2LIST_Init(&pChildDev->IoList);
+
         K2LIST_AddAtTail(&apParentDev->ChildList, &pChildDev->ChildListLink);
 
         K2TREE_Insert(&gDev_Tree, pChildDev->DevTreeNode.mUserVal, &pChildDev->DevTreeNode);
@@ -730,6 +733,8 @@ void Pci_CheckManualScan(void)
     K2MEM_Zero(pTryNode, sizeof(DEV_NODE));
 
     K2LIST_Init(&pTryNode->ChildList);
+    K2LIST_Init(&pTryNode->PhysList);
+    K2LIST_Init(&pTryNode->IoList);
     pTryNode->mpParent = gpDev_RootNode;
     pTryNode->mResFlags = DEV_NODE_RESFLAGS_IS_BUS;
     K2LIST_AddAtTail(&gpDev_RootNode->ChildList, &pTryNode->ChildListLink);

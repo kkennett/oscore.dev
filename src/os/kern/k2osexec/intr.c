@@ -180,7 +180,7 @@ sAttachViaPci_NoAcpiInfo(
 
 static
 void
-sRes_DiscoveredAcpiIrq(
+sIntr_DiscoveredAcpiIrq(
     DEV_NODE *          apDevNode,
     ACPI_RESOURCE_IRQ * apAcpiIrq,
     UINT32              aResLength
@@ -291,7 +291,7 @@ sIntr_AcpiResEnumCallback(
 )
 {
     if (Resource->Type == ACPI_RESOURCE_TYPE_IRQ)
-        sRes_DiscoveredAcpiIrq((DEV_NODE *)Context, (ACPI_RESOURCE_IRQ *)&Resource->Data, Resource->Length);
+        sIntr_DiscoveredAcpiIrq((DEV_NODE *)Context, (ACPI_RESOURCE_IRQ *)&Resource->Data, Resource->Length);
     return AE_OK;
 }
 

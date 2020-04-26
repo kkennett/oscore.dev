@@ -97,15 +97,21 @@ Time_Start(
 
 struct _PHYS_HEAPNODE
 {
-    K2HEAP_NODE HeapNode;   // must go first
-    UINT32      mDisp;
+    K2HEAP_NODE     HeapNode;   // must go first
+    UINT32          mDisp;
+    DEV_NODE *      mpDevNode;
+    K2LIST_LINK     DevNodePhysListLink;
+    BOOL            mIsReadOnly;
+    BOOL            mIsNotCacheable;
+    BOOL            mCannotWriteCombine;
 };
 
-#define PHYS_DISP_ERROR         0
-#define PHYS_DISP_MAPPEDIO      1
-#define PHYS_DISP_MEMORY        2
-#define PHYS_DISP_MAPPEDPORT    3
-#define PHYS_DISP_PCI_SEGMENT   4
+#define PHYS_DISP_ERROR             0
+#define PHYS_DISP_EFI_MAPPEDIO      1
+#define PHYS_DISP_EFI_MEMORY        2
+#define PHYS_DISP_EFI_MAPPEDPORT    3
+#define PHYS_DISP_PCI_SEGMENT       4
+#define PHYS_DISP_DEVNODE           5
 
 extern K2HEAP_ANCHOR        gPhys_SpaceHeap;
 extern K2OS_CRITSEC         gPhys_SpaceSec;
@@ -122,6 +128,7 @@ struct _DEV_NODE_PCI
     DEV_NODE *      mpDevNode;          // set once we find it in DEV_NODE tree
     ACPI_PCI_ID     Id;
     PCICFG          PciCfg;             // copy of first part of pci config space
+    UINT32          mBarsFound;
     UINT32          mBarSize[6];
     ACPI_HANDLE     mhAcpiDevice;       // same as parent DEV_NODE DevTreeNode.mUserVal
     PCI_SEGMENT *   mpSeg;
@@ -175,6 +182,9 @@ struct _DEV_NODE
 
     INTR_LINE *         mpIntrLine;
     K2LIST_LINK         IntrLineDevListLink;
+
+    K2LIST_ANCHOR       IoList;
+    K2LIST_ANCHOR       PhysList;
 };
 
 void 
@@ -187,6 +197,17 @@ extern K2OSKERN_SEQLOCK gDev_SeqLock;
 extern DEV_NODE *       gpDev_RootNode;
 
 /* ----------------------------------------------------------------------------- */
+
+typedef struct _RES_IO_HEAPNODE RES_IO_HEAPNODE;
+struct _RES_IO_HEAPNODE
+{
+    K2HEAP_NODE HeapNode;   // must go first
+    DEV_NODE *  mpDevNode;
+    K2LIST_LINK DevNodeIoListLink;
+};
+
+extern K2HEAP_ANCHOR gRes_IoSpaceHeap;
+extern K2OS_CRITSEC  gRes_IoSpaceSec;
 
 void Res_Init(void);
 

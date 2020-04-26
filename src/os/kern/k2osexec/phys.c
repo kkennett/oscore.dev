@@ -39,12 +39,34 @@ K2OS_CRITSEC    gPhys_SpaceSec;
 
 static K2HEAP_NODE * sAcquireNode(K2HEAP_ANCHOR *apHeap)
 {
-    return (K2HEAP_NODE *)K2OS_HeapAlloc(sizeof(PHYS_HEAPNODE));
+    PHYS_HEAPNODE * pNode;
+    
+    pNode = (PHYS_HEAPNODE *)K2OS_HeapAlloc(sizeof(PHYS_HEAPNODE));
+    if (pNode == NULL)
+        return NULL;
+    K2MEM_Zero(pNode, sizeof(PHYS_HEAPNODE));
+    return &pNode->HeapNode;
 }
 
 static void sReleaseNode(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
 {
     K2OS_HeapFree(apNode);
+}
+
+void sPhysDumper(K2HEAP_ANCHOR *apHeap, K2HEAP_NODE *apNode)
+{
+    PHYS_HEAPNODE *pNode;
+
+    if (K2HEAP_NodeIsFree(apNode))
+        K2OSKERN_Debug("FREE %08X %08X\n", K2HEAP_NodeAddr(apNode), K2HEAP_NodeSize(apNode));
+    else
+    {
+        pNode = (PHYS_HEAPNODE *)apNode;
+        K2OSKERN_Debug("USED %08X %08X DISP %d DEVNODE %08X\n",
+            K2HEAP_NodeAddr(apNode), K2HEAP_NodeSize(apNode),
+            pNode->mDisp,
+            pNode->mpDevNode);
+    }
 }
 
 void
@@ -96,9 +118,21 @@ Phys_Init(
                 (K2HEAP_NODE **)&pPhysNode);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
             if (pDesc->Type == K2EFI_MEMTYPE_MappedIO)
-                pPhysNode->mDisp = PHYS_DISP_MAPPEDIO;
+                pPhysNode->mDisp = PHYS_DISP_EFI_MAPPEDIO;
             else
-                pPhysNode->mDisp = PHYS_DISP_MAPPEDPORT;
+                pPhysNode->mDisp = PHYS_DISP_EFI_MAPPEDPORT;
+
+            if (pDesc->Attribute & K2EFI_MEMORYFLAG_RO)
+                pPhysNode->mIsReadOnly = TRUE;
+
+            if ((0 == (pDesc->Attribute & (K2EFI_MEMORYFLAG_WC | K2EFI_MEMORYFLAG_WT | K2EFI_MEMORYFLAG_WB))) &&
+                (pDesc->Attribute & K2EFI_MEMORYFLAG_UC))
+                pPhysNode->mIsNotCacheable = TRUE;
+
+            if (0 == (pDesc->Attribute & K2EFI_MEMORYFLAG_WC))
+                pPhysNode->mCannotWriteCombine = TRUE;
+
+            pPhysNode->mpDevNode = NULL;
         }
     }
 
@@ -117,7 +151,8 @@ Phys_Init(
                 K2HEAP_NodeSize(&pPhysNode->HeapNode),
                 (K2HEAP_NODE **)&pPhysNode);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
-            pPhysNode->mDisp = PHYS_DISP_MEMORY;
+            pPhysNode->mpDevNode = NULL;
+            pPhysNode->mDisp = PHYS_DISP_EFI_MEMORY;
         }
         pPhysNode = pPhysNext;
     } while (pPhysNode != NULL);
@@ -163,4 +198,5 @@ Phys_Init(
     //
     // we have our physical space map now, with free space available to be allocated
     //
+//    K2HEAP_Dump(&gPhys_SpaceHeap, sPhysDumper);
 }
