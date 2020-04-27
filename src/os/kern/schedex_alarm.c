@@ -109,33 +109,52 @@ BOOL KernSched_Exec_AlarmChange(void)
 
     K2OSKERN_Debug("SCHED:AlarmChange(%08X,%d)\n", pAlarm, isMount);
 
+    changedSomething = FALSE;
+
     if (isMount)
     {
-        K2_ASSERT(pAlarm->mIntervalMs != 0);
-        K2_ASSERT(pAlarm->mIntervalMs != K2OS_TIMEOUT_INFINITE);
+        if (pAlarm->mIsMounted)
+        {
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_IN_USE;
+        }
+        else
+        {
+            K2_ASSERT(pAlarm->mIntervalMs != 0);
+            K2_ASSERT(pAlarm->mIntervalMs != K2OS_TIMEOUT_INFINITE);
 
-        pAlarm->SchedTimerItem.mType = KernSchedTimerItemType_Alarm;
+            pAlarm->SchedTimerItem.mType = KernSchedTimerItemType_Alarm;
 
-        changedSomething = KernSched_AddTimerItem(
-            &pAlarm->SchedTimerItem, 
-            gData.Sched.mpActiveItem->CpuCoreEvent.mEventAbsTimeMs, 
-            (UINT64)pAlarm->mIntervalMs
-        );
+            changedSomething = KernSched_AddTimerItem(
+                &pAlarm->SchedTimerItem,
+                gData.Sched.mpActiveItem->CpuCoreEvent.mEventAbsTimeMs,
+                (UINT64)pAlarm->mIntervalMs
+            );
 
-        pAlarm->mIsMounted = TRUE;
+            pAlarm->mIsMounted = TRUE;
 
-        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+        }
 
         return changedSomething;
     }
 
     if (pAlarm->mIsMounted)
     {
-        if (!pAlarm->mIsSignalled)
+        if (!pAlarm->mIsMounted)
         {
-            KernSched_DelTimerItem(&pAlarm->SchedTimerItem);
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_NOT_IN_USE;
         }
-        pAlarm->mIsMounted = FALSE;
+        else
+        {
+            if (!pAlarm->mIsSignalled)
+            {
+                KernSched_DelTimerItem(&pAlarm->SchedTimerItem);
+            }
+
+            pAlarm->mIsMounted = FALSE;
+
+            gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+        }
     }
 
     return FALSE;
