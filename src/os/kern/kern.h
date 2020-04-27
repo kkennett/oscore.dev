@@ -1300,7 +1300,7 @@ void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunn
 
 void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT *apWait, UINT32 aWaitResult);
 
-BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry, K2OSKERN_OBJ_HEADER **appRetRelObj);
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry);
 /* --------------------------------------------------------------------------------- */
 
 void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore);

@@ -41,8 +41,6 @@ BOOL KernSched_Exec_SemRelease(void)
     K2LIST_ANCHOR *             pAnchor;
     K2LIST_LINK *               pListLink;
     BOOL                        changedSomething;
-    BOOL                        oneSat;
-    K2OSKERN_OBJ_HEADER *       pObjRel;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_SemRelease);
 
@@ -87,16 +85,7 @@ BOOL KernSched_Exec_SemRelease(void)
                 }
                 else
                 {
-                    pObjRel = NULL;
-                    oneSat = KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
-                    if (NULL != pObjRel)
-                    {
-                        //
-                        // this object must be released back in user mode
-                        //
-                        K2_ASSERT(0);
-                    }
-                    if (oneSat)
+                    if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
                     {
                         --relCount;
                         changedSomething = TRUE;

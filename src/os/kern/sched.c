@@ -979,14 +979,12 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
     return TRUE;
 }
 
-BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry, K2OSKERN_OBJ_HEADER **appRetRelObj)
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry)
 {
     //
     // entries that have a sticky status are ones that can only be set once
     //
-    //
-    // if not satisfying all, set sticky pulse status and return object that
-    // must be released by this call when user mode is reached
+    // if not satisfying all, set sticky pulse status 
     //
 
     K2_ASSERT(0);

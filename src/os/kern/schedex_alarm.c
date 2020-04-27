@@ -34,23 +34,64 @@
 
 BOOL KernSchedEx_AlarmFired(K2OSKERN_OBJ_ALARM *apAlarm)
 {
-    BOOL changedSomething;
+    K2OSKERN_SCHED_WAITENTRY *  pEntry;
+    K2OSKERN_SCHED_MACROWAIT *  pWait;
+    K2LIST_ANCHOR *             pAnchor;
+    K2LIST_LINK *               pListLink;
+    BOOL                        changedSomething;
 
     changedSomething = FALSE;
 
-    if (apAlarm->mIsPeriodic)
+    //
+    // alarm timer item has been removed from the timer queue
+    //
+
+    if (!apAlarm->mIsPeriodic)
+        apAlarm->mIsSignalled = TRUE;
+
+    pAnchor = &apAlarm->Hdr.WaitEntryPrioList;
+    if (pAnchor->mNodeCount > 0)
     {
-        if (KernSched_AddTimerItem(&apAlarm->SchedTimerItem, gData.Sched.mCurrentAbsTime, (UINT64)apAlarm->mIntervalMs))
-            changedSomething = TRUE;
+        pListLink = pAnchor->mpHead;
+
+        do {
+            pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+            pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+
+            pListLink = pListLink->mpNext;
+
+            if (pWait->mWaitAll)
+            {
+                //
+                // this *MAY* remove pEntry from the list.  we have already moved 
+                // the link to the next link
+                //
+                if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                    changedSomething = TRUE;
+            }
+            else
+            {
+                //
+                // this will remove pEntry from the list.  we have already moved 
+                // the link to the next link
+                //
+                KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+                changedSomething = TRUE;
+            }
+        } while (pListLink != NULL);
     }
 
     //
-    // now release threads that were waiting on this alarm (if any)
-    // for waitalls, the status of the alarm goes to the sticky status
+    // last thing we do is re-add the timer item to the timer queue if it is periodic
     //
-    K2_ASSERT(0);
-
-
+    if (apAlarm->mIsPeriodic)
+    {
+        //
+        // this can't fire immediately because we are using the current time and
+        // the interval will be > 0
+        //
+        KernSched_AddTimerItem(&apAlarm->SchedTimerItem, gData.Sched.mCurrentAbsTime, (UINT64)apAlarm->mIntervalMs);
+    }
 
     return changedSomething;
 }

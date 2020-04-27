@@ -43,7 +43,6 @@ BOOL KernSched_Exec_ThreadExit(void)
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2LIST_ANCHOR *             pAnchor;
     K2LIST_LINK *               pListLink;
-    K2OSKERN_OBJ_HEADER *       pObjRel;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadExit);
 
@@ -76,15 +75,8 @@ BOOL KernSched_Exec_ThreadExit(void)
                 // this *MAY* remove pEntry from the list.  we have already moved 
                 // the link to the next link
                 //
-                pObjRel = NULL;
-                KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
-                if (NULL != pObjRel)
-                {
-                    //
-                    // this object must be released back in user mode
-                    //
-                    K2_ASSERT(0);
-                }
+                if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                    changedSomething = TRUE;
             }
             else
             {
@@ -93,6 +85,7 @@ BOOL KernSched_Exec_ThreadExit(void)
                 // the link to the next link
                 //
                 KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+                changedSomething = TRUE;
             }
 
         } while (pListLink != NULL);

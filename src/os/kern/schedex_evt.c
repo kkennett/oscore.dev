@@ -38,8 +38,7 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2LIST_ANCHOR *             pAnchor;
     K2LIST_LINK *               pListLink;
-    K2OSKERN_OBJ_HEADER *       pObjRel;
-    BOOL                        oneSat;
+    BOOL                        changedSomething;
 
     if (aSignal == FALSE)
     {
@@ -86,16 +85,7 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
             if (!pWait->mWaitAll)
                 break;
 
-            pObjRel = NULL;
-            oneSat = KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
-            if (NULL != pObjRel)
-            {
-                //
-                // this object needs to be released back in user mode
-                //
-                K2_ASSERT(0);
-            }
-            if (oneSat)
+            if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
                 return TRUE;
 
             pListLink = pListLink->mpNext;
@@ -121,6 +111,8 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
     //
     apEvent->mIsSignalled = TRUE;
 
+    changedSomething = FALSE;
+
     //
     // release everything we can
     //
@@ -136,15 +128,8 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
             // this *MAY* remove pEntry from the list.  we have already moved 
             // the link to the next link
             //
-            pObjRel = NULL;
-            KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
-            if (NULL != pObjRel)
-            {
-                //
-                // this object has to be released back in user mode
-                //
-                K2_ASSERT(0);
-            }
+            if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                changedSomething = TRUE;
         }
         else
         {
@@ -153,11 +138,12 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
             // the link to the next link
             //
             KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+            changedSomething = TRUE;
         }
 
     } while (pListLink != NULL);
 
-    return TRUE;
+    return changedSomething;
 }
 
 BOOL KernSched_Exec_EventChange(void)
