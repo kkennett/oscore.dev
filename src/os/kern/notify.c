@@ -32,50 +32,36 @@
 
 #include "kern.h"
 
-BOOL KernSched_Exec_ThreadCreate(void)
+void
+sThreadExited(
+    K2OSKERN_OBJ_THREAD *   apExitedThread,
+    K2OSKERN_OBJ_MSG *      apExitMsg
+)
 {
-    K2OSKERN_OBJ_THREAD *   pNewThread;
+    K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
+    K2_ASSERT(apExitMsg == &apExitedThread->MsgExit);
+    K2_ASSERT(apExitMsg->Hdr.mRefCount == 1);
+    apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
+    KernObj_Release(&apExitedThread->Hdr);
+}
 
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadCreate);
+void
+K2OSKERN_ReflectNotify(
+    UINT32          aOpCode,
+    UINT32 const *  apParam
+)
+{
+    if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
+        return;
 
-    pNewThread = gData.Sched.mpActiveItem->Args.ThreadCreate.mpThread;
+    K2OSKERN_Debug("ReflectNotify(%d)\n", aOpCode & ~SYSMSG_OPCODE_HIGH_MASK);
 
-    K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
-
-    K2_ASSERT(pNewThread->Sched.Attr.mPriority < K2OS_THREADPRIO_LEVELS);
-    pNewThread->Sched.mBasePrio = pNewThread->Sched.Attr.mPriority;
-    pNewThread->Sched.mThreadActivePrio = pNewThread->Sched.mBasePrio;
-    K2_ASSERT(pNewThread->Sched.mThreadActivePrio < K2OS_THREADPRIO_LEVELS);
-
-    K2_ASSERT(pNewThread->Sched.Attr.mQuantum > 0);
-    K2_ASSERT(pNewThread->Sched.Attr.mAffinityMask != 0);
-
-    //
-    // a thread that is not in a purgeable state holds a reference to itself.
-    //
-    KernObj_AddRef(&pNewThread->Hdr);
-
-    pNewThread->Env.mId = gData.Sched.mNextThreadId++;
-
-    //
-    // get ready to run
-    //
-    KernArch_PrepareThread(pNewThread);
-    pNewThread->Sched.mLastRunCoreIx = gData.mCpuCount;
-
-    //
-    // thread life stage moves to started, it starts as ready, and is not stopped
-    //
-    K2_ASSERT(pNewThread->Sched.State.mLifeStage == KernThreadLifeStage_Run);
-    K2_ASSERT(pNewThread->Sched.State.mRunState == KernThreadRunState_Transition);
-    K2_ASSERT(pNewThread->Sched.State.mStopFlags == KERNTHREAD_STOP_FLAG_NONE);
-
-    //
-    // make thread ready or running
-    //
-    KernSched_MakeThreadActive(pNewThread, TRUE);
-
-    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
-
-    return TRUE;  // if something changes scheduling-wise, return true
+    switch (aOpCode)
+    {
+    case SYSMSG_OPCODE_THREAD_EXIT:
+        sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0], (K2OSKERN_OBJ_MSG *)apParam[1]);
+        break;
+    default:
+        break;
+    }
 }

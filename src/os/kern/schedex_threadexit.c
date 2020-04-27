@@ -34,12 +34,90 @@
 
 BOOL KernSched_Exec_ThreadExit(void)
 {
+    BOOL                        changedSomething;
+    BOOL                        msgRes;
+    K2OSKERN_OBJ_THREAD *       pExitingThread;
+    K2OS_MSGIO                  msgIo;
+    K2STAT                      stat;
+    K2OSKERN_SCHED_WAITENTRY *  pEntry;
+    K2OSKERN_SCHED_MACROWAIT *  pWait;
+    K2LIST_ANCHOR *             pAnchor;
+    K2LIST_LINK *               pListLink;
+    K2OSKERN_OBJ_HEADER *       pObjRel;
+
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadExit);
 
-    K2OSKERN_Debug("SCHED:Thread(%d) EXIT\n", gData.Sched.mpActiveItemThread->Env.mId);
+    pExitingThread = gData.Sched.mpActiveItemThread;
 
-    K2_ASSERT(0);
+//    K2OSKERN_Debug("SCHED:Thread(%d) EXIT\n", pExitingThread->Env.mId);
 
-    return FALSE;  // if something changes scheduling-wise, return true
+    changedSomething = KernSched_MakeThreadInactive(pExitingThread, KernThreadRunState_Transition);
 
+    pExitingThread->Sched.State.mLifeStage = KernThreadLifeStage_Exited;
+    pExitingThread->Sched.State.mRunState = KernThreadRunState_None;
+
+    //
+    // thread is now signalled
+    //
+    if (pExitingThread->Hdr.WaitEntryPrioList.mNodeCount > 0)
+    {
+        pAnchor = &pExitingThread->Hdr.WaitEntryPrioList;
+        K2_ASSERT(pAnchor->mNodeCount > 0);
+        pListLink = pAnchor->mpHead;
+
+        do {
+            pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+            pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+            pListLink = pListLink->mpNext;
+
+            if (pWait->mWaitAll)
+            {
+                //
+                // this *MAY* remove pEntry from the list.  we have already moved 
+                // the link to the next link
+                //
+                pObjRel = NULL;
+                KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
+                if (NULL != pObjRel)
+                {
+                    //
+                    // this object must be released back in user mode
+                    //
+                    K2_ASSERT(0);
+                }
+            }
+            else
+            {
+                //
+                // this will remove pEntry from the list.  we have already moved 
+                // the link to the next link
+                //
+                KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+            }
+
+        } while (pListLink != NULL);
+    }
+
+    //
+    // tell the exec thread have exited (passes it the reference)
+    //
+    msgIo.mOpCode = SYSMSG_OPCODE_THREAD_EXIT;
+    msgIo.mPayload[0] = (UINT32)pExitingThread;
+    msgIo.mPayload[1] = 0;
+
+    K2_ASSERT(NULL != gData.mpMsgSlot_K2OSEXEC);
+
+    msgRes = KernSchedEx_MsgSend(
+        gData.mpMsgSlot_K2OSEXEC, 
+        &pExitingThread->MsgExit,
+        &msgIo, 
+        FALSE, 
+        (K2OSKERN_OBJ_MSG **)&msgIo.mPayload[1], 
+        &stat);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    if (msgRes)
+        changedSomething = TRUE;
+
+    return changedSomething;
 }

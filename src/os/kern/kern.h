@@ -707,6 +707,65 @@ struct _K2OSKERN_OBJ_PROCESS
 
 /* --------------------------------------------------------------------------------- */
 
+#define K2OSKERN_MAILBOX_REQUESTSEQ_MASK   0xFFFFFFC0
+K2_STATIC_ASSERT((K2OSKERN_MAILBOX_REQUESTSEQ_MASK + K2OS_MAX_NUM_SLOT_MAILBOXES) == 0);
+
+#define K2OSKERN_MAILBOX_EMPTY                     0
+#define K2OSKERN_MAILBOX_IN_SERVICE_WITH_MSG       1
+#define K2OSKERN_MAILBOX_IN_SERVICE_NO_MSG         2
+#define K2OSKERN_MAILBOX_IN_SERVICE_MSG_ABANDONED  3
+
+struct _K2OSKERN_OBJ_MAILBOX
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+
+    UINT16                  mState;
+    UINT16                  mId;
+
+    K2OSKERN_OBJ_MAILSLOT * mpSlot;
+    K2LIST_LINK             SlotListLink;
+
+    K2OSKERN_OBJ_MSG *      mpInSvcMsg;         // if mState is IN_SERVICE this will not be NULL
+    K2OS_MSGIO              InSvcSendIo;        // msg content at send
+    UINT32                  mInSvcRequestId;
+
+    K2OSKERN_OBJ_EVENT      Event;
+};
+
+struct _K2OSKERN_OBJ_MAILSLOT
+{
+    K2OSKERN_OBJ_HEADER Hdr;
+
+    K2LIST_ANCHOR       PendingMsgList;
+
+    UINT32              mNextRequestSeq;
+    BOOL                mBlocked;
+
+    K2LIST_ANCHOR       EmptyMailboxList;
+    K2LIST_ANCHOR       FullMailboxList;
+};
+
+#define K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED    1
+struct _K2OSKERN_OBJ_MSG
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+
+    K2OSKERN_OBJ_MAILSLOT * mpPendingOnSlot;
+    K2LIST_LINK             SlotPendingMsgListLink;
+
+    K2OSKERN_OBJ_MAILBOX *  mpSittingInMailbox;
+
+    UINT32                  mFlags;
+
+    volatile UINT32         mRequestId;
+
+    K2OS_MSGIO              Io;
+
+    K2OSKERN_OBJ_EVENT      Event;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 typedef struct _K2OSKERN_THREAD_ENV K2OSKERN_THREAD_ENV;
 struct _K2OSKERN_THREAD_ENV
 {
@@ -757,6 +816,8 @@ struct _K2OSKERN_OBJ_THREAD
 
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
     K2_EXCEPTION_TRAP *         mpUserExTrapStack;
+
+    K2OSKERN_OBJ_MSG            MsgExit;
 };
 
 #define K2OSKERN_THREAD_KERNSTACK_BYTECOUNT (K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_OBJ_THREAD))
@@ -959,65 +1020,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_SEGSLAB) == K2_VA32_MEMPAGE_BYTES);
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OSKERN_MAILBOX_REQUESTSEQ_MASK   0xFFFFFFC0
-K2_STATIC_ASSERT((K2OSKERN_MAILBOX_REQUESTSEQ_MASK + K2OS_MAX_NUM_SLOT_MAILBOXES) == 0);
-
-#define K2OSKERN_MAILBOX_EMPTY                     0
-#define K2OSKERN_MAILBOX_IN_SERVICE_WITH_MSG       1
-#define K2OSKERN_MAILBOX_IN_SERVICE_NO_MSG         2
-#define K2OSKERN_MAILBOX_IN_SERVICE_MSG_ABANDONED  3
-
-struct _K2OSKERN_OBJ_MAILBOX
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-
-    UINT16                  mState;
-    UINT16                  mId;
-
-    K2OSKERN_OBJ_MAILSLOT * mpSlot;
-    K2LIST_LINK             SlotListLink;
-
-    K2OSKERN_OBJ_MSG *      mpInSvcMsg;         // if mState is IN_SERVICE this will not be NULL
-    K2OS_MSGIO              InSvcSendIo;        // msg content at send
-    UINT32                  mInSvcRequestId;
-
-    K2OSKERN_OBJ_EVENT      Event;
-};
-
-struct _K2OSKERN_OBJ_MAILSLOT
-{
-    K2OSKERN_OBJ_HEADER Hdr;
-
-    K2LIST_ANCHOR       PendingMsgList;
-
-    UINT32              mNextRequestSeq;
-    BOOL                mBlocked;
-
-    K2LIST_ANCHOR       EmptyMailboxList;
-    K2LIST_ANCHOR       FullMailboxList;
-};
-
-#define K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED    1
-struct _K2OSKERN_OBJ_MSG
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-
-    K2OSKERN_OBJ_MAILSLOT * mpPendingOnSlot;
-    K2LIST_LINK             SlotPendingMsgListLink;
-
-    K2OSKERN_OBJ_MAILBOX *  mpSittingInMailbox;
-
-    UINT32                  mFlags;
-
-    volatile UINT32         mRequestId;
-
-    K2OS_MSGIO              Io;
-
-    K2OSKERN_OBJ_EVENT      Event;
-};
-
-/* --------------------------------------------------------------------------------- */
-
 typedef enum _KernInitStage KernInitStage;
 enum _KernInitStage
 {
@@ -1104,6 +1106,9 @@ struct _KERN_DATA
     // interrupts
     K2OSKERN_SEQLOCK                    IntrTreeSeqLock;
     K2TREE_ANCHOR                       IntrTree;
+
+    // exec mailslot
+    K2OSKERN_OBJ_MAILSLOT *             mpMsgSlot_K2OSEXEC;
 
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
@@ -1213,7 +1218,7 @@ void                    KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread);
 void   K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread);
 K2STAT                  KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode);
 K2STAT                  KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
-void                    KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
+K2STAT                  KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
 K2STAT                  KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
 K2STAT                  KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
 UINT32                  KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs);
@@ -1247,6 +1252,7 @@ BOOL KernSched_Exec_MsgAbort(void);
 BOOL KernSched_Exec_MsgReadResp(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
+BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILSLOT *apSlot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aRespReq, K2OSKERN_OBJ_MSG **appRetRelMsg, K2STAT *apRetStat);
 
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
@@ -1256,7 +1262,7 @@ void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
-void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewState);
+BOOL KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewState);
 
 BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitStartTime, UINT64 aWaitMs);
 void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
@@ -1266,8 +1272,7 @@ void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunn
 
 void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT *apWait, UINT32 aWaitResult);
 
-BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry);
-
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry, K2OSKERN_OBJ_HEADER **appRetRelObj);
 /* --------------------------------------------------------------------------------- */
 
 void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore);

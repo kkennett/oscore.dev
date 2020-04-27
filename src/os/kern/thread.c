@@ -100,7 +100,7 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread)
 
     apThisThread->Info.mExitCode = apThisThread->Info.CreateInfo.mEntrypoint(apThisThread->Info.CreateInfo.mpArg);
 
-    K2OSKERN_Debug("Thread(%d) calling scheduler for exit with Code %08X\n", apThisThread->Env.mId, apThisThread->Info.mExitCode);
+//    K2OSKERN_Debug("Thread(%d) calling scheduler for exit with Code %08X\n", apThisThread->Env.mId, apThisThread->Info.mExitCode);
 
     apThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadExit;
     apThisThread->Sched.Item.Args.ThreadExit.mNormal = TRUE;
@@ -114,7 +114,6 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread)
     K2OSKERN_Panic("Thread %d resumed after exit trap!\n", apThisThread->Env.mId);
 }
 
-
 K2STAT KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aForcedExitCode)
 {
     K2_ASSERT(0);
@@ -127,12 +126,13 @@ K2STAT KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate)
+K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate)
 {
     K2OSKERN_THREAD_PAGE *  pNewThreadPage;
     K2OSKERN_OBJ_THREAD *   pNewThread;
     K2OSKERN_OBJ_SEGMENT *  pSeg;
     BOOL                    disp;
+    K2STAT                  stat;
     
     pSeg = apThisThread->mpThreadCreateSeg;
     K2_ASSERT(pSeg != NULL);
@@ -150,7 +150,6 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
     pNewThread->Hdr.mRefCount = 1;
     K2LIST_Init(&pNewThread->Hdr.WaitEntryPrioList);
     pNewThread->mpProc = apProc;
-    pNewThread->mpStackSeg = pSeg;
     pNewThread->mIsKernelThread = (((UINT32)apCreate->mEntrypoint) >= K2OS_KVA_KERN_BASE) ? TRUE : FALSE;
     pNewThread->mIsInKernelMode = TRUE;
 
@@ -163,6 +162,11 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
     pNewThread->Info.mProcessId = apProc->mId;
     K2MEM_Copy(&pNewThread->Info.CreateInfo, apCreate, sizeof(K2OS_THREADCREATE));
 
+    stat = KernMsg_Create(&pNewThread->MsgExit);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+    pNewThread->MsgExit.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+
     disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
     K2OSKERN_SeqIntrLock(&apProc->ThreadListSeqLock);
 
@@ -174,10 +178,21 @@ void KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROC
 
     pNewThread->Sched.Attr = apCreate->Attr;
 
+    pNewThread->mpStackSeg = pSeg;
     apThisThread->mpThreadCreateSeg = NULL;
+
+    //
+    // threads can never have a name
+    //
+    stat = KernObj_Add(&pNewThread->Hdr, NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    gData.Sched.mSysWideThreadCount++;
 
     K2OSKERN_SeqIntrUnlock(&apProc->ThreadListSeqLock, FALSE);
     K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
+
+    return K2STAT_NO_ERROR;
 }
 
 K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread)
@@ -196,20 +211,54 @@ K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *
 
 K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
 {
-    //
-    // thread cannot be in created state 
-    //
-    if ((apThread->Sched.State.mLifeStage == KernThreadLifeStage_Init) &&
-        (apThread->Sched.State.mLifeStage == KernThreadLifeStage_Run))
-    {
-        K2OSKERN_Panic("*** Invalid thread disposal\n");
-    }
+    BOOL                    disp;
+    K2OSKERN_OBJ_PROCESS *  pProc;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
 
+    K2_ASSERT(apThread != NULL);
+    K2_ASSERT(apThread->Hdr.mObjType == K2OS_Obj_Thread);
+    K2_ASSERT(apThread->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apThread->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
     K2_ASSERT(apThread->Hdr.WaitEntryPrioList.mNodeCount == 0);
+    K2_ASSERT(apThread->WorkPages_Dirty.mNodeCount == 0);
+    K2_ASSERT(apThread->WorkPages_Clean.mNodeCount == 0);
+    K2_ASSERT(apThread->WorkPtPages_Dirty.mNodeCount == 0);
+    K2_ASSERT(apThread->WorkPtPages_Clean.mNodeCount == 0);
+    K2_ASSERT(apThread->mWorkVirt_Range == 0);
+    K2_ASSERT(apThread->mWorkVirt_PageCount == 0);
+    K2_ASSERT(apThread->mpWorkPage == NULL);
+    K2_ASSERT(apThread->mpWorkPtPage == NULL);
+    K2_ASSERT(apThread->mpWorkSeg == NULL);
+    K2_ASSERT(apThread->mpThreadCreateSeg == NULL);
 
-    K2_ASSERT(0);
+    K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Cleanup);
 
-    return K2STAT_ERROR_NOT_IMPL;
+    //
+    // remove thread from process - it has already been purged from the object tree
+    //
+    pProc = apThread->mpProc;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
+    K2OSKERN_SeqIntrLock(&pProc->ThreadListSeqLock);
+
+    K2LIST_Remove(&pProc->ThreadList, &apThread->ProcThreadListLink);
+
+    pSeg = apThread->mpStackSeg;
+    apThread->mpStackSeg = NULL;
+
+    gData.Sched.mSysWideThreadCount--;
+
+    K2OSKERN_SeqIntrUnlock(&pProc->ThreadListSeqLock, FALSE);
+    K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
+
+    KernObj_Release(&apThread->MsgExit.Hdr);
+
+    //
+    // thread is GONE after this call
+    //
+    KernObj_Release(&pSeg->Hdr);
+
+    return K2STAT_NO_ERROR;
 }
 
 K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, K2STAT *apStat)

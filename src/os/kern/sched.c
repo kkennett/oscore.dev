@@ -855,7 +855,7 @@ void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpu
     }
 }
 
-void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewRunState)
+BOOL KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunState aNewRunState)
 {
     K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Run);
 
@@ -866,20 +866,21 @@ void KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunSt
     if (apThread->Sched.State.mRunState == KernThreadRunState_Running)
     {
         KernSched_StopThread(apThread, NULL, aNewRunState, TRUE);
+        return TRUE;
+    }
+
+    if (apThread->Sched.State.mRunState == KernThreadRunState_Ready)
+    {
+        K2LIST_Remove(&gData.Sched.ReadyThreadsByPrioList[apThread->Sched.mThreadActivePrio], &apThread->Sched.ReadyListLink);
+        gData.Sched.mReadyThreadCount--;
     }
     else
     {
-        if (apThread->Sched.State.mRunState == KernThreadRunState_Ready)
-        {
-            K2LIST_Remove(&gData.Sched.ReadyThreadsByPrioList[apThread->Sched.mThreadActivePrio], &apThread->Sched.ReadyListLink);
-            gData.Sched.mReadyThreadCount--;
-        }
-        else
-        {
-            K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Transition);
-        }
-        apThread->Sched.State.mRunState = aNewRunState;
+        K2_ASSERT(apThread->Sched.State.mRunState == KernThreadRunState_Transition);
     }
+    apThread->Sched.State.mRunState = aNewRunState;
+
+    return FALSE;
 }
 
 #define AUDIT_PRIO_ON_QUANTUM_EXPIRY 1
@@ -977,8 +978,16 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
     return TRUE;
 }
 
-BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry)
+BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry, K2OSKERN_OBJ_HEADER **appRetRelObj)
 {
+    //
+    // entries that have a sticky status are ones that can only be set once
+    //
+    //
+    // if not satisfying all, set sticky pulse status and return object that
+    // must be released by this call when user mode is reached
+    //
+
     K2_ASSERT(0);
     return FALSE;
 }

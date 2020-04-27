@@ -122,7 +122,7 @@ K2OSEXEC_Run(
     K2OSKERN_Debug("------------------------------------\n\n");
 
 #if 1
-    K2OSKERN_Debug("Sleep Hang ints on\n");
+    K2OSKERN_Debug("K2OSEXEC: Main Thread Sleep Hang ints on\n");
     while (1)
     {
         K2OSKERN_Debug("Main Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
@@ -130,7 +130,7 @@ K2OSEXEC_Run(
     }
 #else
     UINT64          last, newTick;
-    K2OSKERN_Debug("Stall Hang ints on\n");
+    K2OSKERN_Debug("K2OSEXEC: Main Thread Stall Hang ints on\n");
     last = K2OS_SysUpTimeMs();
     while (1)
     {

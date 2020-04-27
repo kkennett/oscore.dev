@@ -401,8 +401,6 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadExit(UINT32 aExitCode)
 
     pThisThread->Info.mExitCode = aExitCode;
 
-    K2OSKERN_Debug("Thread(%d) calling scheduler for exit with Code %08X\n", pThisThread->Env.mId, pThisThread->Info.mExitCode);
-
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadExit;
     pThisThread->Sched.Item.Args.ThreadExit.mNormal = FALSE;
 
@@ -1018,37 +1016,48 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
     K2_ASSERT(pNewThread == &pNewThreadPage->Thread);
     tokThread = NULL;
 
-    KernThread_Instantiate(pThisThread, pThisThread->mpProc, &cret);
-
-    //
-    // instantiated thread holds the segment reference at this point
-    //
-    K2_ASSERT(pThisThread->mpThreadCreateSeg == NULL);
-
-    pObjHdr = &pNewThread->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
+    stat = KernThread_Instantiate(pThisThread, pThisThread->mpProc, &cret);
     if (!K2STAT_IS_ERROR(stat))
     {
-        K2_ASSERT(tokThread != NULL);
-        stat = KernThread_Start(pThisThread, pNewThread);
-        if (K2STAT_IS_ERROR(stat))
+        //
+        // successfully instantiated thread holds the segment reference
+        //
+        K2_ASSERT(pThisThread->mpThreadCreateSeg == NULL);
+
+        pObjHdr = &pNewThread->Hdr;
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
+        if (!K2STAT_IS_ERROR(stat))
         {
+            K2_ASSERT(tokThread != NULL);
+            stat = KernThread_Start(pThisThread, pNewThread);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                //
+                // for a non-started thread, the only reference
+                // is the one we have here in creating it
+                //
+                K2OS_TokenDestroy(tokThread);
+                tokThread = NULL;
+            }
             //
-            // for a non-started thread, the only reference
-            // is the one we have here in creating it
+            // thread holds a reference to itself once it is started
+            // it also holds a reference to its own segment
             //
-            K2OS_TokenDestroy(tokThread);
-            tokThread = NULL;
         }
-        //
-        // thread holds a reference to itself once it is started
-        // it also holds a reference to its own segment
-        //
+        else
+        {
+            K2_ASSERT(tokThread == NULL);
+            KernThread_Dispose(pNewThread);
+        }
     }
     else
     {
-        K2_ASSERT(tokThread == NULL);
-        KernThread_Dispose(pNewThread);
+        //
+        // instantiate failed. clean up segment
+        //
+        pSeg = pThisThread->mpThreadCreateSeg;
+        pThisThread->mpThreadCreateSeg = NULL;
+        KernObj_Release(&pSeg->Hdr);
     }
 
     if (K2STAT_IS_ERROR(stat))

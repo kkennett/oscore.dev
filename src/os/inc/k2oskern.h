@@ -333,6 +333,31 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 
 #endif
 
+//
+//------------------------------------------------------------------------
+//
+
+typedef
+void
+(*K2OSKERN_pf_ReflectNotify)(
+    UINT32          aOpCode,
+    UINT32 const *  apParam
+    );
+
+void
+K2OSKERN_ReflectNotify(
+    UINT32          aOpCode,
+    UINT32 const *  apParam
+);
+
+#define SYSMSG_OPCODE_HIGH          0xFEED0000
+#define SYSMSG_OPCODE_HIGH_MASK     0xFFFFF000
+#define SYSMSG_OPCODE_THREAD_EXIT   (SYSMSG_OPCODE_HIGH + 0)
+
+//
+//------------------------------------------------------------------------
+//
+
 #if __cplusplus
 }
 #endif

@@ -52,6 +52,7 @@ K2OSKERN_MapDevice
 K2OSKERN_UnmapDevice
 K2OSKERN_InstallIntrHandler
 K2OSKERN_Esc
+K2OSKERN_ReflectNotify
 
 #
 # Generic entry for K2OS functions when running in Kernel

@@ -38,6 +38,8 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2LIST_ANCHOR *             pAnchor;
     K2LIST_LINK *               pListLink;
+    K2OSKERN_OBJ_HEADER *       pObjRel;
+    BOOL                        oneSat;
 
     if (aSignal == FALSE)
     {
@@ -84,7 +86,16 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
             if (!pWait->mWaitAll)
                 break;
 
-            if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+            pObjRel = NULL;
+            oneSat = KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
+            if (NULL != pObjRel)
+            {
+                //
+                // this object needs to be released back in user mode
+                //
+                K2_ASSERT(0);
+            }
+            if (oneSat)
                 return TRUE;
 
             pListLink = pListLink->mpNext;
@@ -125,7 +136,15 @@ BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal)
             // this *MAY* remove pEntry from the list.  we have already moved 
             // the link to the next link
             //
-            KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry);
+            pObjRel = NULL;
+            KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry, &pObjRel);
+            if (NULL != pObjRel)
+            {
+                //
+                // this object has to be released back in user mode
+                //
+                K2_ASSERT(0);
+            }
         }
         else
         {

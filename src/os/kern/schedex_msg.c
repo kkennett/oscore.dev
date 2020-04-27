@@ -32,93 +32,93 @@
 
 #include "kern.h"
 
-BOOL KernSched_Exec_MsgSend(void)
+BOOL 
+KernSchedEx_MsgSend(
+    K2OSKERN_OBJ_MAILSLOT * apSlot,
+    K2OSKERN_OBJ_MSG *      apMsg,
+    K2OS_MSGIO const *      apMsgIo,
+    BOOL                    aRespReq,
+    K2OSKERN_OBJ_MSG **     appRetRelMsg,
+    K2STAT *                apRetStat
+)
 {
-    K2STAT                  stat;
     BOOL                    changedSomething;
-    K2OSKERN_OBJ_MAILSLOT * pSlot;
-    K2OSKERN_OBJ_MSG *      pMsg;
-    K2OS_MSGIO const *      pMsgIo;
-    BOOL                    respReq;
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
     K2LIST_LINK *           pListLink;
     UINT32                  reqId;
 
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MsgSend);
-
-    pSlot = gData.Sched.mpActiveItem->Args.MsgSend.mpSlot;
-    pMsg = gData.Sched.mpActiveItem->Args.MsgSend.mpMsg;
-    pMsgIo = gData.Sched.mpActiveItem->Args.MsgSend.mpIo;
-    respReq = gData.Sched.mpActiveItem->Args.MsgSend.mResponseRequired;
-
-    gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg = NULL;
-    
-//    K2OSKERN_Debug("SCHED:MsgSend(%08X)\n", pMsg);
+    //    K2OSKERN_Debug("SCHED:MsgSend(%08X)\n", apMsg);
 
     changedSomething = FALSE;
 
-    gData.Sched.mpActiveItem->Args.MboxRecv.mpRetMsgRecv = NULL;
+    *apRetStat = K2STAT_NO_ERROR;
 
-    stat = K2STAT_NO_ERROR;
-
-    if (!pMsg->Event.mIsSignalled)
+    if (!apMsg->Event.mIsSignalled)
     {
-        stat = K2STAT_ERROR_IN_USE;
+        *apRetStat = K2STAT_ERROR_IN_USE;
     }
-    else if (pSlot->mBlocked)
+    else if (apSlot->mBlocked)
     {
-        stat = K2STAT_ERROR_CLOSED;
+        *apRetStat = K2STAT_ERROR_CLOSED;
     }
     else
     {
-        reqId = pSlot->mNextRequestSeq;
-        pSlot->mNextRequestSeq = (reqId + K2OS_MAX_NUM_SLOT_MAILBOXES) & K2OSKERN_MAILBOX_REQUESTSEQ_MASK;
-        if (pSlot->mNextRequestSeq == 0)
-            pSlot->mNextRequestSeq = K2OS_MAX_NUM_SLOT_MAILBOXES;
+        reqId = apSlot->mNextRequestSeq;
+        apSlot->mNextRequestSeq = (reqId + K2OS_MAX_NUM_SLOT_MAILBOXES) & K2OSKERN_MAILBOX_REQUESTSEQ_MASK;
+        if (apSlot->mNextRequestSeq == 0)
+            apSlot->mNextRequestSeq = K2OS_MAX_NUM_SLOT_MAILBOXES;
 
-        if (respReq)
+        if (aRespReq)
         {
-            pMsg->mFlags |= K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED;
+            apMsg->mFlags |= K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED;
         }
         else
         {
-            pMsg->mFlags &= ~K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED;
+            apMsg->mFlags &= ~K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED;
         }
 
-        if (pSlot->EmptyMailboxList.mNodeCount > 0)
+        if (apSlot->EmptyMailboxList.mNodeCount > 0)
         {
             //
             // need to use a mailbox, delivery is immediate
             //
-            pListLink = pSlot->EmptyMailboxList.mpHead;
+            pListLink = apSlot->EmptyMailboxList.mpHead;
             pMailbox = K2_GET_CONTAINER(K2OSKERN_OBJ_MAILBOX, pListLink, SlotListLink);
             K2_ASSERT(pMailbox->mState == K2OSKERN_MAILBOX_EMPTY);
-            K2LIST_Remove(&pSlot->EmptyMailboxList, pListLink);
-            K2LIST_AddAtHead(&pSlot->FullMailboxList, pListLink);
+            K2LIST_Remove(&apSlot->EmptyMailboxList, pListLink);
+            K2LIST_AddAtHead(&apSlot->FullMailboxList, pListLink);
 
-            K2MEM_Copy(&pMailbox->InSvcSendIo, pMsgIo, sizeof(K2OS_MSGIO));
+            //
+            // this has to happen here in case part of the message
+            // is a pointer to the message being returned that needs
+            // to be released.  this is the case in thread exit
+            //
+            if (!aRespReq)
+                *appRetRelMsg = apMsg;
 
-            if (respReq)
+            K2MEM_Copy(&pMailbox->InSvcSendIo, apMsgIo, sizeof(K2OS_MSGIO));
+
+            if (aRespReq)
             {
                 reqId |= pMailbox->mId;
 
-                if (KernSchedEx_EventChange(&pMsg->Event, FALSE))
+                if (KernSchedEx_EventChange(&apMsg->Event, FALSE))
                     changedSomething = TRUE;
-                pMsg->mpSittingInMailbox = pMailbox;
-                pMsg->mRequestId = reqId;
+                apMsg->mpSittingInMailbox = pMailbox;
+                apMsg->mRequestId = reqId;
 
                 pMailbox->mState = K2OSKERN_MAILBOX_IN_SERVICE_WITH_MSG;
-                pMailbox->mpInSvcMsg = pMsg;
+                pMailbox->mpInSvcMsg = apMsg;
                 pMailbox->mInSvcRequestId = reqId;
 
                 //
                 // do not release reference. mailbox is holding it
                 //
-                pMsg = NULL;
+                apMsg = NULL;
             }
             else
             {
-                pMsg->mRequestId = 0;
+                apMsg->mRequestId = 0;
 
                 pMailbox->mState = K2OSKERN_MAILBOX_IN_SERVICE_NO_MSG;
                 K2_ASSERT(pMailbox->mpInSvcMsg == NULL);
@@ -133,26 +133,38 @@ BOOL KernSched_Exec_MsgSend(void)
             //
             // no emptry mailboxes. need to queue message on the slot
             //
-            KernSchedEx_EventChange(&pMsg->Event, FALSE);
+            KernSchedEx_EventChange(&apMsg->Event, FALSE);
 
-            pMsg->Io = *pMsgIo;
-            pMsg->mRequestId = reqId;
-            pMsg->mpPendingOnSlot = pSlot;
-            K2LIST_AddAtTail(&pSlot->PendingMsgList, &pMsg->SlotPendingMsgListLink);
+            K2MEM_Copy(&apMsg->Io, apMsgIo, sizeof(K2OS_MSGIO));
+            apMsg->mRequestId = reqId;
+            apMsg->mpPendingOnSlot = apSlot;
+            K2LIST_AddAtTail(&apSlot->PendingMsgList, &apMsg->SlotPendingMsgListLink);
 
             //
             // do not release reference.  slot queue is holding it
             //
-            pMsg = NULL;
+            apMsg = NULL;
         }
     }
 
-    if (pMsg != NULL)
-        gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg = pMsg;
-
-    gData.Sched.mpActiveItem->mSchedCallResult = stat;
+    *appRetRelMsg = apMsg;
 
     return changedSomething;
+}
+
+BOOL KernSched_Exec_MsgSend(void)
+{
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MsgSend);
+
+    gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg = NULL;
+
+    return KernSchedEx_MsgSend(
+        gData.Sched.mpActiveItem->Args.MsgSend.mpSlot,
+        gData.Sched.mpActiveItem->Args.MsgSend.mpMsg,
+        gData.Sched.mpActiveItem->Args.MsgSend.mpIo,
+        gData.Sched.mpActiveItem->Args.MsgSend.mResponseRequired,
+        &gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg,
+        &gData.Sched.mpActiveItem->mSchedCallResult);
 }
 
 BOOL KernSched_Exec_MsgAbort(void)

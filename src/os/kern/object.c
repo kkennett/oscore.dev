@@ -32,8 +32,11 @@
 
 #include "kern.h"
 
+static char const * sgpK2OSEXEC_MailSlotName = "{51646997-5DE4-4175-AC0B-94BF2B57C0F4}";
+
 void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
+//    K2OSKERN_Debug("ObjectDispose(%d)\n", apObjHdr->mObjType);
     switch (apObjHdr->mObjType)
     {
     case K2OS_Obj_Name:
@@ -210,6 +213,18 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
 
     if (apObjName != NULL)
     {
+        if (NULL == gData.mpMsgSlot_K2OSEXEC)
+        {
+            //
+            // K2EXEC has not started its mail slot yet.  is this it?
+            //
+            if (0 == K2ASC_CompIns(apObjName->NameBuffer, sgpK2OSEXEC_MailSlotName))
+            {
+                gData.mpMsgSlot_K2OSEXEC = K2_GET_CONTAINER(K2OSKERN_OBJ_MAILSLOT, apObjName->mpObject, Hdr);
+                K2_ASSERT(gData.mpMsgSlot_K2OSEXEC->Hdr.mObjType == K2OS_Obj_Mailslot);
+            }
+        }
+
         KernEvent_Change(&apObjName->Event_IsOwned, TRUE);
 
         K2OS_CritSecLeave(&apObjName->OwnerSec);
@@ -296,6 +311,10 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
         }
         else
             apObjHdr = NULL;
+    }
+    else
+    {
+        K2OSKERN_Debug("!!!KernObj_Release - object %08X not found!\n");
     }
 
     K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);

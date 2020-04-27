@@ -67,6 +67,27 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, 
     K2STAT                  stat;
     K2STAT                  stat2;
 
+    if ((apMsg->Io.mOpCode & SYSMSG_OPCODE_HIGH_MASK) == SYSMSG_OPCODE_HIGH)
+    {
+        //
+        // somebody is trying to send a system message
+        //
+        if (apMailslot == gData.mpMsgSlot_K2OSEXEC)
+        {
+            //
+            // somebody is trying to send a system message to the system mailslot
+            //
+            if (apMsg->Io.mOpCode == SYSMSG_OPCODE_THREAD_EXIT)
+            {
+                //
+                // unsendable message. only a thread exiting can
+                // generate this message from inside the scheduler
+                //
+                return K2STAT_ERROR_BAD_ARGUMENT;
+            }
+        }
+    }
+
     stat = KernObj_AddRef(&apMsg->Hdr);
     if (K2STAT_IS_ERROR(stat))
         return stat;
