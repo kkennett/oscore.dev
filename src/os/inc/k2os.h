@@ -225,10 +225,15 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKE
 //------------------------------------------------------------------------
 //
 
+typedef K2OS_TOKEN K2OS_FS_TOKEN;
+typedef K2OS_TOKEN K2OS_DIR_TOKEN;
+typedef K2OS_TOKEN K2OS_FILE_TOKEN;
+
 typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
 struct _K2OS_PROCESSCREATE
 {
     UINT32              mStructBytes;
+    UINT32              mStackBytes;
     void *              mpThreadArg;
     K2OS_THREADATTR     ThreadAttr;
 };
@@ -236,8 +241,10 @@ struct _K2OS_PROCESSCREATE
 typedef struct _K2OS_IMAGEINFO K2OS_IMAGEINFO;
 struct _K2OS_IMAGEINFO
 {
-    UINT32  mStructBytes;
-    UINT32  mLocator;
+    UINT32      mStructBytes;
+    K2_GUID128  mFsProvId;
+    K2_GUID128  mFsVolumeId;
+    char        mFilePath[4];
 };
 
 typedef struct _K2OS_PROCESS_CREATED K2OS_PROCESS_CREATED;
@@ -249,7 +256,7 @@ struct _K2OS_PROCESS_CREATED
     K2OS_TOKEN  mTokThread;
 };
 
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_TOKEN aImageToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_FILE_TOKEN aDlxFileToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated);
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireByName(K2OS_TOKEN aNameToken);
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireById(UINT32 aProcessId);
 BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
@@ -353,6 +360,62 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesFree(UINT32 aPagesAllocAddr);
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeGet(K2_EARTHTIME *apRetTime);
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
+
+//
+//------------------------------------------------------------------------
+//
+
+#define K2OS_FILE_MODE_READ             0x00000001
+#define K2OS_FILE_MODE_WRITE            0x00000002
+
+#define K2OS_FILE_USE_SHARE_READ        0x80000000
+#define K2OS_FILE_USE_SHARE_WRITE       0x40000000
+#define K2OS_FILE_USE_SHARE_NONE        0x00000000
+#define K2OS_FILE_USE_WRITE_THRU        0x08000000
+#define K2OS_FILE_USE_NO_CACHE          0x04000000
+
+#define K2OS_FILE_PROP_READ_ONLY        0x00000001
+#define K2OS_FILE_PROP_HIDDEN           0x00000002
+#define K2OS_FILE_PROP_SYSTEM           0x00000004
+#define K2OS_FILE_PROP_RESERVED         0x00000008
+#define K2OS_FILE_PROP_DIRECTORY        0x00000010
+#define K2OS_FILE_PROP_ARCHIVE          0x00000020
+#define K2OS_FILE_PROP_EXECUTABLE       0x00000040
+#define K2OS_FILE_PROP_EXISTS           0x80000000
+#define K2OS_FILE_PROP_VALID_SET_MASK   0x80000077
+
+#define K2OS_FSPROV_NAME_BUF_COUNT      16
+
+typedef struct _K2OS_FSINFO K2OS_FSINFO;
+struct _K2OS_FSINFO
+{
+    K2_GUID128  mProvId;
+    char        mProvName[K2OS_FSPROV_NAME_BUF_COUNT];
+    UINT32      mProvVersion;
+};
+
+UINT32          K2OS_FsGetVolCount(K2OS_FS_TOKEN aTokFsProv);
+BOOL            K2OS_FsGetInfo(K2OS_FSINFO *apRetInfo);
+BOOL            K2OS_FsGetVolIds(K2OS_FS_TOKEN aTokFsProv, UINT32 * aIoCount, K2_GUID128 * apRetVolIds);
+K2OS_DIR_TOKEN  K2OS_FsOpenRootDir(K2OS_FS_TOKEN aTokFsProv, K2_GUID128 const *apVolId);
+
+K2OS_DIR_TOKEN  K2OS_DirOpenDir(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+K2OS_DIR_TOKEN  K2OS_DirCreateDir(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, BOOL aForce);
+
+BOOL            K2OS_DirDelete(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+
+K2OS_FILE_TOKEN K2OS_DirOpenFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aModeAndUse);
+K2OS_FILE_TOKEN K2OS_DirCreateFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT64 aUseAndProp, BOOL aForce);
+UINT32          K2OS_DirGetFileProp(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+UINT32          K2OS_DirSetFileProp(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aNewProp);
+
+BOOL            K2OS_FileRead(K2OS_FILE_TOKEN aTokFile, UINT32 * apSizeIo, void *apBuffer);
+BOOL            K2OS_FileWrite(K2OS_FILE_TOKEN aTokFile, UINT32 aSizeIo, void const *apBuffer);
+UINT64          K2OS_FileSize(K2OS_FILE_TOKEN aTokFile);
+UINT64          K2OS_FileGetPos(K2OS_FILE_TOKEN aTokFile);
+UINT64          K2OS_FileSetPos(K2OS_FILE_TOKEN aTokFile, UINT64 aNewPos);
+void            K2OS_FileFlush(K2OS_FILE_TOKEN aTokFile);
+UINT32          K2OS_FileGetProp(K2OS_FILE_TOKEN aTokFile);
 
 //
 //------------------------------------------------------------------------
