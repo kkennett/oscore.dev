@@ -34,12 +34,80 @@
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT32 aIntervalMs, BOOL aPeriodic)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    K2STAT                  stat;
+    K2OSKERN_OBJ_NAME *     pNameObj;
+    K2OSKERN_OBJ_ALARM *    pAlarmObj;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2OS_TOKEN              tokAlarm;
+
+    tokAlarm = NULL;
+
+    if ((aIntervalMs == 0) ||
+        (aIntervalMs == K2OS_TIMEOUT_INFINITE))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return NULL;
+    }
+
+    pNameObj = NULL;
+    if (aNameToken != NULL)
+    {
+        stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
+            {
+                KernObj_Release(&pNameObj->Hdr);
+                stat = K2STAT_ERROR_BAD_TOKEN;
+            }
+        }
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return FALSE;
+        }
+    }
+
+    do {
+        pAlarmObj = (K2OSKERN_OBJ_ALARM *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_ALARM));
+        if (pAlarmObj == NULL)
+        {
+            stat = K2OS_ThreadGetStatus();
+            break;
+        }
+
+        stat = KernAlarm_Create(pAlarmObj, pNameObj, aIntervalMs, aPeriodic);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_HeapFree(pAlarmObj);
+            break;
+        }
+
+        pObjHdr = &pAlarmObj->Hdr;
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokAlarm);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            KernObj_Release(&pAlarmObj->Hdr);
+        }
+
+    } while (0);
+
+    if (aNameToken != NULL)
+    {
+        K2_ASSERT(pNameObj != NULL);
+        KernObj_Release(&pNameObj->Hdr);
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokAlarm;
 }
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmAcquireByName(K2OS_TOKEN aNameToken)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Alarm);
 }

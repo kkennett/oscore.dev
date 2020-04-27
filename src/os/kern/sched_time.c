@@ -171,12 +171,14 @@ BOOL sSignalTimerItem(K2OSKERN_SCHED_TIMERITEM * apItem)
             K2STAT_ERROR_TIMEOUT);
         changedSomething = TRUE;
         break;
+
     case KernSchedTimerItemType_Alarm:
         //
         // alarm expired
         //
-        K2_ASSERT(0);
+        changedSomething = KernSchedEx_AlarmFired(K2_GET_CONTAINER(K2OSKERN_OBJ_ALARM, apItem, SchedTimerItem));
         break;
+
     default:
         K2OSKERN_Panic("***Unknown timer item signalled\n");
         break;

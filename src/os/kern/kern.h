@@ -80,6 +80,7 @@ typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 typedef struct _K2OSKERN_OBJ_MAILBOX        K2OSKERN_OBJ_MAILBOX;
 typedef struct _K2OSKERN_OBJ_MAILSLOT       K2OSKERN_OBJ_MAILSLOT;
 typedef struct _K2OSKERN_OBJ_MSG            K2OSKERN_OBJ_MSG;
+typedef struct _K2OSKERN_OBJ_ALARM          K2OSKERN_OBJ_ALARM;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -96,6 +97,7 @@ union _K2OSKERN_OBJ_WAITABLE
     K2OSKERN_OBJ_INTR *     mpIntr;
     K2OSKERN_OBJ_MAILBOX *  mpMailbox;
     K2OSKERN_OBJ_MSG *      mpMsg;
+    K2OSKERN_OBJ_ALARM *    mpAlarm;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -216,6 +218,7 @@ enum _KernSchedItemType
     KernSchedItem_MsgSend,
     KernSchedItem_MsgAbort,
     KernSchedItem_MsgReadResp,
+    KernSchedItem_AlarmChange,
 
     // more here
     KernSchedItemType_Count
@@ -237,6 +240,7 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE       K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE;
 
 typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
 enum _KernSchedTimerItemType
@@ -269,7 +273,7 @@ struct _K2OSKERN_SCHED_MACROWAIT
     UINT32                      mNumEntries;
     BOOL                        mWaitAll;
     UINT32                      mWaitResult;
-    K2OSKERN_SCHED_TIMERITEM    SchedTimerItem;    /* of type 'MACROWAIT' (may be unused) */
+    K2OSKERN_SCHED_TIMERITEM    SchedTimerItem;    /* mType is KernSchedTimerItemType_Wait */
     K2OSKERN_SCHED_WAITENTRY    SchedWaitEntry[1]; /* 'mNumEntries' entries */
 };
 
@@ -381,6 +385,12 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP
     BOOL                mClear;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE
+{
+    K2OSKERN_OBJ_ALARM *    mpAlarm;
+    BOOL                    mIsMount;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -399,6 +409,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           MsgSend;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          MsgAbort;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      MsgReadResp;
+    K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE       AlarmChange;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -506,6 +517,21 @@ struct _K2OSKERN_OBJ_EVENT
     K2OSKERN_OBJ_HEADER     Hdr;
     BOOL                    mIsAutoReset;
     BOOL                    mIsSignalled;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+struct _K2OSKERN_OBJ_ALARM
+{
+    K2OSKERN_OBJ_HEADER         Hdr;
+
+    BOOL                        mIsMounted;
+    BOOL                        mIsPeriodic;
+    BOOL                        mIsSignalled;
+    
+    UINT32                      mIntervalMs;
+
+    K2OSKERN_SCHED_TIMERITEM    SchedTimerItem;     /* mType is KernSchedTimerItemType_Alarm */
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1250,9 +1276,11 @@ BOOL KernSched_Exec_MboxPurge(void);
 BOOL KernSched_Exec_MsgSend(void);
 BOOL KernSched_Exec_MsgAbort(void);
 BOOL KernSched_Exec_MsgReadResp(void);
+BOOL KernSched_Exec_AlarmChange(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
 BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILSLOT *apSlot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aRespReq, K2OSKERN_OBJ_MSG **appRetRelMsg, K2STAT *apRetStat);
+BOOL KernSchedEx_AlarmFired(K2OSKERN_OBJ_ALARM *apAlarm);
 
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
@@ -1336,6 +1364,11 @@ K2OS_TOKEN  KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_Ob
 K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32 aMaxCount, UINT32 aInitCount);
 K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewCount);
 void   KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem);
+
+/* --------------------------------------------------------------------------------- */
+
+K2STAT KernAlarm_Create(K2OSKERN_OBJ_ALARM *apAlarm, K2OSKERN_OBJ_NAME *apName, UINT32 aIntervalMs, BOOL aIsPeriodic);
+void   KernAlarm_Dispose(K2OSKERN_OBJ_ALARM *apAlarm);
 
 /* --------------------------------------------------------------------------------- */
 

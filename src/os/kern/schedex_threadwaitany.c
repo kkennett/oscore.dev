@@ -196,6 +196,13 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
             }
             break;
 
+        case K2OS_Obj_Alarm:
+            if (objWait.mpAlarm->mIsSignalled)
+            {
+                isSatisfiedWithoutChange = TRUE;
+            }
+            break;
+
         default:
             K2_ASSERT(0);
             break;

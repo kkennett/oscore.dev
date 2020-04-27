@@ -356,6 +356,16 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
         //
         return &aObjWait.mpMsg->Event.Hdr;
 
+    case K2OS_Obj_Alarm:
+        if (aObjWait.mpAlarm->mIsSignalled)
+            return NULL;
+
+        //
+        // it is eiterh not signalled yet, or is periodic
+        //
+
+        return aObjWait.mpHdr;
+
     default:
         K2_ASSERT(0);
         break;

@@ -63,6 +63,9 @@ void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Msg:
         KernMsg_Dispose((K2OSKERN_OBJ_MSG *)apObjHdr);
         break;
+    case K2OS_Obj_Alarm:
+        KernAlarm_Dispose((K2OSKERN_OBJ_ALARM *)apObjHdr);
+        break;
     default:
         K2_ASSERT(0);
         break;
