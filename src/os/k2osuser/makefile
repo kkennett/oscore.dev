@@ -48,7 +48,6 @@ SOURCES += osapi_mailslot.c
 SOURCES += osapi_msg.c 
 SOURCES += osapi_name.c 
 SOURCES += osapi_process.c 
-SOURCES += osapi_rwlock.c 
 SOURCES += osapi_sem.c 
 SOURCES += osapi_sys.c 
 SOURCES += osapi_time.c

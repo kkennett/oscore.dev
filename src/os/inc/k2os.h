@@ -81,12 +81,10 @@ enum _K2OS_ObjectType
     K2OS_Obj_Event = 6,
     K2OS_Obj_Alarm = 7,
     K2OS_Obj_Semaphore = 8,
-    K2OS_Obj_RwLock = 9,
-    K2OS_Obj_Mailbox = 10,
-    K2OS_Obj_Mailslot = 11,
-    K2OS_Obj_Msg = 12,
-    K2OS_Obj_RwLockReq = 13,
-    K2OS_Obj_Interrupt = 14,
+    K2OS_Obj_Mailbox = 9,
+    K2OS_Obj_Mailslot = 10,
+    K2OS_Obj_Msg = 11,
+    K2OS_Obj_Interrupt = 12,
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
@@ -283,14 +281,6 @@ K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmAcquireByName(K2OS_TOKEN aNameTok
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, UINT32 aMaxCount, UINT32 aInitCount);
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreAcquireByName(K2OS_TOKEN aNameToken);
 BOOL        K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, UINT32 aRelCount, UINT32 *apRetNewCount);
-
-//
-//------------------------------------------------------------------------
-//
-
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreate(K2OS_TOKEN aNameToken);
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockAcquireByName(K2OS_TOKEN aNameToken);
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_RwLockCreateRequest(K2OS_TOKEN aRwLockToken, BOOL aRequestWrite);
 
 //
 //------------------------------------------------------------------------
