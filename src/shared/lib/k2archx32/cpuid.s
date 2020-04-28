@@ -48,6 +48,57 @@ BEGIN_X32_PROC(X32_CallCPUID)
     ret
 END_X32_PROC(X32_CallCPUID)
 
+#if 0
+
+BEGIN_X32_PROC(Transition)
+    // invalidate instruction cache
+    wbinvd
+
+    // disable paging in cr0 so we can change PAE bit
+    // we are executing in 1:1 on this page so we can do this
+    mov %eax, %cr0
+    and %eax, 0x7FFFFFFF
+    mov %cr0, %eax
+
+    // now that paging is off, disable PAE in CR4 - K2OS uses 32-bit pagetables
+    mov %eax, %cr4
+    and %eax, 0xFFFFFFDF
+    mov %cr4, %eax
+
+    // get currently executing page address
+    call    nextInstr
+nextInstr:
+    pop     %ecx
+    and     %ecx,0xfffff000
+
+    // halfway into the page is the load info
+    add     %ecx,0x800
+
+    // get the translation table base register value
+    mov     %eax,DWORD PTR[%ecx + 0x18]    //  0x18 is K2_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS
+    mov     %cr3,%eax
+
+    // enable paging and kernel RO page write protect in CR0
+    mov     %eax,%cr0
+    or      %eax,0x80000000    // PAGING_ENABLE
+    or      %eax,0x00010000    // WRITE_PROTECT(kernel cant write to RO pages)
+
+    // turn it on
+    wbinvd
+    mov     %cr0,%eax
+    wbinvd
+
+    // re-flush all translation with a cycle of cr3
+    mov     %eax,%cr3
+    mov     %cr3,%eax
+
+    // jump into kernel virtual entry point
+    mov     %eax,DWORD PTR[%ecx + 0x8]     // 0x8 is K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY
+    jmp     %eax
+END_X32_PROC(Transition)
+
+#endif
+
 /*-------------------------------------------------------------------------------*/
 
     .end
