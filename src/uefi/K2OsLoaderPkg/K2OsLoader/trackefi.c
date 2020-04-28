@@ -67,7 +67,14 @@ sSetupToTrackOneDescriptor(
         gData.LoadInfo.mKernArenaHigh = virtTrackWorkPage;
 //        K2Printf(L" %08X-%08X", virtTrackWorkPage, virtTrackWorkPage + areaSize - 1);
         efiPhysAddr = apDesc->PhysicalStart;
-        mapType = (apDesc->Type == EfiRuntimeServicesCode) ? K2OS_MAPTYPE_KERN_TEXT : K2OS_MAPTYPE_KERN_DATA;
+        if (apDesc->Type == EfiRuntimeServicesCode)
+            mapType = K2OS_MAPTYPE_KERN_TEXT;
+        else if ((apDesc->Type == EfiMemoryMappedIO) ||
+                 (apDesc->Type == EfiMemoryMappedIOPortSpace) ||
+                 (apDesc->Type == EfiACPIMemoryNVS))
+            mapType = K2OS_MAPTYPE_KERN_DEVICEIO;
+        else
+            mapType = K2OS_MAPTYPE_KERN_DATA;
         do
         {
 //            K2Printf(L"Map runtime type %d page %08X\n", mapType, virtTrackWorkPage);
@@ -400,7 +407,7 @@ Loader_TrackEfiMap(
     )
 {
     EFI_STATUS              efiStatus;
-    K2STAT             status;
+    K2STAT                  status;
     UINTN                   entCount;
     EFI_MEMORY_DESCRIPTOR   desc;
     UINTN                   entIx;
