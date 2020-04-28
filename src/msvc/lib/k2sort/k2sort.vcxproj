@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -11,10 +11,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{267CCEBF-DF59-4446-A328-E2A92D4741EC}</ProjectGuid>
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <ProjectGuid>{30C9F540-AE50-4E53-AB8D-154DE959D486}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>k2mem</RootNamespace>
+    <RootNamespace>k2sort</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -22,16 +22,14 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
-    <CharacterSet>MultiByte</CharacterSet>
-    <SpectreMitigation>false</SpectreMitigation>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>MultiByte</CharacterSet>
-    <SpectreMitigation>false</SpectreMitigation>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -59,63 +57,37 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <PrecompiledHeader>
-      </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare16.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare32.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare64.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare8.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcopy.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcopy16.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcopy32.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcopy64.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memcopy8.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memset16.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memset32.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memset64.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memset8.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memswap.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memswap16.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memswap32.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memswap64.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memswap8.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memverify16.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memverify32.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memverify64.c" />
-    <ClCompile Include="..\..\..\shared\lib\k2mem\memverify8.c" />
+    <ClCompile Include="..\..\..\shared\lib\k2sort\qsort.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\shared\inc\lib\k2mem.h" />
+    <ClInclude Include="..\..\..\shared\inc\lib\k2sort.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

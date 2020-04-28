@@ -33,32 +33,6 @@ include $(K2_ROOT)/src/shared/build/pre.make
 
 TARGET_TYPE = LIB
 
-SOURCES += memset8.c
-SOURCES += memset16.c
-SOURCES += memset32.c
-SOURCES += memset64.c
-
-SOURCES += memcopy8.c
-SOURCES += memcopy16.c
-SOURCES += memcopy32.c
-SOURCES += memcopy64.c
-SOURCES += memcopy.c
-
-SOURCES += memswap8.c
-SOURCES += memswap16.c
-SOURCES += memswap32.c
-SOURCES += memswap64.c
-SOURCES += memswap.c
-
-SOURCES += memcompare8.c
-SOURCES += memcompare16.c
-SOURCES += memcompare32.c
-SOURCES += memcompare64.c
-SOURCES += memcompare.c
-
-SOURCES += memverify8.c
-SOURCES += memverify16.c
-SOURCES += memverify32.c
-SOURCES += memverify64.c
+SOURCES += zipfile.c
 
 include $(K2_ROOT)/src/shared/build/post.make

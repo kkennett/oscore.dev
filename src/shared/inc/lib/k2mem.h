@@ -82,6 +82,45 @@ K2MEM_Copy(
 //
 
 void
+K2MEM_Swap8(
+    void *  aPtr1,
+    void *  aPtr2,
+    UINT32  aByteCount
+);
+
+void
+K2MEM_Swap16(
+    void *  aPtr1,
+    void *  aPtr2,
+    UINT32  aByteCount
+);
+
+void
+K2MEM_Swap32(
+    void *  aPtr1,
+    void *  aPtr2,
+    UINT32  aByteCount
+);
+
+void
+K2MEM_Swap64(
+    void *  aPtr1,
+    void *  aPtr2,
+    UINT32  aByteCount
+);
+
+void
+K2MEM_Swap(
+    void *  aPtr1,
+    void *  aPtr2,
+    UINT32  aByteCount
+);
+
+//
+//------------------------------------------------------------------------
+//
+
+void
 K2MEM_Set(
     void *  apTarget,
     UINT8   aValue,
