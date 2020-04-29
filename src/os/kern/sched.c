@@ -185,9 +185,6 @@ void KernInit_Sched(void)
 {
     switch (gData.mKernInitStage)
     {
-    case KernInitStage_dlx_entry:
-        break;
-
     case KernInitStage_After_Virt:
         sInit_AfterVirt();
         break;

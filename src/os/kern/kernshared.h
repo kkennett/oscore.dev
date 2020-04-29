@@ -55,8 +55,6 @@ struct _K2OSKERN_FUNCTAB
 {
     K2OSCRT_pf_CoreThreadedPostInit CoreThreadedPostInit;
     
-    K2DLXSUPP_pf_GetInfo            GetDlxInfo;
-
     K2OSKERN_pf_Exec            Exec;
 
     K2OSKERN_pf_Debug           Debug;
@@ -83,8 +81,6 @@ struct _K2OSKERN_FUNCTAB
     K2_pf_EXTRAP_MOUNT          ExTrap_Mount;
     K2_pf_EXTRAP_DISMOUNT       ExTrap_Dismount;
     K2_pf_RAISE_EXCEPTION       RaiseException;
-
-    K2DLXSUPP_HOST              DlxHost;
 };
 
 typedef struct _K2OSKERN_SHARED K2OSKERN_SHARED;

@@ -105,35 +105,9 @@ sInitialize(
     K2_ASSERT(K2OS_UEFI_LOADINFO_OFFSET_XFWFACS_PHYS     == K2_FIELDOFFSET(K2OS_UEFI_LOADINFO, mFwXFacsPhys));
     K2_ASSERT(K2OS_UEFI_LOADINFO_OFFSET_CPU_INFO         == K2_FIELDOFFSET(K2OS_UEFI_LOADINFO, CpuInfo));
 
-    //
-    // reinit from UEFI load, with no support functions
-    // 
-    status = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
+    kernDlxEntry = (DLX_pf_ENTRYPOINT)gShared.LoadInfo.mKernDlxEntry;
 
-    status = DLX_Acquire("k2oshal.dlx", &gShared.mpDlxHal);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    status = DLX_Acquire("k2osacpi.dlx", &gShared.mpDlxAcpi);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    status = DLX_Acquire("k2osexec.dlx", &gShared.mpDlxExec);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    status = DLX_Acquire("k2oskern.dlx", &gShared.mpDlxKern);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    status = K2DLXSUPP_GetInfo(gShared.mpDlxKern, NULL, &kernDlxEntry, NULL, NULL);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    status = kernDlxEntry(gShared.mpDlxKern, (UINT32)&gShared);
-    K2_ASSERT(!K2STAT_IS_ERROR(status));
-
-    //
-    // kernel will be setup now, and will have filled in function pointers
-    // for all dlx support and other goop
-    //
-    status = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gShared.FuncTab.DlxHost, TRUE, TRUE);
+    status = kernDlxEntry(NULL, (UINT32)&gShared);
     K2_ASSERT(!K2STAT_IS_ERROR(status));
 
     K2_Assert = gShared.FuncTab.Assert;
@@ -159,7 +133,6 @@ k2oscrt_kern_common_entry(
     //
     K2MEM_Zero(&gShared, sizeof(gShared));
     K2MEM_Copy(&gShared.LoadInfo, apUEFI, sizeof(K2OS_UEFI_LOADINFO));
-    gShared.FuncTab.GetDlxInfo = K2DLXSUPP_GetInfo;
     gShared.FuncTab.CoreThreadedPostInit = CrtKern_Threaded_InitAtExit;
     gShared.mpCacheInfo = apCacheInfo;
 

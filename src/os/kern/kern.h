@@ -1110,12 +1110,12 @@ struct _KERN_DATA
     K2LIST_ANCHOR                       SegFreeList;
     K2OSKERN_SEGSLAB *                  mpSegSlabs;
 
-
     // dlxsupp.c - 
     K2OSKERN_OBJ_DLX                    DlxCrt;
     K2OSKERN_OBJ_DLX                    DlxHal;
     K2OSKERN_OBJ_DLX                    DlxAcpi;
     K2OSKERN_OBJ_DLX                    DlxExec;
+    K2DLXSUPP_HOST                      DlxHost;
     // kernel dlx is in gpProc0 process object
 
     // sched.c

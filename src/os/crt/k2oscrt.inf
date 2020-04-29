@@ -144,18 +144,6 @@ K2MEM_Compare64
 K2MEM_Compare
 
 #
-# DLX
-#
-DLX_Acquire
-DLX_GetIdent
-DLX_AddRef
-DLX_Release
-DLX_FindExport
-DLX_AcquireContaining
-DLX_FindAddrName
-DLX_AddrToName
-
-#
 # K2OSBASE
 #
 K2OS_CacheOperation

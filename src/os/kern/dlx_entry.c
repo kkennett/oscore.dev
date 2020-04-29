@@ -69,6 +69,8 @@ dlx_entry(
     UINT32  aReason
     )
 {
+    K2STAT stat;
+
     K2MEM_Zero(&gData, sizeof(KERN_DATA));
 
     gData.mpShared = (K2OSKERN_SHARED *)aReason;
@@ -105,16 +107,6 @@ dlx_entry(
     gData.mpShared->FuncTab.HeapAlloc = K2OS_HeapAlloc;
     gData.mpShared->FuncTab.HeapFree = K2OS_HeapFree;
 
-    gData.mpShared->FuncTab.DlxHost.CritSec = KernDlx_CritSec;
-    gData.mpShared->FuncTab.DlxHost.Open = KernDlx_Open;
-    gData.mpShared->FuncTab.DlxHost.AtReInit = KernDlx_AtReInit;
-    gData.mpShared->FuncTab.DlxHost.ReadSectors = KernDlx_ReadSectors;
-    gData.mpShared->FuncTab.DlxHost.Prepare = KernDlx_Prepare;
-    gData.mpShared->FuncTab.DlxHost.PreCallback = KernDlx_PreCallback;
-    gData.mpShared->FuncTab.DlxHost.PostCallback = KernDlx_PostCallback;
-    gData.mpShared->FuncTab.DlxHost.Finalize = KernDlx_Finalize;
-    gData.mpShared->FuncTab.DlxHost.Purge = KernDlx_Purge;
-
     gData.mpShared->FuncTab.Assert = KernEx_Assert;
     gData.mpShared->FuncTab.ExTrap_Mount = KernEx_TrapMount;
     gData.mpShared->FuncTab.ExTrap_Dismount = KernEx_TrapDismount;
@@ -125,6 +117,41 @@ dlx_entry(
     K2TREE_Init(&gData.ObjTree, NULL);
 
     K2TREE_Init(&gData.NameTree, sNameCompare);
+
+    //
+    // reinit DLX support after UEFI load
+    // 
+    gData.DlxHost.CritSec       = KernDlx_CritSec;
+    gData.DlxHost.Open          = KernDlx_Open;
+    gData.DlxHost.AtReInit      = KernDlx_AtReInit;
+    gData.DlxHost.ReadSectors   = KernDlx_ReadSectors;
+    gData.DlxHost.Prepare       = KernDlx_Prepare;
+    gData.DlxHost.PreCallback   = KernDlx_PreCallback;
+    gData.DlxHost.PostCallback  = KernDlx_PostCallback;
+    gData.DlxHost.Finalize      = KernDlx_Finalize;
+    gData.DlxHost.Purge         = KernDlx_Purge;
+
+    //
+    // first init is with no support functions.  reinit will not get called
+    //
+    stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
+    while(K2STAT_IS_ERROR(stat));
+
+    stat = DLX_Acquire("k2oshal.dlx", &gShared.mpDlxHal);
+    while(K2STAT_IS_ERROR(stat));
+    stat = DLX_Acquire("k2osacpi.dlx", &gShared.mpDlxAcpi);
+    while(K2STAT_IS_ERROR(stat));
+    stat = DLX_Acquire("k2osexec.dlx", &gShared.mpDlxExec);
+    while(K2STAT_IS_ERROR(stat));
+    stat = DLX_Acquire("k2oskern.dlx", &gShared.mpDlxKern);
+    while(K2STAT_IS_ERROR(stat));
+
+    //
+    // second init is with support functions. reinit will get called, and all dlx
+    // have been acquired
+    //
+    stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
+    while (K2STAT_IS_ERROR(stat));
 
     KernInit_Stage(KernInitStage_dlx_entry);
 
