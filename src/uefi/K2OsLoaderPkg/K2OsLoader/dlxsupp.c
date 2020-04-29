@@ -461,9 +461,9 @@ K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRES
                 gBS->FreePool(pFile);
             else
             {
-                pFile->mPageAddr_Virt = gData.LoadInfo.mKernArenaLow;
+                pFile->mPageAddr_Virt = gData.mKernArenaLow;
                 apRetResult->mModulePageLinkAddr = pFile->mPageAddr_Virt;
-                gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
+                gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
             }
 
         } while (0);
@@ -626,9 +626,9 @@ K2STAT sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aIn
                 allocSize = K2_ROUNDUP(pOut->Info.SegInfo[segIx].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
                 if (allocSize > 0)
                 {
-//                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.LoadInfo.mKernArenaLow);
-                    pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.LoadInfo.mKernArenaLow;
-                    gData.LoadInfo.mKernArenaLow += allocSize;
+//                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.mKernArenaLow);
+                    pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.mKernArenaLow;
+                    gData.mKernArenaLow += allocSize;
                 }
             }
 

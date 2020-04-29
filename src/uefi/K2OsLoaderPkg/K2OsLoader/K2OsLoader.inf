@@ -145,6 +145,7 @@
     $(K2_DLXSUPPLIB)\dlx_link.c
     $(K2_DLXSUPPLIB)\dlx_loadseg.c
     $(K2_DLXSUPPLIB)\dlx_release.c
+    $(K2_DLXSUPPLIB)\dlx_getinfo.c
     $(K2_DLXSUPPLIB)\idlx.h
 
     #

@@ -166,8 +166,8 @@ K2OsLoaderEntryPoint (
         return efiStatus;
 
     K2MEM_Zero(&gData, sizeof(gData));
-    gData.LoadInfo.mKernArenaLow = K2OS_KVA_FREE_BOTTOM;
-    gData.LoadInfo.mKernArenaHigh = K2OS_KVA_FREE_TOP;
+    gData.mKernArenaLow = K2OS_KVA_FREE_BOTTOM;
+    gData.mKernArenaHigh = K2OS_KVA_FREE_TOP;
     gData.LoadInfo.mpEFIST = (K2EFI_SYSTEM_TABLE *)gST;
 
     K2Printf(L"Scanning for SMBIOS and ACPI...\n");
@@ -293,8 +293,8 @@ K2OsLoaderEntryPoint (
                                             break;
 
 #if 1
-                                        gData.LoadInfo.mDebugPageVirt = gData.LoadInfo.mKernArenaLow;
-                                        gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
+                                        gData.LoadInfo.mDebugPageVirt = gData.mKernArenaLow;
+                                        gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
 #if K2_TARGET_ARCH_IS_ARM
                                         k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);
 #else
@@ -323,6 +323,18 @@ K2OsLoaderEntryPoint (
                                             &gData.LoadInfo.mpDlxCrt,
                                             sysDLX_ConvertLoadPtr,
                                             &gData.LoadInfo.mSystemVirtualEntrypoint);
+
+                                        //
+                                        // kernel dlx virtual entrypoint needs to go into loadinfo
+                                        // this function works after handoff except for the segment
+                                        // info, which we don't really care about here
+                                        //
+                                        k2Stat = K2DLXSUPP_GetInfo(
+                                            pDlxKern, NULL, 
+                                            (DLX_pf_ENTRYPOINT *)&gData.LoadInfo.mKernDlxEntry, 
+                                            NULL, NULL);
+                                        if (K2STAT_IS_ERROR(k2Stat))
+                                            break;
 
                                         if (!K2STAT_IS_ERROR(k2Stat))
                                             Loader_TransitionToKernel();

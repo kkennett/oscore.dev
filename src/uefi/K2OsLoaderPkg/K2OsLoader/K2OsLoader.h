@@ -98,6 +98,8 @@ struct _LOADER_DATA
     K2OS_UEFI_LOADINFO								LoadInfo;           // this is copied to transition page
     SMBIOS_STRUCTURE_POINTER *                      mpSmbios;
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  * mpAcpi;
+    UINT32                                          mKernArenaLow;
+    UINT32                                          mKernArenaHigh;
 };
 
 extern LOADER_DATA gData;

@@ -392,8 +392,8 @@ K2STAT Loader_AssembleAcpi(void)
     // so map that whole single chunk into the kernel space.
     //
     physMapAddr = gData.LoadInfo.mFwTabPagesPhys;
-    virtMapAddr = gData.LoadInfo.mFwTabPagesVirt = gData.LoadInfo.mKernArenaLow;
-    gData.LoadInfo.mKernArenaLow += gData.LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES;
+    virtMapAddr = gData.LoadInfo.mFwTabPagesVirt = gData.mKernArenaLow;
+    gData.mKernArenaLow += gData.LoadInfo.mFwTabPageCount * K2_VA32_MEMPAGE_BYTES;
 
     for (outIx = 0; outIx < gData.LoadInfo.mFwTabPageCount; outIx++)
     {

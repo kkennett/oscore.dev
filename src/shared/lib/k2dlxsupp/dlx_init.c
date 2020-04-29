@@ -255,6 +255,8 @@ K2DLXSUPP_Init(
     }
     else
     {
+        gpK2DLXSUPP_Vars->mHandedOff = FALSE;
+
         //
         // symbol trees in nodes need to be adjusted
         // to have thier comparison function addresses updated

@@ -85,6 +85,10 @@ enum _K2OS_ObjectType
     K2OS_Obj_Mailslot = 10,
     K2OS_Obj_Msg = 11,
     K2OS_Obj_Interrupt = 12,
+    K2OS_Obj_Notify = 13,
+    K2OS_Obj_Subscription = 14,
+    K2OS_Obj_Service = 15,
+    K2OS_Obj_Publish = 16
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
@@ -386,8 +390,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
 
 #define K2OS_FSPROV_NAME_BUF_COUNT      16
 
-typedef struct _K2OS_FSINFO K2OS_FSINFO;
-struct _K2OS_FSINFO
+typedef struct _K2OS_FSPROV K2OS_FSPROV;
+struct _K2OS_FSPROV
 {
     K2_GUID128  mProvId;
     char        mProvName[K2OS_FSPROV_NAME_BUF_COUNT];
@@ -395,7 +399,7 @@ struct _K2OS_FSINFO
 };
 
 UINT32          K2OS_FsGetVolCount(K2OS_FS_TOKEN aTokFsProv);
-BOOL            K2OS_FsGetInfo(K2OS_FSINFO *apRetInfo);
+BOOL            K2OS_FsGetProv(K2OS_FSPROV *apRetInfo);
 BOOL            K2OS_FsGetVolIds(K2OS_FS_TOKEN aTokFsProv, UINT32 * aIoCount, K2_GUID128 * apRetVolIds);
 K2OS_DIR_TOKEN  K2OS_FsOpenRootDir(K2OS_FS_TOKEN aTokFsProv, K2_GUID128 const *apVolId);
 

@@ -117,6 +117,7 @@ struct _K2DLXSUPP_VARS
     K2LIST_ANCHOR   AcqList;
     BOOL            mAcqDisabled;
     BOOL            mKeepSym;
+    BOOL            mHandedOff;
 };
 
 void

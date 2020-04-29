@@ -104,8 +104,8 @@ struct _K2OS_UEFI_LOADINFO
     UINT32                  mMarker;
     K2EFI_SYSTEM_TABLE *    mpEFIST;
     DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
-    UINT32                  mKernArenaLow;
-    UINT32                  mKernArenaHigh;
+    DLX_pf_ENTRYPOINT       mKernDlxEntry;
+    UINT32                  mUnused_10;
     DLX *                   mpDlxCrt;
     UINT32                  mTransBasePhys;
     UINT32                  mZeroPagePhys;

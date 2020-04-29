@@ -62,9 +62,9 @@ sSetupToTrackOneDescriptor(
         // make space for this runtime region in the virtual map
         // shoving it into the top of the map
         //
-        virtTrackLastPage = gData.LoadInfo.mKernArenaHigh - K2_VA32_MEMPAGE_BYTES;
-        virtTrackWorkPage = gData.LoadInfo.mKernArenaHigh - areaSize;
-        gData.LoadInfo.mKernArenaHigh = virtTrackWorkPage;
+        virtTrackLastPage = gData.mKernArenaHigh - K2_VA32_MEMPAGE_BYTES;
+        virtTrackWorkPage = gData.mKernArenaHigh - areaSize;
+        gData.mKernArenaHigh = virtTrackWorkPage;
 //        K2Printf(L" %08X-%08X", virtTrackWorkPage, virtTrackWorkPage + areaSize - 1);
         efiPhysAddr = apDesc->PhysicalStart;
         if (apDesc->Type == EfiRuntimeServicesCode)
@@ -303,7 +303,7 @@ Loader_AssignRuntimeVirtual(
     // WILL CHANGE THE MEMORY MAP!!
     //
 
-    virtWork = gData.LoadInfo.mKernArenaHigh;
+    virtWork = gData.mKernArenaHigh;
     virtEnd = K2OS_KVA_FREE_TOP;
     entCount = gData.LoadInfo.mEfiMapSize / gData.LoadInfo.mEfiMemDescSize;
 
@@ -469,7 +469,7 @@ Loader_TrackEfiMap(
             return status;
         }
         virtAddr += K2_VA32_PAGETABLE_MAP_BYTES;
-    } while (virtAddr < gData.LoadInfo.mKernArenaLow);
+    } while (virtAddr < gData.mKernArenaLow);
 
     //
     // find a transition page now

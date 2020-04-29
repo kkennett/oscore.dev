@@ -137,6 +137,9 @@ K2DLXSUPP_Handoff(
     BOOL            foundEntryDLX;
     K2STAT          status;
 
+    if (gpK2DLXSUPP_Vars->mHandedOff)
+        return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_API_ORDER);
+
     if ((appEntryDlx == NULL) ||
         (ConvertLoadPtr == NULL) ||
         (apRetEntrypoint == NULL))
@@ -183,6 +186,8 @@ K2DLXSUPP_Handoff(
         }
 
     } while (pLink != NULL);
+
+    gpK2DLXSUPP_Vars->mHandedOff = TRUE;
 
     return 0;
 }

@@ -82,8 +82,8 @@
 #define K2OS_UEFI_LOADINFO_OFFSET_MARKER                0x0000      // 'K2OS'
 #define K2OS_UEFI_LOADINFO_OFFSET_EFIST                 0x0004
 #define K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY          0x0008      // encoded in code bytes in uefi loader. careful
-#define K2OS_UEFI_LOADINFO_OFFSET_KERNARENA_LOW         0x000C
-#define K2OS_UEFI_LOADINFO_OFFSET_KERNARENA_HIGH        0x0010
+#define K2OS_UEFI_LOADINFO_OFFSET_KERNDLX_ENTRY         0x000C
+#define K2OS_UEFI_LOADINFO_OFFSET_UNUSED_10             0x0010
 #define K2OS_UEFI_LOADINFO_OFFSET_DLXCRT                0x0014
 #define K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS        0x0018      // encoded in code bytes in uefi loader. careful
 #define K2OS_UEFI_LOADINFO_OFFSET_ZEROPAGE_PHYS         0x001C

@@ -56,9 +56,6 @@ static void sInit(void)
 
 void K2_CALLCONV_REGS KernExec(void)
 {
-    //
-    // never returns here after it launches cores
-    //
     sInit();
 
     // should never return

@@ -54,9 +54,12 @@ K2DLXSUPP_GetInfo(
         return K2STAT_ERROR_BAD_ARGUMENT;
     }
 
-    if (NULL == iK2DLXSUPP_FindAndAddRef(apDlx))
+    if (!gpK2DLXSUPP_Vars->mHandedOff)
     {
-        return K2STAT_ERROR_NOT_FOUND;
+        if (NULL == iK2DLXSUPP_FindAndAddRef(apDlx))
+        {
+            return K2STAT_ERROR_NOT_FOUND;
+        }
     }
 
     if (apRetPageAddr != NULL)
@@ -67,11 +70,14 @@ K2DLXSUPP_GetInfo(
     
     if (apRetEntrypoint != NULL)
         *apRetEntrypoint = (DLX_pf_ENTRYPOINT)apDlx->mEntrypoint;
-    
-    if (apRetSegInfo != NULL)
-        K2MEM_Copy(apRetSegInfo, apDlx->mpInfo->SegInfo, sizeof(DLX_SEGMENT_INFO) * DlxSeg_Count);
 
-    DLX_Release(apDlx);
+    if (!gpK2DLXSUPP_Vars->mHandedOff)
+    {
+        if (apRetSegInfo != NULL)
+            K2MEM_Copy(apRetSegInfo, apDlx->mpInfo->SegInfo, sizeof(DLX_SEGMENT_INFO) * DlxSeg_Count);
+
+        DLX_Release(apDlx);
+    }
 
     return K2STAT_OK;
 }

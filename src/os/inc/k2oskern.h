@@ -358,6 +358,106 @@ K2OSKERN_ReflectNotify(
 //------------------------------------------------------------------------
 //
 
+K2OS_TOKEN
+K2OSKERN_CreateNotify(
+    K2OS_TOKEN          aTokMailslot,
+    UINT32              aMsgsCount,
+    K2OS_TOKEN const *  apTokMsgs
+);
+
+K2OS_TOKEN
+K2OSKERN_NotifySubscribe(
+    K2OS_TOKEN          aTokNotify,
+    K2_GUID128 const *  apInterfaceId,
+    void *              apContext
+);
+
+BOOL
+K2OSKERN_NotifyEnum(
+    K2OS_TOKEN          aTokNotify,
+    UINT32 *            apIoCount,
+    K2_GUID128 *        apRetInterfaceIds
+);
+
+BOOL
+K2OSKERN_NotifyAddMsgs(
+    K2OS_TOKEN          aTokNotify,
+    UINT32              aMsgsCount,
+    K2OS_TOKEN const *  apTokMsgs
+);
+
+BOOL
+K2OSKERN_NotifyAbortMsgs(
+    K2OS_TOKEN          aTokNotify
+);
+
+typedef struct _K2OSKERN_NOTIFY_MSGIO K2OSKERN_NOTIFY_MSGIO;
+struct _K2OSKERN_NOTIFY_MSGIO
+{
+    K2STAT      mStatus;
+    void *      mpSubscribeContext;
+    K2_GUID128  InterfaceId;
+    UINT32      mServiceInstanceId;
+    UINT32      mUnused;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_NOTIFY_MSGIO) == sizeof(K2OS_MSGIO));
+
+K2OS_TOKEN
+K2OSKERN_ServiceCreate(
+    K2OS_TOKEN  aTokMailslot,
+    void *      apContext,
+    UINT32 *    apRetInstanceId
+);
+
+UINT32
+K2OSKERN_ServiceGetInstanceId(
+    K2OS_TOKEN  aTokService
+);
+
+K2OS_TOKEN
+K2OSKERN_ServicePublish(
+    K2OS_TOKEN          aTokService,
+    K2_GUID128 const *  apInterfaceId,
+    void *              apContext
+);
+// destroy token to unpublish
+
+K2STAT
+K2OSKERN_ServiceCall(
+    UINT32          aServiceInstanceId,
+    UINT32          aCallCmd,
+    void const *    apInBuf,
+    UINT32          aInBufBytes,
+    void *          apOutBuf,
+    UINT32          aOutBufBytes,
+    UINT32 *        apRetActualOut
+);
+
+typedef struct _K2OSKERN_SVC_MSGIO K2OSKERN_SVC_MSGIO;
+struct _K2OSKERN_SVC_MSGIO
+{
+    K2STAT          mSvcOpCode;
+    void *          PublishContext;
+    UINT32          mCallCmd;
+    void const *    mpInBuf;
+    UINT32          mInBufBytes;
+    void *          mpOutBuf;
+    UINT32          mOutBufBytes;
+    UINT32 *        mpRetActualOut;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_SVC_MSGIO) == sizeof(K2OS_MSGIO));
+
+BOOL
+K2OSKERN_ServiceEnum(
+    K2_GUID128 const *  apInterfaceId,
+    UINT32 *            apIoCount,
+    UINT32 *            apRetServiceInstanceIds
+);
+
+//
+//------------------------------------------------------------------------
+//
+
 #if __cplusplus
 }
 #endif
