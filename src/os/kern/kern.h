@@ -1165,15 +1165,7 @@ void   KernPanic_Ici(K2OSKERN_CPUCORE* apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 
-K2STAT KernDlx_CritSec(BOOL aEnter);
-K2STAT KernDlx_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult);
 void   KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
-K2STAT KernDlx_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-K2STAT KernDlx_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-BOOL   KernDlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
-K2STAT KernDlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
-K2STAT KernDlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
-K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 
 /* --------------------------------------------------------------------------------- */
@@ -1327,7 +1319,6 @@ void K2_CALLCONV_REGS KernExec(void);
 
 void KernInit_Stage(KernInitStage aStage);
 void KernInit_Arch(void);
-void KernInit_DlxHost(void);
 void KernInit_Mem(void);
 void KernInit_Process(void);
 void KernInit_Thread(void);

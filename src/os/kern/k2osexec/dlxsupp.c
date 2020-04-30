@@ -30,61 +30,73 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#ifndef __KERNEXEC_H
-#define __KERNEXEC_H
+#include "ik2osexec.h"
 
-#include <k2oshal.h>
-#include <lib/k2dlxsupp.h>
+static K2OS_CRITSEC sgDlx_Sec;
 
-/* --------------------------------------------------------------------------------- */
-
-typedef struct _K2OSEXEC_INIT_INFO K2OSEXEC_INIT_INFO;
-struct _K2OSEXEC_INIT_INFO
+K2STAT Dlx_CritSec(BOOL aEnter)
 {
-    //
-    // INPUT
-    //
-    UINT32                      mEfiMapSize;
-    UINT32                      mEfiMemDescSize;
-    UINT32                      mEfiMemDescVer;
+    BOOL ok;
+    if (aEnter)
+        ok = K2OS_CritSecEnter(&sgDlx_Sec);
+    else
+        ok = K2OS_CritSecLeave(&sgDlx_Sec);
+    if (!ok)
+        return K2OS_ThreadGetStatus();
+    return K2STAT_OK;
+}
 
-    //
-    // OUTPUT
-    //
-    K2OSKERN_IRQ_CONFIG         SysTickDevIrqConfig;
+K2STAT Dlx_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
 
-    pfK2DLXSUPP_CritSec         mfDlxCritSec;
-    pfK2DLXSUPP_Open            mfDlxOpen;
-    pfK2DLXSUPP_ReadSectors     mfDlxReadSectors;
-    pfK2DLXSUPP_Prepare         mfDlxPrepare;
-    pfK2DLXSUPP_PreCallback     mfDlxPreCallback;
-    pfK2DLXSUPP_PostCallback    mfDlxPostCallback;
-    pfK2DLXSUPP_Finalize        mfDlxFinalize;
-    pfK2DLXSUPP_Purge           mfDlxPurge;
-};
+K2STAT Dlx_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
 
-typedef
+K2STAT Dlx_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+BOOL   Dlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
+{
+    return FALSE;
+}
+
+K2STAT Dlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT Dlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT Dlx_Purge(K2DLXSUPP_HOST_FILE aHostFile)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
 void
-(*K2OSEXEC_pf_Init)(
+Dlx_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
-    );
+)
+{
+    BOOL ok;
 
-void
-K2OSEXEC_Init(
-    K2OSEXEC_INIT_INFO * apInitInfo
-    );
+    apInitInfo->mfDlxCritSec = Dlx_CritSec;
+    apInitInfo->mfDlxOpen = Dlx_Open;
+    apInitInfo->mfDlxReadSectors = Dlx_ReadSectors;
+    apInitInfo->mfDlxPrepare = Dlx_Prepare;
+    apInitInfo->mfDlxPreCallback = Dlx_PreCallback;
+    apInitInfo->mfDlxPostCallback = Dlx_PostCallback;
+    apInitInfo->mfDlxFinalize = Dlx_Finalize;
+    apInitInfo->mfDlxPurge = Dlx_Purge;
 
-typedef
-void
-(*K2OSEXEC_pf_Run)(
-    void
-    );
-
-void
-K2OSEXEC_Run(
-    void
-    );
-
-/* --------------------------------------------------------------------------------- */
-
-#endif // __KERNEXEC_H
+    ok = K2OS_CritSecInit(&sgDlx_Sec);
+    K2_ASSERT(ok);
+}

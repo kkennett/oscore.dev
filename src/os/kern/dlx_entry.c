@@ -126,19 +126,6 @@ dlx_entry(
     K2MEM_Zero(gpProc0, sizeof(K2OSKERN_OBJ_PROCESS));
 
     //
-    // reinit DLX support after UEFI load
-    // 
-    gData.DlxHost.CritSec       = KernDlx_CritSec;
-    gData.DlxHost.Open          = KernDlx_Open;
-    gData.DlxHost.AtReInit      = KernDlx_AtReInit;
-    gData.DlxHost.ReadSectors   = KernDlx_ReadSectors;
-    gData.DlxHost.Prepare       = KernDlx_Prepare;
-    gData.DlxHost.PreCallback   = KernDlx_PreCallback;
-    gData.DlxHost.PostCallback  = KernDlx_PostCallback;
-    gData.DlxHost.Finalize      = KernDlx_Finalize;
-    gData.DlxHost.Purge         = KernDlx_Purge;
-
-    //
     // first init is with no support functions.  reinit will not get called
     //
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
@@ -157,6 +144,7 @@ dlx_entry(
     // second init is with support functions. reinit will get called, and all dlx
     // have been acquired
     //
+    gData.DlxHost.AtReInit = KernDlx_AtReInit;
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
     while (K2STAT_IS_ERROR(stat));
 

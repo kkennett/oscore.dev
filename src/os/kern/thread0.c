@@ -91,6 +91,15 @@ static K2OSEXEC_pf_Run sExec_Init(void)
 
     fExec_Init(&initInfo);
 
+    gData.DlxHost.CritSec = initInfo.mfDlxCritSec;
+    gData.DlxHost.Open = initInfo.mfDlxOpen;
+    gData.DlxHost.ReadSectors = initInfo.mfDlxReadSectors;
+    gData.DlxHost.Prepare = initInfo.mfDlxPrepare;
+    gData.DlxHost.PreCallback = initInfo.mfDlxPreCallback;
+    gData.DlxHost.PostCallback = initInfo.mfDlxPostCallback;
+    gData.DlxHost.Finalize = initInfo.mfDlxFinalize;
+    gData.DlxHost.Purge = initInfo.mfDlxPurge;
+
     K2_ASSERT(initInfo.SysTickDevIrqConfig.mSourceIrq <= X32_DEVIRQ_LVT_ERROR);
 
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);

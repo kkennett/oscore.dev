@@ -36,7 +36,6 @@ void KernInit_Stage(KernInitStage aStage)
 {
     gData.mKernInitStage = aStage;
     KernInit_Arch();
-    KernInit_DlxHost();
     KernInit_Mem();
     KernInit_Process();
     KernInit_Thread();

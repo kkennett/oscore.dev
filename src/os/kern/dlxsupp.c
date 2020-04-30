@@ -87,27 +87,6 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
 }
 
-void KernInit_DlxHost(void)
-{
-    //
-    // actually happens AFTER "_AtReInit" callback has occurred
-    //
-
-    //
-    // should put built-in DLX onto the list of loaded DLX here
-    //
-}
-
-K2STAT KernDlx_CritSec(BOOL aEnter)
-{
-    return K2STAT_OK;
-}
-
-K2STAT KernDlx_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
 void KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile)
 {
     //
@@ -137,36 +116,6 @@ void KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FIL
     {
         K2_ASSERT(0);
     }
-}
-
-K2STAT KernDlx_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT KernDlx_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-BOOL   KernDlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
-{
-    return FALSE;
-}
-
-K2STAT KernDlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT KernDlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT KernDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile)
-{
-    return K2STAT_ERROR_NOT_IMPL;
 }
 
 #define MAX_DLX_NAME_LEN    32

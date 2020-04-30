@@ -58,6 +58,7 @@ SOURCES += dev.c
 SOURCES += res.c
 SOURCES += intr.c
 SOURCES += msg.c
+SOURCES += dlxsupp.c
 
 SOURCE_LIBS += @shared/lib/k2heap
 
