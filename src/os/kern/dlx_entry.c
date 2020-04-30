@@ -119,6 +119,13 @@ dlx_entry(
     K2TREE_Init(&gData.NameTree, sNameCompare);
 
     //
+    // we are going to fill in some fields in this, so we
+    // clear it out now rather than when we init all the 
+    // rest of the proc0 stuff
+    //
+    K2MEM_Zero(gpProc0, sizeof(K2OSKERN_OBJ_PROCESS));
+
+    //
     // reinit DLX support after UEFI load
     // 
     gData.DlxHost.CritSec       = KernDlx_CritSec;
@@ -137,13 +144,13 @@ dlx_entry(
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
     while(K2STAT_IS_ERROR(stat));
 
-    stat = DLX_Acquire("k2oshal.dlx", &gShared.mpDlxHal);
+    stat = DLX_Acquire("k2oshal.dlx", &gData.mpDlxHal);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2osacpi.dlx", &gShared.mpDlxAcpi);
+    stat = DLX_Acquire("k2osacpi.dlx", &gData.mpDlxAcpi);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2osexec.dlx", &gShared.mpDlxExec);
+    stat = DLX_Acquire("k2osexec.dlx", &gData.mpDlxExec);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2oskern.dlx", &gShared.mpDlxKern);
+    stat = DLX_Acquire("k2oskern.dlx", &gData.mpDlxKern);
     while(K2STAT_IS_ERROR(stat));
 
     //

@@ -88,10 +88,6 @@ struct _K2OSKERN_SHARED
 {
     K2OS_UEFI_LOADINFO      LoadInfo;
     K2_CACHEINFO const *    mpCacheInfo;
-    DLX *                   mpDlxKern;
-    DLX *                   mpDlxHal;
-    DLX *                   mpDlxAcpi;
-    DLX *                   mpDlxExec;
     K2OSKERN_FUNCTAB        FuncTab;
 };
 

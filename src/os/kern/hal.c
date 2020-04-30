@@ -43,7 +43,7 @@ static void sAtHalEntry(void)
     //
 
     stat = DLX_FindExport(
-        gData.mpShared->mpDlxHal,
+        gData.mpDlxHal,
         DlxSeg_Text,
         "K2OSHAL_DebugOut",
         (UINT32 *)&gData.mpShared->FuncTab.DebugOut);
@@ -51,22 +51,22 @@ static void sAtHalEntry(void)
         K2OSKERN_Panic("*** Required HAL export \"K2OSHAL_DebugOut\" missing\n");
 
     stat = DLX_FindExport(
-        gData.mpShared->mpDlxHal,
+        gData.mpDlxHal,
         DlxSeg_Text,
         "K2OSHAL_DebugIn",
         (UINT32 *)&gData.mpShared->FuncTab.DebugIn);
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required HAL export \"K2OSHAL_DebugIn\" missing\n");
 
-    stat = gData.mpShared->FuncTab.GetDlxInfo(
-        gData.mpShared->mpDlxHal,
+    stat = K2DLXSUPP_GetInfo(
+        gData.mpDlxHal,
         NULL,
         &halEntryPoint,
         NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    stat = halEntryPoint(gData.mpShared->mpDlxHal, DLX_ENTRY_REASON_LOAD);
+    stat = halEntryPoint(gData.mpDlxHal, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 

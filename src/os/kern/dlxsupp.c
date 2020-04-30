@@ -58,7 +58,7 @@ sInitBuiltInDlx(
     apDlxObj->mpDlx = apDlx;
     *apInOutHostFile = (K2DLXSUPP_HOST_FILE)apDlxObj;
 
-    stat = gData.mpShared->FuncTab.GetDlxInfo(apDlx, NULL, NULL, segInfo, &pageAddr);
+    stat = K2DLXSUPP_GetInfo(apDlx, NULL, NULL, segInfo, &pageAddr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     K2_ASSERT(aModulePageLinkAddr == pageAddr);
     for (ix = 0; ix < DlxSeg_Reloc; ix++)
@@ -115,23 +115,23 @@ void KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FIL
     //
     if (apDlx == gData.mpShared->LoadInfo.mpDlxCrt)
     {
-        sInitBuiltInDlx(&gData.DlxCrt, apDlx, aModulePageLinkAddr, apInOutHostFile);
+        sInitBuiltInDlx(&gData.DlxObjCrt, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
-    else if (apDlx == gData.mpShared->mpDlxHal)
+    else if (apDlx == gData.mpDlxHal)
     {
-        sInitBuiltInDlx(&gData.DlxHal, apDlx, aModulePageLinkAddr, apInOutHostFile);
+        sInitBuiltInDlx(&gData.DlxObjHal, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
-    else if (apDlx == gData.mpShared->mpDlxKern)
+    else if (apDlx == gData.mpDlxKern)
     {
         sInitBuiltInDlx(&gpProc0->PrimaryModule, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
-    else if (apDlx == gData.mpShared->mpDlxAcpi)
+    else if (apDlx == gData.mpDlxAcpi)
     {
-        sInitBuiltInDlx(&gData.DlxAcpi, apDlx, aModulePageLinkAddr, apInOutHostFile);
+        sInitBuiltInDlx(&gData.DlxObjAcpi, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
-    else if (apDlx == gData.mpShared->mpDlxExec)
+    else if (apDlx == gData.mpDlxExec)
     {
-        sInitBuiltInDlx(&gData.DlxExec, apDlx, aModulePageLinkAddr, apInOutHostFile);
+        sInitBuiltInDlx(&gData.DlxObjExec, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
     else
     {

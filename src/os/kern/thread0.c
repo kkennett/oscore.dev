@@ -37,15 +37,15 @@ void KernAcpi_Init(void)
     DLX_pf_ENTRYPOINT   acpiEntryPoint;
     K2STAT              stat;
 
-    stat = gData.mpShared->FuncTab.GetDlxInfo(
-        gData.mpShared->mpDlxAcpi,
+    stat = K2DLXSUPP_GetInfo(
+        gData.mpDlxAcpi,
         NULL,
         &acpiEntryPoint,
         NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    stat = acpiEntryPoint(gData.mpShared->mpDlxAcpi, DLX_ENTRY_REASON_LOAD);
+    stat = acpiEntryPoint(gData.mpDlxAcpi, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
@@ -58,7 +58,7 @@ static K2OSEXEC_pf_Run sExec_Init(void)
     K2OSEXEC_pf_Run     fExec_Run;
 
     stat = DLX_FindExport(
-        gData.mpShared->mpDlxExec,
+        gData.mpDlxExec,
         DlxSeg_Text,
         "K2OSEXEC_Init",
         (UINT32 *)&fExec_Init);
@@ -66,22 +66,22 @@ static K2OSEXEC_pf_Run sExec_Init(void)
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
 
     stat = DLX_FindExport(
-        gData.mpShared->mpDlxExec,
+        gData.mpDlxExec,
         DlxSeg_Text,
         "K2OSEXEC_Run",
         (UINT32 *)&fExec_Run);
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Run\" missing\n");
 
-    stat = gData.mpShared->FuncTab.GetDlxInfo(
-        gData.mpShared->mpDlxExec,
+    stat = K2DLXSUPP_GetInfo(
+        gData.mpDlxExec,
         NULL,
         &execEntryPoint,
         NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    stat = execEntryPoint(gData.mpShared->mpDlxExec, DLX_ENTRY_REASON_LOAD);
+    stat = execEntryPoint(gData.mpDlxExec, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     K2MEM_Zero(&initInfo,sizeof(initInfo));

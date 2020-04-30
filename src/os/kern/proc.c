@@ -49,7 +49,11 @@ static void sInit_AtDlxEntry(void)
 {
     K2STAT stat;
 
-    K2MEM_Zero(gpProc0, sizeof(K2OSKERN_OBJ_PROCESS));
+    //
+    // proc0 cleared out at dlx entry, because
+    // that's where the DLX module for it gets
+    // initialized at dlxsupp reinit
+    //
     gpProc0->Hdr.mObjType = K2OS_Obj_Process;
     gpProc0->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc0->Hdr.mRefCount = 0x7FFFFFFF;

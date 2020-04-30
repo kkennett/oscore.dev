@@ -49,7 +49,6 @@ SOURCE_LIBS += @shared/lib/k2list
 SOURCE_LIBS += @shared/lib/k2tree
 SOURCE_LIBS += @shared/lib/k2atomic
 SOURCE_LIBS += @shared/lib/k2crc
-SOURCE_LIBS += @shared/lib/k2elf32
 
 KERN_SOURCE_LIBS += @os/crt/crtkern
 

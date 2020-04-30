@@ -1111,12 +1111,17 @@ struct _KERN_DATA
     K2OSKERN_SEGSLAB *                  mpSegSlabs;
 
     // dlxsupp.c - 
-    K2OSKERN_OBJ_DLX                    DlxCrt;
-    K2OSKERN_OBJ_DLX                    DlxHal;
-    K2OSKERN_OBJ_DLX                    DlxAcpi;
-    K2OSKERN_OBJ_DLX                    DlxExec;
     K2DLXSUPP_HOST                      DlxHost;
-    // kernel dlx is in gpProc0 process object
+    K2OSKERN_OBJ_DLX                    DlxObjCrt;
+    // crt dlx is in gpShared->LoadInfo
+    // kernel OBJ_DLX is in gpProc0 process object
+    DLX *                               mpDlxKern;
+    K2OSKERN_OBJ_DLX                    DlxObjHal;
+    DLX *                               mpDlxHal;
+    K2OSKERN_OBJ_DLX                    DlxObjAcpi;
+    DLX *                               mpDlxAcpi;
+    K2OSKERN_OBJ_DLX                    DlxObjExec;
+    DLX *                               mpDlxExec;
 
     // sched.c
     K2OSKERN_SCHED                      Sched;
