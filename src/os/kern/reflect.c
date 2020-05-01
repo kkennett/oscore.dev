@@ -32,65 +32,36 @@
 
 #include "kern.h"
 
-K2OS_TOKEN
-K2OSKERN_CreateNotify(
-    K2OS_TOKEN          aTokMailslot,
-    UINT32              aMsgsCount,
-    K2OS_TOKEN const *  apTokMsgs
+void
+sThreadExited(
+    K2OSKERN_OBJ_THREAD *   apExitedThread,
+    K2OSKERN_OBJ_MSG *      apExitMsg
 )
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
+    K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
+    K2_ASSERT(apExitMsg == &apExitedThread->MsgExit);
+    K2_ASSERT(apExitMsg->Hdr.mRefCount == 1);
+    apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
+    KernObj_Release(&apExitedThread->Hdr);
 }
 
-K2OS_TOKEN
-K2OSKERN_NotifySubscribe(
-    K2OS_TOKEN          aTokNotify,
-    K2_GUID128 const *  apInterfaceId,
-    void *              apContext
+void
+K2OSKERN_ReflectNotify(
+    UINT32          aOpCode,
+    UINT32 const *  apParam
 )
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
+    if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
+        return;
 
-void KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip)
-{
-    K2_ASSERT(0);
-}
+    K2OSKERN_Debug("ReflectNotify(%d)\n", aOpCode & ~SYSMSG_OPCODE_HIGH_MASK);
 
-BOOL
-K2OSKERN_NotifyEnum(
-    K2OS_TOKEN          aTokNotify,
-    UINT32 *            apIoCount,
-    K2_GUID128 *        apRetInterfaceIds
-)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
-
-BOOL
-K2OSKERN_NotifyAddMsgs(
-    K2OS_TOKEN          aTokNotify,
-    UINT32              aMsgsCount,
-    K2OS_TOKEN const *  apTokMsgs
-)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
-
-BOOL
-K2OSKERN_NotifyAbortMsgs(
-    K2OS_TOKEN          aTokNotify
-)
-{
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return FALSE;
-}
-
-void KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify)
-{
-    K2_ASSERT(0);
+    switch (aOpCode)
+    {
+    case SYSMSG_OPCODE_THREAD_EXIT:
+        sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0], (K2OSKERN_OBJ_MSG *)apParam[1]);
+        break;
+    default:
+        break;
+    }
 }

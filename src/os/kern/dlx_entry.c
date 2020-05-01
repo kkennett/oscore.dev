@@ -62,6 +62,21 @@ sNameCompare(
     return K2ASC_CompInsLen((char const *)aKey, pNameObj->NameBuffer, K2OS_NAME_MAX_LEN + 1);
 }
 
+int
+sIFaceCompare(
+    UINT32          aKey,
+    K2TREE_NODE *   apNode
+)
+{
+    K2OSKERN_IFACE *pIFace;
+
+    K2_ASSERT(aKey != 0);
+
+    pIFace = K2_GET_CONTAINER(K2OSKERN_IFACE, apNode, IfaceTreeNode);
+
+    return K2MEM_Compare(&(((K2OSKERN_IFACE *)aKey)->InterfaceId), &pIFace->InterfaceId, sizeof(K2_GUID128));
+}
+
 K2STAT 
 K2_CALLCONV_REGS 
 dlx_entry(
@@ -85,7 +100,11 @@ dlx_entry(
     K2LIST_Init(&gData.ProcList);
 
     K2OSKERN_SeqIntrInit(&gData.IntrTreeSeqLock);
-    K2TREE_Init(&gData.IntrTree, NULL);
+    K2TREE_Init(&gData.IntrTree, NULL);     // mUserVal is source irq number
+
+    K2OSKERN_SeqIntrInit(&gData.ServTreeSeqLock);
+    K2TREE_Init(&gData.ServTree, NULL);     // mUserVal is service instance index
+    K2TREE_Init(&gData.IfaceTree, sIFaceCompare);    // mUserVal is pointer to interface
 
     gData.mpShared->FuncTab.Exec = KernExec;
 

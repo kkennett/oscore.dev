@@ -95,7 +95,7 @@ enum _K2OS_ObjectType
     K2OS_Obj_Msg = 11,
     K2OS_Obj_Interrupt = 12,
     K2OS_Obj_Notify = 13,
-    K2OS_Obj_Subscription = 14,
+    K2OS_Obj_Subscrip = 14,
     K2OS_Obj_Service = 15,
     K2OS_Obj_Publish = 16
 };

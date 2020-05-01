@@ -917,14 +917,33 @@ struct _K2OSKERN_OBJ_SUBSCRIP
     K2OSKERN_OBJ_HEADER     Hdr;
 };
 
+/* --------------------------------------------------------------------------------- */
+
+typedef struct _K2OSKERN_IFACE K2OSKERN_IFACE;
+struct _K2OSKERN_IFACE
+{
+    K2_GUID128      InterfaceId;
+    K2LIST_ANCHOR   PublishList;
+    K2TREE_NODE     IfaceTreeNode;
+};
+
 struct _K2OSKERN_OBJ_SERVICE
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+    K2OSKERN_OBJ_MAILSLOT * mpSlot;
+    void *                  mpContext;
+    K2TREE_NODE             ServTreeNode;   // instance Id is the node's mUserVal
+    K2LIST_ANCHOR           PublishList;
 };
 
 struct _K2OSKERN_OBJ_PUBLISH
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+    K2OSKERN_OBJ_SERVICE *  mpService;
+    void *                  mpContext;
+    K2OSKERN_IFACE *        mpIFace;
+    K2LIST_LINK             ServicePublishListLink;
+    K2LIST_LINK             IfacePublishListLink;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1167,6 +1186,12 @@ struct _KERN_DATA
     // exec mailslot
     K2OSKERN_OBJ_MAILSLOT *             mpMsgSlot_K2OSEXEC;
 
+    // service
+    UINT32                              mLastServInstId;
+    K2OSKERN_SEQLOCK                    ServTreeSeqLock;
+    K2TREE_ANCHOR                       ServTree;
+    K2TREE_ANCHOR                       IfaceTree;
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                              mA32VectorPagePhys;
@@ -1408,6 +1433,13 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, 
 K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg);
 K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear);
 void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
+
+/* --------------------------------------------------------------------------------- */
+
+void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
+void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
+void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
+void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
 
 /* --------------------------------------------------------------------------------- */
 
