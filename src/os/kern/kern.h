@@ -81,6 +81,10 @@ typedef struct _K2OSKERN_OBJ_MAILBOX        K2OSKERN_OBJ_MAILBOX;
 typedef struct _K2OSKERN_OBJ_MAILSLOT       K2OSKERN_OBJ_MAILSLOT;
 typedef struct _K2OSKERN_OBJ_MSG            K2OSKERN_OBJ_MSG;
 typedef struct _K2OSKERN_OBJ_ALARM          K2OSKERN_OBJ_ALARM;
+typedef struct _K2OSKERN_OBJ_NOTIFY         K2OSKERN_OBJ_NOTIFY;
+typedef struct _K2OSKERN_OBJ_SUBSCRIP       K2OSKERN_OBJ_SUBSCRIP;
+typedef struct _K2OSKERN_OBJ_SERVICE        K2OSKERN_OBJ_SERVICE;
+typedef struct _K2OSKERN_OBJ_PUBLISH        K2OSKERN_OBJ_PUBLISH;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -899,6 +903,28 @@ struct _K2OSKERN_OBJ_INTR
     K2OSKERN_IRQ_CONFIG     IrqConfig;
     K2OSKERN_pf_IntrHandler mfHandler;
     void *                  mpHandlerContext;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+struct _K2OSKERN_OBJ_NOTIFY
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+};
+
+struct _K2OSKERN_OBJ_SUBSCRIP
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+};
+
+struct _K2OSKERN_OBJ_SERVICE
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+};
+
+struct _K2OSKERN_OBJ_PUBLISH
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
 };
 
 /* --------------------------------------------------------------------------------- */

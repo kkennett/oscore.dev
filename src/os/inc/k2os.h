@@ -42,6 +42,15 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
+typedef K2OS_TOKEN K2OS_FS_TOKEN;
+typedef K2OS_TOKEN K2OS_DIR_TOKEN;
+typedef K2OS_TOKEN K2OS_FILE_TOKEN;
+typedef K2OS_TOKEN K2OS_PATH_TOKEN;
+
+//
+//------------------------------------------------------------------------
+//
+
 UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo);
 
 typedef UINT64 (K2_CALLCONV_REGS *K2OS_pf_SysUpTimeMs)(void);
@@ -229,10 +238,6 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKE
 //------------------------------------------------------------------------
 //
 
-typedef K2OS_TOKEN K2OS_FS_TOKEN;
-typedef K2OS_TOKEN K2OS_DIR_TOKEN;
-typedef K2OS_TOKEN K2OS_FILE_TOKEN;
-
 typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
 struct _K2OS_PROCESSCREATE
 {
@@ -394,32 +399,65 @@ typedef struct _K2OS_FSPROV K2OS_FSPROV;
 struct _K2OS_FSPROV
 {
     K2_GUID128  mProvId;
-    char        mProvName[K2OS_FSPROV_NAME_BUF_COUNT];
+    char        ProvName[K2OS_FSPROV_NAME_BUF_COUNT];
     UINT32      mProvVersion;
 };
 
-UINT32          K2OS_FsGetVolCount(K2OS_FS_TOKEN aTokFsProv);
-BOOL            K2OS_FsGetProv(K2OS_FSPROV *apRetInfo);
-BOOL            K2OS_FsGetVolIds(K2OS_FS_TOKEN aTokFsProv, UINT32 * aIoCount, K2_GUID128 * apRetVolIds);
-K2OS_DIR_TOKEN  K2OS_FsOpenRootDir(K2OS_FS_TOKEN aTokFsProv, K2_GUID128 const *apVolId);
+typedef struct _K2OS_FILE_INFO K2OS_FILE_INFO;
+struct _K2OS_FILE_INFO
+{
+    char        FileName[K2OS_FILE_MAX_NAME_BUF_SIZE];
+    UINT64      mSizeBytes;
+    UINT64      mCreateTime;
+    UINT64      mLastAccessTime;
+    UINT64      mLastWriteTime;
+    UINT32      mProp;
+};
 
-K2OS_DIR_TOKEN  K2OS_DirOpenDir(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
-K2OS_DIR_TOKEN  K2OS_DirCreateDir(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, BOOL aForce);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsVolEnum(UINT32 *apInOutCount, K2_GUID128 *apRetVolIds);
 
-BOOL            K2OS_DirDelete(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsGetProv(K2_GUID128 const *apVolId, K2OS_FSPROV *apRetProvInfo);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsProvVolEnum(K2OS_FS_TOKEN aTokFs, UINT32 *apInOutCount, K2_GUID128 *apRetVolIds);
 
-K2OS_FILE_TOKEN K2OS_DirOpenFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aModeAndUse);
-K2OS_FILE_TOKEN K2OS_DirCreateFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT64 aUseAndProp, BOOL aForce);
-UINT32          K2OS_DirGetFileProp(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
-UINT32          K2OS_DirSetFileProp(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aNewProp);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_FsAcquireRootDir(K2_GUID128 const *apVolId);
 
-BOOL            K2OS_FileRead(K2OS_FILE_TOKEN aTokFile, UINT32 * apSizeIo, void *apBuffer);
-BOOL            K2OS_FileWrite(K2OS_FILE_TOKEN aTokFile, UINT32 aSizeIo, void const *apBuffer);
-UINT64          K2OS_FileSize(K2OS_FILE_TOKEN aTokFile);
-UINT64          K2OS_FileGetPos(K2OS_FILE_TOKEN aTokFile);
-UINT64          K2OS_FileSetPos(K2OS_FILE_TOKEN aTokFile, UINT64 aNewPos);
-void            K2OS_FileFlush(K2OS_FILE_TOKEN aTokFile);
-UINT32          K2OS_FileGetProp(K2OS_FILE_TOKEN aTokFile);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirCreateSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, BOOL aForce);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireParennt(K2OS_DIR_TOKEN aTokDir);
+
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirDeleteSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
+
+K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aModeAndUse);
+K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DirCreateFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT64 aUseAndProp, BOOL aForce);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirGetFileInfo(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, K2OS_FILE_INFO *apRetInfo);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirSetFileProp(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aNewProp);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirGetName(K2OS_DIR_TOKEN aTokDir, char *apRetNameBuf, UINT32 *apIoBufLen);
+
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FileRead(K2OS_FILE_TOKEN aTokFile, UINT32 * apSizeIo, void *apBuffer);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FileWrite(K2OS_FILE_TOKEN aTokFile, UINT32 aSizeIo, void const *apBuffer);
+UINT64          K2_CALLCONV_CALLERCLEANS K2OS_FileSize(K2OS_FILE_TOKEN aTokFile);
+UINT64          K2_CALLCONV_CALLERCLEANS K2OS_FileGetPos(K2OS_FILE_TOKEN aTokFile);
+UINT64          K2_CALLCONV_CALLERCLEANS K2OS_FileSetPos(K2OS_FILE_TOKEN aTokFile, UINT64 aNewPos);
+void            K2_CALLCONV_CALLERCLEANS K2OS_FileFlush(K2OS_FILE_TOKEN aTokFile);
+UINT32          K2_CALLCONV_CALLERCLEANS K2OS_FileGetProp(K2OS_FILE_TOKEN aTokFile);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_FileAcquireParentDir(K2OS_FILE_TOKEN aTokFile);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FileGetInfo(K2OS_FILE_TOKEN aTokFile, K2OS_FILE_INFO *apRetFileInfo);
+
+K2OS_PATH_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_PathCreate(K2OS_TOKEN aTokNewPathName);
+K2OS_PATH_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_PathCreateCopy(K2OS_TOKEN aTokNewPathName, K2OS_PATH_TOKEN aTokSource);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_PathAddDir(K2OS_PATH_TOKEN aTokPath, K2OS_DIR_TOKEN aTokDir);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_PathDelDir(K2OS_PATH_TOKEN aTokPath, K2OS_DIR_TOKEN aTokDir);
+K2OS_PATH_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_PathAcquireByName(K2OS_TOKEN aTokName);
+
+//
+//------------------------------------------------------------------------
+//
+
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId);
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx);
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apRetId);
+void *     K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aDlxSeg, char const *apExportName);
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress, UINT32 *apRetSegment);
 
 //
 //------------------------------------------------------------------------

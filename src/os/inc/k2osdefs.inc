@@ -186,6 +186,7 @@
 #define K2OS_THREAD_INFINITE_QUANTUM                0xFFFFFFFF
 #define K2OS_THREAD_DEFAULT_STACK_PAGES             8
 
+#define K2OS_FILE_MAX_NAME_BUF_SIZE                 256
 //
 // Kernel Virtual Address Range (KVA) top down
 //
