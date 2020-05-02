@@ -922,29 +922,34 @@ struct _K2OSKERN_OBJ_SUBSCRIP
 typedef struct _K2OSKERN_IFACE K2OSKERN_IFACE;
 struct _K2OSKERN_IFACE
 {
-    K2_GUID128      InterfaceId;
-    K2LIST_ANCHOR   PublishList;
-    K2TREE_NODE     IfaceTreeNode;
+    K2_GUID128      InterfaceId;    // GUID of the interface
+    K2LIST_ANCHOR   PublishList;    // List of PUBLISH objects for this service - IfacePublishListLink
+    K2TREE_NODE     IfaceTreeNode;  // Node on gData.IfaceTree.  Node's userval is unused.
 };
 
 struct _K2OSKERN_OBJ_SERVICE
 {
     K2OSKERN_OBJ_HEADER     Hdr;
-    K2OSKERN_OBJ_MAILSLOT * mpSlot;
-    void *                  mpContext;
-    K2TREE_NODE             ServTreeNode;   // instance Id is the node's mUserVal
-    K2LIST_ANCHOR           PublishList;
+
+    K2OSKERN_OBJ_MAILSLOT * mpSlot;         // reference to mailslot for this service
+
+    void *                  mpContext;      // user context at point of service creation
+    K2TREE_NODE             ServTreeNode;   // Node on gData.ServTree.  instance Id is the node's mUserVal
+    K2LIST_ANCHOR           PublishList;    // List of PUBLISH objects for this service
 };
 
 struct _K2OSKERN_OBJ_PUBLISH
 {
     K2OSKERN_OBJ_HEADER     Hdr;
-    K2OSKERN_OBJ_SERVICE *  mpService;
-    K2OSKERN_IFACE *        mpIFace;
-    void *                  mpContext;
-    K2TREE_NODE             IfInstTreeNode; // interface instance id is the node's userval
-    K2LIST_LINK             ServicePublishListLink;
-    K2LIST_LINK             IfacePublishListLink;
+
+    K2OSKERN_OBJ_SERVICE *  mpService;              // reference to service that publishes this interface
+    void *                  mpContext;              // user context pointer at point of publish
+    K2LIST_LINK             ServicePublishListLink; // link on SERVICE.PublishList
+
+    K2TREE_NODE             IfInstTreeNode;         // Node on gData.IfInstTree. interface instance id is the node's userval
+
+    K2OSKERN_IFACE *        mpIFace;                // points to interface this is an instance of
+    K2LIST_LINK             IfacePublishListLink;   // link on IFACE.PublishList
 };
 
 /* --------------------------------------------------------------------------------- */

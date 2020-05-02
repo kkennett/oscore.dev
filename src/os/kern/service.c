@@ -259,6 +259,7 @@ K2OSKERN_ServicePublish(
                 }
                 else
                 {
+                    pIFace->IfaceTreeNode.mUserVal = (UINT32)-1;
                     K2TREE_Insert(&gData.IfaceTree, (UINT32)pIFace, &pIFace->IfaceTreeNode);
                     pUse = pIFace;
                     pIFace = NULL;
