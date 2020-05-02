@@ -353,6 +353,7 @@ K2OSKERN_ReflectNotify(
 #define SYSMSG_OPCODE_HIGH          0xFEED0000
 #define SYSMSG_OPCODE_HIGH_MASK     0xFFFFF000
 #define SYSMSG_OPCODE_THREAD_EXIT   (SYSMSG_OPCODE_HIGH + 0)
+#define SYSMSG_OPCODE_SVC_CALL      (SYSMSG_OPCODE_HIGH + 1)
 
 //
 //------------------------------------------------------------------------
@@ -437,13 +438,13 @@ typedef struct _K2OSKERN_SVC_MSGIO K2OSKERN_SVC_MSGIO;
 struct _K2OSKERN_SVC_MSGIO
 {
     K2STAT          mSvcOpCode;
-    void *          PublishContext;
+    void *          mpSvcContext;
     UINT32          mCallCmd;
     void const *    mpInBuf;
     UINT32          mInBufBytes;
     void *          mpOutBuf;
     UINT32          mOutBufBytes;
-    UINT32 *        mpRetActualOut;
+    UINT32          mRetActualOut;
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_SVC_MSGIO) == sizeof(K2OS_MSGIO));
 
