@@ -941,6 +941,8 @@ struct _K2OSKERN_OBJ_PUBLISH
     K2OSKERN_OBJ_HEADER     Hdr;
     K2OSKERN_OBJ_SERVICE *  mpService;
     K2OSKERN_IFACE *        mpIFace;
+    void *                  mpContext;
+    K2TREE_NODE             IfInstTreeNode; // interface instance id is the node's userval
     K2LIST_LINK             ServicePublishListLink;
     K2LIST_LINK             IfacePublishListLink;
 };
@@ -1190,6 +1192,8 @@ struct _KERN_DATA
     K2OSKERN_SEQLOCK                    ServTreeSeqLock;
     K2TREE_ANCHOR                       ServTree;
     K2TREE_ANCHOR                       IfaceTree;
+    UINT32                              mLastIfInstId;
+    K2TREE_ANCHOR                       IfInstTree;
 
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
@@ -1435,7 +1439,7 @@ void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 
 /* --------------------------------------------------------------------------------- */
 
-void   KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, BOOL aIsArrival);
+void   KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, UINT32 aIfInstanceId, BOOL aIsArrival);
 void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
 
 void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);

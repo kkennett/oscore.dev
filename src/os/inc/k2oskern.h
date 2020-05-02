@@ -422,13 +422,20 @@ K2OSKERN_ServiceGetInstanceId(
 K2OS_TOKEN
 K2OSKERN_ServicePublish(
     K2OS_TOKEN          aTokService,
-    K2_GUID128 const *  apInterfaceId
+    K2_GUID128 const *  apInterfaceId,
+    void *              apContext,
+    UINT32 *            apRetInstanceId
 );
 // destroy token to unpublish
 
+UINT32
+K2OSKERN_PublishGetInstanceId(
+    K2OS_TOKEN  aTokPublish
+);
+
 K2STAT
 K2OSKERN_ServiceCall(
-    UINT32          aServiceInstanceId,
+    UINT32          aInterfaceInstanceId,
     UINT32          aCallCmd,
     void const *    apInBuf,
     UINT32          aInBufBytes,
@@ -441,21 +448,51 @@ typedef struct _K2OSKERN_SVC_MSGIO K2OSKERN_SVC_MSGIO;
 struct _K2OSKERN_SVC_MSGIO
 {
     K2STAT          mSvcOpCode;
-    void *          mpSvcContext;
+    void *          mpServiceContext;
+    void *          mpPublishContext;
     UINT32          mCallCmd;
     void const *    mpInBuf;
     UINT32          mInBufBytes;
     void *          mpOutBuf;
     UINT32          mOutBufBytes;
-    UINT32          mRetActualOut;
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_SVC_MSGIO) == sizeof(K2OS_MSGIO));
 
+//
+// enumerate services that publish a specific interface
+//
 BOOL
 K2OSKERN_ServiceEnum(
     K2_GUID128 const *  apInterfaceId,
     UINT32 *            apIoCount,
     UINT32 *            apRetServiceInstanceIds
+);
+
+//
+// enumerate interfaces published by a specific service
+//
+BOOL
+K2OSKERN_ServiceInterfaceEnum(
+    UINT32          aServiceInstanceId,
+    UINT32 *        apIoCount,
+    K2_GUID128 *    apRetInterfaceIds
+);
+
+//
+// enumerate all published instances of a particular interface
+//
+typedef struct K2OSKERN_SVC_IFINST K2OSKERN_SVC_IFINST;
+struct K2OSKERN_SVC_IFINST
+{
+    UINT32  mServiceInstanceId;
+    UINT32  mInterfaceInstanceId;
+};
+
+BOOL
+K2OSKERN_InterfaceInstanceEnum(
+    K2_GUID128 const *      apInterfaceId,
+    UINT32 *                apIoCount,
+    K2OSKERN_SVC_IFINST *   apRetInst
 );
 
 //

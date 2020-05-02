@@ -90,7 +90,7 @@ K2OSKERN_NotifyAbortMsgs(
     return FALSE;
 }
 
-void KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, BOOL aIsArrival)
+void KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, UINT32 aIfInstanceId, BOOL aIsArrival)
 {
     K2_ASSERT(0);
 }

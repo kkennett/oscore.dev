@@ -177,7 +177,9 @@ K2OSKERN_ServiceGetInstanceId(
 K2OS_TOKEN
 K2OSKERN_ServicePublish(
     K2OS_TOKEN          aTokService,
-    K2_GUID128 const *  apInterfaceId
+    K2_GUID128 const *  apInterfaceId,
+    void *              apContext,
+    UINT32 *            apRetInstanceId
 )
 {
     K2STAT                  stat;
@@ -192,13 +194,17 @@ K2OSKERN_ServicePublish(
     K2OSKERN_IFACE *        pUse;
     K2TREE_NODE *           pTreeNode;
     UINT32                  svcInstanceId;
+    UINT32                  ifInstanceId;
 
     if ((aTokService == NULL) ||
-        (apInterfaceId == NULL))
+        (apInterfaceId == NULL) ||
+        (apRetInstanceId == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return FALSE;
     }
+
+    *apRetInstanceId = ifInstanceId = 0;
 
     K2MEM_Copy(&guid, apInterfaceId, sizeof(K2_GUID128));
 
@@ -242,6 +248,7 @@ K2OSKERN_ServicePublish(
                 K2LIST_Init(&pPublish->Hdr.WaitEntryPrioList);
 
                 pPublish->mpService = pSvc;
+                pPublish->mpContext = apContext;
 
                 disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
@@ -261,11 +268,15 @@ K2OSKERN_ServicePublish(
                 pPublish->mpIFace = pUse;
                 K2LIST_AddAtTail(&pUse->PublishList, &pPublish->IfacePublishListLink);
                 K2LIST_AddAtTail(&pSvc->PublishList, &pPublish->ServicePublishListLink);
+                ifInstanceId = ++gData.mLastIfInstId;
+                pPublish->IfInstTreeNode.mUserVal = ifInstanceId;
+                K2TREE_Insert(&gData.IfInstTree, pPublish->IfInstTreeNode.mUserVal, &pPublish->IfInstTreeNode);
 
                 stat = KernObj_Add(&pPublish->Hdr, NULL);
                 if (K2STAT_IS_ERROR(stat))
                 {
                     pPublish->mpIFace = NULL;
+                    K2TREE_Remove(&gData.IfInstTree, &pPublish->IfInstTreeNode);
                     K2LIST_Remove(&pSvc->PublishList, &pPublish->ServicePublishListLink);
                     K2LIST_Remove(&pUse->PublishList, &pPublish->IfacePublishListLink);
                     if (pTreeNode != &pUse->IfaceTreeNode)
@@ -322,9 +333,48 @@ K2OSKERN_ServicePublish(
 
     K2_ASSERT(tokPublish != NULL);
 
-    KernNotify_IFaceChange(&guid, svcInstanceId, TRUE);
+    *apRetInstanceId = ifInstanceId;
+
+    KernNotify_IFaceChange(&guid, svcInstanceId, ifInstanceId, TRUE);
 
     return tokPublish;
+}
+
+UINT32
+K2OSKERN_PublishGetInstanceId(
+    K2OS_TOKEN  aTokPublish
+)
+{
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_PUBLISH *  pPublish;
+    UINT32                  result;
+
+    if (aTokPublish == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return 0;
+    }
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokPublish, (K2OSKERN_OBJ_HEADER **)&pPublish);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pPublish->Hdr.mObjType != K2OS_Obj_Publish)
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        else
+            result = pPublish->IfInstTreeNode.mUserVal;
+    }
+
+    stat2 = KernObj_Release(&pPublish->Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return 0;
+    }
+
+    return result;
 }
 
 void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
@@ -345,9 +395,15 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
     KernNotify_IFaceChange(
         &apPublish->mpIFace->InterfaceId, 
         apPublish->mpService->ServTreeNode.mUserVal, 
+        apPublish->IfInstTreeNode.mUserVal,
         FALSE);
 
     disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+    //
+    // detach from interface tree
+    //
+    K2TREE_Remove(&gData.IfInstTree, &apPublish->IfInstTreeNode);
 
     //
     // detach from Interface
@@ -390,7 +446,7 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
 
 K2STAT
 K2OSKERN_ServiceCall(
-    UINT32          aServiceInstanceId,
+    UINT32          aInterfaceInstanceId,
     UINT32          aCallCmd,
     void const *    apInBuf,
     UINT32          aInBufBytes,
@@ -403,6 +459,7 @@ K2OSKERN_ServiceCall(
     K2OS_MSGIO              msgIo;
     K2OSKERN_SVC_MSGIO *    pCall;
     K2OSKERN_OBJ_SERVICE *  pSvc;
+    K2OSKERN_OBJ_PUBLISH *  pPublish;
     BOOL                    disp;
     K2STAT                  stat;
     K2STAT                  stat2;
@@ -429,22 +486,17 @@ K2OSKERN_ServiceCall(
     pCall->mInBufBytes = aInBufBytes;
     pCall->mpOutBuf = apOutBuf;
     pCall->mOutBufBytes = aOutBufBytes;
-    pCall->mRetActualOut = 0;
 
     do {
         disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
-        pTreeNode = K2TREE_Find(&gData.ServTree, aServiceInstanceId);
+        pTreeNode = K2TREE_Find(&gData.IfInstTree, aInterfaceInstanceId);
         if (pTreeNode != NULL)
         {
-            pSvc = K2_GET_CONTAINER(K2OSKERN_OBJ_SERVICE, pTreeNode, ServTreeNode);
+            pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pTreeNode, IfInstTreeNode);
 
-            stat = KernObj_AddRef(&pSvc->Hdr);
-            if (!K2STAT_IS_ERROR(stat))
-            {
-                pCall->mpSvcContext = pSvc->mpContext;
-            }
-            else
+            stat = KernObj_AddRef(&pPublish->Hdr);
+            if (K2STAT_IS_ERROR(stat))
                 pTreeNode = NULL;
         }
 
@@ -452,7 +504,15 @@ K2OSKERN_ServiceCall(
 
         if (pTreeNode != NULL)
         {
-            K2_ASSERT(pSvc != NULL);
+            K2_ASSERT(pPublish != NULL);
+
+            //
+            // pSvc cannot disappear since we are holding reference to publish
+            // which holds a reference to the service
+            //
+            pSvc = pPublish->mpService;
+            pCall->mpServiceContext = pSvc->mpContext;
+            pCall->mpPublishContext = pPublish->mpContext;
 
             stat = KernMsg_Send(pSvc->mpSlot, pMsg, &msgIo, TRUE);
             if (!K2STAT_IS_ERROR(stat))
@@ -473,13 +533,16 @@ K2OSKERN_ServiceCall(
                         if (!K2STAT_IS_ERROR(stat))
                         {
                             if (apRetActualOut != NULL)
-                                *apRetActualOut = pCall->mRetActualOut;
+                            {
+                                K2_ASSERT(msgIo.mPayload[0] <= aOutBufBytes);
+                                *apRetActualOut = msgIo.mPayload[0];
+                            }
                         }
                     }
                 }
             }
 
-            stat2 = KernObj_Release(&pSvc->Hdr);
+            stat2 = KernObj_Release(&pPublish->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
         else
@@ -502,15 +565,20 @@ K2OSKERN_ServiceEnum(
 {
     UINT32                  ioCount;
     BOOL                    disp;
-    K2OSKERN_IFACE          iFace;
-    K2OSKERN_IFACE *        pIFace;
     K2TREE_NODE *           pTreeNode;
     K2LIST_LINK *           pListLink;
-    K2OSKERN_OBJ_SERVICE *  pSvc;
     K2OSKERN_OBJ_PUBLISH *  pPublish;
+    K2OSKERN_OBJ_SERVICE *  pSvc;
     K2STAT                  stat;
+    K2_GUID128              guid;
+    UINT32                  actualCount;
 
-    if (apIoCount == NULL)
+    //
+    // enumerate services that publish a specific interface
+    //
+
+    if ((apInterfaceId == NULL) ||
+        (apIoCount == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return FALSE;
@@ -522,80 +590,172 @@ K2OSKERN_ServiceEnum(
         return TRUE;
     }
 
-    if (apInterfaceId != NULL)
-        K2MEM_Copy(&iFace.InterfaceId, apInterfaceId, sizeof(K2_GUID128));
-    
     ioCount = *apIoCount;
+
+    if (ioCount == 0)
+        apRetServiceInstanceIds = NULL;
+    else if (apRetServiceInstanceIds == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Copy(&guid, apInterfaceId, sizeof(K2_GUID128));
 
     stat = K2STAT_NO_ERROR;
 
+    actualCount = 0;
+
     disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
-    if (apInterfaceId == NULL)
+    pTreeNode = K2TREE_FirstNode(&gData.ServTree);
+    if (pTreeNode != NULL)
     {
-        //
-        // enum all services in the system
-        //
-        if ((ioCount < gData.ServTree.mNodeCount) ||
+        do {
+            pSvc = K2_GET_CONTAINER(K2OSKERN_OBJ_SERVICE, pTreeNode, ServTreeNode);
+            pListLink = pSvc->PublishList.mpHead;
+            if (pListLink != NULL)
+            {
+                do {
+                    pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pListLink, ServicePublishListLink);
+                    pListLink = pListLink->mpNext;
+                    if (0 == K2MEM_Compare(&pPublish->mpIFace->InterfaceId, &guid, sizeof(K2_GUID128)))
+                    {
+                        actualCount++;
+                        break;
+                    }
+                } while (pListLink != NULL);
+            }
+            pTreeNode = K2TREE_NextNode(&gData.ServTree, pTreeNode);
+        } while (pTreeNode != NULL);
+
+        if ((ioCount < actualCount) ||
             (apRetServiceInstanceIds == NULL))
         {
-            ioCount = gData.ServTree.mNodeCount;
+            ioCount = actualCount;
             stat = K2STAT_ERROR_TOO_SMALL;
         }
         else
         {
             ioCount = 0;
             pTreeNode = K2TREE_FirstNode(&gData.ServTree);
+            K2_ASSERT(pTreeNode != NULL);
             do {
                 pSvc = K2_GET_CONTAINER(K2OSKERN_OBJ_SERVICE, pTreeNode, ServTreeNode);
+                pListLink = pSvc->PublishList.mpHead;
+                if (pListLink != NULL)
+                {
+                    do {
+                        pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pListLink, ServicePublishListLink);
+                        pListLink = pListLink->mpNext;
+                        if (0 == K2MEM_Compare(&pPublish->mpIFace->InterfaceId, &guid, sizeof(K2_GUID128)))
+                        {
+                            *apRetServiceInstanceIds = pSvc->ServTreeNode.mUserVal;
+                            ioCount++;
+                            break;
+                        }
+                    } while (pListLink != NULL);
+                }
                 pTreeNode = K2TREE_NextNode(&gData.ServTree, pTreeNode);
-                *apRetServiceInstanceIds = pSvc->ServTreeNode.mUserVal;
-                apRetServiceInstanceIds++;
-                ioCount++;
             } while (pTreeNode != NULL);
+
+            K2_ASSERT(ioCount == actualCount);
         }
     }
-    else
+
+    K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+    if (pTreeNode == NULL)
     {
         //
-        // enum all the services that publish the specified interface
+        // no services found
         //
-        pTreeNode = K2TREE_Find(&gData.IfaceTree, (UINT32)&iFace);
-        if (pTreeNode != NULL)
+        ioCount = 0;
+    }
+
+    *apIoCount = ioCount;
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+BOOL
+K2OSKERN_ServiceInterfaceEnum(
+    UINT32          aServiceInstanceId,
+    UINT32 *        apIoCount,
+    K2_GUID128 *    apRetInterfaceIds
+)
+{
+    UINT32                  ioCount;
+    BOOL                    disp;
+    K2OSKERN_OBJ_SERVICE *  pSvc;
+    K2TREE_NODE *           pTreeNode;
+    K2LIST_LINK *           pListLink;
+    K2OSKERN_OBJ_PUBLISH *  pPublish;
+    K2STAT                  stat;
+
+    //
+    // enumerate interfaces published by a specific service
+    //
+
+    if (apIoCount == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    ioCount = *apIoCount;
+
+    if (ioCount == 0)
+        apRetInterfaceIds = NULL;
+    else if (apRetInterfaceIds == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    stat = K2STAT_NO_ERROR;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gData.ServTree, aServiceInstanceId);
+    if (pTreeNode != NULL)
+    {
+        pSvc = K2_GET_CONTAINER(K2OSKERN_OBJ_SERVICE, pTreeNode, ServTreeNode);
+        if ((ioCount < pSvc->PublishList.mNodeCount) ||
+            (apRetInterfaceIds == NULL))
         {
-            pIFace = K2_GET_CONTAINER(K2OSKERN_IFACE, pTreeNode, IfaceTreeNode);
-            K2_ASSERT(pIFace->PublishList.mNodeCount > 0);
-            if ((ioCount < pIFace->PublishList.mNodeCount) ||
-                (apRetServiceInstanceIds == NULL))
-            {
-                ioCount = pIFace->PublishList.mNodeCount;
-                stat = K2STAT_ERROR_TOO_SMALL;
-            }
-            else
-            {
-                ioCount = 0;
-                pListLink = pIFace->PublishList.mpHead;
-                K2_ASSERT(pListLink != NULL);
-                do {
-                    pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pListLink, IfacePublishListLink);
-                    pListLink = pListLink->mpNext;
-                    *apRetServiceInstanceIds = pPublish->mpService->ServTreeNode.mUserVal;
-                    apRetServiceInstanceIds++;
-                    ioCount++;
-                } while (pListLink != NULL);
-            }
+            ioCount = pSvc->PublishList.mNodeCount;
+            stat = K2STAT_ERROR_TOO_SMALL;
         }
-
-        K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
-
-        if (pTreeNode == NULL)
+        else
         {
-            //
-            // no interface with that id found
-            //
             ioCount = 0;
-            stat = K2STAT_ERROR_NOT_FOUND;
+            pListLink = pSvc->PublishList.mpHead;
+            K2_ASSERT(pListLink != NULL);
+            do {
+                pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pListLink, ServicePublishListLink);
+                pListLink = pListLink->mpNext;
+                K2MEM_Copy(apRetInterfaceIds, &pPublish->mpIFace->InterfaceId, sizeof(K2_GUID128));
+                apRetInterfaceIds++;
+                ioCount++;
+            } while (pListLink != NULL);
         }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+    if (pTreeNode == NULL)
+    {
+        //
+        // no interface with that id found
+        //
+        ioCount = 0;
     }
 
     *apIoCount = ioCount;
@@ -644,4 +804,102 @@ void KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService)
         check = K2OS_HeapFree(apService);
         K2_ASSERT(check);
     }
+}
+
+BOOL
+K2OSKERN_InterfaceInstanceEnum(
+    K2_GUID128 const *      apInterfaceId,
+    UINT32 *                apIoCount,
+    K2OSKERN_SVC_IFINST *   apRetInst
+)
+{
+    UINT32                  ioCount;
+    BOOL                    disp;
+    K2OSKERN_IFACE          iFace;
+    K2OSKERN_IFACE *        pIFace;
+    K2TREE_NODE *           pTreeNode;
+    K2LIST_LINK *           pListLink;
+    K2OSKERN_OBJ_PUBLISH *  pPublish;
+    K2STAT                  stat;
+
+    //
+    // enumerate all published instances of a particular interface
+    //
+    if ((apInterfaceId == NULL) ||
+        (apIoCount == NULL))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    if (gData.IfInstTree.mNodeCount == 0)
+    {
+        *apIoCount = 0;
+        return TRUE;
+    }
+
+    ioCount = *apIoCount;
+
+    if (ioCount == 0)
+        apRetInst = NULL;
+    else if (apRetInst == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    K2MEM_Copy(&iFace.InterfaceId, apInterfaceId, sizeof(K2_GUID128));
+
+    stat = K2STAT_NO_ERROR;
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+    pTreeNode = K2TREE_Find(&gData.IfaceTree, (UINT32)&iFace);
+    if (pTreeNode != NULL)
+    {
+        pIFace = K2_GET_CONTAINER(K2OSKERN_IFACE, pTreeNode, IfaceTreeNode);
+        K2_ASSERT(pIFace->PublishList.mNodeCount > 0);
+        K2_ASSERT(0 == K2MEM_Compare(&iFace.InterfaceId, &pIFace->InterfaceId, sizeof(K2_GUID128)));
+
+        if ((ioCount < pIFace->PublishList.mNodeCount) ||
+            (apRetInst == NULL))
+        {
+            ioCount = pIFace->PublishList.mNodeCount;
+            stat = K2STAT_ERROR_TOO_SMALL;
+        }
+        else
+        {
+            ioCount = 0;
+            pListLink = pIFace->PublishList.mpHead;
+            K2_ASSERT(pListLink != NULL);
+            do {
+                pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pListLink, IfacePublishListLink);
+                pListLink = pListLink->mpNext;
+                apRetInst->mServiceInstanceId = pPublish->mpService->ServTreeNode.mUserVal;
+                apRetInst->mInterfaceInstanceId = pPublish->IfInstTreeNode.mUserVal;
+                apRetInst++;
+                ioCount++;
+            } while (pListLink != NULL);
+        }
+    }
+
+    K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+    if (pTreeNode == NULL)
+    {
+        //
+        // no interface with that id found
+        //
+        ioCount = 0;
+    }
+
+    *apIoCount = ioCount;
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return FALSE;
+    }
+
+    return TRUE;
 }
