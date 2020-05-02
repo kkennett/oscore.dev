@@ -403,6 +403,10 @@ struct _K2OSKERN_NOTIFY_MSGIO
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_NOTIFY_MSGIO) == sizeof(K2OS_MSGIO));
 
+//
+//------------------------------------------------------------------------
+//
+
 K2OS_TOKEN
 K2OSKERN_ServiceCreate(
     K2OS_TOKEN  aTokMailslot,
@@ -418,8 +422,7 @@ K2OSKERN_ServiceGetInstanceId(
 K2OS_TOKEN
 K2OSKERN_ServicePublish(
     K2OS_TOKEN          aTokService,
-    K2_GUID128 const *  apInterfaceId,
-    void *              apContext
+    K2_GUID128 const *  apInterfaceId
 );
 // destroy token to unpublish
 

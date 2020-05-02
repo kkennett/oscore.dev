@@ -940,7 +940,6 @@ struct _K2OSKERN_OBJ_PUBLISH
 {
     K2OSKERN_OBJ_HEADER     Hdr;
     K2OSKERN_OBJ_SERVICE *  mpService;
-    void *                  mpContext;
     K2OSKERN_IFACE *        mpIFace;
     K2LIST_LINK             ServicePublishListLink;
     K2LIST_LINK             IfacePublishListLink;
@@ -1436,10 +1435,15 @@ void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 
 /* --------------------------------------------------------------------------------- */
 
+void   KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, BOOL aIsArrival);
 void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
+
 void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
+
 void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
+
 void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
+
 
 /* --------------------------------------------------------------------------------- */
 

@@ -177,8 +177,7 @@ K2OSKERN_ServiceGetInstanceId(
 K2OS_TOKEN
 K2OSKERN_ServicePublish(
     K2OS_TOKEN          aTokService,
-    K2_GUID128 const *  apInterfaceId,
-    void *              apContext
+    K2_GUID128 const *  apInterfaceId
 )
 {
     K2STAT                  stat;
@@ -192,6 +191,7 @@ K2OSKERN_ServicePublish(
     K2OSKERN_IFACE *        pIFace;
     K2OSKERN_IFACE *        pUse;
     K2TREE_NODE *           pTreeNode;
+    UINT32                  svcInstanceId;
 
     if ((aTokService == NULL) ||
         (apInterfaceId == NULL))
@@ -211,6 +211,8 @@ K2OSKERN_ServicePublish(
                 stat = K2STAT_ERROR_BAD_TOKEN;
                 break;
             }
+
+            svcInstanceId = pSvc->ServTreeNode.mUserVal;
 
             pIFace = (K2OSKERN_IFACE *)K2OS_HeapAlloc(sizeof(K2OSKERN_IFACE));
             if (pIFace == NULL)
@@ -240,7 +242,6 @@ K2OSKERN_ServicePublish(
                 K2LIST_Init(&pPublish->Hdr.WaitEntryPrioList);
 
                 pPublish->mpService = pSvc;
-                pPublish->mpContext = apContext;
 
                 disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
@@ -321,6 +322,8 @@ K2OSKERN_ServicePublish(
 
     K2_ASSERT(tokPublish != NULL);
 
+    KernNotify_IFaceChange(&guid, svcInstanceId, TRUE);
+
     return tokPublish;
 }
 
@@ -338,6 +341,11 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
     K2_ASSERT(apPublish->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
     check = !(apPublish->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    KernNotify_IFaceChange(
+        &apPublish->mpIFace->InterfaceId, 
+        apPublish->mpService->ServTreeNode.mUserVal, 
+        FALSE);
 
     disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
