@@ -53,11 +53,6 @@ K2OSKERN_UnmapDevice
 K2OSKERN_InstallIntrHandler
 K2OSKERN_Esc
 K2OSKERN_ReflectNotify
-K2OSKERN_CreateNotify
-K2OSKERN_NotifySubscribe
-K2OSKERN_NotifyEnum
-K2OSKERN_NotifyAddMsgs
-K2OSKERN_NotifyAbortMsgs
 K2OSKERN_ServiceCreate
 K2OSKERN_ServiceGetInstanceId
 K2OSKERN_ServicePublish
@@ -66,6 +61,7 @@ K2OSKERN_ServiceCall
 K2OSKERN_ServiceEnum
 K2OSKERN_ServiceInterfaceEnum
 K2OSKERN_InterfaceInstanceEnum
+K2OSKERN_InterfaceSubscribe
 
 #
 # Generic entry for K2OS functions when running in Kernel
@@ -151,7 +147,11 @@ K2OS_VirtPagesSetLock
 K2OS_VirtPagesFree
 K2OS_TimeGet
 K2OS_TimeSet
-
+K2OS_DlxLoad
+K2OS_DlxAcquireFile
+K2OS_DlxGetId
+K2OS_DlxFindExport
+K2OS_DlxAcquireAddressOwner
 
 [Data]
 gpK2OSKERN_CacheInfo

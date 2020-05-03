@@ -94,10 +94,9 @@ enum _K2OS_ObjectType
     K2OS_Obj_Mailslot = 10,
     K2OS_Obj_Msg = 11,
     K2OS_Obj_Interrupt = 12,
-    K2OS_Obj_Notify = 13,
-    K2OS_Obj_Subscrip = 14,
-    K2OS_Obj_Service = 15,
-    K2OS_Obj_Publish = 16
+    K2OS_Obj_Service = 13,
+    K2OS_Obj_Publish = 14,
+    K2OS_Obj_Subscrip = 15
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
@@ -421,9 +420,10 @@ BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsProvVolEnum(K2OS_FS_TOKEN aTokFs
 
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_FsAcquireRootDir(K2_GUID128 const *apVolId);
 
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirGetVolId(K2OS_DIR_TOKEN aTokDir, K2_GUID128 *apRetVolId);
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirCreateSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, BOOL aForce);
-K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireParennt(K2OS_DIR_TOKEN aTokDir);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireParent(K2OS_DIR_TOKEN aTokDir);
 
 BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirDeleteSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
 
@@ -453,11 +453,11 @@ K2OS_PATH_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_PathAcquireByName(K2OS_TOKEN aTokN
 //------------------------------------------------------------------------
 //
 
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId);
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx);
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apRetId);
-void *     K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aDlxSeg, char const *apExportName);
-K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress, UINT32 *apRetSegment);
+K2OS_TOKEN      K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId);
+K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apRetId);
+void *          K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aDlxSeg, char const *apExportName);
+K2OS_TOKEN      K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress, UINT32 *apRetSegment);
 
 //
 //------------------------------------------------------------------------

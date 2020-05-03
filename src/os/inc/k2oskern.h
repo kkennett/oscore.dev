@@ -360,54 +360,6 @@ K2OSKERN_ReflectNotify(
 //
 
 K2OS_TOKEN
-K2OSKERN_CreateNotify(
-    K2OS_TOKEN          aTokMailslot,
-    UINT32              aMsgsCount,
-    K2OS_TOKEN const *  apTokMsgs
-);
-
-K2OS_TOKEN
-K2OSKERN_NotifySubscribe(
-    K2OS_TOKEN          aTokNotify,
-    K2_GUID128 const *  apInterfaceId,
-    void *              apContext
-);
-
-BOOL
-K2OSKERN_NotifyEnum(
-    K2OS_TOKEN          aTokNotify,
-    UINT32 *            apIoCount,
-    K2_GUID128 *        apRetInterfaceIds
-);
-
-BOOL
-K2OSKERN_NotifyAddMsgs(
-    K2OS_TOKEN          aTokNotify,
-    UINT32              aMsgsCount,
-    K2OS_TOKEN const *  apTokMsgs
-);
-
-BOOL
-K2OSKERN_NotifyAbortMsgs(
-    K2OS_TOKEN          aTokNotify
-);
-
-typedef struct _K2OSKERN_NOTIFY_MSGIO K2OSKERN_NOTIFY_MSGIO;
-struct _K2OSKERN_NOTIFY_MSGIO
-{
-    K2STAT      mStatus;
-    void *      mpSubscribeContext;
-    K2_GUID128  InterfaceId;
-    UINT32      mServiceInstanceId;
-    UINT32      mUnused;
-};
-K2_STATIC_ASSERT(sizeof(K2OSKERN_NOTIFY_MSGIO) == sizeof(K2OS_MSGIO));
-
-//
-//------------------------------------------------------------------------
-//
-
-K2OS_TOKEN
 K2OSKERN_ServiceCreate(
     K2OS_TOKEN  aTokMailslot,
     void *      apContext,
@@ -493,6 +445,22 @@ K2OSKERN_InterfaceInstanceEnum(
     K2_GUID128 const *      apInterfaceId,
     UINT32 *                apIoCount,
     K2OSKERN_SVC_IFINST *   apRetInst
+);
+
+typedef 
+void 
+(*K2OSKERN_of_IFaceSubscripCallback)(
+    K2_GUID128 const *          apInterfaceId, 
+    void *                      apContext, 
+    K2OSKERN_SVC_IFINST const * apInterfaceInstance,
+    BOOL                        aIsArrival
+    );
+
+K2OS_TOKEN
+K2OSKERN_InterfaceSubscribe(
+    K2_GUID128 const *                  apInterfaceId,
+    K2OSKERN_of_IFaceSubscripCallback   afCallback,
+    void *                              apContext
 );
 
 //

@@ -51,7 +51,7 @@ K2OSKERN_ServiceCreate(
         (apRetInstanceId == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return FALSE;
+        return NULL;
     }
 
     stat = KernTok_TranslateToAddRefObjs(1, &aTokMailslot, (K2OSKERN_OBJ_HEADER **)&pMailslot);
@@ -111,7 +111,7 @@ K2OSKERN_ServiceCreate(
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
-        return FALSE;
+        return NULL;
     }
 
     //
@@ -127,7 +127,7 @@ K2OSKERN_ServiceCreate(
         stat2 = KernObj_Release(&pSvc->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         K2OS_ThreadSetStatus(stat);
-        return FALSE;
+        return NULL;
     }
 
     *apRetInstanceId = pSvc->ServTreeNode.mUserVal;
@@ -201,7 +201,7 @@ K2OSKERN_ServicePublish(
         (apRetInstanceId == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return FALSE;
+        return NULL;
     }
 
     *apRetInstanceId = ifInstanceId = 0;
@@ -230,6 +230,7 @@ K2OSKERN_ServicePublish(
             do {
                 K2MEM_Copy(&pIFace->InterfaceId, &guid, sizeof(K2_GUID128));
                 K2LIST_Init(&pIFace->PublishList);
+                K2LIST_Init(&pIFace->SubscripList);
                 K2MEM_Zero(&pIFace->IfaceTreeNode, sizeof(K2TREE_NODE));
 
                 pPublish = (K2OSKERN_OBJ_PUBLISH *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_PUBLISH));
@@ -285,6 +286,7 @@ K2OSKERN_ServicePublish(
                         // restore so it will get freed
                         pIFace = pUse;
                         K2_ASSERT(pIFace->PublishList.mNodeCount == 0);
+                        K2_ASSERT(pIFace->SubscripList.mNodeCount == 0);
                         K2TREE_Remove(&gData.IfaceTree, &pIFace->IfaceTreeNode);
                     }
                 }
@@ -313,7 +315,7 @@ K2OSKERN_ServicePublish(
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
-        return FALSE;
+        return NULL;
     }
 
     //
@@ -329,14 +331,17 @@ K2OSKERN_ServicePublish(
         stat2 = KernObj_Release(&pPublish->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         K2OS_ThreadSetStatus(stat);
-        return FALSE;
+        return NULL;
     }
 
     K2_ASSERT(tokPublish != NULL);
 
     *apRetInstanceId = ifInstanceId;
 
+    K2OSKERN_Debug("NOTIFY: %d", svcInstanceId);
+#if 0
     KernNotify_IFaceChange(&guid, svcInstanceId, ifInstanceId, TRUE);
+#endif
 
     return tokPublish;
 }
@@ -393,11 +398,14 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
 
     check = !(apPublish->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 
+    K2OSKERN_Debug("NOTIFY: %d\n", apPublish->mpService->ServTreeNode.mUserVal);
+#if 0
     KernNotify_IFaceChange(
         &apPublish->mpIFace->InterfaceId, 
         apPublish->mpService->ServTreeNode.mUserVal, 
         apPublish->IfInstTreeNode.mUserVal,
         FALSE);
+#endif
 
     disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
@@ -411,7 +419,8 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
     //
     pIFace = apPublish->mpIFace;
     K2LIST_Remove(&pIFace->PublishList, &apPublish->IfacePublishListLink);
-    if (pIFace->PublishList.mNodeCount == 0)
+    if ((pIFace->PublishList.mNodeCount == 0) &&
+        (pIFace->SubscripList.mNodeCount == 0))
     {
         K2TREE_Remove(&gData.IfaceTree, &pIFace->IfaceTreeNode);
     }
@@ -903,4 +912,199 @@ K2OSKERN_InterfaceInstanceEnum(
     }
 
     return TRUE;
+}
+
+K2OS_TOKEN
+K2OSKERN_InterfaceSubscribe(
+    K2_GUID128 const *                  apInterfaceId,
+    K2OSKERN_of_IFaceSubscripCallback   afCallback,
+    void *                              apContext
+)
+{
+    BOOL                    disp;
+    K2OS_TOKEN              tokSubscrip;
+    K2OSKERN_IFACE          iFace;
+    K2OSKERN_IFACE *        pIFace;
+    K2OSKERN_IFACE *        pUse;
+    K2OSKERN_OBJ_SUBSCRIP * pSubscrip;
+    UINT32                  callbackSegment;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2TREE_NODE *           pTreeNode;
+
+    if ((apInterfaceId == NULL) ||
+        (afCallback == NULL))
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return NULL;
+    }
+
+    K2MEM_Copy(&iFace.InterfaceId, apInterfaceId, sizeof(K2_GUID128));
+
+    pSubscrip = (K2OSKERN_OBJ_SUBSCRIP *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SUBSCRIP));
+    if (pSubscrip == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_OUT_OF_MEMORY);
+        return NULL;
+    }
+
+    do {
+        K2MEM_Zero(pSubscrip, sizeof(K2OSKERN_OBJ_SUBSCRIP));
+
+        pSubscrip->Hdr.mObjType = K2OS_Obj_Subscrip;
+        pSubscrip->Hdr.mObjFlags = 0;
+        pSubscrip->Hdr.mpName = NULL;
+        pSubscrip->Hdr.mRefCount = 1;
+        K2LIST_Init(&pSubscrip->Hdr.WaitEntryPrioList);
+
+        callbackSegment = (UINT32)-1;
+        pSubscrip->mTokDlxOwningCallback = K2OS_DlxAcquireAddressOwner((UINT32)afCallback, &callbackSegment);
+        if ((pSubscrip->mTokDlxOwningCallback == NULL) ||
+            (callbackSegment != DlxSeg_Text))
+        {
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+            break;
+        }
+
+        do {
+            pSubscrip->Callback.mfFunc = afCallback;
+            pSubscrip->Callback.mpContext = apContext;
+
+            pIFace = (K2OSKERN_IFACE *)K2OS_HeapAlloc(sizeof(K2OSKERN_IFACE));
+            if (pIFace == NULL)
+            {
+                stat = K2STAT_ERROR_OUT_OF_MEMORY;
+                break;
+            }
+
+            K2MEM_Copy(&pIFace->InterfaceId, &iFace.InterfaceId, sizeof(K2_GUID128));
+            K2LIST_Init(&pIFace->PublishList);
+            K2LIST_Init(&pIFace->SubscripList);
+            K2MEM_Zero(&pIFace->IfaceTreeNode, sizeof(K2TREE_NODE));
+
+            disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+            pTreeNode = K2TREE_Find(&gData.IfaceTree, (UINT32)&iFace);
+            if (pTreeNode != NULL)
+            {
+                pUse = K2_GET_CONTAINER(K2OSKERN_IFACE, pTreeNode, IfaceTreeNode);
+            }
+            else
+            {
+                pIFace->IfaceTreeNode.mUserVal = (UINT32)-1;
+                K2TREE_Insert(&gData.IfaceTree, (UINT32)pIFace, &pIFace->IfaceTreeNode);
+                pUse = pIFace;
+                pIFace = NULL;
+            }
+            K2_ASSERT(0 == K2MEM_Compare(&pUse->InterfaceId, &iFace.InterfaceId, sizeof(K2_GUID128)));
+
+            pSubscrip->mpIFace = pUse;
+            K2LIST_AddAtTail(&pUse->SubscripList, &pSubscrip->IfaceSubscripListLink);
+
+            stat = KernObj_Add(&pSubscrip->Hdr, NULL);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                pSubscrip->mpIFace = NULL;
+                K2LIST_Remove(&pUse->SubscripList, &pSubscrip->IfaceSubscripListLink);
+                if (pTreeNode != &pUse->IfaceTreeNode)
+                {
+                    // restore so it will get freed
+                    pIFace = pUse;
+                    K2_ASSERT(pIFace->PublishList.mNodeCount == 0);
+                    K2_ASSERT(pIFace->SubscripList.mNodeCount == 0);
+                    K2TREE_Remove(&gData.IfaceTree, &pIFace->IfaceTreeNode);
+                }
+            }
+
+            K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+            if (pIFace != NULL)
+            {
+                K2OS_HeapFree(pIFace);
+            }
+
+        } while (0);
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_TokenDestroy(pSubscrip->mTokDlxOwningCallback);
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_HeapFree(pSubscrip);
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    //
+    // subscription done
+    // now create token
+    //
+
+    tokSubscrip = NULL;
+    pObjHdr = &pSubscrip->Hdr;
+    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokSubscrip);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        stat2 = KernObj_Release(&pSubscrip->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    K2_ASSERT(tokSubscrip != NULL);
+
+    return tokSubscrip;
+}
+
+void KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip)
+{
+    BOOL                    check;
+    BOOL                    disp;
+    K2OSKERN_IFACE *        pIFace;
+
+    K2_ASSERT(apSubscrip->Hdr.mObjType == K2OS_Obj_Subscrip);
+    K2_ASSERT(apSubscrip->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apSubscrip->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apSubscrip->Hdr.WaitEntryPrioList.mNodeCount == 0);
+
+    check = !(apSubscrip->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+    //
+    // detach from Interface
+    //
+    pIFace = apSubscrip->mpIFace;
+    K2LIST_Remove(&pIFace->SubscripList, &apSubscrip->IfaceSubscripListLink);
+    if ((pIFace->PublishList.mNodeCount == 0) &&
+        (pIFace->SubscripList.mNodeCount == 0))
+    {
+        K2TREE_Remove(&gData.IfaceTree, &pIFace->IfaceTreeNode);
+    }
+    else
+        pIFace = NULL;
+
+    K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+    K2OS_TokenDestroy(apSubscrip->mTokDlxOwningCallback);
+
+    if (pIFace != NULL)
+    {
+        K2MEM_Zero(pIFace, sizeof(K2OSKERN_IFACE));
+        check = K2OS_HeapFree(pIFace);
+        K2_ASSERT(check);
+    }
+
+    K2MEM_Zero(apSubscrip, sizeof(K2OSKERN_OBJ_SUBSCRIP));
+
+    if (check)
+    {
+        check = K2OS_HeapFree(apSubscrip);
+        K2_ASSERT(check);
+    }
 }

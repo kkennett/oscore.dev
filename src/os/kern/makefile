@@ -79,13 +79,13 @@ SOURCES += schedex_msg.c
 SOURCES += reflect.c
 SOURCES += alarm.c
 SOURCES += schedex_alarm.c
-SOURCES += notify.c
 SOURCES += service.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 
 SOURCES += osapi_critsec.c 
 SOURCES += osapi_debug.c 
+SOURCES += osapi_dlx.c
 SOURCES += osapi_event.c 
 SOURCES += osapi_heap.c 
 SOURCES += osapi_mailbox.c 

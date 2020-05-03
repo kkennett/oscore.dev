@@ -643,6 +643,7 @@ struct _K2OSKERN_OBJ_DLX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
     DLX *                   mpDlx;
+    K2OS_FILE_TOKEN         mTokFile;
     K2OSKERN_OBJ_SEGMENT    PageSeg;
     K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
 };
@@ -907,24 +908,13 @@ struct _K2OSKERN_OBJ_INTR
 
 /* --------------------------------------------------------------------------------- */
 
-struct _K2OSKERN_OBJ_NOTIFY
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-};
-
-struct _K2OSKERN_OBJ_SUBSCRIP
-{
-    K2OSKERN_OBJ_HEADER     Hdr;
-};
-
-/* --------------------------------------------------------------------------------- */
-
 typedef struct _K2OSKERN_IFACE K2OSKERN_IFACE;
 struct _K2OSKERN_IFACE
 {
     K2_GUID128      InterfaceId;    // GUID of the interface
-    K2LIST_ANCHOR   PublishList;    // List of PUBLISH objects for this service - IfacePublishListLink
-    K2TREE_NODE     IfaceTreeNode;  // Node on gData.IfaceTree.  Node's userval is unused.
+    K2LIST_ANCHOR   PublishList;    // List of PUBLISH objects for this interface - IfacePublishListLink
+    K2LIST_ANCHOR   SubscripList;   // list of SUBSCRIP objects for this interface - IfaceSubscripListLink
+    K2TREE_NODE     IfaceTreeNode;  // Node on gData.IfaceTree.  Node's userval is unused. Indexed on InterfaceId
 };
 
 struct _K2OSKERN_OBJ_SERVICE
@@ -951,6 +941,28 @@ struct _K2OSKERN_OBJ_PUBLISH
     K2OSKERN_IFACE *        mpIFace;                // points to interface this is an instance of
     K2LIST_LINK             IfacePublishListLink;   // link on IFACE.PublishList
 };
+
+typedef struct _K2OSKERN_SUBSCRIP_CALLBACK K2OSKERN_SUBSCRIP_CALLBACK;
+struct _K2OSKERN_SUBSCRIP_CALLBACK
+{
+    K2OSKERN_of_IFaceSubscripCallback   mfFunc;
+    void *                              mpContext;
+};
+
+struct _K2OSKERN_OBJ_SUBSCRIP
+{
+    K2OSKERN_OBJ_HEADER                 Hdr;
+
+    K2OS_TOKEN                          mTokDlxOwningCallback;
+    K2OSKERN_SUBSCRIP_CALLBACK          Callback;
+
+    K2OSKERN_IFACE *                    mpIFace;
+    K2LIST_LINK                         IfaceSubscripListLink;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1444,15 +1456,11 @@ void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 
 /* --------------------------------------------------------------------------------- */
 
-void   KernNotify_IFaceChange(K2_GUID128 const *apId, UINT32 aSvcInstanceId, UINT32 aIfInstanceId, BOOL aIsArrival);
-void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
-
-void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
+void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
 
 void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
 
-void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
-
+void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
 
 /* --------------------------------------------------------------------------------- */
 
