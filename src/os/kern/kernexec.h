@@ -77,12 +77,12 @@ K2OSEXEC_Init(
 typedef
 void
 (*K2OSEXEC_pf_Run)(
-    void
+    K2OSHAL_pf_OnSystemReady afReady
     );
 
 void
 K2OSEXEC_Run(
-    void
+    K2OSHAL_pf_OnSystemReady afReady
     );
 
 /* --------------------------------------------------------------------------------- */

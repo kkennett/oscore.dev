@@ -289,6 +289,7 @@ K2OSKERN_ServicePublish(
                                 stat = K2STAT_ERROR_OUT_OF_MEMORY;
                                 break;
                             }
+                            numCallbacks = needCount;
                         }
                     } while (1);
 
@@ -488,11 +489,19 @@ K2OSKERN_PublishGetInstanceId(
 
 void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
 {
-    BOOL                    check;
-    BOOL                    disp;
-    K2STAT                  stat;
-    K2OSKERN_IFACE *        pIFace;
-    K2OSKERN_OBJ_SERVICE *  pSvc;
+    BOOL                        check;
+    BOOL                        disp;
+    K2STAT                      stat;
+    K2STAT                      stat2;
+    K2OSKERN_IFACE *            pIFace;
+    K2OSKERN_OBJ_SERVICE *      pSvc;
+    K2_GUID128                  guid;
+    K2OSKERN_SVC_IFINST         ifInst;
+    UINT32                      needCount;
+    UINT32                      numCallbacks;
+    K2OSKERN_OBJ_SUBSCRIP **    ppSubscrip;
+    K2LIST_LINK *               pListLink;
+
 
     K2_ASSERT(apPublish->Hdr.mObjType == K2OS_Obj_Publish);
     K2_ASSERT(apPublish->Hdr.mRefCount == 0);
@@ -501,16 +510,56 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
 
     check = !(apPublish->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 
-    K2OSKERN_Debug("NOTIFY: %d\n", apPublish->mpService->ServTreeNode.mUserVal);
-#if 0
-    KernNotify_IFaceChange(
-        &apPublish->mpIFace->InterfaceId, 
-        apPublish->mpService->ServTreeNode.mUserVal, 
-        apPublish->IfInstTreeNode.mUserVal,
-        FALSE);
-#endif
+    ifInst.mServiceInstanceId = apPublish->mpService->ServTreeNode.mUserVal;
+    ifInst.mInterfaceInstanceId = apPublish->IfInstTreeNode.mUserVal;
 
-    disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+    K2MEM_Copy(&guid, &apPublish->mpIFace->InterfaceId, sizeof(K2_GUID128));
+
+    numCallbacks = 0;
+
+    do {
+        disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
+
+        needCount = apPublish->mpIFace->SubscripList.mNodeCount;
+        if (numCallbacks == needCount)
+            break;
+
+        K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
+
+        if (numCallbacks)
+        {
+            K2OS_HeapFree(ppSubscrip);
+            numCallbacks = 0;
+        }
+
+        if (needCount != 0)
+        {
+            ppSubscrip = (K2OSKERN_OBJ_SUBSCRIP **)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_SUBSCRIP *) * needCount);
+            if (ppSubscrip != NULL)
+                numCallbacks = needCount;
+            else
+            {
+                K2OS_ThreadSleep(10);
+            }
+        }
+    } while (1);
+
+    //
+    // seqlock is locked here
+    //
+    K2_ASSERT(needCount == numCallbacks);
+    K2_ASSERT(numCallbacks == apPublish->mpIFace->SubscripList.mNodeCount);
+    if (numCallbacks != 0)
+    {
+        pListLink = apPublish->mpIFace->SubscripList.mpHead;
+        needCount = 0;
+        do {
+            ppSubscrip[needCount] = K2_GET_CONTAINER(K2OSKERN_OBJ_SUBSCRIP, pListLink, IfaceSubscripListLink);
+            KernObj_AddRef(&ppSubscrip[needCount]->Hdr);
+            needCount++;
+            pListLink = pListLink->mpNext;
+        } while (pListLink != NULL);
+    }
 
     //
     // detach from interface tree
@@ -555,6 +604,25 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
         check = K2OS_HeapFree(apPublish);
         K2_ASSERT(check);
     }
+
+    if (numCallbacks)
+    {
+        for (needCount = 0; needCount < numCallbacks; needCount++)
+        {
+            ppSubscrip[needCount]->Callback.mfFunc(
+                &guid,
+                ppSubscrip[needCount]->Callback.mpContext,
+                &ifInst,
+                FALSE);
+
+            stat2 = KernObj_Release(&ppSubscrip[needCount]->Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+            ppSubscrip[needCount] = NULL;
+        }
+
+        K2OS_HeapFree(ppSubscrip);
+    }
 }
 
 K2STAT
@@ -581,6 +649,16 @@ K2OSKERN_ServiceCall(
 
     if (apRetActualOut != NULL)
         *apRetActualOut = 0;
+
+    if (aInBufBytes == 0)
+        apInBuf = NULL;
+    else if (apInBuf == NULL)
+        return K2STAT_ERROR_BAD_ARGUMENT;
+
+    if (aOutBufBytes == 0)
+        apOutBuf = NULL;
+    else if (apOutBuf == NULL)
+        return K2STAT_ERROR_BAD_ARGUMENT;
 
     pMsg = (K2OSKERN_OBJ_MSG *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_MSG));
     if (pMsg == NULL)

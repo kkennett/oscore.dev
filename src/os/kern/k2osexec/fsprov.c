@@ -29,35 +29,48 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OSEXEC_H
-#define __K2OSEXEC_H
 
-#include "k2oskern.h"
+#include "ik2osexec.h"
 
-#if __cplusplus
-extern "C" {
-#endif
+// {0440C404-CAD6-4333-A23D-24FDBF335DA8}
+K2_GUID128 const    gK2OSEXEC_FsProvInterfaceGuid       = K2OSEXEC_FSPROV_INTERFACE_ID;
+char const *        gpK2OSEXEC_FsProvInterfaceGuidStr   = "{0440C404-CAD6-4333-A23D-24FDBF335DA8}";
 
-//
-//------------------------------------------------------------------------
-//
+static K2OS_TOKEN sgTokSubscrip;
 
-extern K2_GUID128 const gK2OSEXEC_MailslotGuid;
-extern char const *     gpK2OSEXEC_MailslotGuidStr;
+void
+sIfPopCallback(
+    K2_GUID128 const *          apInterfaceId,
+    void *                      apContext,
+    K2OSKERN_SVC_IFINST const * apInterfaceInstance,
+    BOOL                        aIsArrival
+)
+{
+    K2_ASSERT(0 == K2MEM_Compare(apInterfaceId, &gK2OSEXEC_FsProvInterfaceGuid, sizeof(K2_GUID128)));
+    K2_ASSERT(apContext == NULL);
 
-
-#define K2OSEXEC_FSPROV_INTERFACE_ID    \
-    { 0x440c404, 0xcad6, 0x4333, { 0xa2, 0x3d, 0x24, 0xfd, 0xbf, 0x33, 0x5d, 0xa8 } }
-
-extern K2_GUID128 const gK2OSEXEC_FsProvInterfaceGuid;
-extern char const *     gpK2OSEXEC_FsProvInterfaceGuidStr;
-
-//
-//------------------------------------------------------------------------
-//
-
-#if __cplusplus
+    if (aIsArrival)
+    {
+        //
+        // file system provider interface was published
+        //
+        K2OSKERN_Debug("ARRIVE - FILESYS PROVIDER: %d / %d\n",
+            apInterfaceInstance->mServiceInstanceId,
+            apInterfaceInstance->mInterfaceInstanceId);
+    }
+    else
+    {
+        //
+        // file system provider interface left
+        //
+        K2OSKERN_Debug("DEPART - FILESYS PROVIDER: %d / %d\n",
+            apInterfaceInstance->mServiceInstanceId,
+            apInterfaceInstance->mInterfaceInstanceId);
+    }
 }
-#endif
 
-#endif // __K2OSKERN_H
+void FsProv_Init(void)
+{
+    sgTokSubscrip = K2OSKERN_InterfaceSubscribe(&gK2OSEXEC_FsProvInterfaceGuid, sIfPopCallback, NULL);
+    K2_ASSERT(sgTokSubscrip != NULL);
+}

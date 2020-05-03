@@ -41,6 +41,7 @@ K2_KERNEL := TRUE
 DLX_INF := ../../k2oshal.inf
 
 SOURCES += x32pc.c
+SOURCES += onsysready.c
 
 SOURCE_LIBS += @os/hal/x32pc/dbgser
 SOURCE_LIBS += @shared/lib/k2archx32

@@ -67,6 +67,17 @@ K2OSHAL_DebugIn(
     UINT8 *apRetData
 );
 
+typedef
+UINT32
+(K2_CALLCONV_CALLERCLEANS *K2OSHAL_pf_OnSystemReady)(
+    void
+    );
+
+UINT32
+K2OSHAL_OnSystemReady(
+    void
+);
+
 //
 //------------------------------------------------------------------------
 //

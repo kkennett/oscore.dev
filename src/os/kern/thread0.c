@@ -49,7 +49,11 @@ void KernAcpi_Init(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
-static K2OSEXEC_pf_Run sExec_Init(void)
+static 
+K2OSEXEC_pf_Run 
+sExec_Init(
+    K2OSHAL_pf_OnSystemReady * apfSysReady
+)
 {
     DLX_pf_ENTRYPOINT   execEntryPoint;
     K2STAT              stat;
@@ -102,6 +106,14 @@ static K2OSEXEC_pf_Run sExec_Init(void)
 
     K2_ASSERT(initInfo.SysTickDevIrqConfig.mSourceIrq <= X32_DEVIRQ_LVT_ERROR);
 
+    stat = DLX_FindExport(
+        gData.mpDlxHal,
+        DlxSeg_Text,
+        "K2OSHAL_OnSystemReady",
+        (UINT32 *)apfSysReady);
+    if (K2STAT_IS_ERROR(stat))
+        K2OSKERN_Debug("*** HAL has no OnSysReady()\n");
+
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
 
     return fExec_Run;
@@ -109,7 +121,8 @@ static K2OSEXEC_pf_Run sExec_Init(void)
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
-    KernInitStage initStage;
+    KernInitStage               initStage;
+    K2OSHAL_pf_OnSystemReady    fSysReady;
 
     //
     // run stages up to multithreaded
@@ -132,7 +145,8 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     //
     // load the exec and run it
     //
-    (sExec_Init())();
+    fSysReady = NULL;
+    (sExec_Init(&fSysReady))(fSysReady);
 
     K2OSKERN_Panic("Executive returned");
 

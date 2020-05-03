@@ -110,12 +110,47 @@ sScanForHw(
     }
 }
 
+
+UINT32 K2_CALLCONV_REGS sHalThread(void *apParam)
+{
+    K2OSHAL_pf_OnSystemReady fReady;
+
+    fReady = (K2OSHAL_pf_OnSystemReady)apParam;
+
+    return fReady();
+}
+
+void
+sStartHalThread(
+    K2OSHAL_pf_OnSystemReady afReady
+)
+{
+    K2OS_TOKEN          tokThread;
+    K2OS_THREADCREATE   cret;
+
+    K2MEM_Zero(&cret, sizeof(cret));
+    cret.mStructBytes = sizeof(cret);
+    cret.mEntrypoint = sHalThread;
+    cret.mpArg = afReady;
+
+    tokThread = K2OS_ThreadCreate(&cret);
+    K2_ASSERT(NULL != tokThread);
+
+    K2OS_TokenDestroy(tokThread);
+}
+
 void
 K2OSEXEC_Run(
-    void
+    K2OSHAL_pf_OnSystemReady afReady
 )
 {
     Msg_Init();
+
+    if (NULL != afReady)
+    {
+        sStartHalThread(afReady);
+        K2OSKERN_Debug("HAL thread started\n");
+    }
 
     K2OSKERN_Debug("\nUnparented Hardware:\n------------------------------------\n");
     sScanForHw(gpDev_RootNode, 0);

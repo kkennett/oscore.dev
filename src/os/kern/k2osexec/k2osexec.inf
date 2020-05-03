@@ -40,3 +40,5 @@ K2OSEXEC_Run
 [Data]
 gK2OSEXEC_MailslotGuid
 gpK2OSEXEC_MailslotGuidStr
+gK2OSEXEC_FsProvInterfaceGuid
+gpK2OSEXEC_FsProvInterfaceGuidStr

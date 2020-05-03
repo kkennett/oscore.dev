@@ -962,10 +962,6 @@ struct _K2OSKERN_OBJ_SUBSCRIP
 
 /* --------------------------------------------------------------------------------- */
 
-
-
-/* --------------------------------------------------------------------------------- */
-
 typedef enum _KernPhysPageList KernPhysPageList;
 enum _KernPhysPageList
 {

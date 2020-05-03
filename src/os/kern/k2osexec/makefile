@@ -59,6 +59,7 @@ SOURCES += res.c
 SOURCES += intr.c
 SOURCES += msg.c
 SOURCES += dlxsupp.c
+SOURCES += fsprov.c
 
 SOURCE_LIBS += @shared/lib/k2heap
 

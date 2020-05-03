@@ -81,6 +81,8 @@ K2OSEXEC_Init(
 
     Dlx_Init(apInitInfo);
 
+    FsProv_Init();
+
     Time_Start(apInitInfo);
 }
 
