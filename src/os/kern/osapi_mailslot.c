@@ -45,8 +45,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UIN
     K2OS_TOKEN              tokMailslot;
     BOOL                    ok;
 
-    if ((aTokName == NULL) ||
-        (aMailboxCount == 0) ||
+    if ((aMailboxCount == 0) ||
         (apTokMailboxes == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
@@ -56,19 +55,23 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UIN
     tokMailslot = NULL;
 
     pNameObj = NULL;
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokName, (K2OSKERN_OBJ_HEADER **)&pNameObj);
-    if (!K2STAT_IS_ERROR(stat))
+
+    if (aTokName != NULL)
     {
-        if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
+        stat = KernTok_TranslateToAddRefObjs(1, &aTokName, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        if (!K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pNameObj->Hdr);
-            stat = K2STAT_ERROR_BAD_TOKEN;
+            if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
+            {
+                KernObj_Release(&pNameObj->Hdr);
+                stat = K2STAT_ERROR_BAD_TOKEN;
+            }
         }
-    }
-    if (K2STAT_IS_ERROR(stat))
-    {
-        K2OS_ThreadSetStatus(stat);
-        return NULL;
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return NULL;
+        }
     }
 
     do {
@@ -150,7 +153,10 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UIN
 
     } while (0);
 
-    KernObj_Release(&pNameObj->Hdr);
+    if (pNameObj != NULL)
+    {
+        KernObj_Release(&pNameObj->Hdr);
+    }
 
     if (K2STAT_IS_ERROR(stat))
     {

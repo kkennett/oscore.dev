@@ -502,7 +502,6 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
     K2OSKERN_OBJ_SUBSCRIP **    ppSubscrip;
     K2LIST_LINK *               pListLink;
 
-
     K2_ASSERT(apPublish->Hdr.mObjType == K2OS_Obj_Publish);
     K2_ASSERT(apPublish->Hdr.mRefCount == 0);
     K2_ASSERT(!(apPublish->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));

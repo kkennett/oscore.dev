@@ -69,6 +69,9 @@ void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Service:
         KernService_Dispose((K2OSKERN_OBJ_SERVICE *)apObjHdr);
         break;
+    case K2OS_Obj_Publish:
+        KernPublish_Dispose((K2OSKERN_OBJ_PUBLISH *)apObjHdr);
+        break;
     case K2OS_Obj_Subscrip:
         KernSubscrip_Dispose((K2OSKERN_OBJ_SUBSCRIP *)apObjHdr);
         break;

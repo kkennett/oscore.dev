@@ -100,11 +100,12 @@ dlx_entry(
     K2LIST_Init(&gData.ProcList);
 
     K2OSKERN_SeqIntrInit(&gData.IntrTreeSeqLock);
-    K2TREE_Init(&gData.IntrTree, NULL);     // mUserVal is source irq number
+    K2TREE_Init(&gData.IntrTree, NULL);             // mUserVal is source irq number
 
     K2OSKERN_SeqIntrInit(&gData.ServTreeSeqLock);
-    K2TREE_Init(&gData.ServTree, NULL);     // mUserVal is service instance index
-    K2TREE_Init(&gData.IfaceTree, sIFaceCompare);    // mUserVal is pointer to interface
+    K2TREE_Init(&gData.ServTree, NULL);             // mUserVal is service instance id
+    K2TREE_Init(&gData.IfaceTree, sIFaceCompare);   // mUserVal is pointer to interface
+    K2TREE_Init(&gData.IfInstTree, NULL);           // mUserVal is interface instance id
 
     gData.mpShared->FuncTab.Exec = KernExec;
 

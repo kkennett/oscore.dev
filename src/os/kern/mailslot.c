@@ -40,13 +40,15 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
     K2OSKERN_OBJ_THREAD *   pThisThread;
 
     K2_ASSERT(apMailslot != NULL);
-    K2_ASSERT(apName != NULL);
     K2_ASSERT(aMailboxCount > 0);
     K2_ASSERT(appMailbox != NULL);
 
-    stat = KernObj_AddRef(&apName->Hdr);
-    if (K2STAT_IS_ERROR(stat))
-        return stat;
+    if (apName != NULL)
+    {
+        stat = KernObj_AddRef(&apName->Hdr);
+        if (K2STAT_IS_ERROR(stat))
+            return stat;
+    }
 
     do {
         //
@@ -152,7 +154,8 @@ K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME 
 
     } while (0);
 
-    KernObj_Release(&apName->Hdr);
+    if (apName != NULL)
+        KernObj_Release(&apName->Hdr);
 
     return stat;
 }
