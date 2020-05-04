@@ -45,12 +45,11 @@ extern "C" {
 extern K2_GUID128 const gK2OSEXEC_MailslotGuid;
 extern char const *     gpK2OSEXEC_MailslotGuidStr;
 
-
-#define K2OSEXEC_FSPROV_INTERFACE_ID    \
-    { 0x440c404, 0xcad6, 0x4333, { 0xa2, 0x3d, 0x24, 0xfd, 0xbf, 0x33, 0x5d, 0xa8 } }
-
 extern K2_GUID128 const gK2OSEXEC_FsProvInterfaceGuid;
 extern char const *     gpK2OSEXEC_FsProvInterfaceGuidStr;
+
+extern K2_GUID128 const gK2OSEXEC_FileSysInterfaceGuid;
+extern char const *     gpK2OSEXEC_FileSysInterfaceGuidStr;
 
 //
 //------------------------------------------------------------------------

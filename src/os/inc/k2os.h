@@ -42,15 +42,6 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
-typedef K2OS_TOKEN K2OS_FS_TOKEN;
-typedef K2OS_TOKEN K2OS_DIR_TOKEN;
-typedef K2OS_TOKEN K2OS_FILE_TOKEN;
-typedef K2OS_TOKEN K2OS_PATH_TOKEN;
-
-//
-//------------------------------------------------------------------------
-//
-
 UINT32  K2_CALLCONV_CALLERCLEANS K2OS_SysGetInfo(K2OS_SYSINFO *apRetInfo);
 
 typedef UINT64 (K2_CALLCONV_REGS *K2OS_pf_SysUpTimeMs)(void);
@@ -96,7 +87,11 @@ enum _K2OS_ObjectType
     K2OS_Obj_Interrupt = 12,
     K2OS_Obj_Service = 13,
     K2OS_Obj_Publish = 14,
-    K2OS_Obj_Subscrip = 15
+    K2OS_Obj_Subscrip = 15,
+    K2OS_Obj_FileSys = 16,
+    K2OS_Obj_FsDir = 17,
+    K2OS_Obj_FsFile = 18,
+    K2OS_Obj_FsPath = 19
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
@@ -237,46 +232,6 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKE
 //------------------------------------------------------------------------
 //
 
-typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
-struct _K2OS_PROCESSCREATE
-{
-    UINT32              mStructBytes;
-    UINT32              mStackBytes;
-    void *              mpThreadArg;
-    K2OS_THREADATTR     ThreadAttr;
-};
-
-typedef struct _K2OS_IMAGEINFO K2OS_IMAGEINFO;
-struct _K2OS_IMAGEINFO
-{
-    UINT32      mStructBytes;
-    K2_GUID128  mFsProvId;
-    K2_GUID128  mFsVolumeId;
-    char        mFilePath[4];
-};
-
-typedef struct _K2OS_PROCESS_CREATED K2OS_PROCESS_CREATED;
-struct _K2OS_PROCESS_CREATED
-{
-    UINT32      mProcessId;
-    K2OS_TOKEN  mTokProcess;
-    UINT32      mThreadId;
-    K2OS_TOKEN  mTokThread;
-};
-
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_FILE_TOKEN aDlxFileToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated);
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireByName(K2OS_TOKEN aNameToken);
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireById(UINT32 aProcessId);
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
-UINT32      K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
-void        K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
-
-//
-//------------------------------------------------------------------------
-//
-
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL aAutoReset, BOOL aInitialState);
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_EventAcquireByName(K2OS_TOKEN aNameToken);
 BOOL        K2_CALLCONV_CALLERCLEANS K2OS_EventSet(K2OS_TOKEN aEventToken);
@@ -373,6 +328,20 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
 //------------------------------------------------------------------------
 //
 
+typedef K2OS_TOKEN K2OS_FS_TOKEN;
+typedef K2OS_TOKEN K2OS_DIR_TOKEN;
+typedef K2OS_TOKEN K2OS_FILE_TOKEN;
+typedef K2OS_TOKEN K2OS_PATH_TOKEN;
+
+#define K2OS_INTERFACE_ID_FSPROV    \
+    { 0x440c404, 0xcad6, 0x4333, { 0xa2, 0x3d, 0x24, 0xfd, 0xbf, 0x33, 0x5d, 0xa8 } }
+
+#define K2OS_INTERFACE_ID_FILESYS   \
+    { 0x71e000d8, 0x2a94, 0x476a, { 0xb6, 0xc7, 0xa8, 0x57, 0x5c, 0x66, 0x18, 0xce } }
+
+#define K2OS_FSPROV_ID_HAL \
+    { 0x138de9b5, 0x2549, 0x4376, { 0xbd, 0xe7, 0x2c, 0x3a, 0xf4, 0x1b, 0x21, 0x80 } }
+
 #define K2OS_FILE_MODE_READ             0x00000001
 #define K2OS_FILE_MODE_WRITE            0x00000002
 
@@ -392,13 +361,13 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TimeSet(K2_EARTHTIME const *apTime);
 #define K2OS_FILE_PROP_EXISTS           0x80000000
 #define K2OS_FILE_PROP_VALID_SET_MASK   0x80000077
 
-#define K2OS_FSPROV_NAME_BUF_COUNT      16
+#define K2OS_FSPROVINFO_NAME_BUF_COUNT  16
 
-typedef struct _K2OS_FSPROV K2OS_FSPROV;
-struct _K2OS_FSPROV
+typedef struct _K2OS_FSPROVINFO K2OS_FSPROVINFO;
+struct _K2OS_FSPROVINFO
 {
     K2_GUID128  mProvId;
-    char        ProvName[K2OS_FSPROV_NAME_BUF_COUNT];
+    char        ProvName[K2OS_FSPROVINFO_NAME_BUF_COUNT];
     UINT32      mProvVersion;
 };
 
@@ -414,17 +383,13 @@ struct _K2OS_FILE_INFO
 };
 
 BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsVolEnum(UINT32 *apInOutCount, K2_GUID128 *apRetVolIds);
-
-BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsGetProv(K2_GUID128 const *apVolId, K2OS_FSPROV *apRetProvInfo);
-BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsProvVolEnum(K2OS_FS_TOKEN aTokFs, UINT32 *apInOutCount, K2_GUID128 *apRetVolIds);
-
-K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_FsAcquireRootDir(K2_GUID128 const *apVolId);
+BOOL            K2_CALLCONV_CALLERCLEANS K2OS_FsVolGetProv(K2_GUID128 const *apVolId, K2OS_FSPROVINFO *apRetProvInfo);
+K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_FsVolAcquireRootDir(K2_GUID128 const *apVolId);
 
 BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirGetVolId(K2OS_DIR_TOKEN aTokDir, K2_GUID128 *apRetVolId);
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirCreateSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, BOOL aForce);
 K2OS_DIR_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireParent(K2OS_DIR_TOKEN aTokDir);
-
 BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DirDeleteSub(K2OS_DIR_TOKEN aTokDir, char const *apRelPath);
 
 K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DirAcquireFile(K2OS_DIR_TOKEN aTokDir, char const *apRelPath, UINT32 aModeAndUse);
@@ -458,6 +423,46 @@ K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx)
 BOOL            K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apRetId);
 void *          K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aDlxSeg, char const *apExportName);
 K2OS_TOKEN      K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress, UINT32 *apRetSegment);
+
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2OS_PROCESSCREATE K2OS_PROCESSCREATE;
+struct _K2OS_PROCESSCREATE
+{
+    UINT32              mStructBytes;
+    UINT32              mStackBytes;
+    void *              mpThreadArg;
+    K2OS_THREADATTR     ThreadAttr;
+};
+
+typedef struct _K2OS_IMAGEINFO K2OS_IMAGEINFO;
+struct _K2OS_IMAGEINFO
+{
+    UINT32      mStructBytes;
+    K2_GUID128  mFsProvId;
+    K2_GUID128  mFsVolumeId;
+    char        mFilePath[4];
+};
+
+typedef struct _K2OS_PROCESS_CREATED K2OS_PROCESS_CREATED;
+struct _K2OS_PROCESS_CREATED
+{
+    UINT32      mProcessId;
+    K2OS_TOKEN  mTokProcess;
+    UINT32      mThreadId;
+    K2OS_TOKEN  mTokThread;
+};
+
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessCreate(K2OS_TOKEN aNameToken, K2OS_FILE_TOKEN aDlxFileToken, K2OS_PROCESSCREATE const *apProcessCreate, K2OS_PROCESS_CREATED *apRetCreated);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireByName(K2OS_TOKEN aNameToken);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ProcessAcquireById(UINT32 aProcessId);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetId(K2OS_TOKEN aProcessToken, UINT32 *apRetId);
+UINT32      K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnId(void);
+void        K2_CALLCONV_CALLERCLEANS K2OS_ProcessExit(UINT32 aExitCode);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetImageInfo(K2OS_TOKEN aProcessToken, K2OS_IMAGEINFO *apRetImageInfo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_ProcessGetOwnImageInfo(K2OS_IMAGEINFO *apRetImageInfo);
 
 //
 //------------------------------------------------------------------------

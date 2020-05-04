@@ -85,6 +85,10 @@ typedef struct _K2OSKERN_OBJ_NOTIFY         K2OSKERN_OBJ_NOTIFY;
 typedef struct _K2OSKERN_OBJ_SUBSCRIP       K2OSKERN_OBJ_SUBSCRIP;
 typedef struct _K2OSKERN_OBJ_SERVICE        K2OSKERN_OBJ_SERVICE;
 typedef struct _K2OSKERN_OBJ_PUBLISH        K2OSKERN_OBJ_PUBLISH;
+typedef struct _K2OSKERN_OBJ_FILESYS        K2OSKERN_OBJ_FILESYS;
+typedef struct _K2OSKERN_OBJ_FSDIR          K2OSKERN_OBJ_FSDIR;
+typedef struct _K2OSKERN_OBJ_FSFILE         K2OSKERN_OBJ_FSFILE;
+typedef struct _K2OSKERN_OBJ_FSPATH         K2OSKERN_OBJ_FSPATH;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -962,6 +966,94 @@ struct _K2OSKERN_OBJ_SUBSCRIP
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OS_FSPROV K2OS_FSPROV;
+struct _K2OS_FSPROV
+{
+    // from service that publshed fs provider interface id
+    UINT32                  mServiceInstanceId;     
+    UINT32                  mInterfaceInstanceId;
+    K2OS_FSPROVINFO         Info;               
+    void *                  mpFsContext;        
+
+    // this lives on gData.FsProvList
+    K2LIST_LINK             FsProvListLink;     
+
+    // list of OBJ_FILESYS
+    K2OSKERN_SEQLOCK        FileSysListLock;    
+    K2LIST_ANCHOR           FileSysList;        
+};
+
+struct _K2OSKERN_OBJ_FILESYS
+{
+    K2OSKERN_OBJ_HEADER             Hdr;
+
+    // from service that published provider GUID
+    void *                          mpFsContext;            
+    K2OSKERN_FSPROV_FILESYS_IFACE   ProvFileSysIFace;
+
+    // this lives on mpProv->FileSysList
+    K2OS_FSPROV *                   mpProv;
+    K2LIST_LINK                     ProvFileSysListLink;
+
+    // list of FSVOL
+    K2OSKERN_SEQLOCK                VolListLock;
+    K2LIST_ANCHOR                   VolList;
+};
+
+typedef struct _K2OSKERN_FSVOL K2OSKERN_FSVOL;
+struct K2OSKERN_FSVOL
+{
+    // from service that published provider GUID
+    K2_GUID128              VolumeId;
+    void *                  mpFsContext;
+
+    // this lives on mpFileSys->VolList
+    K2OSKERN_OBJ_FILESYS *  mpFileSys;
+    K2LIST_LINK             FileSysVolListLink;
+
+    // list of currently open OBJ_FSDIR
+    K2OSKERN_OBJ_FSDIR *    mpOpenRootDir;
+};
+
+struct _K2OSKERN_OBJ_FSDIR
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+
+    // from service that published provider GUID
+    void *                  mpFsContext;
+    char                    Name[K2OS_FILE_MAX_NAME_BUF_SIZE];
+
+    // this is mpOpenRootDir of mpVol, or lives on
+    // mpParentDir->OpenSubDirList
+    K2OSKERN_OBJ_FSDIR *    mpParentDir;
+    K2OSKERN_FSVOL *        mpVol;
+    K2LIST_ANCHOR           OpenSubDirList;
+
+    // list of open OBJ_FSFILE in this dir
+    K2OSKERN_SEQLOCK        OpenFileListLock;
+    K2LIST_ANCHOR           OpenFileList;
+};
+
+struct _K2OSKERN_OBJ_FSFILE
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+
+    // from service that published provider GUID
+    void *                  mpFsContext;
+    K2OS_FILE_INFO          Info;
+
+    // this lives on mpParentDir->OpenFileList
+    K2OSKERN_OBJ_FSDIR *    mpParentDir;
+    K2LIST_LINK             DirOpenFileListLink;
+};
+
+struct _K2OSKERN_OBJ_FSPATH
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 typedef enum _KernPhysPageList KernPhysPageList;
 enum _KernPhysPageList
 {
@@ -1207,6 +1299,9 @@ struct _KERN_DATA
     K2TREE_ANCHOR                       IfaceTree;
     UINT32                              mLastIfInstId;
     K2TREE_ANCHOR                       IfInstTree;
+
+    // File System Providers
+    K2LIST_ANCHOR                       FsProvList;
 
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM

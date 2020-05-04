@@ -32,8 +32,18 @@
 
 #include "..\x32pc.h"
 
+#define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
+#define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
+
+static K2OS_FSPROVINFO const sgInfo =
+{
+    K2OS_FSPROV_ID_HAL,     // {138DE9B5-2549-4376-BDE7-2C3AF41B2180}
+    "HAL BuiltIn",
+    0x00010000
+};
+
 K2STAT 
-OnServiceCall(
+FsProvServiceCall(
     UINT32          aCallCmd,
     void const *    apInBuf,
     UINT32          aInBufBytes,
@@ -42,8 +52,20 @@ OnServiceCall(
     UINT32 *        apRetActualOut
 )
 {
-    K2OSKERN_Debug("HAL:ServiceCall(%d)\n", aCallCmd);
-    return K2STAT_ERROR_NOT_IMPL;
+    if (((aCallCmd & FSPROV_CALL_OPCODE_HIGH_MASK) != FSPROV_CALL_OPCODE_HIGH) ||
+        (aCallCmd != FSPROV_CALL_OPCODE_GET_INFO))
+        return K2STAT_ERROR_UNSUPPORTED;
+    if (apInBuf != NULL)
+        return K2STAT_ERROR_INBUF_NOT_NULL;
+    if (apOutBuf == NULL)
+        return K2STAT_ERROR_OUTBUF_NULL;
+    if (aOutBufBytes < sizeof(sgInfo))
+        return K2STAT_ERROR_OUTBUF_TOO_SMALL;
+
+    K2MEM_Copy(apOutBuf, &sgInfo, sizeof(sgInfo));
+    *apRetActualOut = sizeof(sgInfo);
+
+    return K2STAT_NO_ERROR;
 }
 
 K2OS_TOKEN  tokMailbox;
@@ -76,7 +98,7 @@ K2OSHAL_OnSystemReady(
         K2OSKERN_Panic("HAL failed mailslot create\n");
     }
 
-    tokService = K2OSKERN_ServiceCreate(tokMailslot, NULL, &serviceId);
+    tokService = K2OSKERN_ServiceCreate(tokMailslot, HAL_SERVICE_CONTEXT, &serviceId);
     if (NULL == tokService)
     {
         K2OSKERN_Panic("HAL failed to create service\n");
@@ -87,7 +109,7 @@ K2OSHAL_OnSystemReady(
     tokPublish = K2OSKERN_ServicePublish(
         tokService,
         &gK2OSEXEC_FsProvInterfaceGuid,
-        NULL,
+        FSPROV_IFACE_CONTEXT,
         &interfaceId);
     if (NULL == tokPublish)
     {
@@ -102,23 +124,35 @@ K2OSHAL_OnSystemReady(
         K2_ASSERT(ok);
         if (requestId != 0)
         {
-            if ((msgIo.mSvcOpCode == SYSMSG_OPCODE_SVC_CALL) &&
-                (msgIo.mpServiceContext == NULL) &&
-                (msgIo.mpPublishContext == NULL))
+            if (msgIo.mSvcOpCode == SYSMSG_OPCODE_SVC_CALL)
             {
                 actualOut = 0;
                 if (msgIo.mInBufBytes == 0)
                     msgIo.mpInBuf = NULL;
                 if (msgIo.mOutBufBytes == 0)
                     msgIo.mpOutBuf = NULL;
-                ((K2OS_MSGIO *)&msgIo)->mStatus = OnServiceCall(
-                    msgIo.mCallCmd,
-                    msgIo.mpInBuf,
-                    msgIo.mInBufBytes,
-                    msgIo.mpOutBuf,
-                    msgIo.mOutBufBytes,
-                    &actualOut
-                );
+                if (msgIo.mpServiceContext == HAL_SERVICE_CONTEXT)
+                {
+                    if (msgIo.mpPublishContext == FSPROV_IFACE_CONTEXT)
+                    {
+                        ((K2OS_MSGIO *)&msgIo)->mStatus = FsProvServiceCall(
+                            msgIo.mCallCmd,
+                            msgIo.mpInBuf,
+                            msgIo.mInBufBytes,
+                            msgIo.mpOutBuf,
+                            msgIo.mOutBufBytes,
+                            &actualOut
+                        );
+                    }
+                    else
+                    {
+                        ((K2OS_MSGIO *)&msgIo)->mStatus = K2STAT_ERROR_NO_INTERFACE;
+                    }
+                }
+                else
+                {
+                    ((K2OS_MSGIO *)&msgIo)->mStatus = K2STAT_ERROR_UNSUPPORTED;
+                }
                 K2_ASSERT(actualOut <= msgIo.mOutBufBytes);
                 ((K2OS_MSGIO *)&msgIo)->mPayload[0] = actualOut;
             }

@@ -110,13 +110,10 @@ sScanForHw(
     }
 }
 
-
 UINT32 K2_CALLCONV_REGS sHalThread(void *apParam)
 {
     K2OSHAL_pf_OnSystemReady fReady;
-
     fReady = (K2OSHAL_pf_OnSystemReady)apParam;
-
     return fReady();
 }
 

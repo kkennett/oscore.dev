@@ -42,3 +42,5 @@ gK2OSEXEC_MailslotGuid
 gpK2OSEXEC_MailslotGuidStr
 gK2OSEXEC_FsProvInterfaceGuid
 gpK2OSEXEC_FsProvInterfaceGuidStr
+gK2OSEXEC_FileSysInterfaceGuid
+gpK2OSEXEC_FileSysInterfaceGuidStr

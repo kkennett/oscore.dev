@@ -33,8 +33,12 @@
 #include "ik2osexec.h"
 
 // {0440C404-CAD6-4333-A23D-24FDBF335DA8}
-K2_GUID128 const    gK2OSEXEC_FsProvInterfaceGuid       = K2OSEXEC_FSPROV_INTERFACE_ID;
+K2_GUID128 const    gK2OSEXEC_FsProvInterfaceGuid       = K2OS_INTERFACE_ID_FSPROV;
 char const *        gpK2OSEXEC_FsProvInterfaceGuidStr   = "{0440C404-CAD6-4333-A23D-24FDBF335DA8}";
+
+// {71E000D8-2A94-476A-B6C7-A8575C6618CE}
+K2_GUID128 const    gK2OSEXEC_FileSysInterfaceGuid      = K2OS_INTERFACE_ID_FILESYS;
+char const *        gpK2OSEXEC_FileSysInterfaceGuidStr  = "{71E000D8-2A94-476A-B6C7-A8575C6618CE}";
 
 static K2OS_TOKEN sgTokSubscrip;
 
@@ -46,6 +50,9 @@ sIfPopCallback(
     BOOL                        aIsArrival
 )
 {
+    K2STAT          stat;
+    K2OS_FSPROVINFO provInfo;
+
     K2_ASSERT(0 == K2MEM_Compare(apInterfaceId, &gK2OSEXEC_FsProvInterfaceGuid, sizeof(K2_GUID128)));
     K2_ASSERT(apContext == NULL);
 
@@ -57,6 +64,21 @@ sIfPopCallback(
         K2OSKERN_Debug("ARRIVE - FILESYS PROVIDER: %d / %d\n",
             apInterfaceInstance->mServiceInstanceId,
             apInterfaceInstance->mInterfaceInstanceId);
+
+        stat = K2OSKERN_ServiceCall(
+            apInterfaceInstance->mInterfaceInstanceId,
+            FSPROV_CALL_OPCODE_GET_INFO,
+            NULL, 0,
+            &provInfo, sizeof(provInfo),
+            NULL);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OSKERN_Debug("Provider did not return info, error %08X\n", stat);
+        }
+        else
+        {
+            K2OSKERN_Debug("FsProvider \"%s\" arrived\n", provInfo.ProvName);
+        }
     }
     else
     {

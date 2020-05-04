@@ -467,6 +467,31 @@ K2OSKERN_InterfaceSubscribe(
 //------------------------------------------------------------------------
 //
 
+//
+// filesys provider service calls
+//
+#define FSPROV_CALL_OPCODE_HIGH             0xF00D0000
+#define FSPROV_CALL_OPCODE_HIGH_MASK        0xFFFFF000
+#define FSPROV_CALL_OPCODE_GET_INFO         (FSPROV_CALL_OPCODE_HIGH + 0)
+
+typedef void * (*K2OSKERN_pf_FsProv_FileSys_OpenRoot)(void *apProvContext, K2_GUID128 const *apVolId);
+typedef void * (*K2OSKERN_pf_FsProv_FileSys_DirOpenSubDir)(void *apDirContext, char const *apSubDirName);
+typedef BOOL   (*K2OSKERN_pf_FsProv_FileSys_DirClose)(void *apDirContext);
+typedef BOOL   (*K2OSKERN_pf_FsProv_FileSys_DirDelete)(void *apDirContext, char const *apSubDirName);
+
+typedef struct _K2OSKERN_FSPROV_FILESYS_IFACE K2OSKERN_FSPROV_FILESYS_IFACE;
+struct _K2OSKERN_FSPROV_FILESYS_IFACE
+{
+    K2OSKERN_pf_FsProv_FileSys_OpenRoot         OpenRoot;
+    K2OSKERN_pf_FsProv_FileSys_DirOpenSubDir    DirOpenSubDir;
+    K2OSKERN_pf_FsProv_FileSys_DirClose         DirClose;
+    K2OSKERN_pf_FsProv_FileSys_DirDelete        DirDelete;
+};
+
+//
+//------------------------------------------------------------------------
+//
+
 #if __cplusplus
 }
 #endif

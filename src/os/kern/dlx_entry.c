@@ -107,6 +107,8 @@ dlx_entry(
     K2TREE_Init(&gData.IfaceTree, sIFaceCompare);   // mUserVal is pointer to interface
     K2TREE_Init(&gData.IfInstTree, NULL);           // mUserVal is interface instance id
 
+    K2LIST_Init(&gData.FsProvList);
+
     gData.mpShared->FuncTab.Exec = KernExec;
 
     gData.mpShared->FuncTab.Debug = K2OSKERN_Debug;
