@@ -318,16 +318,8 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
         return aObjWait.mpHdr;
 
     case K2OS_Obj_Mailbox:
-        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
-        {
-            //
-            // very special case - changing the object and returning no wait
-            //
-            K2_ASSERT(aObjWait.mpMailbox->Semaphore.mCurCount > 0);
-            aObjWait.mpMailbox->Semaphore.mCurCount--;
-            return NULL;
-        }
-        return &aObjWait.mpMailbox->Semaphore.Hdr;
+        K2_ASSERT(aObjWait.mpMailbox->AvailEvent.mIsAutoReset == FALSE);
+        return aObjWait.mpMailbox->AvailEvent.mIsSignalled ? NULL : &aObjWait.mpMailbox->AvailEvent.Hdr;
 
     case K2OS_Obj_Msg:
         K2_ASSERT(aObjWait.mpMsg->CompletionEvent.mIsAutoReset == FALSE);
@@ -360,7 +352,7 @@ UINT32 KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs)
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     stat = K2STAT_NO_ERROR;
-    
+
     apObjHdr = sTranslate_CheckNotAllNoWait(pThisThread, (K2OSKERN_OBJ_WAITABLE)apObjHdr, &stat);
     if (apObjHdr == NULL)
     {

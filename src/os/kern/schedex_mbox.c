@@ -55,12 +55,13 @@ BOOL KernSched_Exec_MboxRecv(void)
 {
     K2OSKERN_OBJ_MSG *      pMsg;
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
+    BOOL                    changedSomething;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MboxRecv);
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxRecv.mpIn_Mailbox;
 
-//    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
+    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
 
     if (pMailbox->PendingMsgList.mNodeCount == 0)
     {
@@ -73,12 +74,17 @@ BOOL KernSched_Exec_MboxRecv(void)
 
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
+    changedSomething = FALSE;
+
     pMsg = K2_GET_CONTAINER(K2OSKERN_OBJ_MSG, pMailbox->PendingMsgList.mpHead, MailboxListLink);
     K2_ASSERT(pMsg->mState == KernMsgState_Pending);
     K2LIST_Remove(&pMailbox->PendingMsgList, &pMsg->MailboxListLink);
-    K2_ASSERT(pMailbox->Semaphore.mCurCount > 0);
-    pMailbox->Semaphore.mCurCount--;
-
+    if (pMailbox->PendingMsgList.mNodeCount == 0)
+    {
+        if (KernSchedEx_EventChange(&pMailbox->AvailEvent, FALSE))
+            changedSomething = TRUE;
+    }
+    
     K2MEM_Copy(
         gData.Sched.mpActiveItem->Args.MboxRecv.mpIn_MsgIoOutBuf, 
         &pMsg->Io, 
@@ -94,7 +100,9 @@ BOOL KernSched_Exec_MboxRecv(void)
         gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MailboxToRelease = pMailbox;
         gData.Sched.mpActiveItem->Args.MboxRecv.mOut_RequestId = 0;
         gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
-        return KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE);
+        if (KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE))
+            changedSomething = TRUE;
+        return changedSomething;
     }
 
     K2_ASSERT(pMsg->mRequestId != 0);
@@ -106,7 +114,7 @@ BOOL KernSched_Exec_MboxRecv(void)
     gData.Sched.mpActiveItem->Args.MboxRecv.mOut_RequestId = pMsg->mRequestId;
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
-    return FALSE;
+    return changedSomething;
 }
 
 BOOL KernSched_Exec_MboxRespond(void)

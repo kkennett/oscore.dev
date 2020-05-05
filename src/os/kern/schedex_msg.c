@@ -40,6 +40,9 @@ KernSchedEx_MsgSend(
     K2STAT *                apRetStat
 )
 {
+    BOOL    wasEmpty;
+    BOOL    changedSomething;
+
     //  K2OSKERN_Debug("SCHED:MsgSend(%08X)\n", apMsg);
 
     if (apMsg->mState != KernMsgState_Ready)
@@ -66,6 +69,7 @@ KernSchedEx_MsgSend(
     KernObj_AddRef(&apMsg->Hdr);
 
     apMsg->mpMailbox = apMailbox;
+    wasEmpty = (apMailbox->PendingMsgList.mNodeCount == 0) ? TRUE : FALSE;
     K2LIST_AddAtTail(&apMailbox->PendingMsgList, &apMsg->MailboxListLink);
     apMsg->mState = KernMsgState_Pending;
     if (apMsgIo->mOpCode & K2OS_MSGOPCODE_HAS_RESPONSE)
@@ -77,8 +81,16 @@ KernSchedEx_MsgSend(
     else
         apMsg->mRequestId = 0;
     K2MEM_Copy(&apMsg->Io, apMsgIo, sizeof(K2OS_MSGIO));
+    
+    changedSomething = KernSchedEx_EventChange(&apMsg->CompletionEvent, FALSE);
 
-    return KernSchedEx_SemInc(&apMailbox->Semaphore, 1);
+    if (wasEmpty)
+    {
+        if (KernSchedEx_EventChange(&apMailbox->AvailEvent, TRUE))
+            changedSomething = TRUE;
+    }
+
+    return changedSomething;
 }
 
 BOOL KernSched_Exec_MsgSend(void)
@@ -127,6 +139,8 @@ BOOL KernSched_Exec_MsgAbort(void)
     pMailbox = pMsg->mpMailbox;
     K2_ASSERT(pMailbox != NULL);
 
+    changedSomething = FALSE;
+
     gData.Sched.mpActiveItem->Args.MsgAbort.mpOut_MailboxToRelease = pMailbox;
     gData.Sched.mpActiveItem->Args.MsgAbort.mpOut_MsgToRelease = pMsg;
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
@@ -134,8 +148,10 @@ BOOL KernSched_Exec_MsgAbort(void)
     if (pMsg->mState == KernMsgState_Pending)
     {
         K2LIST_Remove(&pMailbox->PendingMsgList, &pMsg->MailboxListLink);
-        K2_ASSERT(pMailbox->Semaphore.mCurCount > 0);
-        pMailbox->Semaphore.mCurCount--;
+        if (pMailbox->PendingMsgList.mNodeCount == 0)
+        {
+            changedSomething = KernSchedEx_EventChange(&pMailbox->AvailEvent, FALSE);
+        }
     }
     else
     {
@@ -147,13 +163,15 @@ BOOL KernSched_Exec_MsgAbort(void)
     pMsg->Io.mStatus = K2STAT_ERROR_ABANDONED;
     pMsg->mState = KernMsgState_Completed;
 
-    changedSomething = KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE);
+    if (KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE))
+        changedSomething = TRUE;
 
     if (doClear)
     {
         pMsg->mRequestId = 0;
         pMsg->mState = KernMsgState_Ready;
-        KernSchedEx_EventChange(&pMsg->CompletionEvent, FALSE);
+        if (KernSchedEx_EventChange(&pMsg->CompletionEvent, FALSE))
+            changedSomething = TRUE;
     }
 
     return changedSomething;
@@ -174,7 +192,9 @@ BOOL KernSched_Exec_MsgReadResp(void)
         if (pMsg->mState == KernMsgState_Ready)
             gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_NOT_IN_USE;
         else
+        {
             gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_IN_USE;
+        }
         return FALSE;
     }
 

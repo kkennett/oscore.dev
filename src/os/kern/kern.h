@@ -736,7 +736,7 @@ struct _K2OSKERN_OBJ_MAILBOX
     K2LIST_ANCHOR           PendingMsgList;
     K2LIST_ANCHOR           InSvcMsgList;
 
-    K2OSKERN_OBJ_SEM        Semaphore;
+    K2OSKERN_OBJ_EVENT      AvailEvent;
 };
 
 typedef enum _KernMsgState KernMsgState;

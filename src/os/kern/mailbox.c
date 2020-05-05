@@ -50,16 +50,16 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
     K2LIST_Init(&apMailbox->PendingMsgList);
     K2LIST_Init(&apMailbox->InSvcMsgList);
 
-    stat = KernSem_Create(&apMailbox->Semaphore, NULL, 0xFFFFFFFF, 0);
+    stat = KernEvent_Create(&apMailbox->AvailEvent, NULL, FALSE, FALSE);
     if (K2STAT_IS_ERROR(stat))
         return stat;
 
-    apMailbox->Semaphore.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    apMailbox->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
-    stat = KernObj_Add(&apMailbox->Hdr, apName);
+    stat = KernObj_Add(&apMailbox->Hdr, NULL);
     if (K2STAT_IS_ERROR(stat))
     {
-        KernObj_Release(&apMailbox->Semaphore.Hdr);
+        KernObj_Release(&apMailbox->AvailEvent.Hdr);
     }
 
     return stat;
@@ -193,7 +193,7 @@ void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
     K2_ASSERT(apMailbox->PendingMsgList.mNodeCount == 0);
     K2_ASSERT(apMailbox->InSvcMsgList.mNodeCount == 0);
 
-    KernObj_Release(&apMailbox->Semaphore.Hdr);
+    KernObj_Release(&apMailbox->AvailEvent.Hdr);
 
     check = !(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 
