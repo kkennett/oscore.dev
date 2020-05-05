@@ -98,13 +98,12 @@ BOOL KernSched_Exec_ThreadExit(void)
     msgIo.mPayload[0] = (UINT32)pExitingThread;
     msgIo.mPayload[1] = 0;
 
-    K2_ASSERT(NULL != gData.mpMsgSlot_K2OSEXEC);
+    K2_ASSERT(NULL != gData.mpMsgBox_K2OSEXEC);
 
     msgRes = KernSchedEx_MsgSend(
-        gData.mpMsgSlot_K2OSEXEC, 
+        gData.mpMsgBox_K2OSEXEC, 
         &pExitingThread->MsgExit,
         &msgIo, 
-        FALSE, 
         (K2OSKERN_OBJ_MSG **)&msgIo.mPayload[1], 
         &stat);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));

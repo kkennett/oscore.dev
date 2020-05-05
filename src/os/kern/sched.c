@@ -47,9 +47,7 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_SemRelease,          // KernSchedItem_SemRelease
     KernSched_Exec_ThreadCreate,        // KernSchedItem_ThreadCreate
     KernSched_Exec_EventChange,         // KernSchedItem_EventChange
-    KernSched_Exec_SlotBlock,           // KernSchedItem_SlotBlock
-    KernSched_Exec_SlotBoxes,           // KernSchedItem_SlotBoxes
-    KernSched_Exec_SlotPurge,           // KernSchedItem_SlotPurge
+    KernSched_Exec_MboxBlock,           // KernSchedItem_MboxBlock
     KernSched_Exec_MboxRecv,            // KernSchedItem_MboxRecv
     KernSched_Exec_MboxRespond,         // KernSchedItem_MboxRespond
     KernSched_Exec_MboxPurge,           // KernSchedItem_MboxPurge

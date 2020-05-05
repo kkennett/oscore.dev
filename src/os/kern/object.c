@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-static char const * sgpK2OSEXEC_MailSlotName = "{51646997-5DE4-4175-AC0B-94BF2B57C0F4}";
+static char const * sgpK2OSEXEC_MailboxName = "{51646997-5DE4-4175-AC0B-94BF2B57C0F4}";
 
 void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
@@ -53,9 +53,6 @@ void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
         break;
     case K2OS_Obj_Thread:
         KernThread_Dispose((K2OSKERN_OBJ_THREAD *)apObjHdr);
-        break;
-    case K2OS_Obj_Mailslot:
-        KernMailslot_Dispose((K2OSKERN_OBJ_MAILSLOT *)apObjHdr);
         break;
     case K2OS_Obj_Mailbox:
         KernMailbox_Dispose((K2OSKERN_OBJ_MAILBOX *)apObjHdr);
@@ -225,15 +222,15 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
 
     if (apObjName != NULL)
     {
-        if (NULL == gData.mpMsgSlot_K2OSEXEC)
+        if (NULL == gData.mpMsgBox_K2OSEXEC)
         {
             //
             // K2EXEC has not started its mail slot yet.  is this it?
             //
-            if (0 == K2ASC_CompIns(apObjName->NameBuffer, sgpK2OSEXEC_MailSlotName))
+            if (0 == K2ASC_CompIns(apObjName->NameBuffer, sgpK2OSEXEC_MailboxName))
             {
-                gData.mpMsgSlot_K2OSEXEC = K2_GET_CONTAINER(K2OSKERN_OBJ_MAILSLOT, apObjName->mpObject, Hdr);
-                K2_ASSERT(gData.mpMsgSlot_K2OSEXEC->Hdr.mObjType == K2OS_Obj_Mailslot);
+                gData.mpMsgBox_K2OSEXEC = K2_GET_CONTAINER(K2OSKERN_OBJ_MAILBOX, apObjName->mpObject, Hdr);
+                K2_ASSERT(gData.mpMsgBox_K2OSEXEC->Hdr.mObjType == K2OS_Obj_Mailbox);
             }
         }
 

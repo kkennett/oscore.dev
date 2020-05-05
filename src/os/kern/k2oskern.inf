@@ -126,9 +126,8 @@ K2OS_AlarmAcquireByName
 K2OS_SemaphoreCreate
 K2OS_SemaphoreAcquireByName
 K2OS_SemaphoreRelease
-K2OS_MailslotCreate
-K2OS_MailslotSetBlock
 K2OS_MailboxCreate
+K2OS_MailboxSetBlock
 K2OS_MailboxRecv
 K2OS_MailboxRespond
 K2OS_MsgCreate

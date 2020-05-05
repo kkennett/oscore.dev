@@ -34,31 +34,31 @@
 
 K2OS_TOKEN
 K2OSKERN_ServiceCreate(
-    K2OS_TOKEN  aTokMailslot,
+    K2OS_TOKEN  aTokMailbox,
     void *      apContext,
     UINT32 *    apRetInstanceId
 )
 {
     K2STAT                  stat;
     K2STAT                  stat2;
-    K2OSKERN_OBJ_MAILSLOT * pMailslot;
+    K2OSKERN_OBJ_MAILBOX *  pMailbox;
     K2OSKERN_OBJ_SERVICE *  pSvc;
     BOOL                    disp;
     K2OSKERN_OBJ_HEADER *   pObjHdr;
     K2OS_TOKEN              tokService;
 
-    if ((aTokMailslot == NULL) ||
+    if ((aTokMailbox == NULL) ||
         (apRetInstanceId == NULL))
     {
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return NULL;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailslot, (K2OSKERN_OBJ_HEADER **)&pMailslot);
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailbox);
     if (!K2STAT_IS_ERROR(stat))
     {
         do {
-            if (pMailslot->Hdr.mObjType != K2OS_Obj_Mailslot)
+            if (pMailbox->Hdr.mObjType != K2OS_Obj_Mailbox)
             {
                 stat = K2STAT_ERROR_BAD_TOKEN;
                 break;
@@ -79,7 +79,7 @@ K2OSKERN_ServiceCreate(
             pSvc->Hdr.mRefCount = 1;
             K2LIST_Init(&pSvc->Hdr.WaitEntryPrioList);
 
-            pSvc->mpSlot = pMailslot;
+            pSvc->mpMailbox = pMailbox;
             pSvc->mpContext = apContext;
             K2LIST_Init(&pSvc->PublishList);
 
@@ -103,7 +103,7 @@ K2OSKERN_ServiceCreate(
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pMailslot->Hdr);
+            stat2 = KernObj_Release(&pMailbox->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
     }
@@ -704,7 +704,7 @@ K2OSKERN_ServiceCall(
             pCall->mpServiceContext = pSvc->mpContext;
             pCall->mpPublishContext = pPublish->mpContext;
 
-            stat = KernMsg_Send(pSvc->mpSlot, pMsg, &msgIo, TRUE);
+            stat = KernMsg_Send(pSvc->mpMailbox, pMsg, &msgIo);
             if (!K2STAT_IS_ERROR(stat))
             {
                 waitResult = KernThread_WaitOne(&pMsg->Hdr, K2OS_TIMEOUT_INFINITE);
@@ -964,7 +964,7 @@ void KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService)
     BOOL                    check;
     BOOL                    disp;
     K2STAT                  stat;
-    K2OSKERN_OBJ_MAILSLOT * pSlot;
+    K2OSKERN_OBJ_MAILBOX *  pMailbox;
 
     K2_ASSERT(apService->Hdr.mObjType == K2OS_Obj_Service);
     K2_ASSERT(apService->Hdr.mRefCount == 0);
@@ -977,14 +977,14 @@ void KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService)
 
     disp = K2OSKERN_SeqIntrLock(&gData.ServTreeSeqLock);
 
-    pSlot = apService->mpSlot;
+    pMailbox = apService->mpMailbox;
 
     K2TREE_Remove(&gData.ServTree, &apService->ServTreeNode);
     apService->ServTreeNode.mUserVal = 0;
 
     K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
 
-    stat = KernObj_Release(&pSlot->Hdr);
+    stat = KernObj_Release(&pMailbox->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     K2MEM_Zero(apService, sizeof(K2OSKERN_OBJ_SERVICE));

@@ -82,16 +82,15 @@ enum _K2OS_ObjectType
     K2OS_Obj_Alarm = 7,
     K2OS_Obj_Semaphore = 8,
     K2OS_Obj_Mailbox = 9,
-    K2OS_Obj_Mailslot = 10,
-    K2OS_Obj_Msg = 11,
-    K2OS_Obj_Interrupt = 12,
-    K2OS_Obj_Service = 13,
-    K2OS_Obj_Publish = 14,
-    K2OS_Obj_Subscrip = 15,
-    K2OS_Obj_FileSys = 16,
-    K2OS_Obj_FsDir = 17,
-    K2OS_Obj_FsFile = 18,
-    K2OS_Obj_FsPath = 19
+    K2OS_Obj_Msg = 10,
+    K2OS_Obj_Interrupt = 11,
+    K2OS_Obj_Service = 12,
+    K2OS_Obj_Publish = 13,
+    K2OS_Obj_Subscrip = 14,
+    K2OS_Obj_FileSys = 15,
+    K2OS_Obj_FsDir = 16,
+    K2OS_Obj_FsFile = 17,
+    K2OS_Obj_FsPath = 18
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);
@@ -256,6 +255,11 @@ BOOL        K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphore
 //------------------------------------------------------------------------
 //
 
+#define K2OS_MSGOPCODE_HAS_RESPONSE     0x80000000
+#define K2OS_MSGOPCODE_ID_MASK          0x7FFFFFFF
+#define K2OS_MSGOPCODE_NOTIFY(x)        ((x) & K2OS_MSGOPCODE_ID_MASK)
+#define K2OS_MSGOPCODE_TRANSACT(x)      ((x) | K2OS_MSGOPCODE_HAS_RESPONSE)
+
 typedef struct _K2OS_MSGIO K2OS_MSGIO;
 struct _K2OS_MSGIO
 {
@@ -267,18 +271,15 @@ struct _K2OS_MSGIO
 };
 K2_STATIC_ASSERT(sizeof(K2OS_MSGIO) == (8 * sizeof(UINT32)));
 
-#define K2OS_MAX_NUM_SLOT_MAILBOXES     K2OS_WAIT_MAX_TOKENS
-K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_MailslotCreate(K2OS_TOKEN aTokName, UINT32 aMailboxCount, K2OS_TOKEN const *apTokMailboxes, BOOL aInitBlocked);
-BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MailslotSetBlock(K2OS_TOKEN aTokMailslot, BOOL aBlock);
+K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL aInitBlocked);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MailboxSetBlock(K2OS_TOKEN aTokMailbox, BOOL aBlock);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGIO *apRetMsgIo, UINT32 *apRetRequestId);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRespIo);
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(UINT32 aMailboxCount, K2OS_TOKEN *apRetTokMailboxes);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGIO *apRetMsgIo, UINT32 *apRetRequestId);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRespIo);
-
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRetTokMsgs);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, BOOL aResponseRequired);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg);
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGIO *apRetRespIo, BOOL aClear);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRetTokMsgs);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg);
+BOOL        K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGIO *apRetRespIo, BOOL aClear);
 
 //
 //------------------------------------------------------------------------

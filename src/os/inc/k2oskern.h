@@ -350,10 +350,10 @@ K2OSKERN_ReflectNotify(
     UINT32 const *  apParam
 );
 
-#define SYSMSG_OPCODE_HIGH          0xFEED0000
-#define SYSMSG_OPCODE_HIGH_MASK     0xFFFFF000
+#define SYSMSG_OPCODE_HIGH          0x7EED0000
+#define SYSMSG_OPCODE_HIGH_MASK     0x7FFFF000
 #define SYSMSG_OPCODE_THREAD_EXIT   (SYSMSG_OPCODE_HIGH + 0)
-#define SYSMSG_OPCODE_SVC_CALL      (SYSMSG_OPCODE_HIGH + 1)
+#define SYSMSG_OPCODE_SVC_CALL      (SYSMSG_OPCODE_HIGH + 1 + K2OS_MSGOPCODE_HAS_RESPONSE)
 
 //
 //------------------------------------------------------------------------
@@ -361,7 +361,7 @@ K2OSKERN_ReflectNotify(
 
 K2OS_TOKEN
 K2OSKERN_ServiceCreate(
-    K2OS_TOKEN  aTokMailslot,
+    K2OS_TOKEN  aTokMailbox,
     void *      apContext,
     UINT32 *    apRetInstanceId
 );
@@ -470,9 +470,9 @@ K2OSKERN_InterfaceSubscribe(
 //
 // filesys provider service calls
 //
-#define FSPROV_CALL_OPCODE_HIGH             0xF00D0000
-#define FSPROV_CALL_OPCODE_HIGH_MASK        0xFFFFF000
-#define FSPROV_CALL_OPCODE_GET_INFO         (FSPROV_CALL_OPCODE_HIGH + 0)
+#define FSPROV_CALL_OPCODE_HIGH             0x700D0000
+#define FSPROV_CALL_OPCODE_HIGH_MASK        0x7FFFF000
+#define FSPROV_CALL_OPCODE_GET_INFO         (FSPROV_CALL_OPCODE_HIGH + 0 + K2OS_MSGOPCODE_HAS_RESPONSE)
 
 typedef void * (*K2OSKERN_pf_FsProv_FileSys_OpenRoot)(void *apProvContext, K2_GUID128 const *apVolId);
 typedef void * (*K2OSKERN_pf_FsProv_FileSys_DirOpenSubDir)(void *apDirContext, char const *apSubDirName);

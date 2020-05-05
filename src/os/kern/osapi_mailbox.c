@@ -32,97 +32,96 @@
 
 #include "kern.h"
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(UINT32 aMailboxCount, K2OS_TOKEN *apRetTokMailboxes)
+K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL aInitBlocked)
 {
-    K2OSKERN_OBJ_MAILBOX ** ppMailbox;
-    K2OS_TOKEN *            pTokens;
-    UINT32                  ix;
     K2STAT                  stat;
-    K2STAT                  stat2;
-    K2OSKERN_OBJ_MAILBOX *  pMailbox;
-    BOOL                    ok;
+    K2OSKERN_OBJ_NAME *     pNameObj;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2OSKERN_OBJ_MAILBOX *  pMailboxObj;
+    K2OS_TOKEN              tokMailbox;
 
-    if ((aMailboxCount == 0) ||
-        (apRetTokMailboxes == NULL))
+    tokMailbox = NULL;
+
+    pNameObj = NULL;
+
+    if (aTokName != NULL)
     {
-        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return FALSE;
+        stat = KernTok_TranslateToAddRefObjs(1, &aTokName, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
+            {
+                KernObj_Release(&pNameObj->Hdr);
+                stat = K2STAT_ERROR_BAD_TOKEN;
+            }
+        }
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return NULL;
+        }
     }
 
-    stat = K2STAT_NO_ERROR;
-    K2MEM_Zero(apRetTokMailboxes, aMailboxCount * sizeof(K2OS_TOKEN));
-
-    ppMailbox = (K2OSKERN_OBJ_MAILBOX **)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_MAILBOX *) * aMailboxCount);
-    if (ppMailbox == NULL)
-        return FALSE;
-
-    K2MEM_Zero(ppMailbox, sizeof(K2OSKERN_OBJ_MAILBOX *) * aMailboxCount);
-
     do {
-        pTokens = (K2OS_TOKEN *)K2OS_HeapAlloc(sizeof(K2OS_TOKEN) * aMailboxCount);
-        if (pTokens == NULL)
+        pMailboxObj = (K2OSKERN_OBJ_MAILBOX *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_MAILBOX));
+        if (pMailboxObj == NULL)
         {
             stat = K2OS_ThreadGetStatus();
             break;
         }
 
-        K2MEM_Zero(pTokens, sizeof(K2OS_TOKEN) * aMailboxCount);
+        stat = KernMailbox_Create(pMailboxObj, pNameObj, aInitBlocked);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_HeapFree(pMailboxObj);
+            break;
+        }
 
-        do {
-            for (ix = 0; ix < aMailboxCount; ix++)
-            {
-                pMailbox = (K2OSKERN_OBJ_MAILBOX *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_MAILBOX));
-                if (pMailbox == NULL)
-                {
-                    stat = K2OS_ThreadGetStatus();
-                    break;
-                }
-
-                stat = KernMailbox_Create(pMailbox, ix);
-                if (K2STAT_IS_ERROR(stat))
-                    break;
-
-                ppMailbox[ix] = pMailbox;
-            }
-            if (ix < aMailboxCount)
-            {
-                if (ix > 0)
-                {
-                    do {
-                        --ix;
-                        stat2 = KernObj_Release(&ppMailbox[ix]->Hdr);
-                        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
-                        ppMailbox[ix] = NULL;
-                    } while (ix > 0);
-                }
-                K2_ASSERT(K2STAT_IS_ERROR(stat));
-                break;
-            }
-
-            stat = KernTok_CreateNoAddRef(aMailboxCount, (K2OSKERN_OBJ_HEADER **)ppMailbox, pTokens);
-            if (K2STAT_IS_ERROR(stat))
-            {
-                for (ix = 0; ix < aMailboxCount; ix++)
-                {
-                    stat2 = KernObj_Release(&ppMailbox[ix]->Hdr);
-                    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
-                    ppMailbox[ix] = NULL;
-                }
-            }
-            else
-            {
-                K2MEM_Copy(apRetTokMailboxes, pTokens, sizeof(K2OS_TOKEN) * aMailboxCount);
-            }
-
-        } while (0);
-
-        ok = K2OS_HeapFree(pTokens);
-        K2_ASSERT(ok);
+        pObjHdr = &pMailboxObj->Hdr;
+        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokMailbox);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            KernObj_Release(&pMailboxObj->Hdr);
+        }
 
     } while (0);
 
-    ok = K2OS_HeapFree(ppMailbox);
-    K2_ASSERT(ok);
+    if (pNameObj != NULL)
+    {
+        KernObj_Release(&pNameObj->Hdr);
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokMailbox;
+}
+
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxSetBlock(K2OS_TOKEN aTokMailbox, BOOL aBlock)
+{
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_MAILBOX *  pMailboxObj;
+
+    if (aTokMailbox == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_TOKEN);
+        return FALSE;
+    }
+
+    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
+            stat = KernMailbox_SetBlock(pMailboxObj, aBlock);
+        else
+            stat = K2STAT_ERROR_BAD_TOKEN;
+        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
 
     if (K2STAT_IS_ERROR(stat))
     {

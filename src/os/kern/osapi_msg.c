@@ -136,15 +136,15 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRet
     return TRUE;
 }
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo, BOOL aResponseRequired)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKEN aTokMsg, K2OS_MSGIO const *apMsgIo)
 {
     K2STAT                  stat;
     K2STAT                  stat2;
-    K2OSKERN_OBJ_MAILSLOT * pMailslot;
+    K2OSKERN_OBJ_MAILBOX *  pMailbox;
     K2OSKERN_OBJ_MSG *      pMsg;
     K2OS_MSGIO              msgIo;
 
-    if ((aTokMailslotName == NULL) ||
+    if ((aTokMailboxName == NULL) ||
         (aTokMsg == NULL) ||
         (apMsgIo == NULL))
     {
@@ -152,12 +152,12 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOK
         return FALSE;
     }
 
-    stat = KernName_TokenToAddRefObject(aTokMailslotName, (K2OSKERN_OBJ_HEADER **)&pMailslot);
+    stat = KernName_TokenToAddRefObject(aTokMailboxName, (K2OSKERN_OBJ_HEADER **)&pMailbox);
     if (!K2STAT_IS_ERROR(stat))
     {
-        if (pMailslot->Hdr.mObjType != K2OS_Obj_Mailslot)
+        if (pMailbox->Hdr.mObjType != K2OS_Obj_Mailbox)
         {
-            stat = KernObj_Release(&pMailslot->Hdr);
+            stat = KernObj_Release(&pMailbox->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
             stat = K2STAT_ERROR_BAD_TOKEN;
         }
@@ -174,14 +174,14 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailslotName, K2OS_TOK
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMsg->Hdr.mObjType == K2OS_Obj_Msg)
-            stat = KernMsg_Send(pMailslot, pMsg, &msgIo, aResponseRequired);
+            stat = KernMsg_Send(pMailbox, pMsg, &msgIo);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
         stat2 = KernObj_Release(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
-    KernObj_Release(&pMailslot->Hdr);
+    KernObj_Release(&pMailbox->Hdr);
 
     if (K2STAT_IS_ERROR(stat))
     {

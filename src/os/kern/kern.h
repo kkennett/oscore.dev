@@ -78,7 +78,6 @@ typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
 typedef struct _K2OSKERN_OBJ_SEM            K2OSKERN_OBJ_SEM;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 typedef struct _K2OSKERN_OBJ_MAILBOX        K2OSKERN_OBJ_MAILBOX;
-typedef struct _K2OSKERN_OBJ_MAILSLOT       K2OSKERN_OBJ_MAILSLOT;
 typedef struct _K2OSKERN_OBJ_MSG            K2OSKERN_OBJ_MSG;
 typedef struct _K2OSKERN_OBJ_ALARM          K2OSKERN_OBJ_ALARM;
 typedef struct _K2OSKERN_OBJ_NOTIFY         K2OSKERN_OBJ_NOTIFY;
@@ -217,9 +216,7 @@ enum _KernSchedItemType
     KernSchedItem_SemRelease,
     KernSchedItem_ThreadCreate,
     KernSchedItem_EventChange,
-    KernSchedItem_SlotBlock,
-    KernSchedItem_SlotBoxes,
-    KernSchedItem_SlotPurge,
+    KernSchedItem_MboxBlock,
     KernSchedItem_MboxRecv,
     KernSchedItem_MboxRespond,
     KernSchedItem_MboxPurge,
@@ -239,9 +236,7 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_INVALIDATE_TLB     K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE       K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES;
-typedef struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK         K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE;
@@ -328,25 +323,10 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE
     BOOL                    mSetReset;
 };
 
-struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK
+struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK
 {
-    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
     BOOL                    mSetBlock;
-};
-
-struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES
-{
-    BOOL                    mAttach;
-    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
-    UINT32                  mBoxCount;
-    K2OSKERN_OBJ_MAILBOX ** mppMailbox;
-};
-
-struct _K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE
-{
-    K2OSKERN_OBJ_MAILSLOT * mpMailslot;
-    UINT32                  mObjCount;
-    K2OSKERN_OBJ_HEADER **  mppObj;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV
@@ -374,10 +354,9 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND
 {
-    K2OSKERN_OBJ_MAILSLOT * mpSlot;
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
     K2OSKERN_OBJ_MSG *      mpMsg;
     K2OS_MSGIO const *      mpIo;
-    BOOL                    mResponseRequired;
     K2OSKERN_OBJ_MSG *      mpRetRelMsg;
 };
 
@@ -408,9 +387,7 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_SEM_RELEASE        SemRelease;
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_CREATE      ThreadCreate;
     K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE       EventChange;
-    K2OSKERN_SCHED_ITEM_ARGS_SLOT_BLOCK         SlotBlock;
-    K2OSKERN_SCHED_ITEM_ARGS_SLOT_BOXES         SlotBoxes;
-    K2OSKERN_SCHED_ITEM_ARGS_SLOT_PURGE         SlotPurge;
+    K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK         MboxBlock;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          MboxRecv;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       MboxRespond;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         MboxPurge;
@@ -742,55 +719,35 @@ struct _K2OSKERN_OBJ_PROCESS
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OSKERN_MAILBOX_REQUESTSEQ_MASK   0xFFFFFFC0
-K2_STATIC_ASSERT((K2OSKERN_MAILBOX_REQUESTSEQ_MASK + K2OS_MAX_NUM_SLOT_MAILBOXES) == 0);
-
-#define K2OSKERN_MAILBOX_EMPTY                     0
-#define K2OSKERN_MAILBOX_IN_SERVICE_WITH_MSG       1
-#define K2OSKERN_MAILBOX_IN_SERVICE_NO_MSG         2
-#define K2OSKERN_MAILBOX_IN_SERVICE_MSG_ABANDONED  3
-
 struct _K2OSKERN_OBJ_MAILBOX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
 
-    UINT16                  mState;
-    UINT16                  mId;
+    UINT32                  mLastRequestSeq;
+    BOOL                    mBlocked;
 
-    K2OSKERN_OBJ_MAILSLOT * mpSlot;
-    K2LIST_LINK             SlotListLink;
-
-    K2OSKERN_OBJ_MSG *      mpInSvcMsg;         // if mState is IN_SERVICE this will not be NULL
-    K2OS_MSGIO              InSvcSendIo;        // msg content at send
-    UINT32                  mInSvcRequestId;
+    K2LIST_ANCHOR           PendingMsgList;
+    K2LIST_ANCHOR           InSvcMsgList;
 
     K2OSKERN_OBJ_EVENT      Event;
 };
 
-struct _K2OSKERN_OBJ_MAILSLOT
+typedef enum _KernMsgState KernMsgState;
+enum _KernMsgState
 {
-    K2OSKERN_OBJ_HEADER Hdr;
-
-    K2LIST_ANCHOR       PendingMsgList;
-
-    UINT32              mNextRequestSeq;
-    BOOL                mBlocked;
-
-    K2LIST_ANCHOR       EmptyMailboxList;
-    K2LIST_ANCHOR       FullMailboxList;
+    KernMsgState_Ready = 0,
+    KernMsgState_Pending,
+    KernMsgState_InSvc
 };
 
-#define K2OSKERN_MSG_FLAG_RESPONSE_REQUIRED    1
 struct _K2OSKERN_OBJ_MSG
 {
     K2OSKERN_OBJ_HEADER     Hdr;
 
-    K2OSKERN_OBJ_MAILSLOT * mpPendingOnSlot;
-    K2LIST_LINK             SlotPendingMsgListLink;
+    KernMsgState            mState;
 
-    K2OSKERN_OBJ_MAILBOX *  mpSittingInMailbox;
-
-    UINT32                  mFlags;
+    K2OSKERN_OBJ_MAILBOX *  mpBox;
+    K2LIST_LINK             BoxListLink;
 
     volatile UINT32         mRequestId;
 
@@ -925,7 +882,7 @@ struct _K2OSKERN_OBJ_SERVICE
 {
     K2OSKERN_OBJ_HEADER     Hdr;
 
-    K2OSKERN_OBJ_MAILSLOT * mpSlot;         // reference to mailslot for this service
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;      // reference to mailbox for this service
 
     void *                  mpContext;      // user context at point of service creation
     K2TREE_NODE             ServTreeNode;   // Node on gData.ServTree.  instance Id is the node's mUserVal
@@ -1289,8 +1246,8 @@ struct _KERN_DATA
     K2OSKERN_SEQLOCK                    IntrTreeSeqLock;
     K2TREE_ANCHOR                       IntrTree;
 
-    // exec mailslot
-    K2OSKERN_OBJ_MAILSLOT *             mpMsgSlot_K2OSEXEC;
+    // exec mailbox
+    K2OSKERN_OBJ_MAILBOX *              mpMsgBox_K2OSEXEC;
 
     // service
     UINT32                              mLastServInstId;
@@ -1426,9 +1383,7 @@ BOOL KernSched_Exec_InvalidateTlb(void);
 BOOL KernSched_Exec_SemRelease(void);
 BOOL KernSched_Exec_ThreadCreate(void);
 BOOL KernSched_Exec_EventChange(void);
-BOOL KernSched_Exec_SlotBlock(void);
-BOOL KernSched_Exec_SlotBoxes(void);
-BOOL KernSched_Exec_SlotPurge(void);
+BOOL KernSched_Exec_MboxBlock(void);
 BOOL KernSched_Exec_MboxRecv(void);
 BOOL KernSched_Exec_MboxRespond(void);
 BOOL KernSched_Exec_MboxPurge(void);
@@ -1438,7 +1393,7 @@ BOOL KernSched_Exec_MsgReadResp(void);
 BOOL KernSched_Exec_AlarmChange(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
-BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILSLOT *apSlot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aRespReq, K2OSKERN_OBJ_MSG **appRetRelMsg, K2STAT *apRetStat);
+BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, K2OSKERN_OBJ_MSG **appRetRelMsg, K2STAT *apRetStat);
 BOOL KernSchedEx_AlarmFired(K2OSKERN_OBJ_ALARM *apAlarm);
 
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
@@ -1530,17 +1485,14 @@ void   KernAlarm_Dispose(K2OSKERN_OBJ_ALARM *apAlarm);
 
 /* --------------------------------------------------------------------------------- */
 
-K2STAT KernMailslot_Create(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_NAME *apname, UINT32 aMailboxCount, K2OSKERN_OBJ_MAILBOX **appMailbox, BOOL aInitBlocked);
-K2STAT KernMailslot_SetBlock(K2OSKERN_OBJ_MAILSLOT *apMailslot, BOOL aBlock);
-void   KernMailslot_Dispose(K2OSKERN_OBJ_MAILSLOT *apMailslot);
-
-K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT16 aId);
+K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *apName, BOOL aInitBlocked);
+K2STAT KernMailbox_SetBlock(K2OSKERN_OBJ_MAILBOX *apMailbox, BOOL aSetBlock);
 K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo, UINT32 *apRetRequestId);
 K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRetRespIo);
 void   KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox);
 
 K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg);
-K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aResponseRequired);
+K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo);
 K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg);
 K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear);
 void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
@@ -1548,9 +1500,7 @@ void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 /* --------------------------------------------------------------------------------- */
 
 void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
-
 void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
-
 void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
 
 /* --------------------------------------------------------------------------------- */

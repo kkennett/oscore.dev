@@ -32,8 +32,30 @@
 
 #include "kern.h"
 
+BOOL KernSched_Exec_MboxBlock(void)
+{
+    K2OSKERN_OBJ_MAILBOX *  pMailbox;
+    BOOL                    setBlock;
+
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MboxBlock);
+
+    pMailbox = gData.Sched.mpActiveItem->Args.MboxBlock.mpMailbox;
+    setBlock = gData.Sched.mpActiveItem->Args.MboxBlock.mSetBlock;
+
+    //    K2OSKERN_Debug("SCHED:SlotBlock(%08X,%d)\n", pMailslot, setBlock);
+
+    pMailbox->mBlocked = setBlock;
+
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+
+    return FALSE;
+}
+
 BOOL KernSched_Exec_MboxRecv(void)
 {
+#if 1
+    return FALSE;
+#else
     K2STAT                  stat;
     K2OSKERN_OBJ_MSG *      pMsg;
     K2OSKERN_OBJ_MAILSLOT * pSlot;
@@ -160,10 +182,14 @@ BOOL KernSched_Exec_MboxRecv(void)
     gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return changedSomething;
+#endif
 }
 
 BOOL KernSched_Exec_MboxRespond(void)
 {
+#if 1
+    return FALSE;
+#else
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
     UINT32                  requestId;
     K2OS_MSGIO const *      pRespMsgIo;
@@ -302,10 +328,14 @@ BOOL KernSched_Exec_MboxRespond(void)
     gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return changedSomething;
+#endif
 }
 
 BOOL KernSched_Exec_MboxPurge(void)
 {
+#if 1
+    return FALSE;
+#else
     K2OSKERN_OBJ_MSG *      pMsg;
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
     BOOL                    changedSomething;
@@ -332,5 +362,6 @@ BOOL KernSched_Exec_MboxPurge(void)
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     return changedSomething;
+#endif
 }
 

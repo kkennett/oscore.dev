@@ -46,6 +46,8 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
     apMsg->Hdr.mRefCount = 1;
     K2LIST_Init(&apMsg->Hdr.WaitEntryPrioList);
 
+    apMsg->mState = KernMsgState_Ready;
+
     stat = KernEvent_Create(&apMsg->Event, NULL, TRUE, TRUE);
     if (K2STAT_IS_ERROR(stat))
         return stat;
@@ -61,18 +63,23 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
     return stat;
 }
 
-K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, BOOL aResponseRequired)
+K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo)
 {
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2STAT                  stat;
     K2STAT                  stat2;
+
+    if (apMsg->mState != KernMsgState_Ready)
+    {
+        return K2STAT_ERROR_NOT_READY;
+    }
 
     if ((apMsg->Io.mOpCode & SYSMSG_OPCODE_HIGH_MASK) == SYSMSG_OPCODE_HIGH)
     {
         //
         // somebody is trying to send a system message
         //
-        if (apMailslot == gData.mpMsgSlot_K2OSEXEC)
+        if (apMailbox == gData.mpMsgBox_K2OSEXEC)
         {
             //
             // somebody is trying to send a system message to the system mailslot
@@ -95,10 +102,9 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILSLOT *apMailslot, K2OSKERN_OBJ_MSG *apMsg, 
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MsgSend;
-    pThisThread->Sched.Item.Args.MsgSend.mpSlot = apMailslot;
+    pThisThread->Sched.Item.Args.MsgSend.mpMailbox = apMailbox;
     pThisThread->Sched.Item.Args.MsgSend.mpMsg = apMsg;
     pThisThread->Sched.Item.Args.MsgSend.mpIo = apMsgIo;
-    pThisThread->Sched.Item.Args.MsgSend.mResponseRequired = aResponseRequired;
     pThisThread->Sched.Item.Args.MsgSend.mpRetRelMsg = NULL;
     KernArch_ThreadCallSched();
     stat = pThisThread->Sched.Item.mSchedCallResult;
@@ -162,8 +168,8 @@ void KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg)
     K2_ASSERT(!(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
     K2_ASSERT(apMsg->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
-    K2_ASSERT(apMsg->mpPendingOnSlot == NULL);
-    K2_ASSERT(apMsg->mpSittingInMailbox == NULL);
+    K2_ASSERT(apMsg->mState == KernMsgState_Ready);
+    K2_ASSERT(apMsg->mpBox == NULL);
 
     KernObj_Release(&apMsg->Event.Hdr);
 

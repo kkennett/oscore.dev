@@ -34,14 +34,16 @@
 
 BOOL 
 KernSchedEx_MsgSend(
-    K2OSKERN_OBJ_MAILSLOT * apSlot,
+    K2OSKERN_OBJ_MAILBOX *  apMailbox,
     K2OSKERN_OBJ_MSG *      apMsg,
     K2OS_MSGIO const *      apMsgIo,
-    BOOL                    aRespReq,
     K2OSKERN_OBJ_MSG **     appRetRelMsg,
     K2STAT *                apRetStat
 )
 {
+#if 1
+    return FALSE;
+#else
     BOOL                    changedSomething;
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
     K2LIST_LINK *           pListLink;
@@ -150,6 +152,7 @@ KernSchedEx_MsgSend(
     *appRetRelMsg = apMsg;
 
     return changedSomething;
+#endif
 }
 
 BOOL KernSched_Exec_MsgSend(void)
@@ -159,16 +162,18 @@ BOOL KernSched_Exec_MsgSend(void)
     gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg = NULL;
 
     return KernSchedEx_MsgSend(
-        gData.Sched.mpActiveItem->Args.MsgSend.mpSlot,
+        gData.Sched.mpActiveItem->Args.MsgSend.mpMailbox,
         gData.Sched.mpActiveItem->Args.MsgSend.mpMsg,
         gData.Sched.mpActiveItem->Args.MsgSend.mpIo,
-        gData.Sched.mpActiveItem->Args.MsgSend.mResponseRequired,
         &gData.Sched.mpActiveItem->Args.MsgSend.mpRetRelMsg,
         &gData.Sched.mpActiveItem->mSchedCallResult);
 }
 
 BOOL KernSched_Exec_MsgAbort(void)
 {
+#if 1
+    return FALSE;
+#else
     K2STAT                  stat;
     BOOL                    changedSomething;
     K2OSKERN_OBJ_MAILSLOT * pSlot;
@@ -230,10 +235,14 @@ BOOL KernSched_Exec_MsgAbort(void)
     gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return changedSomething;
+#endif
 }
 
 BOOL KernSched_Exec_MsgReadResp(void)
 {
+#if 1
+    return FALSE;
+#else
     K2STAT              stat;
     K2OSKERN_OBJ_MSG *  pMsg;
 
@@ -266,4 +275,5 @@ BOOL KernSched_Exec_MsgReadResp(void)
     gData.Sched.mpActiveItem->mSchedCallResult = stat;
 
     return FALSE;
+#endif
 }
