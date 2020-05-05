@@ -32,14 +32,14 @@
 
 #include "ik2osexec.h"
 
-K2_GUID128 const gK2OSEXEC_MailslotGuid = 
+K2_GUID128 const gK2OSEXEC_MailboxGuid = 
 // {51646997-5DE4-4175-AC0B-94BF2B57C0F4}
 { 0x51646997, 0x5de4, 0x4175, { 0xac, 0xb, 0x94, 0xbf, 0x2b, 0x57, 0xc0, 0xf4 } };
 
-char const * gpK2OSEXEC_MailslotGuidStr =
+char const * gpK2OSEXEC_MailboxGuidStr =
 "{51646997-5DE4-4175-AC0B-94BF2B57C0F4}";
 
-static K2OS_TOKEN sgTokMailslot;
+static K2OS_TOKEN sgTokMailbox;
 
 void sRecvNotify(UINT32 aOpCode, UINT32 *apParam)
 {
@@ -62,41 +62,37 @@ K2STAT sRecvCall(UINT32 aOpCode, UINT32 *apParam)
 UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
 {
     K2OS_TOKEN  tokName;
-    K2OS_TOKEN  tokMailbox;
     K2OS_MSGIO  msgIo;
     UINT32      requestId;
     UINT32      waitResult;
     BOOL        ok;
 
-    if (!K2OS_MailboxCreate(1, &tokMailbox))
-    {
-        K2OSKERN_Panic("Could not create k2osexec mailbox\n");
-    }
-
-    tokName = K2OS_NameDefine(gpK2OSEXEC_MailslotGuidStr);
+    tokName = K2OS_NameDefine(gpK2OSEXEC_MailboxGuidStr);
     if (tokName == NULL)
     {
         K2OSKERN_Panic("Could not create k2osexec mailslot name\n");
     }
 
-    sgTokMailslot = K2OS_MailslotCreate(tokName, 1, &tokMailbox, FALSE);
-    if (sgTokMailslot == NULL)
+    sgTokMailbox = K2OS_MailboxCreate(tokName, FALSE);
+    if (sgTokMailbox == NULL)
     {
         K2OSKERN_Panic("Could not create k2osexec mailslot\n");
     }
 
+    K2OS_TokenDestroy(tokName);
+
     do {
-        waitResult = K2OS_ThreadWaitOne(tokMailbox, K2OS_TIMEOUT_INFINITE);
+        waitResult = K2OS_ThreadWaitOne(sgTokMailbox, K2OS_TIMEOUT_INFINITE);
         K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
         requestId = 0;
-        ok = K2OS_MailboxRecv(tokMailbox, &msgIo, &requestId);
+        ok = K2OS_MailboxRecv(sgTokMailbox, &msgIo, &requestId);
         K2_ASSERT(ok);
         if (requestId == 0)
             sRecvNotify(msgIo.mOpCode, msgIo.mPayload);
         else
         {
             msgIo.mStatus = sRecvCall(msgIo.mOpCode, msgIo.mPayload);
-            ok = K2OS_MailboxRespond(tokMailbox, requestId, &msgIo);
+            ok = K2OS_MailboxRespond(sgTokMailbox, requestId, &msgIo);
             K2_ASSERT(ok);
         }
     } while (1);

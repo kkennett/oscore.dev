@@ -38,8 +38,8 @@ K2OSEXEC_Init
 K2OSEXEC_Run
 
 [Data]
-gK2OSEXEC_MailslotGuid
-gpK2OSEXEC_MailslotGuidStr
+gK2OSEXEC_MailboxGuid
+gpK2OSEXEC_MailboxGuidStr
 gK2OSEXEC_FsProvInterfaceGuid
 gpK2OSEXEC_FsProvInterfaceGuidStr
 gK2OSEXEC_FileSysInterfaceGuid

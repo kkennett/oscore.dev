@@ -69,7 +69,6 @@ FsProvServiceCall(
 }
 
 K2OS_TOKEN  tokMailbox;
-K2OS_TOKEN  tokMailslot;
 K2OS_TOKEN  tokService;
 UINT32      serviceId;
 K2OS_TOKEN  tokPublish;
@@ -87,24 +86,19 @@ K2OSHAL_OnSystemReady(
     BOOL                ok;
     UINT32              actualOut;
 
-    if (!K2OS_MailboxCreate(1, &tokMailbox))
+    tokMailbox = K2OS_MailboxCreate(NULL, FALSE);
+    if (NULL == tokMailbox)
     {
         K2OSKERN_Panic("HAL failed mailbox create\n");
     }
 
-    tokMailslot = K2OS_MailslotCreate(NULL, 1, &tokMailbox, FALSE);
-    if (NULL == tokMailslot)
-    {
-        K2OSKERN_Panic("HAL failed mailslot create\n");
-    }
-
-    tokService = K2OSKERN_ServiceCreate(tokMailslot, HAL_SERVICE_CONTEXT, &serviceId);
+    tokService = K2OSKERN_ServiceCreate(tokMailbox, HAL_SERVICE_CONTEXT, &serviceId);
     if (NULL == tokService)
     {
         K2OSKERN_Panic("HAL failed to create service\n");
     }
 
-    K2OS_TokenDestroy(tokMailslot);
+    K2OS_TokenDestroy(tokMailbox);
 
     tokPublish = K2OSKERN_ServicePublish(
         tokService,
