@@ -710,7 +710,7 @@ K2OSKERN_ServiceCall(
                 waitResult = KernThread_WaitOne(&pMsg->Hdr, K2OS_TIMEOUT_INFINITE);
                 if (waitResult != K2OS_WAIT_SIGNALLED_0)
                 {
-                    stat2 = KernMsg_Abort(pMsg);
+                    stat2 = KernMsg_Abort(pMsg, TRUE);
                     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                     stat = K2STAT_ERROR_WAIT_ABANDONED;
                 }

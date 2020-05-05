@@ -34,13 +34,11 @@
 
 void
 sThreadExited(
-    K2OSKERN_OBJ_THREAD *   apExitedThread,
-    K2OSKERN_OBJ_MSG *      apExitMsg
+    K2OSKERN_OBJ_THREAD * apExitedThread
 )
 {
     K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
-    K2_ASSERT(apExitMsg == &apExitedThread->MsgExit);
-    K2_ASSERT(apExitMsg->Hdr.mRefCount == 1);
+    K2_ASSERT(apExitedThread->MsgExit.Hdr.mRefCount == 1);
     apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
     KernObj_Release(&apExitedThread->Hdr);
 }
@@ -59,7 +57,7 @@ K2OSKERN_ReflectNotify(
     switch (aOpCode)
     {
     case SYSMSG_OPCODE_THREAD_EXIT:
-        sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0], (K2OSKERN_OBJ_MSG *)apParam[1]);
+        sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0]);
         break;
     default:
         break;

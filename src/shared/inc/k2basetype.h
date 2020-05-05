@@ -349,6 +349,7 @@ typedef struct _K2_RECT K2_RECT;
 #define K2STAT_CLOSED                           3
 #define K2STAT_PENDING                          4
 #define K2STAT_ALREADY_EXISTS                   5
+#define K2STAT_COMPLETED                        6
 
 #define K2STAT_EX_UNKNOWN                       K2STAT_MAKE_EXCEPTION(0)
 #define K2STAT_EX_ACCESS                        K2STAT_MAKE_EXCEPTION(1)

@@ -48,16 +48,16 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
 
     apMsg->mState = KernMsgState_Ready;
 
-    stat = KernEvent_Create(&apMsg->Event, NULL, TRUE, TRUE);
+    stat = KernEvent_Create(&apMsg->CompletionEvent, NULL, FALSE, TRUE);
     if (K2STAT_IS_ERROR(stat))
         return stat;
 
-    apMsg->Event.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    apMsg->CompletionEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
     stat = KernObj_Add(&apMsg->Hdr, NULL);
     if (K2STAT_IS_ERROR(stat))
     {
-        KernObj_Release(&apMsg->Event.Hdr);
+        KernObj_Release(&apMsg->CompletionEvent.Hdr);
     }
 
     return stat;
@@ -67,7 +67,6 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2
 {
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2STAT                  stat;
-    K2STAT                  stat2;
 
     if (apMsg->mState != KernMsgState_Ready)
     {
@@ -95,51 +94,55 @@ K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2
         }
     }
 
-    stat = KernObj_AddRef(&apMsg->Hdr);
-    if (K2STAT_IS_ERROR(stat))
-        return stat;
-
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MsgSend;
-    pThisThread->Sched.Item.Args.MsgSend.mpMailbox = apMailbox;
-    pThisThread->Sched.Item.Args.MsgSend.mpMsg = apMsg;
-    pThisThread->Sched.Item.Args.MsgSend.mpIo = apMsgIo;
-    pThisThread->Sched.Item.Args.MsgSend.mpRetRelMsg = NULL;
+    pThisThread->Sched.Item.Args.MsgSend.mpIn_Mailbox = apMailbox;
+    pThisThread->Sched.Item.Args.MsgSend.mpIn_Msg = apMsg;
+    pThisThread->Sched.Item.Args.MsgSend.mpIn_Io = apMsgIo;
     KernArch_ThreadCallSched();
     stat = pThisThread->Sched.Item.mSchedCallResult;
-
-    apMsg = pThisThread->Sched.Item.Args.MsgSend.mpRetRelMsg;
-    if (apMsg != NULL)
-    {
-        stat2 = KernObj_Release(&apMsg->Hdr);
-        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
-    }
 
     return stat;
 }
 
-K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg)
+K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg, BOOL aClear)
 {
     K2OSKERN_OBJ_THREAD *   pThisThread;
     K2STAT                  stat;
     K2STAT                  stat2;
+    K2OSKERN_OBJ_MSG *      pMsg;
+    K2OSKERN_OBJ_MAILBOX *  pMailbox;
 
-    if (apMsg->Event.mIsSignalled)
+    if (apMsg->CompletionEvent.mIsSignalled)
         return K2STAT_NO_ERROR;
 
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MsgAbort;
-    pThisThread->Sched.Item.Args.MsgAbort.mpMsgInOut = apMsg;
+    pThisThread->Sched.Item.Args.MsgAbort.mpIn_Msg = apMsg;
+    pThisThread->Sched.Item.Args.MsgAbort.mIn_Clear = aClear;
+    pThisThread->Sched.Item.Args.MsgAbort.mpOut_MsgToRelease = NULL;
+    pThisThread->Sched.Item.Args.MsgAbort.mpOut_MailboxToRelease = NULL;
     KernArch_ThreadCallSched();
     stat = pThisThread->Sched.Item.mSchedCallResult;
 
-    apMsg = pThisThread->Sched.Item.Args.MsgAbort.mpMsgInOut;
-    if (apMsg != NULL)
+    pMsg = pThisThread->Sched.Item.Args.MsgAbort.mpOut_MsgToRelease;
+    pMailbox = pThisThread->Sched.Item.Args.MsgAbort.mpOut_MailboxToRelease;
+    if (pMsg != NULL)
     {
-        stat2 = KernObj_Release(&apMsg->Hdr);
+        K2_ASSERT(pMailbox != NULL);
+
+        stat2 = KernObj_Release(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+        stat2 = KernObj_Release(&pMailbox->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+    else
+    {
+        K2_ASSERT(K2STAT_IS_ERROR(stat));
+        K2_ASSERT(pMailbox == NULL);
     }
 
     return stat;
@@ -151,9 +154,9 @@ K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, B
 
     pThisThread = K2OSKERN_CURRENT_THREAD;
     pThisThread->Sched.Item.mSchedItemType = KernSchedItem_MsgReadResp;
-    pThisThread->Sched.Item.Args.MsgReadResp.mpMsg = apMsg;
-    pThisThread->Sched.Item.Args.MsgReadResp.mpIo = apRetRespIo;
-    pThisThread->Sched.Item.Args.MsgReadResp.mClear = aClear;
+    pThisThread->Sched.Item.Args.MsgReadResp.mpIn_Msg = apMsg;
+    pThisThread->Sched.Item.Args.MsgReadResp.mpIn_MsgIoOutBuf = apRetRespIo;
+    pThisThread->Sched.Item.Args.MsgReadResp.mIn_Clear = aClear;
     KernArch_ThreadCallSched();
 
     return pThisThread->Sched.Item.mSchedCallResult;
@@ -168,10 +171,11 @@ void KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg)
     K2_ASSERT(!(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
     K2_ASSERT(apMsg->Hdr.WaitEntryPrioList.mNodeCount == 0);
 
-    K2_ASSERT(apMsg->mState == KernMsgState_Ready);
-    K2_ASSERT(apMsg->mpBox == NULL);
+    K2_ASSERT((apMsg->mState == KernMsgState_Ready) || (apMsg->mState == KernMsgState_Completed));
+    K2_ASSERT(apMsg->CompletionEvent.mIsSignalled);
+    K2_ASSERT(apMsg->mpMailbox == NULL);
 
-    KernObj_Release(&apMsg->Event.Hdr);
+    KernObj_Release(&apMsg->CompletionEvent.Hdr);
 
     check = !(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

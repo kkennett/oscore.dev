@@ -219,7 +219,6 @@ enum _KernSchedItemType
     KernSchedItem_MboxBlock,
     KernSchedItem_MboxRecv,
     KernSchedItem_MboxRespond,
-    KernSchedItem_MboxPurge,
     KernSchedItem_MsgSend,
     KernSchedItem_MsgAbort,
     KernSchedItem_MsgReadResp,
@@ -325,51 +324,51 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_EVENT_CHANGE
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK
 {
-    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
-    BOOL                    mSetBlock;
+    K2OSKERN_OBJ_MAILBOX *  mpIn_Mailbox;
+    BOOL                    mIn_SetBlock;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV
 {
-    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
-    UINT32                  mRetRequestId;
-    K2OS_MSGIO *            mpRetMsgIo;
-    K2OSKERN_OBJ_MSG *      mpRetMsgRecv;
+    K2OSKERN_OBJ_MAILBOX *  mpIn_Mailbox;
+    K2OS_MSGIO *            mpIn_MsgIoOutBuf;
+
+    UINT32                  mOut_RequestId;
+    K2OSKERN_OBJ_MSG *      mpOut_MsgToRelease;
+    K2OSKERN_OBJ_MAILBOX *  mpOut_MailboxToRelease;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND
 {
-    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
-    UINT32                  mRequestId;
-    K2OS_MSGIO const *      mpRespMsgIo;
-    K2OSKERN_OBJ_MSG *      mpRetMsg1;
-    K2OSKERN_OBJ_MSG *      mpRetMsg2;
-};
+    K2OSKERN_OBJ_MAILBOX *  mpIn_Mailbox;
+    UINT32                  mIn_RequestId;
+    K2OS_MSGIO const *      mpIn_ResponseIo;
 
-struct _K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE
-{
-    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
-    K2OSKERN_OBJ_MSG *      mpRetMsgPurge;
+    K2OSKERN_OBJ_MSG *      mpOut_MsgToRelease;
+    K2OSKERN_OBJ_MAILBOX *  mpOut_MailboxToRelease;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND
 {
-    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
-    K2OSKERN_OBJ_MSG *      mpMsg;
-    K2OS_MSGIO const *      mpIo;
-    K2OSKERN_OBJ_MSG *      mpRetRelMsg;
+    K2OSKERN_OBJ_MAILBOX *  mpIn_Mailbox;
+    K2OSKERN_OBJ_MSG *      mpIn_Msg;
+    K2OS_MSGIO const *      mpIn_Io;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT
 {
-    K2OSKERN_OBJ_MSG *  mpMsgInOut;
+    K2OSKERN_OBJ_MSG *      mpIn_Msg;
+    BOOL                    mIn_Clear;
+
+    K2OSKERN_OBJ_MSG *      mpOut_MsgToRelease;
+    K2OSKERN_OBJ_MAILBOX *  mpOut_MailboxToRelease;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP
 {
-    K2OSKERN_OBJ_MSG *  mpMsg;
-    K2OS_MSGIO *        mpIo;
-    BOOL                mClear;
+    K2OSKERN_OBJ_MSG *  mpIn_Msg;
+    K2OS_MSGIO *        mpIn_MsgIoOutBuf;
+    BOOL                mIn_Clear;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE
@@ -390,7 +389,6 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_BLOCK         MboxBlock;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RECV          MboxRecv;
     K2OSKERN_SCHED_ITEM_ARGS_MBOX_RESPOND       MboxRespond;
-    K2OSKERN_SCHED_ITEM_ARGS_MBOX_PURGE         MboxPurge;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           MsgSend;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          MsgAbort;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      MsgReadResp;
@@ -719,6 +717,15 @@ struct _K2OSKERN_OBJ_PROCESS
 
 /* --------------------------------------------------------------------------------- */
 
+struct _K2OSKERN_OBJ_SEM
+{
+    K2OSKERN_OBJ_HEADER Hdr;
+    UINT32              mMaxCount;
+    UINT32              mCurCount;
+};
+
+/* --------------------------------------------------------------------------------- */
+
 struct _K2OSKERN_OBJ_MAILBOX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -729,7 +736,7 @@ struct _K2OSKERN_OBJ_MAILBOX
     K2LIST_ANCHOR           PendingMsgList;
     K2LIST_ANCHOR           InSvcMsgList;
 
-    K2OSKERN_OBJ_EVENT      Event;
+    K2OSKERN_OBJ_SEM        Semaphore;
 };
 
 typedef enum _KernMsgState KernMsgState;
@@ -737,7 +744,8 @@ enum _KernMsgState
 {
     KernMsgState_Ready = 0,
     KernMsgState_Pending,
-    KernMsgState_InSvc
+    KernMsgState_InSvc,
+    KernMsgState_Completed
 };
 
 struct _K2OSKERN_OBJ_MSG
@@ -746,14 +754,14 @@ struct _K2OSKERN_OBJ_MSG
 
     KernMsgState            mState;
 
-    K2OSKERN_OBJ_MAILBOX *  mpBox;
-    K2LIST_LINK             BoxListLink;
+    K2OSKERN_OBJ_MAILBOX *  mpMailbox;
+    K2LIST_LINK             MailboxListLink;
 
     volatile UINT32         mRequestId;
 
     K2OS_MSGIO              Io;
 
-    K2OSKERN_OBJ_EVENT      Event;
+    K2OSKERN_OBJ_EVENT      CompletionEvent;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -833,15 +841,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_THREAD_PAGE) == K2_VA32_MEMPAGE_BYTES);
 #else
 #error !!!Unsupported Architecture
 #endif
-
-/* --------------------------------------------------------------------------------- */
-
-struct _K2OSKERN_OBJ_SEM
-{
-    K2OSKERN_OBJ_HEADER Hdr;
-    UINT32              mMaxCount;
-    UINT32              mCurCount;
-};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1386,14 +1385,14 @@ BOOL KernSched_Exec_EventChange(void);
 BOOL KernSched_Exec_MboxBlock(void);
 BOOL KernSched_Exec_MboxRecv(void);
 BOOL KernSched_Exec_MboxRespond(void);
-BOOL KernSched_Exec_MboxPurge(void);
 BOOL KernSched_Exec_MsgSend(void);
 BOOL KernSched_Exec_MsgAbort(void);
 BOOL KernSched_Exec_MsgReadResp(void);
 BOOL KernSched_Exec_AlarmChange(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
-BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, K2OSKERN_OBJ_MSG **appRetRelMsg, K2STAT *apRetStat);
+BOOL KernSchedEx_SemInc(K2OSKERN_OBJ_SEM *apSem, UINT32 aRelCount);
+BOOL KernSchedEx_MsgSend(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo, K2STAT *apRetStat);
 BOOL KernSchedEx_AlarmFired(K2OSKERN_OBJ_ALARM *apAlarm);
 
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
@@ -1493,7 +1492,7 @@ void   KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox);
 
 K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg);
 K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo);
-K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg);
+K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg, BOOL aClear);
 K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear);
 void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 

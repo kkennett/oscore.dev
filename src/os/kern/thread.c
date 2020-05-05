@@ -318,43 +318,20 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
         return aObjWait.mpHdr;
 
     case K2OS_Obj_Mailbox:
-        K2_ASSERT(aObjWait.mpMailbox->Event.mIsAutoReset == TRUE);
-        if (aObjWait.mpMailbox->Event.mIsSignalled)
+        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
         {
-            if (gData.mKernInitStage < KernInitStage_MultiThreaded)
-            {
-                //
-                // very special case - changing the object and returning no wait
-                //
-                aObjWait.mpMailbox->Event.mIsSignalled = FALSE;
-                return NULL;
-            }
+            //
+            // very special case - changing the object and returning no wait
+            //
+            K2_ASSERT(aObjWait.mpMailbox->Semaphore.mCurCount > 0);
+            aObjWait.mpMailbox->Semaphore.mCurCount--;
+            return NULL;
         }
-
-        //
-        // signalled auto-reset event. we need to wait on it so the scheduler can release the right thread
-        //
-        return &aObjWait.mpMailbox->Event.Hdr;
+        return &aObjWait.mpMailbox->Semaphore.Hdr;
 
     case K2OS_Obj_Msg:
-        K2_ASSERT(aObjWait.mpMsg->Event.mIsAutoReset == TRUE);
-
-        if (aObjWait.mpMsg->Event.mIsSignalled)
-        {
-            if (gData.mKernInitStage < KernInitStage_MultiThreaded)
-            {
-                //
-                // very special case - changing the object and returning no wait
-                //
-                aObjWait.mpMsg->Event.mIsSignalled = FALSE;
-                return NULL;
-            }
-        }
-
-        //
-        // signalled auto-reset event. we need to wait on it so the scheduler can release the right thread
-        //
-        return &aObjWait.mpMsg->Event.Hdr;
+        K2_ASSERT(aObjWait.mpName->Event_IsOwned.mIsAutoReset == FALSE);
+        return aObjWait.mpMsg->CompletionEvent.mIsSignalled ? NULL : &aObjWait.mpMsg->CompletionEvent.Hdr;
 
     case K2OS_Obj_Alarm:
         if (aObjWait.mpAlarm->mIsSignalled)

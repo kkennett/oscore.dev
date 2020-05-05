@@ -35,7 +35,6 @@
 BOOL KernSched_Exec_ThreadExit(void)
 {
     BOOL                        changedSomething;
-    BOOL                        msgRes;
     K2OSKERN_OBJ_THREAD *       pExitingThread;
     K2OS_MSGIO                  msgIo;
     K2STAT                      stat;
@@ -96,20 +95,17 @@ BOOL KernSched_Exec_ThreadExit(void)
     //
     msgIo.mOpCode = SYSMSG_OPCODE_THREAD_EXIT;
     msgIo.mPayload[0] = (UINT32)pExitingThread;
-    msgIo.mPayload[1] = 0;
 
     K2_ASSERT(NULL != gData.mpMsgBox_K2OSEXEC);
 
-    msgRes = KernSchedEx_MsgSend(
+    if (KernSchedEx_MsgSend(
         gData.mpMsgBox_K2OSEXEC, 
         &pExitingThread->MsgExit,
         &msgIo, 
-        (K2OSKERN_OBJ_MSG **)&msgIo.mPayload[1], 
-        &stat);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
-    if (msgRes)
+        &stat))
         changedSomething = TRUE;
+
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     return changedSomething;
 }

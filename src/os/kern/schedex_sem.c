@@ -32,15 +32,65 @@
 
 #include "kern.h"
 
-BOOL KernSched_Exec_SemRelease(void)
+BOOL KernSchedEx_SemInc(K2OSKERN_OBJ_SEM *apSem, UINT32 aRelCount)
 {
-    K2OSKERN_OBJ_SEM *          pSem;
-    UINT32                      relCount;
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2OSKERN_SCHED_WAITENTRY *  pEntry;
     K2LIST_ANCHOR *             pAnchor;
     K2LIST_LINK *               pListLink;
     BOOL                        changedSomething;
+
+    changedSomething = FALSE;
+
+    pAnchor = &apSem->Hdr.WaitEntryPrioList;
+
+    if (apSem->mCurCount == 0)
+    {
+        K2_ASSERT(pAnchor->mNodeCount > 0);
+
+        //
+        // we need to try to release threads that are waiting, up to 'relCount' of them.
+        //
+        pListLink = pAnchor->mpHead;
+        do {
+            pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+            pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+            pListLink = pListLink->mpNext;
+
+            if (!pWait->mWaitAll)
+            {
+                --aRelCount;
+                KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
+                changedSomething = TRUE;
+            }
+            else
+            {
+                if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                {
+                    --aRelCount;
+                    changedSomething = TRUE;
+                }
+            }
+        } while ((pListLink != NULL) && (aRelCount > 0));
+
+        //
+        // whatever is left is what increments the cur count
+        //
+    }
+    else
+    {
+        K2_ASSERT(pAnchor->mNodeCount == 0);
+    }
+
+    apSem->mCurCount += aRelCount;
+
+    return changedSomething;
+}
+
+BOOL KernSched_Exec_SemRelease(void)
+{
+    K2OSKERN_OBJ_SEM *  pSem;
+    UINT32              relCount;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_SemRelease);
 
@@ -48,62 +98,17 @@ BOOL KernSched_Exec_SemRelease(void)
     relCount = gData.Sched.mpActiveItem->Args.SemRelease.mCount;
 
     K2_ASSERT(relCount > 0);
-    
-//    K2OSKERN_Debug("SCHED:SemRelease(%08X,%d)\n", pSem, relCount);
 
-    changedSomething = FALSE;
+//    K2OSKERN_Debug("SCHED:SemRelease(%08X,%d)\n", pSem, relCount);
 
     if ((pSem->mCurCount + relCount) > pSem->mMaxCount)
     {
         K2OSKERN_Debug("**Failed to release sem - count would exceed max\n");
         gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_BAD_ARGUMENT;
-    }
-    else
-    {
-        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
-
-        pAnchor = &pSem->Hdr.WaitEntryPrioList;
-
-        if (pSem->mCurCount == 0)
-        {
-            K2_ASSERT(pAnchor->mNodeCount > 0);
-
-            //
-            // we need to try to release threads that are waiting, up to 'relCount' of them.
-            //
-            pListLink = pAnchor->mpHead;
-            do {
-                pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
-                pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
-                pListLink = pListLink->mpNext;
-
-                if (!pWait->mWaitAll)
-                {
-                    --relCount;
-                    KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
-                    changedSomething = TRUE;
-                }
-                else
-                {
-                    if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
-                    {
-                        --relCount;
-                        changedSomething = TRUE;
-                    }
-                }
-            } while ((pListLink != NULL) && (relCount > 0));
-
-            //
-            // whatever is left is what increments the cur count
-            //
-        }
-        else
-        {
-            K2_ASSERT(pAnchor->mNodeCount == 0);
-        }
-
-        pSem->mCurCount += relCount;
+        return FALSE;
     }
 
-    return changedSomething;  
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+
+    return KernSchedEx_SemInc(pSem, relCount);
 }

@@ -192,7 +192,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKE
     return TRUE;
 }
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg)
+BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg, BOOL aClear)
 {
     K2STAT          stat;
     K2STAT          stat2;
@@ -208,7 +208,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg)
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMsg->Hdr.mObjType == K2OS_Obj_Msg)
-            stat = KernMsg_Abort(pMsg);
+            stat = KernMsg_Abort(pMsg, aClear);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
         stat2 = KernObj_Release(&pMsg->Hdr);
