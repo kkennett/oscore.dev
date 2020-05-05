@@ -99,38 +99,54 @@ BOOL KernSched_Exec_MboxRecv(void)
 
     K2_ASSERT(pMsg->mRequestId != 0);
     pMsg->mState = KernMsgState_InSvc;
+    K2LIST_AddAtTail(&pMailbox->InSvcMsgList, &pMsg->MailboxListLink);
 
     gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MsgToRelease = NULL;
     gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MailboxToRelease = NULL;
     gData.Sched.mpActiveItem->Args.MboxRecv.mOut_RequestId = pMsg->mRequestId;
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
-    return KernSchedEx_SemInc(&pMailbox->Semaphore, 1);
+    return FALSE;
 }
 
 BOOL KernSched_Exec_MboxRespond(void)
 {
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
+    K2OSKERN_OBJ_MSG *      pMsg;
     UINT32                  requestId;
-    K2OS_MSGIO const *      pResponseIo;
-
-//    K2OSKERN_OBJ_MSG *      pMsg;
+    K2LIST_LINK *           pListLink;
 
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MboxRespond);
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxRespond.mpIn_Mailbox;
     requestId = gData.Sched.mpActiveItem->Args.MboxRespond.mIn_RequestId;
-    pResponseIo = gData.Sched.mpActiveItem->Args.MboxRespond.mpIn_ResponseIo;
 
-    //
-    // find the message with the specified request id on the 
-    // in service message list
-    //
-    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_NOT_IMPL;
+    pListLink = pMailbox->InSvcMsgList.mpHead;
+    if (pListLink != NULL)
+    {
+        do {
+            pMsg = K2_GET_CONTAINER(K2OSKERN_OBJ_MSG, pListLink, MailboxListLink);
+            if (pMsg->mRequestId == requestId)
+                break;
+            pListLink = pListLink->mpNext;
+        } while (pListLink != NULL);
+    }
+    if (NULL == pListLink)
+    {
+        gData.Sched.mpActiveItem->Args.MboxRespond.mpOut_MsgToRelease = NULL;
+        gData.Sched.mpActiveItem->Args.MboxRespond.mpOut_MailboxToRelease = NULL;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_NOT_FOUND;
+        return FALSE;
+    }
 
-//    K2OSKERN_OBJ_MSG *      mpOut_MsgToRelease;
-//    K2OSKERN_OBJ_MAILBOX *  mpOut_MailboxToRelease;
+    K2LIST_Remove(&pMailbox->InSvcMsgList, &pMsg->MailboxListLink);
+    K2MEM_Copy(&pMsg->Io, gData.Sched.mpActiveItem->Args.MboxRespond.mpIn_ResponseIo, sizeof(K2OS_MSGIO));
+    pMsg->mpMailbox = NULL;
+    pMsg->mState = KernMsgState_Completed;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+    gData.Sched.mpActiveItem->Args.MboxRespond.mpOut_MsgToRelease = pMsg;
+    gData.Sched.mpActiveItem->Args.MboxRespond.mpOut_MailboxToRelease = pMailbox;
 
-    return FALSE;
+    return KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE);
 }
 
