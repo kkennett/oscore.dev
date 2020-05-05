@@ -48,7 +48,7 @@ KernSchedEx_MsgSend(
         return FALSE;
     }
 
-    K2_ASSERT(FALSE == apMsg->CompletionEvent.mIsSignalled);
+    K2_ASSERT(FALSE != apMsg->CompletionEvent.mIsSignalled);
 
     if (apMailbox->mBlocked)
     {

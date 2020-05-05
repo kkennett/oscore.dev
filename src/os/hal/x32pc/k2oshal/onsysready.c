@@ -98,8 +98,6 @@ K2OSHAL_OnSystemReady(
         K2OSKERN_Panic("HAL failed to create service\n");
     }
 
-    K2OS_TokenDestroy(tokMailbox);
-
     tokPublish = K2OSKERN_ServicePublish(
         tokService,
         &gK2OSEXEC_FsProvInterfaceGuid,

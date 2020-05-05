@@ -46,40 +46,37 @@ BOOL KernSchedEx_SemInc(K2OSKERN_OBJ_SEM *apSem, UINT32 aRelCount)
 
     if (apSem->mCurCount == 0)
     {
-        K2_ASSERT(pAnchor->mNodeCount > 0);
+        if (pAnchor->mNodeCount > 0)
+        {
+            //
+            // we need to try to release threads that are waiting, up to 'relCount' of them.
+            //
+            pListLink = pAnchor->mpHead;
+            do {
+                pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
+                pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
+                pListLink = pListLink->mpNext;
 
-        //
-        // we need to try to release threads that are waiting, up to 'relCount' of them.
-        //
-        pListLink = pAnchor->mpHead;
-        do {
-            pEntry = K2_GET_CONTAINER(K2OSKERN_SCHED_WAITENTRY, pListLink, WaitPrioListLink);
-            pWait = K2_GET_CONTAINER(K2OSKERN_SCHED_MACROWAIT, pEntry, SchedWaitEntry[pEntry->mMacroIndex]);
-            pListLink = pListLink->mpNext;
-
-            if (!pWait->mWaitAll)
-            {
-                --aRelCount;
-                KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
-                changedSomething = TRUE;
-            }
-            else
-            {
-                if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                if (!pWait->mWaitAll)
                 {
                     --aRelCount;
+                    KernSched_EndThreadWait(pWait, K2OS_WAIT_SIGNALLED_0 + pEntry->mMacroIndex);
                     changedSomething = TRUE;
                 }
-            }
-        } while ((pListLink != NULL) && (aRelCount > 0));
+                else
+                {
+                    if (KernSched_CheckSignalOne_SatisfyAll(pWait, pEntry))
+                    {
+                        --aRelCount;
+                        changedSomething = TRUE;
+                    }
+                }
+            } while ((pListLink != NULL) && (aRelCount > 0));
 
-        //
-        // whatever is left is what increments the cur count
-        //
-    }
-    else
-    {
-        K2_ASSERT(pAnchor->mNodeCount == 0);
+            //
+            // whatever is left is what increments the cur count
+            //
+        }
     }
 
     apSem->mCurCount += aRelCount;

@@ -330,7 +330,7 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
         return &aObjWait.mpMailbox->Semaphore.Hdr;
 
     case K2OS_Obj_Msg:
-        K2_ASSERT(aObjWait.mpName->Event_IsOwned.mIsAutoReset == FALSE);
+        K2_ASSERT(aObjWait.mpMsg->CompletionEvent.mIsAutoReset == FALSE);
         return aObjWait.mpMsg->CompletionEvent.mIsSignalled ? NULL : &aObjWait.mpMsg->CompletionEvent.Hdr;
 
     case K2OS_Obj_Alarm:
