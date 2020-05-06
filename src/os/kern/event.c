@@ -57,6 +57,7 @@ K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, 
     apEvent->mIsAutoReset = aAutoReset;
     apEvent->mIsSignalled = aInitialState;
 
+    K2OSKERN_Debug("Add Event %08X\n", apEvent);
     stat = KernObj_Add(&apEvent->Hdr, apName);
 
     if (apName != NULL)

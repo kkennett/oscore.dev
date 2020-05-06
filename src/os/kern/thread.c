@@ -74,6 +74,7 @@ static void sInit_BeforeVirt(void)
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);
 
+    K2OSKERN_Debug("Add Thread %08X\n", pThread);
     stat = KernObj_Add(&pThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
@@ -184,6 +185,7 @@ K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PR
     //
     // threads can never have a name
     //
+    K2OSKERN_Debug("Add Thread %08X\n", pNewThread);
     stat = KernObj_Add(&pNewThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 

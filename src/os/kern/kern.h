@@ -397,6 +397,7 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_READ
     K2_GUID128 *            mpOut_InterfaceId;
     void *                  mOut_Context;
     K2OSKERN_SVC_IFINST  *  mpOut_IfInst;
+    K2OSKERN_OBJ_NOTIFY *   mpOut_NotifyToRelease;
     K2OSKERN_NOTIFY_BLOCK * mpOut_NotifyBlockToRelease;
 };
 

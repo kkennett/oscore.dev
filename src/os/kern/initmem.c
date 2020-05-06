@@ -738,6 +738,7 @@ static void sAddSegmentToTree(K2OSKERN_OBJ_SEGMENT *apSeg)
     K2STAT                      stat;
 
     K2TREE_Insert(&gpProc0->SegTree, apSeg->ProcSegTreeNode.mUserVal, &apSeg->ProcSegTreeNode);
+    K2OSKERN_Debug("Add Segment %08X\n", apSeg);
     stat = KernObj_Add(&apSeg->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 

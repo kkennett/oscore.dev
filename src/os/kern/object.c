@@ -40,39 +40,51 @@ void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     switch (apObjHdr->mObjType)
     {
     case K2OS_Obj_Name:
+        K2OSKERN_Debug("Dispose Name %08X\n", apObjHdr);
         KernName_Dispose((K2OSKERN_OBJ_NAME *)apObjHdr);
         break;
     case K2OS_Obj_Event:
+        K2OSKERN_Debug("Dispose Event %08X\n", apObjHdr);
         KernEvent_Dispose((K2OSKERN_OBJ_EVENT *)apObjHdr);
         break;
     case K2OS_Obj_Semaphore:
+        K2OSKERN_Debug("Dispose Sem %08X\n", apObjHdr);
         KernSem_Dispose((K2OSKERN_OBJ_SEM *)apObjHdr);
         break;
     case K2OS_Obj_Segment:
+        K2OSKERN_Debug("Dispose Segment %08X\n", apObjHdr);
         KernMem_SegDispose((K2OSKERN_OBJ_SEGMENT *)apObjHdr);
         break;
     case K2OS_Obj_Thread:
+        K2OSKERN_Debug("Dispose Thread %08X\n", apObjHdr);
         KernThread_Dispose((K2OSKERN_OBJ_THREAD *)apObjHdr);
         break;
     case K2OS_Obj_Mailbox:
+        K2OSKERN_Debug("Dispose Mailbox %08X\n", apObjHdr);
         KernMailbox_Dispose((K2OSKERN_OBJ_MAILBOX *)apObjHdr);
         break;
     case K2OS_Obj_Msg:
+        K2OSKERN_Debug("Dispose Msg %08X\n", apObjHdr);
         KernMsg_Dispose((K2OSKERN_OBJ_MSG *)apObjHdr);
         break;
     case K2OS_Obj_Alarm:
+        K2OSKERN_Debug("Dispose Alarm %08X\n", apObjHdr);
         KernAlarm_Dispose((K2OSKERN_OBJ_ALARM *)apObjHdr);
         break;
     case K2OS_Obj_Service:
+        K2OSKERN_Debug("Dispose Service %08X\n", apObjHdr);
         KernService_Dispose((K2OSKERN_OBJ_SERVICE *)apObjHdr);
         break;
     case K2OS_Obj_Publish:
+        K2OSKERN_Debug("Dispose Publish %08X\n", apObjHdr);
         KernPublish_Dispose((K2OSKERN_OBJ_PUBLISH *)apObjHdr);
         break;
     case K2OS_Obj_Notify:
+        K2OSKERN_Debug("Dispose Notify %08X\n", apObjHdr);
         KernNotify_Dispose((K2OSKERN_OBJ_NOTIFY *)apObjHdr);
         break;
     case K2OS_Obj_Subscrip:
+        K2OSKERN_Debug("Dispose Subscrip %08X\n", apObjHdr);
         KernSubscrip_Dispose((K2OSKERN_OBJ_SUBSCRIP *)apObjHdr);
         break;
     default:

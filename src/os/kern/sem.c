@@ -62,6 +62,7 @@ K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32
     apSem->mCurCount = aInitCount;
     apSem->mMaxCount = aMaxCount;
 
+    K2OSKERN_Debug("Add Sem %08X\n", apSem);
     stat = KernObj_Add(&apSem->Hdr, apName);
 
     if (apName != NULL)

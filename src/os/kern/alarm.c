@@ -60,6 +60,7 @@ K2STAT KernAlarm_Create(K2OSKERN_OBJ_ALARM *apAlarm, K2OSKERN_OBJ_NAME *apName, 
     apAlarm->mIsPeriodic = aIsPeriodic;
     apAlarm->mIntervalMs = aIntervalMs;
 
+    K2OSKERN_Debug("Add Alarm %08X\n", apAlarm);
     stat = KernObj_Add(&apAlarm->Hdr, apName);
     if (!K2STAT_IS_ERROR(stat))
     {

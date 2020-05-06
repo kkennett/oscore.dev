@@ -34,12 +34,83 @@
 
 BOOL KernSched_Exec_NotifyLatch(void)
 {
+    K2OSKERN_NOTIFY_BLOCK * pBlock;
+    K2OSKERN_OBJ_NOTIFY *   pNotify;
+    UINT32                  ix;
+    BOOL                    changedSomething;
+
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_NotifyLatch);
-    return FALSE;
+
+    pBlock = gData.Sched.mpActiveItem->Args.NotifyLatch.mpIn_NotifyBlock;
+    pBlock->mActiveCount = pBlock->mTotalCount;
+
+    changedSomething = FALSE;
+
+    for (ix = 0; ix < pBlock->mTotalCount; ix++)
+    {
+        K2_ASSERT(pBlock->Rec[ix].mRecBlockIndex == ix);
+        pNotify = pBlock->Rec[ix].mpSubscrip->mpNotify;
+        pBlock->Rec[ix].mpSubscrip = NULL;  // caller holds reference separately
+        pBlock->Rec[ix].mpNotify = pNotify;
+        KernObj_AddRef(&pNotify->Hdr);
+        K2LIST_AddAtTail(&pNotify->RecList, &pBlock->Rec[ix].NotifyRecListLink);
+        if (KernSchedEx_EventChange(&pNotify->AvailEvent, TRUE))
+            changedSomething = TRUE;
+    }
+
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+
+    return changedSomething;
 }
 
 BOOL KernSched_Exec_NotifyRead(void)
 {
+    K2OSKERN_NOTIFY_BLOCK * pBlock;
+    K2OSKERN_OBJ_NOTIFY *   pNotify;
+    K2OSKERN_NOTIFY_REC *   pRec;
+    BOOL                    changedSomething;
+
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_NotifyRead);
-    return FALSE;
+
+    pNotify = gData.Sched.mpActiveItem->Args.NotifyRead.mpIn_Notify;
+
+    if (pNotify->RecList.mNodeCount == 0)
+    {
+        gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_NotifyBlockToRelease = NULL;
+        gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_ERROR_EMPTY;
+        return FALSE;
+    }
+
+    changedSomething = FALSE;
+    gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
+
+    //
+    // remove notify record from the active list
+    //
+    pRec = K2_GET_CONTAINER(K2OSKERN_NOTIFY_REC, pNotify->RecList.mpHead, NotifyRecListLink);
+    K2_ASSERT(pRec->mpNotify == pNotify);
+    K2LIST_Remove(&pNotify->RecList, &pRec->NotifyRecListLink);
+    if (pNotify->RecList.mNodeCount == 0)
+    {
+        if (KernSchedEx_EventChange(&pNotify->AvailEvent, FALSE))
+            changedSomething = TRUE;
+    }
+
+    pBlock = K2_GET_CONTAINER(K2OSKERN_NOTIFY_BLOCK, pRec, Rec[pRec->mRecBlockIndex]);
+    K2_ASSERT(pBlock->mActiveCount > 0);
+    if (--pBlock->mActiveCount == 0)
+    {
+        gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_NotifyBlockToRelease = pBlock;
+    }
+    else
+    {
+        gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_NotifyBlockToRelease = NULL;
+    }
+
+    gData.Sched.mpActiveItem->Args.NotifyRead.mOut_IsArrival = pRec->mIsArrival;
+    K2MEM_Copy(gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_InterfaceId, &pRec->InterfaceId, sizeof(K2_GUID128));
+    gData.Sched.mpActiveItem->Args.NotifyRead.mOut_Context = pRec->mpContext;
+    K2MEM_Copy(&gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_IfInst, &pBlock->Instance, sizeof(K2OSKERN_SVC_IFINST));
+
+    return changedSomething;
 }

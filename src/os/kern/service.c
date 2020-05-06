@@ -88,6 +88,7 @@ K2OSKERN_ServiceCreate(
             pSvc->ServTreeNode.mUserVal = ++gData.mLastServInstId;
             K2TREE_Insert(&gData.ServTree, pSvc->ServTreeNode.mUserVal, &pSvc->ServTreeNode);
 
+            K2OSKERN_Debug("Add Service %08X\n", pSvc);
             stat = KernObj_Add(&pSvc->Hdr, NULL);
             if (K2STAT_IS_ERROR(stat))
             {
@@ -338,6 +339,7 @@ K2OSKERN_ServicePublish(
                     pPublish->IfInstTreeNode.mUserVal = ifInst.mInterfaceInstanceId;
                     K2TREE_Insert(&gData.IfInstTree, pPublish->IfInstTreeNode.mUserVal, &pPublish->IfInstTreeNode);
 
+                    K2OSKERN_Debug("Add Publish %08X\n", pPublish);
                     stat = KernObj_Add(&pPublish->Hdr, NULL);
                     if (K2STAT_IS_ERROR(stat))
                     {
@@ -1181,6 +1183,7 @@ K2OSKERN_NotifyCreate(
 
         pNotifyObj->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
+        K2OSKERN_Debug("Add Notify %08X\n", pNotifyObj);
         stat = KernObj_Add(&pNotifyObj->Hdr, NULL);
         if (K2STAT_IS_ERROR(stat))
         {
@@ -1298,6 +1301,7 @@ K2OSKERN_NotifySubscribe(
 
                 K2LIST_AddAtTail(&pNotify->SubscripList, &pSubscrip->NotifySubscripListLink);
 
+                K2OSKERN_Debug("Add Subscrip %08X\n", pSubscrip);
                 stat = KernObj_Add(&pSubscrip->Hdr, NULL);
                 if (K2STAT_IS_ERROR(stat))
                 {
@@ -1517,5 +1521,29 @@ K2OSKERN_NotifyRead(
 
 void KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify)
 {
-    K2_ASSERT(0);
+    BOOL    stat;
+    BOOL    check;
+
+    K2_ASSERT(apNotify->Hdr.mObjType == K2OS_Obj_Notify);
+    K2_ASSERT(apNotify->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apNotify->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apNotify->Hdr.WaitEntryPrioList.mNodeCount == 0);
+
+    K2_ASSERT(apNotify->SubscripList.mNodeCount == 0);
+    K2_ASSERT(apNotify->RecList.mNodeCount == 0);
+    K2_ASSERT(apNotify->AvailEvent.mIsSignalled == FALSE);
+    K2_ASSERT(apNotify->AvailEvent.Hdr.WaitEntryPrioList.mNodeCount == 0);
+
+    check = !(apNotify->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    stat = KernObj_Release(&apNotify->AvailEvent.Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    K2MEM_Zero(apNotify, sizeof(K2OSKERN_OBJ_SUBSCRIP));
+
+    if (check)
+    {
+        check = K2OS_HeapFree(apNotify);
+        K2_ASSERT(check);
+    }
 }
