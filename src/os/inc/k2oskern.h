@@ -339,13 +339,13 @@ extern K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 
 typedef
 void
-(*K2OSKERN_pf_ReflectNotify)(
+(*K2OSKERN_pf_ReflectSysMsg)(
     UINT32          aOpCode,
     UINT32 const *  apParam
     );
 
 void
-K2OSKERN_ReflectNotify(
+K2OSKERN_ReflectSysMsg(
     UINT32          aOpCode,
     UINT32 const *  apParam
 );
@@ -447,21 +447,31 @@ K2OSKERN_InterfaceInstanceEnum(
     K2OSKERN_SVC_IFINST *   apRetInst
 );
 
-typedef 
-void 
-(*K2OSKERN_of_IFaceSubscripCallback)(
-    K2_GUID128 const *          apInterfaceId, 
-    void *                      apContext, 
-    K2OSKERN_SVC_IFINST const * apInterfaceInstance,
-    BOOL                        aIsArrival
-    );
+
+//
+// a notify receives indications of interface arrival an departure
+//
+K2OS_TOKEN
+K2OSKERN_NotifyCreate(
+    void
+);
 
 K2OS_TOKEN
-K2OSKERN_InterfaceSubscribe(
-    K2_GUID128 const *                  apInterfaceId,
-    K2OSKERN_of_IFaceSubscripCallback   afCallback,
-    void *                              apContext
+K2OSKERN_NotifySubscribe(
+    K2OS_TOKEN              aTokNotify,
+    K2_GUID128 const *      apInterfaceId,
+    void *                  apContext
 );
+
+BOOL
+K2OSKERN_NotifyRead(
+    K2OS_TOKEN              aTokNotify,
+    BOOL *                  apRetIsArrival,
+    K2_GUID128 *            apRetInterfaceId,
+    void **                 apRetContext,
+    K2OSKERN_SVC_IFINST *   apRetInterfaceInstance
+);
+
 
 //
 //------------------------------------------------------------------------

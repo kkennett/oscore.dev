@@ -46,7 +46,7 @@ void sRecvNotify(UINT32 aOpCode, UINT32 *apParam)
     if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
         return;
 
-    K2OSKERN_ReflectNotify(aOpCode, apParam);
+    K2OSKERN_ReflectSysMsg(aOpCode, apParam);
 }
 
 K2STAT sRecvCall(UINT32 aOpCode, UINT32 *apParam)

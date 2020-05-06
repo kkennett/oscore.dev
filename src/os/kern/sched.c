@@ -53,7 +53,9 @@ sgSchedHandlers[KernSchedItemType_Count] =
     KernSched_Exec_MsgSend,             // KernSchedItem_MsgSend
     KernSched_Exec_MsgAbort,            // KernSchedItem_MsgAbort
     KernSched_Exec_MsgReadResp,         // KernSchedItem_MsgReadResp
-    KernSched_Exec_AlarmChange          // KernSchedItem_AlarmChange
+    KernSched_Exec_AlarmChange,         // KernSchedItem_AlarmChange
+    KernSched_Exec_NotifyLatch,         // KernSchedItem_NotifyLatch
+    KernSched_Exec_NotifyRead           // KernSchedItem_NotifyRead
 };
 
 static K2OSKERN_SCHED_ITEM * sgpItemList;

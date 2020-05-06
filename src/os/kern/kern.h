@@ -105,7 +105,10 @@ union _K2OSKERN_OBJ_WAITABLE
     K2OSKERN_OBJ_MAILBOX *  mpMailbox;
     K2OSKERN_OBJ_MSG *      mpMsg;
     K2OSKERN_OBJ_ALARM *    mpAlarm;
+    K2OSKERN_OBJ_NOTIFY *   mpNotify;
 };
+
+typedef struct _K2OSKERN_NOTIFY_BLOCK K2OSKERN_NOTIFY_BLOCK;
 
 /* --------------------------------------------------------------------------------- */
 
@@ -223,6 +226,8 @@ enum _KernSchedItemType
     KernSchedItem_MsgAbort,
     KernSchedItem_MsgReadResp,
     KernSchedItem_AlarmChange,
+    KernSchedItem_NotifyLatch,
+    KernSchedItem_NotifyRead,
 
     // more here
     KernSchedItemType_Count
@@ -243,6 +248,8 @@ typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_SEND           K2OSKERN_SCHED_ITEM_
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP;
 typedef struct _K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE       K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_LATCH       K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_LATCH;
+typedef struct _K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_READ        K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_READ;
 
 typedef enum _KernSchedTimerItemType KernSchedTimerItemType;
 enum _KernSchedTimerItemType
@@ -377,6 +384,22 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE
     BOOL                    mIsMount;
 };
 
+struct _K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_LATCH
+{
+    K2OSKERN_NOTIFY_BLOCK * mpIn_NotifyBlock;
+};
+
+struct _K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_READ
+{
+    K2OSKERN_OBJ_NOTIFY *   mpIn_Notify;
+
+    BOOL                    mOut_IsArrival;
+    K2_GUID128 *            mpOut_InterfaceId;
+    void *                  mOut_Context;
+    K2OSKERN_SVC_IFINST  *  mpOut_IfInst;
+    K2OSKERN_NOTIFY_BLOCK * mpOut_NotifyBlockToRelease;
+};
+
 union _K2OSKERN_SCHED_ITEM_ARGS
 {
     K2OSKERN_SCHED_ITEM_ARGS_THREAD_EXIT        ThreadExit;      
@@ -393,6 +416,8 @@ union _K2OSKERN_SCHED_ITEM_ARGS
     K2OSKERN_SCHED_ITEM_ARGS_MSG_ABORT          MsgAbort;
     K2OSKERN_SCHED_ITEM_ARGS_MSG_READ_RESP      MsgReadResp;
     K2OSKERN_SCHED_ITEM_ARGS_ALARM_CHANGE       AlarmChange;
+    K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_LATCH       NotifyLatch;
+    K2OSKERN_SCHED_ITEM_ARGS_NOTIFY_READ        NotifyRead;
 };
 
 struct _K2OSKERN_SCHED_ITEM
@@ -902,22 +927,53 @@ struct _K2OSKERN_OBJ_PUBLISH
     K2LIST_LINK             IfacePublishListLink;   // link on IFACE.PublishList
 };
 
-typedef struct _K2OSKERN_SUBSCRIP_CALLBACK K2OSKERN_SUBSCRIP_CALLBACK;
-struct _K2OSKERN_SUBSCRIP_CALLBACK
+typedef struct _K2OSKERN_NOTIFY_REC K2OSKERN_NOTIFY_REC;
+struct _K2OSKERN_NOTIFY_REC
 {
-    K2OSKERN_of_IFaceSubscripCallback   mfFunc;
-    void *                              mpContext;
+    // set during publish lock
+    // cleared after scheduler call
+    K2OSKERN_OBJ_SUBSCRIP * mpSubscrip;
+
+    // set after publish lock before schedular call
+    UINT32                  mRecBlockIndex;
+    void *                  mpContext;
+
+    // set inside scheduler. cleared by read
+    // where block active count is also decreased
+    K2OSKERN_OBJ_NOTIFY *   mpNotify;
+    K2LIST_LINK             NotifyRecListLink;
+};
+
+typedef struct _K2OSKERN_NOTIFY_BLOCK K2OSKERN_NOTIFY_BLOCK;
+struct _K2OSKERN_NOTIFY_BLOCK
+{
+    UINT32              mTotalCount;
+    UINT32              mActiveCount;
+    BOOL                mIsArrival;
+    K2_GUID128          InterfaceId;
+    K2OSKERN_SVC_IFINST Instance;
+    K2OSKERN_NOTIFY_REC Rec[1];
+};
+
+struct _K2OSKERN_OBJ_NOTIFY
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+    K2LIST_ANCHOR           SubscripList;
+    K2LIST_ANCHOR           RecList;
+    K2OSKERN_OBJ_EVENT      AvailEvent;
 };
 
 struct _K2OSKERN_OBJ_SUBSCRIP
 {
-    K2OSKERN_OBJ_HEADER                 Hdr;
+    K2OSKERN_OBJ_HEADER     Hdr;
 
-    K2OS_TOKEN                          mTokDlxOwningCallback;
-    K2OSKERN_SUBSCRIP_CALLBACK          Callback;
+    void *                  mpContext;
 
-    K2OSKERN_IFACE *                    mpIFace;
-    K2LIST_LINK                         IfaceSubscripListLink;
+    K2OSKERN_OBJ_NOTIFY *   mpNotify;
+    K2LIST_LINK             NotifySubscripListLink;
+
+    K2OSKERN_IFACE *        mpIFace;
+    K2LIST_LINK             IfaceSubscripListLink;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1389,6 +1445,8 @@ BOOL KernSched_Exec_MsgSend(void);
 BOOL KernSched_Exec_MsgAbort(void);
 BOOL KernSched_Exec_MsgReadResp(void);
 BOOL KernSched_Exec_AlarmChange(void);
+BOOL KernSched_Exec_NotifyLatch(void);
+BOOL KernSched_Exec_NotifyRead(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
 BOOL KernSchedEx_SemInc(K2OSKERN_OBJ_SEM *apSem, UINT32 aRelCount);
@@ -1500,6 +1558,8 @@ void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
 
 void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
 void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
+
+void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
 void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
 
 /* --------------------------------------------------------------------------------- */

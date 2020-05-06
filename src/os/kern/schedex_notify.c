@@ -32,34 +32,14 @@
 
 #include "kern.h"
 
-void
-sThreadExited(
-    K2OSKERN_OBJ_THREAD * apExitedThread
-)
+BOOL KernSched_Exec_NotifyLatch(void)
 {
-    K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
-    K2_ASSERT(apExitedThread->MsgExit.Hdr.mRefCount == 1);
-    apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
-    KernObj_Release(&apExitedThread->Hdr);
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_NotifyLatch);
+    return FALSE;
 }
 
-void
-K2OSKERN_ReflectSysMsg(
-    UINT32          aOpCode,
-    UINT32 const *  apParam
-)
+BOOL KernSched_Exec_NotifyRead(void)
 {
-    if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
-        return;
-
-    K2OSKERN_Debug("ReflectSysMsg(%d)\n", aOpCode & ~SYSMSG_OPCODE_HIGH_MASK);
-
-    switch (aOpCode)
-    {
-    case SYSMSG_OPCODE_THREAD_EXIT:
-        sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0]);
-        break;
-    default:
-        break;
-    }
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_NotifyRead);
+    return FALSE;
 }

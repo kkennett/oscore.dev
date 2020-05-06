@@ -335,6 +335,10 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
 
         return aObjWait.mpHdr;
 
+    case K2OS_Obj_Notify:
+        K2_ASSERT(aObjWait.mpNotify->AvailEvent.mIsAutoReset == FALSE);
+        return aObjWait.mpNotify->AvailEvent.mIsSignalled ? NULL : &aObjWait.mpNotify->AvailEvent.Hdr;
+
     default:
         K2_ASSERT(0);
         break;

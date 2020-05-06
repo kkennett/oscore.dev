@@ -238,7 +238,16 @@ void Dlx_Init(K2OSEXEC_INIT_INFO * apInitInfo);
 
 /* ----------------------------------------------------------------------------- */
 
+void
+FsProv_NotifyHandler(
+    BOOL                        aIsArrival,
+    K2_GUID128 const *          apInterfaceId,
+    K2OSKERN_SVC_IFINST const * apInterfaceInstance
+);
+
 void FsProv_Init(void);
+
+extern K2OS_TOKEN gFsProv_TokNotify;
 
 /* ----------------------------------------------------------------------------- */
 

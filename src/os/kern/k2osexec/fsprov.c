@@ -40,21 +40,19 @@ char const *        gpK2OSEXEC_FsProvInterfaceGuidStr   = "{0440C404-CAD6-4333-A
 K2_GUID128 const    gK2OSEXEC_FileSysInterfaceGuid      = K2OS_INTERFACE_ID_FILESYS;
 char const *        gpK2OSEXEC_FileSysInterfaceGuidStr  = "{71E000D8-2A94-476A-B6C7-A8575C6618CE}";
 
-static K2OS_TOKEN sgTokSubscrip;
+K2OS_TOKEN gFsProv_TokNotify = NULL;
 
-void
-sIfPopCallback(
+void 
+FsProv_NotifyHandler(
+    BOOL                        aIsArrival,
     K2_GUID128 const *          apInterfaceId,
-    void *                      apContext,
-    K2OSKERN_SVC_IFINST const * apInterfaceInstance,
-    BOOL                        aIsArrival
+    K2OSKERN_SVC_IFINST const * apInterfaceInstance
 )
 {
     K2STAT          stat;
     K2OS_FSPROVINFO provInfo;
 
     K2_ASSERT(0 == K2MEM_Compare(apInterfaceId, &gK2OSEXEC_FsProvInterfaceGuid, sizeof(K2_GUID128)));
-    K2_ASSERT(apContext == NULL);
 
     if (aIsArrival)
     {
@@ -93,6 +91,11 @@ sIfPopCallback(
 
 void FsProv_Init(void)
 {
-    sgTokSubscrip = K2OSKERN_InterfaceSubscribe(&gK2OSEXEC_FsProvInterfaceGuid, sIfPopCallback, NULL);
-    K2_ASSERT(sgTokSubscrip != NULL);
+    K2OS_TOKEN tokSubscrip;
+
+    gFsProv_TokNotify = K2OSKERN_NotifyCreate();
+    K2_ASSERT(gFsProv_TokNotify != NULL);
+
+    tokSubscrip = K2OSKERN_NotifySubscribe(gFsProv_TokNotify, &gK2OSEXEC_FsProvInterfaceGuid, FsProv_NotifyHandler);
+    K2_ASSERT(tokSubscrip != NULL);
 }
