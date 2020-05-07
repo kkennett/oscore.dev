@@ -213,7 +213,7 @@ enum _KernSchedItemType
     KernSchedItem_EnterDebug,
 
     KernSchedItem_ThreadExit,
-    KernSchedItem_ThreadWaitAny,
+    KernSchedItem_ThreadWait,
     KernSchedItem_PurgePT,
     KernSchedItem_InvalidateTlb,
     KernSchedItem_SemRelease,
@@ -1419,7 +1419,7 @@ K2STAT                  KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_T
 K2STAT                  KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
 K2STAT                  KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
 K2STAT                  KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
-UINT32                  KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs);
+UINT32                  KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL aWaitAll, UINT32 aTimeoutMs);
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg);
 
@@ -1432,7 +1432,7 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore);
 typedef BOOL(*KernSched_pf_Handler)(void);
 
 BOOL KernSched_Exec_ThreadExit(void);
-BOOL KernSched_Exec_ThreadWaitAny(void);
+BOOL KernSched_Exec_ThreadWait(void);
 BOOL KernSched_Exec_EnterDebug(void);
 BOOL KernSched_Exec_PurgePT(void);
 BOOL KernSched_Exec_InvalidateTlb(void);

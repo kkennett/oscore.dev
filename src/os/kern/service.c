@@ -700,6 +700,7 @@ K2OSKERN_ServiceCall(
     K2STAT                  stat2;
     K2TREE_NODE *           pTreeNode;
     UINT32                  waitResult;
+    K2OSKERN_OBJ_HEADER *   pHdr;
 
     if (apRetActualOut != NULL)
         *apRetActualOut = 0;
@@ -762,7 +763,8 @@ K2OSKERN_ServiceCall(
             stat = KernMsg_Send(pSvc->mpMailbox, pMsg, &msgIo);
             if (!K2STAT_IS_ERROR(stat))
             {
-                waitResult = KernThread_WaitOne(&pMsg->Hdr, K2OS_TIMEOUT_INFINITE);
+                pHdr = &pMsg->Hdr;
+                waitResult = KernThread_Wait(1, &pHdr, FALSE, K2OS_TIMEOUT_INFINITE);
                 if (waitResult != K2OS_WAIT_SIGNALLED_0)
                 {
                     stat2 = KernMsg_Abort(pMsg, TRUE);

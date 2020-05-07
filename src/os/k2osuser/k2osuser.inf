@@ -75,9 +75,7 @@ K2OS_ThreadSetOwnAttr
 K2OS_ThreadGetOwnAttr
 K2OS_ThreadSetPauseLock
 K2OS_ThreadSleep
-K2OS_ThreadWaitOne
-K2OS_ThreadWaitAny
-K2OS_ThreadWaitAll
+K2OS_ThreadWait
 K2OS_ProcessCreate
 K2OS_ProcessAcquireByName
 K2OS_ProcessAcquireById

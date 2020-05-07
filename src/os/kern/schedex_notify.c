@@ -107,8 +107,8 @@ BOOL KernSched_Exec_NotifyRead(void)
         gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_NotifyBlockToRelease = NULL;
     }
 
-    gData.Sched.mpActiveItem->Args.NotifyRead.mOut_IsArrival = pRec->mIsArrival;
-    K2MEM_Copy(gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_InterfaceId, &pRec->InterfaceId, sizeof(K2_GUID128));
+    gData.Sched.mpActiveItem->Args.NotifyRead.mOut_IsArrival = pBlock->mIsArrival;
+    K2MEM_Copy(gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_InterfaceId, &pBlock->InterfaceId, sizeof(K2_GUID128));
     gData.Sched.mpActiveItem->Args.NotifyRead.mOut_Context = pRec->mpContext;
     K2MEM_Copy(&gData.Sched.mpActiveItem->Args.NotifyRead.mpOut_IfInst, &pBlock->Instance, sizeof(K2OSKERN_SVC_IFINST));
 

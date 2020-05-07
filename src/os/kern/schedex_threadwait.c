@@ -116,7 +116,7 @@ void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT * apWait, UINT32 aWaitResu
     KernSched_MakeThreadActive(pThread, TRUE);
 }
 
-BOOL KernSched_Exec_ThreadWaitAny(void)
+BOOL KernSched_Exec_ThreadWait(void)
 {
     K2OSKERN_SCHED_MACROWAIT *  pWait;
     K2OSKERN_SCHED_WAITENTRY *  pEntry;
@@ -130,7 +130,7 @@ BOOL KernSched_Exec_ThreadWaitAny(void)
     K2LIST_LINK *               pListLink;
     K2OSKERN_OBJ_THREAD *       pReadyThread;
 
-    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWaitAny);
+    K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_ThreadWait);
 
     pWait = gData.Sched.mpActiveItem->Args.ThreadWait.mpMacroWait;
 

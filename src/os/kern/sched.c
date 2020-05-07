@@ -41,7 +41,7 @@ sgSchedHandlers[KernSchedItemType_Count] =
     NULL,                               // KernSchedItem_SchedTimer - not done through pointer call
     KernSched_Exec_EnterDebug,          // KernSchedItem_EnterDebug
     KernSched_Exec_ThreadExit,          // KernSchedItem_ThreadExit
-    KernSched_Exec_ThreadWaitAny,       // KernSchedItem_ThreadWaitAny
+    KernSched_Exec_ThreadWait,          // KernSchedItem_ThreadWait
     KernSched_Exec_PurgePT,             // KernSchedItem_PurgePT
     KernSched_Exec_InvalidateTlb,       // KernSchedItem_InvalidateTlb
     KernSched_Exec_SemRelease,          // KernSchedItem_SemRelease

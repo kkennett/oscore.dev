@@ -154,7 +154,7 @@ void   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
 }
 
-BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs)
+UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWait(UINT32 aTokenCount, K2OS_TOKEN const *apTokenArray, BOOL aWaitAll, UINT32 aTimeoutMs)
 {
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return FALSE;

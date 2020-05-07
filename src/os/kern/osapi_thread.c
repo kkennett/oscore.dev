@@ -774,7 +774,7 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     wait.mNumEntries = 0;
     wait.mWaitAll = FALSE;
 
-    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
+    pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
     pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
     pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aMilliseconds;
     
@@ -787,82 +787,57 @@ void K2_CALLCONV_CALLERCLEANS K2OS_ThreadSleep(UINT32 aMilliseconds)
     }
 }
 
-UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitOne(K2OS_TOKEN aToken, UINT32 aTimeoutMs)
+UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWait(UINT32 aTokenCount, K2OS_TOKEN const *apTokenArray, BOOL aWaitAll, UINT32 aTimeoutMs)
 {
-    K2OSKERN_OBJ_HEADER *   pObjHdr;
     K2STAT                  stat;
+    K2STAT                  stat2;
     UINT32                  result;
+    K2OSKERN_OBJ_HEADER **  ppObj;
+    UINT32                  ix;
+
+    if (aTokenCount == 0)
+    {
+        K2OS_ThreadSleep(aTimeoutMs);
+        stat = K2OS_ThreadGetStatus();
+        if (K2STAT_IS_ERROR(stat))
+            return stat;
+        return K2STAT_ERROR_TIMEOUT;
+    }
+
+    if (apTokenArray == NULL)
+        return K2STAT_ERROR_BAD_ARGUMENT;
 
     if (FALSE == K2OSKERN_GetIntr())
-        K2OSKERN_Panic("Interrupts disabled at ThreadWaitOne!\n");
+        K2OSKERN_Panic("Interrupts disabled at ThreadWait!\n");
 
-    result = KernTok_TranslateToAddRefObjs(1, &aToken, (K2OSKERN_OBJ_HEADER **)&pObjHdr);
-    if (K2STAT_IS_ERROR(result))
+    ppObj = (K2OSKERN_OBJ_HEADER **)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_HEADER *) * aTokenCount);
+    if (ppObj == NULL)
     {
-        K2OS_ThreadSetStatus(result);
-        return result;
+        K2OS_ThreadSetStatus(K2STAT_ERROR_OUT_OF_MEMORY);
+        return K2STAT_ERROR_OUT_OF_MEMORY;
     }
 
-    result = KernThread_WaitOne(pObjHdr, aTimeoutMs);
+    do {
+        stat = KernTok_TranslateToAddRefObjs(aTokenCount, apTokenArray, ppObj);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            result = stat;
+            break;
+        }
 
-    stat = KernObj_Release(pObjHdr);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        result = KernThread_Wait(aTokenCount, ppObj, aWaitAll, aTimeoutMs);
+
+        for (ix = 0; ix < aTokenCount; ix++)
+        {
+            stat2 = KernObj_Release(ppObj[ix]);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+        }
+
+    } while (0);
+
+    K2OS_HeapFree(ppObj);
 
     return result;
-}
-
-UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAny(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs)
-{
-    if (aTokenCount == 0)
-    {
-        K2OS_ThreadSleep(aTimeoutMs);
-        return K2STAT_THREAD_WAITED;
-    }
-
-    if (apTokenArray == NULL)
-    {
-        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return K2STAT_ERROR_BAD_ARGUMENT;
-    }
-
-    if (aTokenCount == 1)
-    {
-        return K2OS_ThreadWaitOne(apTokenArray[0], aTimeoutMs);
-    }
-
-    //
-    // trying to wait on multiple things
-    //
-    K2_ASSERT(0);
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return K2STAT_ERROR_TIMEOUT;
-}
-
-UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWaitAll(UINT32 aTokenCount, K2OS_TOKEN *apTokenArray, UINT32 aTimeoutMs)
-{
-    if (aTokenCount == 0)
-    {
-        K2OS_ThreadSleep(aTimeoutMs);
-        return K2STAT_THREAD_WAITED;
-    }
-
-    if (apTokenArray == NULL)
-    {
-        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
-        return K2STAT_ERROR_BAD_ARGUMENT;
-    }
-
-    if (aTokenCount == 1)
-    {
-        return K2OS_ThreadWaitOne(apTokenArray[0], aTimeoutMs);
-    }
-
-    //
-    // trying to wait on multiple things
-    //
-    K2_ASSERT(0);
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return K2STAT_ERROR_TIMEOUT;
 }
 
 BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetPauseLock(BOOL aSetLock)

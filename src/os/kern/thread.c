@@ -349,40 +349,91 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
     return FALSE;
 }
 
-UINT32 KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs)
+UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL aWaitAll, UINT32 aTimeoutMs)
 {
     K2OSKERN_OBJ_THREAD *       pThisThread;
     K2STAT                      stat;
     K2OSKERN_SCHED_MACROWAIT    wait;
+    K2OSKERN_SCHED_MACROWAIT *  pMacro;
+    K2OSKERN_OBJ_HEADER *       pObjHdr;
+    UINT32                      ix;
+    UINT32                      result;
+
+    K2_ASSERT(!aWaitAll);
+
+    for (ix = 0; ix < aObjCount; ix++)
+    {
+        switch (appObjHdr[ix]->mObjType)
+        {
+        case K2OS_Obj_Name:
+        case K2OS_Obj_Process:
+        case K2OS_Obj_Thread:
+        case K2OS_Obj_Event:
+        case K2OS_Obj_Alarm:
+        case K2OS_Obj_Semaphore:
+        case K2OS_Obj_Mailbox:
+        case K2OS_Obj_Msg:
+        case K2OS_Obj_Interrupt:
+        case K2OS_Obj_Notify:
+            break;
+        default:
+            return K2STAT_ERROR_BAD_ARGUMENT;
+        }
+    }
+
+    if (aObjCount < 2)
+    {
+        pMacro = &wait;
+    }
+    else
+    {
+        pMacro = (K2OSKERN_SCHED_MACROWAIT *)K2OS_HeapAlloc(sizeof(K2OSKERN_SCHED_MACROWAIT) + ((aObjCount - 1) * sizeof(K2OSKERN_SCHED_WAITENTRY)));
+        if (pMacro == NULL)
+        {
+            return K2STAT_ERROR_OUT_OF_MEMORY;
+        }
+    }
 
     pThisThread = K2OSKERN_CURRENT_THREAD;
 
     stat = K2STAT_NO_ERROR;
 
-    apObjHdr = sTranslate_CheckNotAllNoWait(pThisThread, (K2OSKERN_OBJ_WAITABLE)apObjHdr, &stat);
-    if (apObjHdr == NULL)
+    for (ix = 0; ix < aObjCount; ix++)
     {
-        if (K2STAT_IS_ERROR(stat))
+        pObjHdr = sTranslate_CheckNotAllNoWait(pThisThread, (K2OSKERN_OBJ_WAITABLE)appObjHdr[ix], &stat);
+        if (pObjHdr == NULL)
         {
-            K2OS_ThreadSetStatus(stat);
-            return K2OS_WAIT_ERROR;
+            if (!K2STAT_IS_ERROR(stat))
+            {
+                result = K2OS_WAIT_SIGNALLED_0 + ix;
+            }
+            break;
         }
-        return K2OS_WAIT_SIGNALLED_0;
+        pMacro->SchedWaitEntry[ix].mWaitObj.mpHdr = pObjHdr;
     }
 
     if (!K2STAT_IS_ERROR(stat))
     {
-        wait.mNumEntries = 1;
-        wait.mWaitAll = FALSE;
-        wait.SchedWaitEntry[0].mWaitObj.mpHdr = apObjHdr;
-        pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWaitAny;
-        pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = &wait;
-        pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
-        pThisThread->Sched.Item.Args.ThreadWait.mWaitResult = 0;
-        KernArch_ThreadCallSched();
+        if (ix == aObjCount)
+        {
+            pMacro->mNumEntries = aObjCount;
+            pMacro->mWaitAll = FALSE;
 
-        stat = pThisThread->Sched.Item.mSchedCallResult;
+            pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
+            pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = pMacro;
+            pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
+            pThisThread->Sched.Item.Args.ThreadWait.mWaitResult = K2OS_WAIT_ERROR;
+            KernArch_ThreadCallSched();
+
+            stat = pThisThread->Sched.Item.mSchedCallResult;
+            result = pThisThread->Sched.Item.Args.ThreadWait.mWaitResult;
+        }
     }
+    else
+        result = stat;
+
+    if (aObjCount >= 2)
+        K2OS_HeapFree(pMacro);
 
     if (K2STAT_IS_ERROR(stat))
     {
@@ -390,5 +441,5 @@ UINT32 KernThread_WaitOne(K2OSKERN_OBJ_HEADER *apObjHdr, UINT32 aTimeoutMs)
         return K2OS_WAIT_ERROR;
     }
 
-    return pThisThread->Sched.Item.Args.ThreadWait.mWaitResult;
+    return result;
 }

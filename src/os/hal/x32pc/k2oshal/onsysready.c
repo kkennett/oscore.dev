@@ -109,7 +109,7 @@ K2OSHAL_OnSystemReady(
     }
 
     do {
-        waitResult = K2OS_ThreadWaitOne(tokMailbox, K2OS_TIMEOUT_INFINITE);
+        waitResult = K2OS_ThreadWait(1, &tokMailbox, FALSE, K2OS_TIMEOUT_INFINITE);
         K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
         requestId = 0;
         ok = K2OS_MailboxRecv(tokMailbox, (K2OS_MSGIO *)&msgIo, &requestId);

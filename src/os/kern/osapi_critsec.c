@@ -122,6 +122,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
     BOOL                    disp;
     BOOL                    gotIntoSec;
     UINT32                  result;
+    K2OSKERN_OBJ_HEADER *   pHdr;
 
     if (FALSE == K2OSKERN_GetIntr())
         K2OSKERN_Panic("Interrupts disabled at CritSecEnter!\n");
@@ -163,7 +164,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
 
     if (!gotIntoSec)
     {
-        result = KernThread_WaitOne(&pSec->Event.Hdr, K2OS_TIMEOUT_INFINITE);
+        pHdr = &pSec->Event.Hdr;
+        result = KernThread_Wait(1, &pHdr, FALSE, K2OS_TIMEOUT_INFINITE);
         if (result == K2OS_WAIT_SIGNALLED_0)
         {
             gotIntoSec = TRUE;

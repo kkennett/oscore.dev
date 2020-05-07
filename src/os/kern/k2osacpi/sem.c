@@ -85,7 +85,7 @@ AcpiOsWaitSemaphore(
     took = 0;
     snapTime = K2OS_SysUpTimeMs();
     do {
-        waitResult = K2OS_ThreadWaitOne(Handle, k2Timeout);
+        waitResult = K2OS_ThreadWait(1, &Handle, FALSE, k2Timeout);
         if (waitResult != K2OS_WAIT_SIGNALLED_0)
         {
             break;
