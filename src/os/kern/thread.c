@@ -74,7 +74,6 @@ static void sInit_BeforeVirt(void)
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);
 
-    K2OSKERN_Debug("Add Thread %08X\n", pThread);
     stat = KernObj_Add(&pThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
@@ -185,7 +184,6 @@ K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PR
     //
     // threads can never have a name
     //
-    K2OSKERN_Debug("Add Thread %08X\n", pNewThread);
     stat = KernObj_Add(&pNewThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
@@ -416,17 +414,19 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
     {
         if (ix == aObjCount)
         {
+//            K2OSKERN_Debug("Thread %d +Wait\n", pThisThread->Env.mId);
             pMacro->mNumEntries = aObjCount;
             pMacro->mWaitAll = FALSE;
 
             pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
             pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = pMacro;
             pThisThread->Sched.Item.Args.ThreadWait.mTimeoutMs = aTimeoutMs;
-            pThisThread->Sched.Item.Args.ThreadWait.mWaitResult = K2OS_WAIT_ERROR;
             KernArch_ThreadCallSched();
 
             stat = pThisThread->Sched.Item.mSchedCallResult;
-            result = pThisThread->Sched.Item.Args.ThreadWait.mWaitResult;
+            result = pMacro->mWaitResult;
+
+//            K2OSKERN_Debug("Thread %d -Wait stat %08X result %08X\n", pThisThread->Env.mId, stat, result);
         }
     }
     else

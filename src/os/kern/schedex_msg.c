@@ -170,8 +170,6 @@ BOOL KernSched_Exec_MsgAbort(void)
     {
         pMsg->mRequestId = 0;
         pMsg->mState = KernMsgState_Ready;
-        if (KernSchedEx_EventChange(&pMsg->CompletionEvent, FALSE))
-            changedSomething = TRUE;
     }
 
     return changedSomething;
@@ -208,8 +206,6 @@ BOOL KernSched_Exec_MsgReadResp(void)
     {
         pMsg->mRequestId = 0;
         pMsg->mState = KernMsgState_Ready;
-        if (KernSchedEx_EventChange(&pMsg->CompletionEvent, FALSE))
-            return TRUE;
     }
 
     return FALSE;

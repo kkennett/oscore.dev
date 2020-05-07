@@ -61,7 +61,7 @@ BOOL KernSched_Exec_MboxRecv(void)
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxRecv.mpIn_Mailbox;
 
-    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
+//    K2OSKERN_Debug("SCHED:MboxRecv(%08X)\n", pMailbox);
 
     if (pMailbox->PendingMsgList.mNodeCount == 0)
     {

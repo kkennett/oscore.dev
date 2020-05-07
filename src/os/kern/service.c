@@ -88,7 +88,6 @@ K2OSKERN_ServiceCreate(
             pSvc->ServTreeNode.mUserVal = ++gData.mLastServInstId;
             K2TREE_Insert(&gData.ServTree, pSvc->ServTreeNode.mUserVal, &pSvc->ServTreeNode);
 
-            K2OSKERN_Debug("Add Service %08X\n", pSvc);
             stat = KernObj_Add(&pSvc->Hdr, NULL);
             if (K2STAT_IS_ERROR(stat))
             {
@@ -339,7 +338,6 @@ K2OSKERN_ServicePublish(
                     pPublish->IfInstTreeNode.mUserVal = ifInst.mInterfaceInstanceId;
                     K2TREE_Insert(&gData.IfInstTree, pPublish->IfInstTreeNode.mUserVal, &pPublish->IfInstTreeNode);
 
-                    K2OSKERN_Debug("Add Publish %08X\n", pPublish);
                     stat = KernObj_Add(&pPublish->Hdr, NULL);
                     if (K2STAT_IS_ERROR(stat))
                     {
@@ -1185,7 +1183,6 @@ K2OSKERN_NotifyCreate(
 
         pNotifyObj->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
-        K2OSKERN_Debug("Add Notify %08X\n", pNotifyObj);
         stat = KernObj_Add(&pNotifyObj->Hdr, NULL);
         if (K2STAT_IS_ERROR(stat))
         {
@@ -1303,7 +1300,6 @@ K2OSKERN_NotifySubscribe(
 
                 K2LIST_AddAtTail(&pNotify->SubscripList, &pSubscrip->NotifySubscripListLink);
 
-                K2OSKERN_Debug("Add Subscrip %08X\n", pSubscrip);
                 stat = KernObj_Add(&pSubscrip->Hdr, NULL);
                 if (K2STAT_IS_ERROR(stat))
                 {
@@ -1498,12 +1494,12 @@ K2OSKERN_NotifyRead(
         {
             *apRetIsArrival = pThisThread->Sched.Item.Args.NotifyRead.mOut_IsArrival;
             K2MEM_Copy(apRetInterfaceId, &guid, sizeof(K2_GUID128));
-            if (apRetContext)
+            if (NULL != apRetContext)
                 *apRetContext = pThisThread->Sched.Item.Args.NotifyRead.mOut_Context;
-            if (apRetInstance)
+            if (NULL != apRetInstance)
             {
-                apRetInstance->mServiceInstanceId = pThisThread->Sched.Item.Args.NotifyRead.mpOut_IfInst->mServiceInstanceId;
-                apRetInstance->mInterfaceInstanceId = pThisThread->Sched.Item.Args.NotifyRead.mpOut_IfInst->mInterfaceInstanceId;
+                apRetInstance->mServiceInstanceId = actIfInst.mServiceInstanceId;
+                apRetInstance->mInterfaceInstanceId = actIfInst.mInterfaceInstanceId;
             }
         }
 

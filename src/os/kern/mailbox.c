@@ -56,7 +56,6 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
 
     apMailbox->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
-    K2OSKERN_Debug("Add Mailbox %08X\n", apMailbox);
     stat = KernObj_Add(&apMailbox->Hdr, NULL);
     if (K2STAT_IS_ERROR(stat))
     {

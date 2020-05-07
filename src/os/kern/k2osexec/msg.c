@@ -66,6 +66,7 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
     UINT32      requestId;
     UINT32      waitResult;
     BOOL        ok;
+    K2OS_TOKEN  tokWait[2];
 
     tokName = K2OS_NameDefine(gpK2OSEXEC_MailboxGuidStr);
     if (tokName == NULL)
@@ -81,19 +82,29 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
 
     K2OS_TokenDestroy(tokName);
 
+    tokWait[0] = sgTokMailbox;
+    tokWait[1] = gFsProv_TokNotify;
+
     do {
-        waitResult = K2OS_ThreadWait(1, &sgTokMailbox, FALSE, K2OS_TIMEOUT_INFINITE);
-        K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
-        requestId = 0;
-        ok = K2OS_MailboxRecv(sgTokMailbox, &msgIo, &requestId);
-        K2_ASSERT(ok);
-        if (requestId == 0)
-            sRecvNotify(msgIo.mOpCode, msgIo.mPayload);
-        else
+        waitResult = K2OS_ThreadWait(2, tokWait, FALSE, K2OS_TIMEOUT_INFINITE);
+        if (waitResult == K2OS_WAIT_SIGNALLED_0)
         {
-            msgIo.mStatus = sRecvCall(msgIo.mOpCode, msgIo.mPayload);
-            ok = K2OS_MailboxRespond(sgTokMailbox, requestId, &msgIo);
+            requestId = 0;
+            ok = K2OS_MailboxRecv(sgTokMailbox, &msgIo, &requestId);
             K2_ASSERT(ok);
+            if (requestId == 0)
+                sRecvNotify(msgIo.mOpCode, msgIo.mPayload);
+            else
+            {
+                msgIo.mStatus = sRecvCall(msgIo.mOpCode, msgIo.mPayload);
+                ok = K2OS_MailboxRespond(sgTokMailbox, requestId, &msgIo);
+                K2_ASSERT(ok);
+            }
+        }
+        else 
+        {
+            K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0 + 1);
+            FsProv_OnNotify();
         }
     } while (1);
 

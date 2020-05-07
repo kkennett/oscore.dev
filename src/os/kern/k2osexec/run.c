@@ -141,6 +141,9 @@ K2OSEXEC_Run(
     K2OSHAL_pf_OnSystemReady afReady
 )
 {
+    //
+    // this has to happen after fsprov init
+    //
     Msg_Init();
 
     if (NULL != afReady)

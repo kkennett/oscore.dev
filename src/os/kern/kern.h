@@ -295,7 +295,6 @@ struct _K2OSKERN_SCHED_ITEM_ARGS_THREAD_WAIT
 {
     UINT32                      mTimeoutMs;
     K2OSKERN_SCHED_MACROWAIT *  mpMacroWait;
-    UINT32                      mWaitResult;
 };
 
 struct _K2OSKERN_SCHED_ITEM_ARGS_PURGE_PT

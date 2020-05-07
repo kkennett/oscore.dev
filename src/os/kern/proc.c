@@ -73,7 +73,6 @@ static void sInit_AtDlxEntry(void)
 
     K2LIST_Init(&gpProc0->ThreadList);
     K2LIST_AddAtTail(&gData.ProcList, &gpProc0->ProcListLink);
-    K2OSKERN_Debug("Add Process %08X\n", gpProc0);
     stat = KernObj_Add(&gpProc0->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }

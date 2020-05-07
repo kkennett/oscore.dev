@@ -1576,7 +1576,6 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
     K2OSKERN_SeqIntrUnlock(&apCurThread->mpProc->SegTreeSeqLock, disp);
 
-    K2OSKERN_Debug("Add Segment %08X\n", apSegSrc);
     stat = KernObj_Add(&apSegSrc->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 

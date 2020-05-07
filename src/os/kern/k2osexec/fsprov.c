@@ -42,51 +42,59 @@ char const *        gpK2OSEXEC_FileSysInterfaceGuidStr  = "{71E000D8-2A94-476A-B
 
 K2OS_TOKEN gFsProv_TokNotify = NULL;
 
-void 
-FsProv_NotifyHandler(
-    BOOL                        aIsArrival,
-    K2_GUID128 const *          apInterfaceId,
-    K2OSKERN_SVC_IFINST const * apInterfaceInstance
-)
+void FsProv_OnNotify(void)
 {
-    K2STAT          stat;
-    K2OS_FSPROVINFO provInfo;
+    BOOL                isArrival;
+    K2_GUID128          interfaceId;
+    void *              pContext;
+    K2OSKERN_SVC_IFINST ifInst;
+    K2STAT              stat;
+    K2OS_FSPROVINFO     provInfo;
 
-    K2_ASSERT(0 == K2MEM_Compare(apInterfaceId, &gK2OSEXEC_FsProvInterfaceGuid, sizeof(K2_GUID128)));
+    do {
+        if (!K2OSKERN_NotifyRead(gFsProv_TokNotify,
+            &isArrival,
+            &interfaceId,
+            &pContext,
+            &ifInst))
+            break;
 
-    if (aIsArrival)
-    {
-        //
-        // file system provider interface was published
-        //
-        K2OSKERN_Debug("ARRIVE - FILESYS PROVIDER: %d / %d\n",
-            apInterfaceInstance->mServiceInstanceId,
-            apInterfaceInstance->mInterfaceInstanceId);
+        K2_ASSERT(0 == K2MEM_Compare(&interfaceId, &gK2OSEXEC_FsProvInterfaceGuid, sizeof(K2_GUID128)));
 
-        stat = K2OSKERN_ServiceCall(
-            apInterfaceInstance->mInterfaceInstanceId,
-            FSPROV_CALL_OPCODE_GET_INFO,
-            NULL, 0,
-            &provInfo, sizeof(provInfo),
-            NULL);
-        if (K2STAT_IS_ERROR(stat))
+        if (isArrival)
         {
-            K2OSKERN_Debug("Provider did not return info, error %08X\n", stat);
+            //
+            // file system provider interface was published
+            //
+            K2OSKERN_Debug("ARRIVE - FILESYS PROVIDER: %d / %d\n",
+                ifInst.mServiceInstanceId,
+                ifInst.mInterfaceInstanceId);
+
+            stat = K2OSKERN_ServiceCall(
+                ifInst.mInterfaceInstanceId,
+                FSPROV_CALL_OPCODE_GET_INFO,
+                NULL, 0,
+                &provInfo, sizeof(provInfo),
+                NULL);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                K2OSKERN_Debug("Provider did not return info, error %08X\n", stat);
+            }
+            else
+            {
+                K2OSKERN_Debug("FsProvider \"%s\" arrived\n", provInfo.ProvName);
+            }
         }
         else
         {
-            K2OSKERN_Debug("FsProvider \"%s\" arrived\n", provInfo.ProvName);
+            //
+            // file system provider interface left
+            //
+            K2OSKERN_Debug("DEPART - FILESYS PROVIDER: %d / %d\n",
+                ifInst.mServiceInstanceId,
+                ifInst.mInterfaceInstanceId);
         }
-    }
-    else
-    {
-        //
-        // file system provider interface left
-        //
-        K2OSKERN_Debug("DEPART - FILESYS PROVIDER: %d / %d\n",
-            apInterfaceInstance->mServiceInstanceId,
-            apInterfaceInstance->mInterfaceInstanceId);
-    }
+    } while (1);
 }
 
 void FsProv_Init(void)
@@ -96,6 +104,6 @@ void FsProv_Init(void)
     gFsProv_TokNotify = K2OSKERN_NotifyCreate();
     K2_ASSERT(gFsProv_TokNotify != NULL);
 
-    tokSubscrip = K2OSKERN_NotifySubscribe(gFsProv_TokNotify, &gK2OSEXEC_FsProvInterfaceGuid, FsProv_NotifyHandler);
+    tokSubscrip = K2OSKERN_NotifySubscribe(gFsProv_TokNotify, &gK2OSEXEC_FsProvInterfaceGuid, NULL);
     K2_ASSERT(tokSubscrip != NULL);
 }
