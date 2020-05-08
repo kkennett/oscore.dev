@@ -139,83 +139,188 @@ BOOL KernSched_Exec_ThreadWait(void)
     pWait->mWaitResult = K2OS_WAIT_ERROR;
 
     K2_ASSERT(pWait->mNumEntries <= K2OS_WAIT_MAX_TOKENS);
-    
-    K2_ASSERT(FALSE == pWait->mWaitAll);
 
-//    K2OSKERN_Debug("%6d.Core %d: SCHED:Exec WaitAny(%d, %d)\n", 
-//        gData.Sched.mpSchedulingCore->mCoreIx, 
-//        (UINT32)K2OS_SysUpTimeMs(), 
-//        pWait->mNumEntries, 
-//        gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
-
-    isSatisfiedWithoutChange = FALSE;
-
-    for (ix = 0; ix < pWait->mNumEntries; ix++)
+    if (pWait->mWaitAll)
     {
-        pEntry = &pWait->SchedWaitEntry[ix];
-        objWait = pEntry->mWaitObj;
+        //
+        // we need to see if everything is already signalled without changing
+        // anything. if it is, then we can go ahead and change things and
+        // satisfy the wait immeidately.  if it is not, then we have to do
+        // the wait without changing anything
+        //
+        isSatisfiedWithoutChange = TRUE;
 
-        //
-        // check for wait already being satisfied
-        //
-        switch (objWait.mpHdr->mObjType)
+        for (ix = 0; ix < pWait->mNumEntries; ix++)
         {
-        case K2OS_Obj_Event:
-            if (objWait.mpEvent->mIsSignalled)
+            pEntry = &pWait->SchedWaitEntry[ix];
+            objWait = pEntry->mWaitObj;
+
+            pEntry->mMacroIndex = (UINT8)ix;
+            pEntry->mStickyPulseStatus = 0;
+
+            switch (objWait.mpHdr->mObjType)
             {
-                if (objWait.mpEvent->mIsAutoReset)
+            case K2OS_Obj_Event:
+                if (!objWait.mpEvent->mIsSignalled)
                 {
-                    //
-                    // nobody is waiting, or it would not be signalled
-                    //
-                    objWait.mpEvent->mIsSignalled = FALSE;
+                    isSatisfiedWithoutChange = FALSE;
                 }
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
+                break;
 
-        case K2OS_Obj_Process:
-            if (objWait.mpProc->mState >= KernProcState_Done)
-            {
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
+            case K2OS_Obj_Process:
+                if (objWait.mpProc->mState < KernProcState_Done)
+                {
+                    isSatisfiedWithoutChange = FALSE;
+                }
+                break;
 
-        case K2OS_Obj_Thread:
-            if (objWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited)
-            {
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
+            case K2OS_Obj_Thread:
+                if (objWait.mpThread->Sched.State.mLifeStage < KernThreadLifeStage_Exited)
+                {
+                    isSatisfiedWithoutChange = FALSE;
+                }
+                break;
 
-        case K2OS_Obj_Semaphore:
-            if (objWait.mpSem->mCurCount > 0)
-            {
-                objWait.mpSem->mCurCount--;
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
+            case K2OS_Obj_Semaphore:
+                if (objWait.mpSem->mCurCount > 0)
+                {
+                    isSatisfiedWithoutChange = FALSE;
+                }
+                break;
 
-        case K2OS_Obj_Alarm:
-            if (objWait.mpAlarm->mIsSignalled)
-            {
-                isSatisfiedWithoutChange = TRUE;
-            }
-            break;
+            case K2OS_Obj_Alarm:
+                if (!objWait.mpAlarm->mIsSignalled)
+                {
+                    isSatisfiedWithoutChange = FALSE;
+                }
+                break;
 
-        default:
-            K2_ASSERT(0);
-            break;
+            default:
+                K2_ASSERT(0);
+                break;
+            }
+
+            if (!isSatisfiedWithoutChange)
+                break;
         }
-        
-        if (isSatisfiedWithoutChange)
-            break;
 
-        //
-        // continue setup for wait on this item
-        //
-        pEntry->mMacroIndex = (UINT8)ix;
-        pEntry->mStickyPulseStatus = 0;
+        if (isSatisfiedWithoutChange)
+        {
+            //
+            // can satisfy waitall immediately.
+            //
+            for (ix = 0; ix < pWait->mNumEntries; ix++)
+            {
+                pEntry = &pWait->SchedWaitEntry[ix];
+                objWait = pEntry->mWaitObj;
+
+                switch (objWait.mpHdr->mObjType)
+                {
+                case K2OS_Obj_Event:
+                    K2_ASSERT(objWait.mpEvent->mIsSignalled);
+                    if (objWait.mpEvent->mIsAutoReset)
+                        objWait.mpEvent->mIsSignalled = FALSE;
+                    break;
+
+                case K2OS_Obj_Semaphore:
+                    K2_ASSERT(objWait.mpSem->mCurCount > 0);
+                    objWait.mpSem->mCurCount--;
+                    break;
+
+                case K2OS_Obj_Alarm:
+                    if (objWait.mpAlarm->mIsSignalled)
+                        pEntry->mStickyPulseStatus = TRUE;
+                    break;
+
+                default:
+                    break;
+                }
+            }
+
+            //
+            // successful waitall returns SIGNALLED_0
+            //
+            ix = 0;
+        }
+    }
+    else
+    {
+        
+    //    K2OSKERN_Debug("%6d.Core %d: SCHED:Exec WaitAny(%d, %d)\n", 
+        //        gData.Sched.mpSchedulingCore->mCoreIx, 
+        //        (UINT32)K2OS_SysUpTimeMs(), 
+        //        pWait->mNumEntries, 
+        //        gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs);
+        
+        isSatisfiedWithoutChange = FALSE;
+
+        for (ix = 0; ix < pWait->mNumEntries; ix++)
+        {
+            pEntry = &pWait->SchedWaitEntry[ix];
+            objWait = pEntry->mWaitObj;
+
+            //
+            // check for wait already being satisfied
+            //
+            switch (objWait.mpHdr->mObjType)
+            {
+            case K2OS_Obj_Event:
+                if (objWait.mpEvent->mIsSignalled)
+                {
+                    if (objWait.mpEvent->mIsAutoReset)
+                    {
+                        //
+                        // nobody is waiting, or it would not be signalled
+                        //
+                        objWait.mpEvent->mIsSignalled = FALSE;
+                    }
+                    isSatisfiedWithoutChange = TRUE;
+                }
+                break;
+
+            case K2OS_Obj_Process:
+                if (objWait.mpProc->mState >= KernProcState_Done)
+                {
+                    isSatisfiedWithoutChange = TRUE;
+                }
+                break;
+
+            case K2OS_Obj_Thread:
+                if (objWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited)
+                {
+                    isSatisfiedWithoutChange = TRUE;
+                }
+                break;
+
+            case K2OS_Obj_Semaphore:
+                if (objWait.mpSem->mCurCount > 0)
+                {
+                    objWait.mpSem->mCurCount--;
+                    isSatisfiedWithoutChange = TRUE;
+                }
+                break;
+
+            case K2OS_Obj_Alarm:
+                if (objWait.mpAlarm->mIsSignalled)
+                {
+                    isSatisfiedWithoutChange = TRUE;
+                }
+                break;
+
+            default:
+                K2_ASSERT(0);
+                break;
+            }
+
+            if (isSatisfiedWithoutChange)
+                break;
+
+            //
+            // continue setup for wait on this item
+            //
+            pEntry->mMacroIndex = (UINT8)ix;
+            pEntry->mStickyPulseStatus = 0;
+        }
     }
 
     if (isSatisfiedWithoutChange)
@@ -224,6 +329,10 @@ BOOL KernSched_Exec_ThreadWait(void)
         gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
         return FALSE;
     }
+
+    //
+    // if we get here, thread will stop unless it is a zero timeout
+    //
 
     nextRunState = KernThreadRunState_Waiting;
 

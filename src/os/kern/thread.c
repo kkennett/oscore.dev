@@ -373,8 +373,16 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
     UINT32                      ix;
     UINT32                      result;
 
+    if (aObjCount >= K2OS_WAIT_MAX_TOKENS)
+    {
+        return K2STAT_ERROR_BAD_ARGUMENT;
+    }
+
+    K2_ASSERT(appObjHdr != NULL);
+
     for (ix = 0; ix < aObjCount; ix++)
     {
+        K2_ASSERT(appObjHdr[ix] != NULL);
         switch (appObjHdr[ix]->mObjType)
         {
         case K2OS_Obj_Name:
