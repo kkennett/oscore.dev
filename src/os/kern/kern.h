@@ -884,11 +884,11 @@ struct _K2OSKERN_OBJ_NAME
 struct _K2OSKERN_OBJ_INTR
 {
     K2OSKERN_OBJ_HEADER     Hdr;
-    BOOL                    mIsSignalled;
     K2TREE_NODE             IntrTreeNode;
     K2OSKERN_IRQ_CONFIG     IrqConfig;
     K2OSKERN_pf_IntrHandler mfHandler;
     void *                  mpHandlerContext;
+    K2OSKERN_OBJ_EVENT      IrqEvent;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1503,6 +1503,7 @@ void KernInit_CpuCore(void);
 /* --------------------------------------------------------------------------------- */
 
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
+void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr);
 
 /* --------------------------------------------------------------------------------- */
 

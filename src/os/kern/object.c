@@ -57,6 +57,9 @@ void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     case K2OS_Obj_Mailbox:
         KernMailbox_Dispose((K2OSKERN_OBJ_MAILBOX *)apObjHdr);
         break;
+    case K2OS_Obj_Interrupt:
+        KernIntr_Dispose((K2OSKERN_OBJ_INTR *)apObjHdr);
+        break;
     case K2OS_Obj_Msg:
         KernMsg_Dispose((K2OSKERN_OBJ_MSG *)apObjHdr);
         break;

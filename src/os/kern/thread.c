@@ -261,16 +261,21 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
     return K2STAT_NO_ERROR;
 }
 
-K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_WAITABLE aObjWait, K2STAT *apStat)
+K2OSKERN_OBJ_HEADER * 
+sTranslate_Check(
+    K2OSKERN_OBJ_THREAD *   apThisThread, 
+    BOOL                    aWaitAll,
+    K2OSKERN_OBJ_WAITABLE   aObjWait, 
+    K2STAT *                apStat
+)
 {
     //
     // returns what you are ACTUALLY going to wait on
     //
-
     switch (aObjWait.mpHdr->mObjType)
     {
     case K2OS_Obj_Event:
-        if (!aObjWait.mpEvent->mIsSignalled)
+        if ((aWaitAll) || (!aObjWait.mpEvent->mIsSignalled))
             return aObjWait.mpHdr;
 
         if (!aObjWait.mpEvent->mIsAutoReset)
@@ -292,10 +297,14 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
 
     case K2OS_Obj_Name:
         K2_ASSERT(aObjWait.mpName->Event_IsOwned.mIsAutoReset == FALSE);
-        return aObjWait.mpName->Event_IsOwned.mIsSignalled ? NULL : &aObjWait.mpName->Event_IsOwned.Hdr;
+        if ((aWaitAll) || (!aObjWait.mpName->Event_IsOwned.mIsSignalled))
+            return &aObjWait.mpName->Event_IsOwned.Hdr;
+        return NULL;
 
     case K2OS_Obj_Process:
-        return (aObjWait.mpProc->mState >= KernProcState_Done) ? NULL : aObjWait.mpHdr;
+        if ((aWaitAll) || (aObjWait.mpProc->mState < KernProcState_Done))
+            return aObjWait.mpHdr;
+        return NULL;
 
     case K2OS_Obj_Thread:
         if (aObjWait.mpThread == apThisThread)
@@ -303,10 +312,12 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
             *apStat = K2STAT_ERROR_BAD_ARGUMENT;
             return NULL;
         }
-        return (aObjWait.mpThread->Sched.State.mLifeStage >= KernThreadLifeStage_Exited) ? NULL : aObjWait.mpHdr;
+        if ((aWaitAll) || (aObjWait.mpThread->Sched.State.mLifeStage < KernThreadLifeStage_Exited))
+            return aObjWait.mpHdr;
+        return NULL;
 
     case K2OS_Obj_Semaphore:
-        if (gData.mKernInitStage < KernInitStage_MultiThreaded)
+        if ((!aWaitAll) && (gData.mKernInitStage < KernInitStage_MultiThreaded))
         {
             //
             // very special case - changing the object and returning no wait
@@ -319,32 +330,37 @@ K2OSKERN_OBJ_HEADER * sTranslate_CheckNotAllNoWait(K2OSKERN_OBJ_THREAD *apThisTh
 
     case K2OS_Obj_Mailbox:
         K2_ASSERT(aObjWait.mpMailbox->AvailEvent.mIsAutoReset == FALSE);
-        return aObjWait.mpMailbox->AvailEvent.mIsSignalled ? NULL : &aObjWait.mpMailbox->AvailEvent.Hdr;
+        if ((aWaitAll) || (!aObjWait.mpMailbox->AvailEvent.mIsSignalled))
+            return &aObjWait.mpMailbox->AvailEvent.Hdr;
+        return NULL;
 
     case K2OS_Obj_Msg:
         K2_ASSERT(aObjWait.mpMsg->CompletionEvent.mIsAutoReset == FALSE);
-        return aObjWait.mpMsg->CompletionEvent.mIsSignalled ? NULL : &aObjWait.mpMsg->CompletionEvent.Hdr;
+        if ((aWaitAll) || (!aObjWait.mpMsg->CompletionEvent.mIsSignalled))
+            return &aObjWait.mpMsg->CompletionEvent.Hdr;
+        return NULL;
 
     case K2OS_Obj_Alarm:
-        if (aObjWait.mpAlarm->mIsSignalled)
-            return NULL;
+        if ((aWaitAll) || (!aObjWait.mpAlarm->mIsSignalled))
+            return aObjWait.mpHdr;
+        return NULL;
 
-        //
-        // it is eiterh not signalled yet, or is periodic
-        //
-
+    case K2OS_Obj_Interrupt:
+        K2_ASSERT(aObjWait.mpIntr->IrqEvent.mIsAutoReset == TRUE);
         return aObjWait.mpHdr;
 
     case K2OS_Obj_Notify:
         K2_ASSERT(aObjWait.mpNotify->AvailEvent.mIsAutoReset == FALSE);
-        return aObjWait.mpNotify->AvailEvent.mIsSignalled ? NULL : &aObjWait.mpNotify->AvailEvent.Hdr;
+        if ((aWaitAll) || (!aObjWait.mpNotify->AvailEvent.mIsSignalled))
+            return &aObjWait.mpNotify->AvailEvent.Hdr;
+        return NULL;
 
     default:
         K2_ASSERT(0);
         break;
     }
 
-    return FALSE;
+    return NULL;
 }
 
 UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL aWaitAll, UINT32 aTimeoutMs)
@@ -356,8 +372,6 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
     K2OSKERN_OBJ_HEADER *       pObjHdr;
     UINT32                      ix;
     UINT32                      result;
-
-    K2_ASSERT(!aWaitAll);
 
     for (ix = 0; ix < aObjCount; ix++)
     {
@@ -375,6 +389,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
         case K2OS_Obj_Notify:
             break;
         default:
+            K2_ASSERT(0);
             return K2STAT_ERROR_BAD_ARGUMENT;
         }
     }
@@ -398,7 +413,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
 
     for (ix = 0; ix < aObjCount; ix++)
     {
-        pObjHdr = sTranslate_CheckNotAllNoWait(pThisThread, (K2OSKERN_OBJ_WAITABLE)appObjHdr[ix], &stat);
+        pObjHdr = sTranslate_Check(pThisThread, aWaitAll, (K2OSKERN_OBJ_WAITABLE)appObjHdr[ix], &stat);
         if (pObjHdr == NULL)
         {
             if (!K2STAT_IS_ERROR(stat))
@@ -416,7 +431,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
         {
 //            K2OSKERN_Debug("Thread %d +Wait\n", pThisThread->Env.mId);
             pMacro->mNumEntries = aObjCount;
-            pMacro->mWaitAll = FALSE;
+            pMacro->mWaitAll = aWaitAll;
 
             pThisThread->Sched.Item.mSchedItemType = KernSchedItem_ThreadWait;
             pThisThread->Sched.Item.Args.ThreadWait.mpMacroWait = pMacro;

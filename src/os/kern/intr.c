@@ -58,6 +58,7 @@ K2OSKERN_InstallIntrHandler(
     K2OSKERN_OBJ_INTR *     pIntr;
     BOOL                    disp;
     K2STAT                  stat;
+    K2STAT                  stat2;
     K2TREE_NODE *           pTreeNode;
     K2OS_TOKEN              tokIntr;
     K2OSKERN_OBJ_HEADER *   pObjHdr;
@@ -78,33 +79,42 @@ K2OSKERN_InstallIntrHandler(
     pIntr->Hdr.mObjType = K2OS_Obj_Interrupt;
     pIntr->Hdr.mRefCount = 1;
     K2LIST_Init(&pIntr->Hdr.WaitEntryPrioList);
-    pIntr->mIsSignalled = FALSE;
     pIntr->mfHandler = aHandler;
     pIntr->mpHandlerContext = apContext;
     pIntr->IntrTreeNode.mUserVal = apConfig->mSourceIrq;
     pIntr->IrqConfig = *apConfig;
 
-    disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);
-
-    pTreeNode = K2TREE_Find(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal);
-    if (pTreeNode != NULL)
+    stat = KernEvent_Create(&pIntr->IrqEvent, NULL, TRUE, FALSE);
+    if (!K2STAT_IS_ERROR(stat))
     {
-        stat = K2STAT_ERROR_ALREADY_EXISTS;
-    }
-    else
-    {
-        KernArch_InstallDevIntrHandler(pIntr);
-        K2TREE_Insert(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal, &pIntr->IntrTreeNode);
-        stat = K2STAT_NO_ERROR;
-    }
+        disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);
 
-    K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
+        pTreeNode = K2TREE_Find(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal);
+        if (pTreeNode != NULL)
+        {
+            stat = K2STAT_ERROR_ALREADY_EXISTS;
+        }
+        else
+        {
+            KernArch_InstallDevIntrHandler(pIntr);
+            K2TREE_Insert(&gData.IntrTree, pIntr->IntrTreeNode.mUserVal, &pIntr->IntrTreeNode);
+            stat = K2STAT_NO_ERROR;
+        }
+
+        K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            stat2 = KernObj_Release(&pIntr->IrqEvent.Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+        }
+    }
 
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
-        stat = K2OS_HeapFree(pIntr);
-        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        stat2 = K2OS_HeapFree(pIntr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
     else
     {
@@ -145,6 +155,35 @@ K2OSKERN_SetIntrMask(
     KernObj_Release(&pIntr->Hdr);
 
     return stat;
+}
 
+void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr)
+{
+    BOOL disp;
 
+    K2_ASSERT(apIntr->Hdr.mObjType == K2OS_Obj_Interrupt);
+    K2_ASSERT(apIntr->Hdr.mRefCount == 0);
+    K2_ASSERT(!(apIntr->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
+    K2_ASSERT(apIntr->Hdr.WaitEntryPrioList.mNodeCount == 0);
+
+    KernArch_SetDevIntrMask(apIntr, TRUE);
+
+    disp = K2OSKERN_SeqIntrLock(&gData.IntrTreeSeqLock);
+
+    KernArch_RemoveDevIntrHandler(apIntr);
+    K2TREE_Remove(&gData.IntrTree, &apIntr->IntrTreeNode);
+
+    K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
+
+    KernObj_Release(&apIntr->IrqEvent.Hdr);
+
+    disp = !(apIntr->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
+
+    K2MEM_Zero(apIntr, sizeof(K2OSKERN_OBJ_MSG));
+
+    if (disp)
+    {
+        disp = K2OS_HeapFree(apIntr);
+        K2_ASSERT(disp);
+    }
 }
