@@ -404,6 +404,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
 
     if (aObjCount < 2)
     {
+        aWaitAll = FALSE;
         pMacro = &wait;
     }
     else

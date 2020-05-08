@@ -977,12 +977,121 @@ BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OB
 
 BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry)
 {
+    UINT32                      ix;
+    K2OSKERN_SCHED_WAITENTRY *  pEntry;
+    K2OSKERN_OBJ_WAITABLE       objWait;
+    BOOL                        canSatisfy;
+
     //
     // entries that have a sticky status are ones that can only be set once
     //
     // if not satisfying all, set sticky pulse status 
     //
+    canSatisfy = TRUE;
+    for (ix = 0; ix < apWait->mNumEntries; ix++)
+    {
+        pEntry = &apWait->SchedWaitEntry[ix];
 
-    K2_ASSERT(0);
-    return FALSE;
+        if (pEntry == apEntry)
+            continue;
+
+        objWait = pEntry->mWaitObj;
+
+        switch (objWait.mpHdr->mObjType)
+        {
+        case K2OS_Obj_Event:
+            if (!objWait.mpEvent->mIsSignalled)
+            {
+                canSatisfy = FALSE;
+            }
+            break;
+
+        case K2OS_Obj_Process:
+            if (objWait.mpProc->mState < KernProcState_Done)
+            {
+                canSatisfy = FALSE;
+            }
+            break;
+
+        case K2OS_Obj_Thread:
+            if (objWait.mpThread->Sched.State.mLifeStage < KernThreadLifeStage_Exited)
+            {
+                canSatisfy = FALSE;
+            }
+            break;
+
+        case K2OS_Obj_Semaphore:
+            if (objWait.mpSem->mCurCount > 0)
+            {
+                canSatisfy = FALSE;
+            }
+            break;
+
+        case K2OS_Obj_Alarm:
+            if ((!pEntry->mStickyPulseStatus) &&
+                (!objWait.mpAlarm->mIsSignalled))
+            {
+                canSatisfy = FALSE;
+            }
+            break;
+
+        default:
+            K2_ASSERT(0);
+            break;
+        }
+
+        if (!canSatisfy)
+            break;
+    }
+
+    if (!canSatisfy)
+    {
+        //
+        // if the entry triggering this was an alarm then
+        // set the sticky pulse status to show that the alarm
+        // went off at some point
+        //
+        if (apEntry->mWaitObj.mpHdr->mObjType == K2OS_Obj_Alarm)
+        {
+            apEntry->mStickyPulseStatus = TRUE;
+        }
+        return FALSE;
+    }
+
+    //
+    // satisfying waitall
+    //
+    for (ix = 0; ix < apWait->mNumEntries; ix++)
+    {
+        pEntry = &apWait->SchedWaitEntry[ix];
+
+        if (pEntry == apEntry)
+            continue;
+
+        objWait = pEntry->mWaitObj;
+
+        switch (objWait.mpHdr->mObjType)
+        {
+        case K2OS_Obj_Event:
+            K2_ASSERT(objWait.mpEvent->mIsSignalled);
+            if (objWait.mpEvent->mIsAutoReset)
+                objWait.mpEvent->mIsSignalled = FALSE;
+            break;
+
+        case K2OS_Obj_Semaphore:
+            K2_ASSERT(objWait.mpSem->mCurCount > 0);
+            objWait.mpSem->mCurCount--;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    //
+    // now end the thread wait
+    //
+    KernSched_EndThreadWait(apWait, K2OS_WAIT_SIGNALLED_0);
+
+    return TRUE;
 }
