@@ -332,3 +332,15 @@ $(K2_OBJECT_PATH)/%.o : %.cpp makefile $(K2_ROOT)/src/shared/build/pre.make $(K2
 -include $(OBJECTS:.o=.d)
 
 #========================================================================================
+
+
+pushd <dir_to_zip>
+
+zip -FS -o -r -q <temp_path>\<dir_to_zip>.zip .
+
+popd
+
+objcopy -I binary -O elf32-little -B i386 --rename-section .data=.rodata.<dir_to_zip>.zip,alloc,load,readonly,data,contents <tmp_path>/<dir_to_zip>.zip <obj_path>/<dir_to_zip>.o
+
+_binary_builtin_zip_start
+_binary_builtin_zip_size
