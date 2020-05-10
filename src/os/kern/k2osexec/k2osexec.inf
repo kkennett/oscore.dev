@@ -44,3 +44,5 @@ gK2OSEXEC_FsProvInterfaceGuid
 gpK2OSEXEC_FsProvInterfaceGuidStr
 gK2OSEXEC_FileSysInterfaceGuid
 gpK2OSEXEC_FileSysInterfaceGuidStr
+gK2OSEXEC_DriverStoreInterfaceGuid
+gpK2OSEXEC_DriverStoreInterfaceGuidStr

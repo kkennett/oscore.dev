@@ -472,10 +472,39 @@ K2OSKERN_NotifyRead(
     K2OSKERN_SVC_IFINST *   apRetInterfaceInstance
 );
 
+//
+//------------------------------------------------------------------------
+//
+
+#define K2OS_INTERFACE_ID_DRIVERSTORE    \
+    { 0x612a5d97, 0xc492, 0x44b3, { 0x94, 0xa1, 0xac, 0xe4, 0x75, 0xeb, 0x93, 0xe } };
+
+//
+// filesys provider service calls
+//
+#define DRVSTORE_CALL_OPCODE_HIGH           0x700C0000
+#define DRVSTORE_CALL_OPCODE_HIGH_MASK      0x7FFFF000
+#define DRVSTORE_CALL_OPCODE_GET_INFO       (DRVSTORE_CALL_OPCODE_HIGH + 0 + K2OS_MSGOPCODE_HAS_RESPONSE)
+
+#define K2OSKERN_DRVSTOREINFO_NAME_BUF_COUNT  16
+
+typedef struct _K2OSKERN_DRVSTORE_INFO K2OSKERN_DRVSTORE_INFO;
+struct _K2OSKERN_DRVSTORE_INFO
+{
+    K2_GUID128  mStoreId;
+    char        StoreName[K2OSKERN_DRVSTOREINFO_NAME_BUF_COUNT];
+    UINT32      mStoreVersion;
+};
+
+#define K2OSKERN_DRVSTORE_ID_HAL \
+    { 0xafa9a8c6, 0xd494, 0x4d7b, { 0x94, 0x23, 0x16, 0x9e, 0x41, 0x6c, 0x23, 0x96 } }
 
 //
 //------------------------------------------------------------------------
 //
+
+#define K2OS_INTERFACE_ID_FSPROV    \
+    { 0x440c404, 0xcad6, 0x4333, { 0xa2, 0x3d, 0x24, 0xfd, 0xbf, 0x33, 0x5d, 0xa8 } }
 
 //
 // filesys provider service calls
@@ -484,19 +513,11 @@ K2OSKERN_NotifyRead(
 #define FSPROV_CALL_OPCODE_HIGH_MASK        0x7FFFF000
 #define FSPROV_CALL_OPCODE_GET_INFO         (FSPROV_CALL_OPCODE_HIGH + 0 + K2OS_MSGOPCODE_HAS_RESPONSE)
 
-typedef void * (*K2OSKERN_pf_FsProv_FileSys_OpenRoot)(void *apProvContext, K2_GUID128 const *apVolId);
-typedef void * (*K2OSKERN_pf_FsProv_FileSys_DirOpenSubDir)(void *apDirContext, char const *apSubDirName);
-typedef BOOL   (*K2OSKERN_pf_FsProv_FileSys_DirClose)(void *apDirContext);
-typedef BOOL   (*K2OSKERN_pf_FsProv_FileSys_DirDelete)(void *apDirContext, char const *apSubDirName);
+#define K2OS_INTERFACE_ID_FILESYS   \
+    { 0x71e000d8, 0x2a94, 0x476a, { 0xb6, 0xc7, 0xa8, 0x57, 0x5c, 0x66, 0x18, 0xce } }
 
-typedef struct _K2OSKERN_FSPROV_FILESYS_IFACE K2OSKERN_FSPROV_FILESYS_IFACE;
-struct _K2OSKERN_FSPROV_FILESYS_IFACE
-{
-    K2OSKERN_pf_FsProv_FileSys_OpenRoot         OpenRoot;
-    K2OSKERN_pf_FsProv_FileSys_DirOpenSubDir    DirOpenSubDir;
-    K2OSKERN_pf_FsProv_FileSys_DirClose         DirClose;
-    K2OSKERN_pf_FsProv_FileSys_DirDelete        DirDelete;
-};
+#define K2OS_FSPROV_ID_HAL \
+    { 0x138de9b5, 0x2549, 0x4376, { 0xbd, 0xe7, 0x2c, 0x3a, 0xf4, 0x1b, 0x21, 0x80 } }
 
 //
 //------------------------------------------------------------------------

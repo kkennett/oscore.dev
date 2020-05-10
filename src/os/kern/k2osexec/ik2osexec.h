@@ -245,6 +245,13 @@ extern K2OS_TOKEN gFsProv_TokNotify;
 
 /* ----------------------------------------------------------------------------- */
 
+void DrvStore_Init(void);
+void DrvStore_OnNotify(void);
+
+extern K2OS_TOKEN gDrvStore_TokNotify;
+
+/* ----------------------------------------------------------------------------- */
+
 #ifdef __cplusplus
 }
 #endif

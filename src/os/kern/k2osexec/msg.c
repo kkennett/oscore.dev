@@ -66,7 +66,7 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
     UINT32      requestId;
     UINT32      waitResult;
     BOOL        ok;
-    K2OS_TOKEN  tokWait[2];
+    K2OS_TOKEN  tokWait[3];
 
     tokName = K2OS_NameDefine(gpK2OSEXEC_MailboxGuidStr);
     if (tokName == NULL)
@@ -84,9 +84,10 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
 
     tokWait[0] = sgTokMailbox;
     tokWait[1] = gFsProv_TokNotify;
+    tokWait[2] = gDrvStore_TokNotify;
 
     do {
-        waitResult = K2OS_ThreadWait(2, tokWait, FALSE, K2OS_TIMEOUT_INFINITE);
+        waitResult = K2OS_ThreadWait(3, tokWait, FALSE, K2OS_TIMEOUT_INFINITE);
         if (waitResult == K2OS_WAIT_SIGNALLED_0)
         {
             requestId = 0;
@@ -101,10 +102,14 @@ UINT32 K2_CALLCONV_REGS sMsgThread(void *apParam)
                 K2_ASSERT(ok);
             }
         }
-        else 
+        else if (waitResult == K2OS_WAIT_SIGNALLED_0 + 1)
         {
-            K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0 + 1);
             FsProv_OnNotify();
+        }
+        else
+        {
+            K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0 + 2);
+            DrvStore_OnNotify();
         }
     } while (1);
 

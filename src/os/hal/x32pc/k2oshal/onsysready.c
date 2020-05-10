@@ -34,8 +34,9 @@
 
 #define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
 #define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
+#define DRVSTORE_IFACE_CONTEXT  ((void *)0xF00DDEAD)
 
-static K2OS_FSPROVINFO const sgInfo =
+static K2OS_FSPROVINFO const sgFsProvInfo =
 {
     K2OS_FSPROV_ID_HAL,     // {138DE9B5-2549-4376-BDE7-2C3AF41B2180}
     "HAL BuiltIn",
@@ -59,11 +60,44 @@ FsProvServiceCall(
         return K2STAT_ERROR_INBUF_NOT_NULL;
     if (apOutBuf == NULL)
         return K2STAT_ERROR_OUTBUF_NULL;
-    if (aOutBufBytes < sizeof(sgInfo))
+    if (aOutBufBytes < sizeof(sgFsProvInfo))
         return K2STAT_ERROR_OUTBUF_TOO_SMALL;
 
-    K2MEM_Copy(apOutBuf, &sgInfo, sizeof(sgInfo));
-    *apRetActualOut = sizeof(sgInfo);
+    K2MEM_Copy(apOutBuf, &sgFsProvInfo, sizeof(sgFsProvInfo));
+    *apRetActualOut = sizeof(sgFsProvInfo);
+
+    return K2STAT_NO_ERROR;
+}
+
+static K2OSKERN_DRVSTORE_INFO const sgDrvStoreInfo =
+{
+    K2OSKERN_DRVSTORE_ID_HAL,     // {AFA9A8C6-D494-4D7B-9423-169E416C2396}
+    "HAL BuiltIn",
+    0x00010000
+};
+
+K2STAT
+DrvStoreServiceCall(
+    UINT32          aCallCmd,
+    void const *    apInBuf,
+    UINT32          aInBufBytes,
+    void *          apOutBuf,
+    UINT32          aOutBufBytes,
+    UINT32 *        apRetActualOut
+)
+{
+    if (((aCallCmd & DRVSTORE_CALL_OPCODE_HIGH_MASK) != DRVSTORE_CALL_OPCODE_HIGH) ||
+        (aCallCmd != DRVSTORE_CALL_OPCODE_GET_INFO))
+        return K2STAT_ERROR_UNSUPPORTED;
+    if (apInBuf != NULL)
+        return K2STAT_ERROR_INBUF_NOT_NULL;
+    if (apOutBuf == NULL)
+        return K2STAT_ERROR_OUTBUF_NULL;
+    if (aOutBufBytes < sizeof(sgDrvStoreInfo))
+        return K2STAT_ERROR_OUTBUF_TOO_SMALL;
+
+    K2MEM_Copy(apOutBuf, &sgDrvStoreInfo, sizeof(sgDrvStoreInfo));
+    *apRetActualOut = sizeof(sgDrvStoreInfo);
 
     return K2STAT_NO_ERROR;
 }
@@ -71,8 +105,10 @@ FsProvServiceCall(
 K2OS_TOKEN  tokMailbox;
 K2OS_TOKEN  tokService;
 UINT32      serviceId;
-K2OS_TOKEN  tokPublish;
-UINT32      interfaceId;
+K2OS_TOKEN  tokPublishFsProv;
+K2OS_TOKEN  tokPublishDrvStore;
+UINT32      sgFsProvInterfaceId;
+UINT32      sgDrvStoreInterfaceId;
 
 UINT32
 K2_CALLCONV_CALLERCLEANS
@@ -98,14 +134,24 @@ K2OSHAL_OnSystemReady(
         K2OSKERN_Panic("HAL failed to create service\n");
     }
 
-    tokPublish = K2OSKERN_ServicePublish(
+    tokPublishFsProv = K2OSKERN_ServicePublish(
         tokService,
         &gK2OSEXEC_FsProvInterfaceGuid,
         FSPROV_IFACE_CONTEXT,
-        &interfaceId);
-    if (NULL == tokPublish)
+        &sgFsProvInterfaceId);
+    if (NULL == tokPublishFsProv)
     {
         K2OSKERN_Panic("HAL failed to publish filesystem interface\n");
+    }
+
+    tokPublishDrvStore = K2OSKERN_ServicePublish(
+        tokService,
+        &gK2OSEXEC_DriverStoreInterfaceGuid,
+        DRVSTORE_IFACE_CONTEXT,
+        &sgDrvStoreInterfaceId);
+    if (NULL == tokPublishDrvStore)
+    {
+        K2OSKERN_Panic("HAL failed to publish driver store interface\n");
     }
 
     do {
@@ -128,6 +174,17 @@ K2OSHAL_OnSystemReady(
                     if (msgIo.mpPublishContext == FSPROV_IFACE_CONTEXT)
                     {
                         ((K2OS_MSGIO *)&msgIo)->mStatus = FsProvServiceCall(
+                            msgIo.mCallCmd,
+                            msgIo.mpInBuf,
+                            msgIo.mInBufBytes,
+                            msgIo.mpOutBuf,
+                            msgIo.mOutBufBytes,
+                            &actualOut
+                        );
+                    }
+                    else if (msgIo.mpPublishContext == DRVSTORE_IFACE_CONTEXT)
+                    {
+                        ((K2OS_MSGIO *)&msgIo)->mStatus = DrvStoreServiceCall(
                             msgIo.mCallCmd,
                             msgIo.mpInBuf,
                             msgIo.mInBufBytes,

@@ -38,6 +38,13 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
 
     K2_ASSERT(apMailbox != NULL);
 
+    if (apName != NULL)
+    {
+        stat = KernObj_AddRef(&apName->Hdr);
+        if (K2STAT_IS_ERROR(stat))
+            return stat;
+    }
+
     K2MEM_Zero(apMailbox, sizeof(K2OSKERN_OBJ_MAILBOX));
 
     apMailbox->Hdr.mObjType = K2OS_Obj_Mailbox;
@@ -56,10 +63,15 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
 
     apMailbox->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
-    stat = KernObj_Add(&apMailbox->Hdr, NULL);
+    stat = KernObj_Add(&apMailbox->Hdr, apName);
     if (K2STAT_IS_ERROR(stat))
     {
         KernObj_Release(&apMailbox->AvailEvent.Hdr);
+    }
+
+    if (apName != NULL)
+    {
+        KernObj_Release(&apName->Hdr);
     }
 
     return stat;

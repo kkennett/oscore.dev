@@ -179,7 +179,7 @@ void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr)
 
     disp = !(apIntr->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 
-    K2MEM_Zero(apIntr, sizeof(K2OSKERN_OBJ_MSG));
+    K2MEM_Zero(apIntr, sizeof(K2OSKERN_OBJ_INTR));
 
     if (disp)
     {

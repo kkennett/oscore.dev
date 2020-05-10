@@ -45,6 +45,9 @@ extern "C" {
 extern K2_GUID128 const gK2OSEXEC_MailslotGuid;
 extern char const *     gpK2OSEXEC_MailslotGuidStr;
 
+extern K2_GUID128 const gK2OSEXEC_DriverStoreInterfaceGuid;
+extern char const *     gpK2OSEXEC_DriverStoreInterfaceGuidStr;
+
 extern K2_GUID128 const gK2OSEXEC_FsProvInterfaceGuid;
 extern char const *     gpK2OSEXEC_FsProvInterfaceGuidStr;
 

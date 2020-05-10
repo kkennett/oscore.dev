@@ -1001,7 +1001,7 @@ struct _K2OSKERN_OBJ_FILESYS
 
     // from service that published provider GUID
     void *                          mpFsContext;            
-    K2OSKERN_FSPROV_FILESYS_IFACE   ProvFileSysIFace;
+//    K2OSKERN_FSPROV_FILESYS_IFACE   ProvFileSysIFace;
 
     // this lives on mpProv->FileSysList
     K2OS_FSPROV *                   mpProv;

@@ -248,7 +248,7 @@ K2OSKERN_ServicePublish(
                 }
 
                 do {
-                    K2MEM_Zero(pPublish, sizeof(K2OSKERN_OBJ_SERVICE));
+                    K2MEM_Zero(pPublish, sizeof(K2OSKERN_OBJ_PUBLISH));
 
                     pPublish->Hdr.mObjType = K2OS_Obj_Publish;
                     pPublish->Hdr.mObjFlags = 0;
@@ -636,7 +636,7 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
         K2_ASSERT(check);
     }
 
-    K2MEM_Zero(apPublish, sizeof(K2OSKERN_OBJ_SERVICE));
+    K2MEM_Zero(apPublish, sizeof(K2OSKERN_OBJ_PUBLISH));
 
     if (check)
     {
@@ -1537,7 +1537,7 @@ void KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify)
     stat = KernObj_Release(&apNotify->AvailEvent.Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    K2MEM_Zero(apNotify, sizeof(K2OSKERN_OBJ_SUBSCRIP));
+    K2MEM_Zero(apNotify, sizeof(K2OSKERN_OBJ_NOTIFY));
 
     if (check)
     {
