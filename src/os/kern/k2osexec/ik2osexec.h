@@ -252,6 +252,20 @@ extern K2OS_TOKEN gDrvStore_TokNotify;
 
 /* ----------------------------------------------------------------------------- */
 
+typedef struct _SERWORK_ITEM_HDR SERWORK_ITEM_HDR;
+
+typedef void (*SERWORKITEM_pf_Exec)(SERWORK_ITEM_HDR *apItem);
+
+struct _SERWORK_ITEM_HDR
+{
+    SERWORK_ITEM_HDR * volatile mpNext;
+    SERWORKITEM_pf_Exec         mfExec;
+};
+
+void Run_AddSerializedWork(SERWORK_ITEM_HDR * apItem, SERWORKITEM_pf_Exec afExec);
+
+/* ----------------------------------------------------------------------------- */
+
 #ifdef __cplusplus
 }
 #endif

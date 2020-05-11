@@ -32,6 +32,156 @@
 
 #include "ik2osexec.h"
 
+static K2OS_TOKEN                   sgTokWorkEvent;
+static SERWORK_ITEM_HDR * volatile  sgpWorkList;
+
+void 
+Run_AddSerializedWork(
+    SERWORK_ITEM_HDR *  apItem, 
+    SERWORKITEM_pf_Exec afExec
+)
+{
+    UINT32 old;
+
+    apItem->mfExec = afExec;
+    do {
+        old = (UINT32)sgpWorkList;
+        apItem->mpNext = (SERWORK_ITEM_HDR *)old;
+        if (old == K2ATOMIC_CompareExchange((UINT32 volatile *)&sgpWorkList, (UINT32)apItem, old))
+            break;
+    } while (1);
+    K2OS_EventSet(sgTokWorkEvent);
+}
+
+UINT32 
+K2_CALLCONV_REGS 
+sHalThread(
+    void *apParam
+)
+{
+    K2OSHAL_pf_OnSystemReady fReady;
+    fReady = (K2OSHAL_pf_OnSystemReady)apParam;
+    return fReady();
+}
+
+void
+sStartHalThread(
+    K2OSHAL_pf_OnSystemReady afReady
+)
+{
+    K2OS_TOKEN          tokThread;
+    K2OS_THREADCREATE   cret;
+
+    K2MEM_Zero(&cret, sizeof(cret));
+    cret.mStructBytes = sizeof(cret);
+    cret.mEntrypoint = sHalThread;
+    cret.mpArg = afReady;
+
+    tokThread = K2OS_ThreadCreate(&cret);
+    K2_ASSERT(NULL != tokThread);
+
+    K2OS_TokenDestroy(tokThread);
+}
+
+void
+K2OSEXEC_Run(
+    K2OSHAL_pf_OnSystemReady afReady
+)
+{
+    SERWORK_ITEM_HDR *  pFix;
+    SERWORK_ITEM_HDR *  pHold;
+    SERWORK_ITEM_HDR *  pWorkList;
+    UINT32              waitResult;
+
+    //
+    // set up worker thread queue
+    //
+    sgpWorkList = NULL;
+    sgTokWorkEvent = K2OS_EventCreate(NULL, TRUE, FALSE);
+    K2_ASSERT(NULL != sgTokWorkEvent);
+
+    //
+    // this has to happen after fsprov init and drvstore init
+    //
+    Msg_Init();
+
+    //
+    // run the HAL, which will provide a driver store interface
+    // which we can use to find drivers for devices that need them
+    //
+    if (NULL != afReady)
+    {
+        //
+        // afReady will have been provided by the init info
+        //
+        sStartHalThread(afReady);
+//        K2OSKERN_Debug("HAL thread started\n");
+    }
+
+    //
+    // this is now the worker thread
+    // which shoulld actually be thread 0 in the system as well
+    //
+    do {
+        K2OSKERN_Debug("WorkWait\n");
+        waitResult = K2OS_ThreadWait(1, &sgTokWorkEvent, FALSE, K2OS_TIMEOUT_INFINITE);
+        K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
+
+        do {
+            pWorkList = (SERWORK_ITEM_HDR *)K2ATOMIC_Exchange((UINT32 volatile *)&sgpWorkList, 0);
+            if (pWorkList == NULL)
+                break;
+
+            //
+            // reverse the list
+            //
+            pFix = NULL;
+            do {
+                pHold = pWorkList;
+                pWorkList = pWorkList->mpNext;
+                pHold->mpNext = pFix;
+                pFix = pHold;
+            } while (pWorkList != NULL);
+            pWorkList = pHold;
+
+            //
+            // process the list
+            //
+            do {
+                pHold = pWorkList;
+                pWorkList = pWorkList->mpNext;
+                K2OSKERN_Debug("Work:%08X\n", pHold);
+                pHold->mfExec(pHold);
+            } while (pWorkList != NULL);
+
+        } while (1);
+
+    } while (1);
+}
+
+#if 0
+
+8086 "Intel"
+27B9 "82801GBM (ICH7-M) LPC Interface Bridge"
+2415 "82801AA AC'97 Audio Controller"
+7113 "82371AB/EB/MB PIIX4 ACPI"
+7111 "82371AB/EB/MB PIIX4 IDE"
+265C "82801FB/FBM/FR/FW/FRW (ICH6 Family) USB2 EHCI Controller"
+
+80EE    "VirtualBox"
+BEEF "VirtualBox Graphics Adapter"
+CAFE "VirtualBox Guest Service"
+
+1022     "AMD"
+2000 "79c970 [PCnet32 LANCE]"
+
+106B "Apple"
+003F "KeyLargo / Intrepid USB"
+
+#endif
+
+#if 0
+
 void
 sScanForHw(
     DEV_NODE *  apDevNode,
@@ -103,99 +253,11 @@ sScanForHw(
         if (pListLink != NULL)
         {
             do {
-                sScanForHw(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aLevel+1);
+                sScanForHw(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aLevel + 1);
                 pListLink = pListLink->mpNext;
             } while (pListLink != NULL);
         }
     }
 }
-
-UINT32 K2_CALLCONV_REGS sHalThread(void *apParam)
-{
-    K2OSHAL_pf_OnSystemReady fReady;
-    fReady = (K2OSHAL_pf_OnSystemReady)apParam;
-    return fReady();
-}
-
-void
-sStartHalThread(
-    K2OSHAL_pf_OnSystemReady afReady
-)
-{
-    K2OS_TOKEN          tokThread;
-    K2OS_THREADCREATE   cret;
-
-    K2MEM_Zero(&cret, sizeof(cret));
-    cret.mStructBytes = sizeof(cret);
-    cret.mEntrypoint = sHalThread;
-    cret.mpArg = afReady;
-
-    tokThread = K2OS_ThreadCreate(&cret);
-    K2_ASSERT(NULL != tokThread);
-
-    K2OS_TokenDestroy(tokThread);
-}
-
-void
-K2OSEXEC_Run(
-    K2OSHAL_pf_OnSystemReady afReady
-)
-{
-    //
-    // this has to happen after fsprov init
-    //
-    Msg_Init();
-
-    if (NULL != afReady)
-    {
-        sStartHalThread(afReady);
-        K2OSKERN_Debug("HAL thread started\n");
-    }
-
-    K2OSKERN_Debug("\nUnparented Hardware:\n------------------------------------\n");
-    sScanForHw(gpDev_RootNode, 0);
-    K2OSKERN_Debug("------------------------------------\n\n");
-
-#if 1
-    K2OSKERN_Debug("K2OSEXEC: Main Thread Sleep Hang ints on\n");
-    while (1)
-    {
-        K2OSKERN_Debug("Main Tick %d\n", (UINT32)K2OS_SysUpTimeMs());
-        K2OS_ThreadSleep(1000);
-    }
-#else
-    UINT64          last, newTick;
-    K2OSKERN_Debug("K2OSEXEC: Main Thread Stall Hang ints on\n");
-    last = K2OS_SysUpTimeMs();
-    while (1)
-    {
-        do {
-            newTick = K2OS_SysUpTimeMs();
-        } while (newTick - last < 1000);
-        last = newTick;
-        K2OSKERN_Debug("Tick %d\n", (UINT32)(newTick & 0xFFFFFFFF));
-    }
-#endif
-
-}
-
-#if 0
-
-8086 "Intel"
-27B9 "82801GBM (ICH7-M) LPC Interface Bridge"
-2415 "82801AA AC'97 Audio Controller"
-7113 "82371AB/EB/MB PIIX4 ACPI"
-7111 "82371AB/EB/MB PIIX4 IDE"
-265C "82801FB/FBM/FR/FW/FRW (ICH6 Family) USB2 EHCI Controller"
-
-80EE    "VirtualBox"
-BEEF "VirtualBox Graphics Adapter"
-CAFE "VirtualBox Guest Service"
-
-1022     "AMD"
-2000 "79c970 [PCnet32 LANCE]"
-
-106B "Apple"
-003F "KeyLargo / Intrepid USB"
 
 #endif
