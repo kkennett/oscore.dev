@@ -58,6 +58,7 @@ SOURCES += x32devintr.c
 SOURCES += x32tss.c
 
 SOURCES += x32kernex.c
+SOURCES += x32kernexasm.s
 
 SOURCES += x32map.c
 

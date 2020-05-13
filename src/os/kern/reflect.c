@@ -38,9 +38,18 @@ sThreadExited(
 )
 {
     K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
-    K2_ASSERT(apExitedThread->MsgExit.Hdr.mRefCount == 1);
+    K2_ASSERT(apExitedThread->MsgSvc.Hdr.mRefCount == 1);
     apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
     KernObj_Release(&apExitedThread->Hdr);
+}
+
+void
+sThreadStopped(
+    K2OSKERN_OBJ_THREAD * apStoppedThread
+)
+{
+    K2OSKERN_Debug("Thread %d stopped\n", apStoppedThread->Env.mId);
+    K2_ASSERT(0);
 }
 
 void
@@ -52,13 +61,16 @@ K2OSKERN_ReflectSysMsg(
     if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
         return;
 
-    K2OSKERN_Debug("ReflectSysMsg(%d)\n", aOpCode & ~SYSMSG_OPCODE_HIGH_MASK);
-
     switch (aOpCode)
     {
     case SYSMSG_OPCODE_THREAD_EXIT:
         sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0]);
         break;
+
+    case SYSMSG_OPCODE_THREAD_STOP:
+        sThreadStopped((K2OSKERN_OBJ_THREAD *)apParam[0]);
+        break;
+
     default:
         break;
     }

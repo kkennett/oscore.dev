@@ -376,7 +376,7 @@ void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem)
 
 UINT32 KernSched_SystemTickInterrupt(void *apContext)
 {
-    K2OSKERN_CPUCORE *                  pThisCore;
+    K2OSKERN_CPUCORE volatile *         pThisCore;
     K2OSKERN_CPUCORE_EVENT volatile *   pCoreEvent;
     UINT32                              v;
 

@@ -1178,9 +1178,9 @@ void KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread)
 
 static void sCleanPage(UINT32 aPhysPage)
 {
-    BOOL                disp;
-    K2OSKERN_CPUCORE *  pThisCore;
-    UINT32              virtAddr;
+    BOOL                        disp;
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    UINT32                      virtAddr;
 
     //
     // interrupts off so thread does not migrate to another core or get stopped

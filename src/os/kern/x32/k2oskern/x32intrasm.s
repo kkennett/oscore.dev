@@ -52,6 +52,48 @@ BEGIN_X32_PROC(X32Kern_InterruptReturn)
     jmp X32Kern_RawInterruptReturn
 END_X32_PROC(X32Kern_InterruptReturn)
 
+//void K2_CALLCONV_REGS X32Kern_KernelExTrapReturn(X32_EXCEPTION_CONTEXT *apSrcContext, UINT32 aTargetESP);
+BEGIN_X32_PROC(X32Kern_KernelExTrapReturn)
+    // set the new stack address at the new return context
+    mov %esp, %edx
+
+    // move the context down in the stack (up in memory)
+    // need to move backwards
+    mov %esi, %ecx
+    add %esi, (X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT-4)
+    mov %edi, %edx
+    add %edi, (X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT-4)
+    mov %ecx, (X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT >> 2)
+    std
+    rep movsd
+    cld
+
+    jmp X32Kern_RawInterruptReturn
+END_X32_PROC(X32Kern_KernelExTrapReturn)
+
+//void K2_CALLCONV_REGS KernArch_RaiseException(K2STAT aExceptionCode);
+BEGIN_X32_PROC(KernArch_RaiseException)
+    pop %eax                        // pop return address to EAX
+    pushf                           // put live flags onto stack
+    cli                             // interrupts off
+    push (X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL)
+    push 0                          // space for EIP, ErrCode, IntNum
+    push 0
+    push 0
+    pusha                           // regs saved to correct place
+    // esp points to first dword in X32_PUSHA
+    mov dword ptr [%esp+40], %eax   // save return address as exception context EIP
+    xor %eax, %eax                  // store user DS as kernel data segment (last thing in exception context)
+    mov %ax, (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL)
+    push %eax
+    // unlikely to return here
+    // if we do then return to the thread
+    mov %eax, offset X32Kern_RawInterruptReturn
+    push %eax
+.extern X32Kern_RaiseKernelModeException
+    jmp X32Kern_RaiseKernelModeException
+END_X32_PROC(KernArch_RaiseException)
+
 BEGIN_X32_STATIC_PROC(sInterruptCommon)
    pusha
 

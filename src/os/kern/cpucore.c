@@ -34,8 +34,8 @@
 
 static void sInit_AtDlxEntry(void)
 {
-    UINT32              coreIx;
-    K2OSKERN_CPUCORE *  pCore;
+    UINT32                      coreIx;
+    K2OSKERN_CPUCORE volatile * pCore;
 
     K2_ASSERT(gData.mCpuCount > 0);
     K2_ASSERT(gData.mCpuCount <= K2OS_MAX_CPU_COUNT);
@@ -43,7 +43,7 @@ static void sInit_AtDlxEntry(void)
     for (coreIx = 0; coreIx < gData.mCpuCount; coreIx++)
     {
         pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
-        K2MEM_Zero(pCore, sizeof(K2OSKERN_CPUCORE));
+        K2MEM_Zero((void *)pCore, sizeof(K2OSKERN_CPUCORE));
         pCore->mCoreIx = coreIx;
         K2_CpuWriteBarrier();
     }
@@ -64,9 +64,9 @@ void KernInit_CpuCore(void)
 
 void
 sProcessOneCpuCoreEvent(
-    K2OSKERN_CPUCORE *      apThisCore,
-    KernCpuCoreEventType    aEventType,
-    UINT64                  aEventTime
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    KernCpuCoreEventType        aEventType,
+    UINT64                      aEventTime
 )
 {
 //    K2OSKERN_Debug("!Core %d: Event %d\n", apThisCore->mCoreIx,aEventType);
@@ -78,6 +78,9 @@ sProcessOneCpuCoreEvent(
         break;
     case KernCpuCoreEvent_SchedTimerFired:
         KernSched_TimerFired(apThisCore);
+        break;
+    case KernCpuCoreEvent_ThreadStop:
+        KernSched_ThreadStop(apThisCore);
         break;
     case KernCpuCoreEvent_Ici_Wakeup:
         //
@@ -111,7 +114,7 @@ sProcessOneCpuCoreEvent(
     }
 }
 
-void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore)
+void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE volatile *apThisCore)
 {
     K2OSKERN_CPUCORE_EVENT volatile *   pEvent;
     K2OSKERN_CPUCORE_EVENT volatile *   pEventList;
@@ -191,7 +194,7 @@ void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore)
     } while (1);
 }
 
-void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE *apThisCore, UINT32 aTargetCoreIx, KernCpuCoreEventType aEventType)
+void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetCoreIx, KernCpuCoreEventType aEventType)
 {
     K2OSKERN_CPUCORE volatile *         pTargetCore;
     K2OSKERN_CPUCORE_EVENT volatile *   pEvent;
@@ -220,7 +223,7 @@ void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE *apThisCore, UINT32 aTargetCo
     KernArch_SendIci(apThisCore->mCoreIx, TRUE, aTargetCoreIx);
 }
 
-void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE *apThisCore, KernCpuCoreEventType aEventType)
+void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE volatile *apThisCore, KernCpuCoreEventType aEventType)
 {
     K2OSKERN_CPUCORE volatile *         pOtherCore;
     K2OSKERN_CPUCORE_EVENT volatile *   pEvent;

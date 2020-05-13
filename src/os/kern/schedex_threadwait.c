@@ -125,7 +125,7 @@ BOOL KernSched_Exec_ThreadWait(void)
     UINT32                      ix;
     BOOL                        isSatisfiedWithoutChange;
     KernThreadRunState          nextRunState;
-    K2OSKERN_CPUCORE *          pCore;
+    K2OSKERN_CPUCORE volatile * pCore;
     UINT32                      workPrio;
     K2LIST_LINK *               pListLink;
     K2OSKERN_OBJ_THREAD *       pReadyThread;

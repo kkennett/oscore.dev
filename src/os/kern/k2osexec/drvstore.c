@@ -39,6 +39,18 @@ char const *     gpK2OSEXEC_DriverStoreInterfaceGuidStr = "{612A5D97-C492-44B3-9
 
 K2OS_TOKEN gDrvStore_TokNotify = NULL;
 
+static SERWORK_ITEM_HDR sgWork;
+
+void sDoWork(SERWORK_ITEM_HDR *apItem)
+{
+    int a, b;
+    K2_ASSERT(apItem == &sgWork);
+    a = 1;
+    b = 0;
+    K2OSKERN_Debug("Do work\n");
+    a = a / b;
+}
+
 void DrvStore_OnNotify(void)
 {
     BOOL                    isArrival;
@@ -80,6 +92,12 @@ void DrvStore_OnNotify(void)
             else
             {
                 K2OSKERN_Debug("Driver Store \"%s\" arrived\n", storeInfo.StoreName);
+
+                Run_AddSerializedWork(&sgWork, sDoWork);
+
+
+
+
             }
         }
         else

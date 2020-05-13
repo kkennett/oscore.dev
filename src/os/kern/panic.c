@@ -36,7 +36,7 @@ static K2OSKERN_CPUCORE * volatile  sgpPanicCore = NULL;
 
 void 
 KernPanic_Ici(
-    K2OSKERN_CPUCORE *apThisCore
+    K2OSKERN_CPUCORE volatile *apThisCore
 )
 {
     K2OSKERN_SetIntr(FALSE);
@@ -51,8 +51,8 @@ K2OSKERN_Panic(
     ...
 )
 {
-    K2OSKERN_CPUCORE *  pThisCore;
-    VALIST              vList;
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    VALIST                      vList;
 
     K2OSKERN_SetIntr(FALSE);
 

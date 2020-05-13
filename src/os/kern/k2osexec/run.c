@@ -83,6 +83,23 @@ sStartHalThread(
     K2OS_TokenDestroy(tokThread);
 }
 
+static
+K2STAT
+sCallExec(
+    SERWORK_ITEM_HDR *  apItem
+)
+{
+    //
+    // if this causes an exception the containing trap will trap it
+    //
+    apItem->mfExec(apItem);
+
+    //
+    // if we get here there was no exception in the call
+    //
+    return K2STAT_NO_ERROR;
+}
+
 void
 K2OSEXEC_Run(
     K2OSHAL_pf_OnSystemReady afReady
@@ -92,6 +109,8 @@ K2OSEXEC_Run(
     SERWORK_ITEM_HDR *  pHold;
     SERWORK_ITEM_HDR *  pWorkList;
     UINT32              waitResult;
+    K2STAT              stat;
+    K2_EXCEPTION_TRAP   trap;
 
     //
     // set up worker thread queue
@@ -123,7 +142,6 @@ K2OSEXEC_Run(
     // which shoulld actually be thread 0 in the system as well
     //
     do {
-        K2OSKERN_Debug("WorkWait\n");
         waitResult = K2OS_ThreadWait(1, &sgTokWorkEvent, FALSE, K2OS_TIMEOUT_INFINITE);
         K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
 
@@ -149,9 +167,16 @@ K2OSEXEC_Run(
             //
             do {
                 pHold = pWorkList;
+                
                 pWorkList = pWorkList->mpNext;
-                K2OSKERN_Debug("Work:%08X\n", pHold);
-                pHold->mfExec(pHold);
+
+                sCallExec(pHold);
+                stat = K2_EXTRAP(&trap, sCallExec(pHold));
+                if (K2STAT_IS_EXCEPTION(stat))
+                {
+                    K2OSKERN_Debug("!!! Work item threw exception %08X\n", stat);
+                }
+
             } while (pWorkList != NULL);
 
         } while (1);

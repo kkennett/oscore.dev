@@ -354,6 +354,7 @@ K2OSKERN_ReflectSysMsg(
 #define SYSMSG_OPCODE_HIGH_MASK     0x7FFFF000
 #define SYSMSG_OPCODE_THREAD_EXIT   (SYSMSG_OPCODE_HIGH + 0)
 #define SYSMSG_OPCODE_SVC_CALL      (SYSMSG_OPCODE_HIGH + 1 + K2OS_MSGOPCODE_HAS_RESPONSE)
+#define SYSMSG_OPCODE_THREAD_STOP   (SYSMSG_OPCODE_HIGH + 2)
 
 //
 //------------------------------------------------------------------------

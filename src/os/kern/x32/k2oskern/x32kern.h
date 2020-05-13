@@ -156,6 +156,10 @@ void X32Kern_UnmaskDevIrq(UINT8 aIrqIx);
 
 void X32Kern_EOI(UINT32 aVector);
 
+void X32Kern_MountExceptionTrap(X32_CONTEXT aThreadContext);
+
+void K2_CALLCONV_REGS X32Kern_KernelExTrapReturn(X32_EXCEPTION_CONTEXT *apSrcContext, UINT32 aTargetESP);
+
 /* --------------------------------------------------------------------------------- */
 
 #endif // __X32KERN_H

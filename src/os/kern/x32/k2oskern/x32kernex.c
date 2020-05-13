@@ -32,21 +32,23 @@
 
 #include "x32kern.h"
 
-BOOL
-K2_CALLCONV_REGS
-KernEx_TrapMount(
-    K2_EXCEPTION_TRAP *apTrap
-)
+void X32Kern_MountExceptionTrap(X32_CONTEXT aThreadContext)
 {
-    return FALSE;
-}
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+    K2_EXCEPTION_TRAP *     pTrap;
 
-void
-K2_CALLCONV_REGS
-KernEx_RaiseException(
-    K2STAT aExceptionCode
-)
-{
-    K2_ASSERT(0);
+    //
+    // interrupts are off
+    //
+
+    // get the trap and save goop to it
+    pTrap = (K2_EXCEPTION_TRAP *)aThreadContext.ECX;
+    pTrap->mTrapResult = K2STAT_ERROR_UNKNOWN;
+    K2MEM_Copy(&pTrap->SavedContext, &aThreadContext, sizeof(X32_CONTEXT));
+
+    // push this trap onto the trap stack
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+    pTrap->mpNextTrap = pThisThread->mpKernExTrapStack;
+    pThisThread->mpKernExTrapStack = pTrap;
 }
 

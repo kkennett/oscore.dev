@@ -118,6 +118,7 @@ enum _KernCpuCoreEventType
     KernCpuCoreEvent_None = 0,
     KernCpuCoreEvent_SchedulerCall,
     KernCpuCoreEvent_SchedTimerFired,
+    KernCpuCoreEvent_ThreadStop,
     KernCpuCoreEvent_Ici_Wakeup,
     KernCpuCoreEvent_Ici_Stop,
     KernCpuCoreEvent_Ici_TlbInv,
@@ -182,7 +183,7 @@ struct _K2OSKERN_COREPAGE
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_COREPAGE) == K2_VA32_MEMPAGE_BYTES);
 
-#define K2OSKERN_COREIX_TO_CPUCORE(x)   ((K2OSKERN_CPUCORE *)(K2OS_KVA_COREPAGES_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
+#define K2OSKERN_COREIX_TO_CPUCORE(x)   ((K2OSKERN_CPUCORE volatile *)(K2OS_KVA_COREPAGES_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
 #define K2OSKERN_GET_CURRENT_CPUCORE    K2OSKERN_COREIX_TO_CPUCORE(K2OSKERN_GetCpuIndex())
 
 #define K2OSKERN_COREIX_TO_COREPAGE(x)  ((K2OSKERN_COREPAGE *)(K2OS_KVA_COREPAGES_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
@@ -228,6 +229,7 @@ enum _KernSchedItemType
     KernSchedItem_AlarmChange,
     KernSchedItem_NotifyLatch,
     KernSchedItem_NotifyRead,
+    KernSchedItem_ThreadStop,
 
     // more here
     KernSchedItemType_Count
@@ -448,6 +450,7 @@ enum _KernThreadRunState
     KernThreadRunState_Transition,
     KernThreadRunState_Ready,
     KernThreadRunState_Running,
+    KernThreadRunState_Stopped,
     KernThreadRunState_Blocked_CS,
     KernThreadRunState_Waiting
 };
@@ -502,7 +505,7 @@ struct _K2OSKERN_SCHED
     K2OSKERN_SCHED_ITEM             SchedTimerSchedItem;
     K2OSKERN_SCHED_TIMERITEM *      mpTimerItemQueue;
 
-    K2OSKERN_CPUCORE *              mpSchedulingCore;
+    K2OSKERN_CPUCORE volatile *     mpSchedulingCore;
     
     K2OSKERN_SCHED_ITEM *           mpActiveItem;
     K2OSKERN_OBJ_THREAD *           mpActiveItemThread;
@@ -842,7 +845,11 @@ struct _K2OSKERN_OBJ_THREAD
     K2_EXCEPTION_TRAP *         mpKernExTrapStack;
     K2_EXCEPTION_TRAP *         mpUserExTrapStack;
 
-    K2OSKERN_OBJ_MSG            MsgExit;
+    K2STAT                      mEx_Code;
+    UINT32                      mEx_FaultAddr;
+    BOOL                        mEx_IsPageFault;
+
+    K2OSKERN_OBJ_MSG            MsgSvc;
 };
 
 #define K2OSKERN_THREAD_KERNSTACK_BYTECOUNT (K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_OBJ_THREAD))
@@ -1330,12 +1337,10 @@ extern KERN_DATA gData;
 /* --------------------------------------------------------------------------------- */
 
 void   K2_CALLCONV_REGS KernEx_Assert(char const * apFile, int aLineNum, char const * apCondition);
-BOOL   K2_CALLCONV_REGS KernEx_TrapMount(K2_EXCEPTION_TRAP *apTrap);
 K2STAT K2_CALLCONV_REGS KernEx_TrapDismount(K2_EXCEPTION_TRAP *apTrap);
-void   K2_CALLCONV_REGS KernEx_RaiseException(K2STAT aExceptionCode);
 
 UINT32 KernDebug_OutputWithArgs(char const *apFormat, VALIST aList);
-void   KernPanic_Ici(K2OSKERN_CPUCORE* apThisCore);
+void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1388,8 +1393,8 @@ UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL 
 void    KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread);
 void    KernArch_LaunchCores(void);
 void    KernArch_ThreadCallSched(void);
-void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore);
-void    KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore);
+void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
 
 void    KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
@@ -1399,7 +1404,10 @@ void    KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 
-void    KernArch_Panic(K2OSKERN_CPUCORE *apThisCore, BOOL aDumpStack);
+void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
+
+BOOL K2_CALLCONV_REGS KernArch_ExTrapMount(K2_EXCEPTION_TRAP *apTrap);
+void K2_CALLCONV_REGS KernArch_RaiseException(K2STAT aExceptionCode);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1425,8 +1433,9 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg);
 /* --------------------------------------------------------------------------------- */
 
 void KernSched_AddCurrentCore(void);
-void KernSched_Check(K2OSKERN_CPUCORE *apThisCore);
-void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_Check(K2OSKERN_CPUCORE volatile *apThisCore);
+void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE volatile *apThisCore);
+void KernSched_ThreadStop(K2OSKERN_CPUCORE volatile *apThisCore);
 
 typedef BOOL(*KernSched_pf_Handler)(void);
 
@@ -1447,6 +1456,7 @@ BOOL KernSched_Exec_MsgReadResp(void);
 BOOL KernSched_Exec_AlarmChange(void);
 BOOL KernSched_Exec_NotifyLatch(void);
 BOOL KernSched_Exec_NotifyRead(void);
+BOOL KernSched_Exec_ThreadStop(void);
 
 BOOL KernSchedEx_EventChange(K2OSKERN_OBJ_EVENT *apEvent, BOOL aSignal);
 BOOL KernSchedEx_SemInc(K2OSKERN_OBJ_SEM *apSem, UINT32 aRelCount);
@@ -1455,9 +1465,9 @@ BOOL KernSchedEx_AlarmFired(K2OSKERN_OBJ_ALARM *apAlarm);
 
 BOOL KernSched_TimePassed(UINT64 aSchedTime);
 
-void KernSched_TimerFired(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_TimerFired(K2OSKERN_CPUCORE volatile *apThisCore);
 void KernSched_TlbInvalidateAcrossCores(void);
-void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore);
+void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE volatile *apThisCore);
 void KernSched_StartSysTick(K2OSKERN_IRQ_CONFIG const * apConfig);
 void KernSched_ArmSchedTimer(UINT32 aMsFromNow);
 void KernSched_MakeThreadActive(K2OSKERN_OBJ_THREAD *apThread, BOOL aEndOfListAtPrio);
@@ -1465,18 +1475,21 @@ BOOL KernSched_MakeThreadInactive(K2OSKERN_OBJ_THREAD *apThread, KernThreadRunSt
 
 BOOL KernSched_AddTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem, UINT64 aAbsWaitStartTime, UINT64 aWaitMs);
 void KernSched_DelTimerItem(K2OSKERN_SCHED_TIMERITEM *apItem);
-BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread);
-void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle);
-void KernSched_PreemptCore(K2OSKERN_CPUCORE *apCore, K2OSKERN_OBJ_THREAD *apRunningThread, KernThreadRunState aNewState, K2OSKERN_OBJ_THREAD *apReadyThread);
+BOOL KernSched_RunningThreadQuantumExpired(K2OSKERN_CPUCORE volatile *apCore, K2OSKERN_OBJ_THREAD *apRunningThread);
+void KernSched_StopThread(K2OSKERN_OBJ_THREAD *apThread, K2OSKERN_CPUCORE volatile *apCpuCore, KernThreadRunState aNewRunState, BOOL aSetCoreIdle);
+void KernSched_PreemptCore(K2OSKERN_CPUCORE volatile *apCore, K2OSKERN_OBJ_THREAD *apRunningThread, KernThreadRunState aNewState, K2OSKERN_OBJ_THREAD *apReadyThread);
 
 void KernSched_EndThreadWait(K2OSKERN_SCHED_MACROWAIT *apWait, UINT32 aWaitResult);
 
 BOOL KernSched_CheckSignalOne_SatisfyAll(K2OSKERN_SCHED_MACROWAIT *apWait, K2OSKERN_SCHED_WAITENTRY *apEntry);
+
+void KernSched_UntrappedKernelRaiseException(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+
 /* --------------------------------------------------------------------------------- */
 
-void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE *apThisCore);
-void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE *apThisCore, UINT32 aTargetCoreIx, KernCpuCoreEventType aEventType);
-void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE *apThisCore, KernCpuCoreEventType aEventType);
+void KernCpuCore_DrainEvents(K2OSKERN_CPUCORE volatile *apThisCore);
+void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetCoreIx, KernCpuCoreEventType aEventType);
+void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE volatile *apThisCore, KernCpuCoreEventType aEventType);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1502,7 +1515,7 @@ void KernInit_CpuCore(void);
 
 /* --------------------------------------------------------------------------------- */
 
-void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
+void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
 void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr);
 
 /* --------------------------------------------------------------------------------- */

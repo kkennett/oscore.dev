@@ -43,8 +43,10 @@ K2OSKERN_Esc(
     case K2OSKERN_ESC_GET_DEBUGPAGE:
         *((UINT32 *)apParam) = gData.mpShared->LoadInfo.mDebugPageVirt;
         return 0;
+
     default:
         break;
     }
+
     return K2STAT_ERROR_NOT_IMPL;
 }

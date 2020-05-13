@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE *apThisCore)
+void KernSched_PerCpuTlbInvEvent(K2OSKERN_CPUCORE volatile *apThisCore)
 {
     UINT32 left;
     UINT32 virtAddr;

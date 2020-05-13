@@ -30,44 +30,38 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "x32kernasm.inc"
 
-void 
-K2_CALLCONV_REGS 
-KernEx_Assert(
-    char const *    apFile,
-    int             aLineNum,
-    char const *    apCondition
-    )
-{
-    K2OSKERN_Panic("***KERNEL ASSERT:\nLocation: %s(%d)\nFALSE ==> %s\n", apFile, aLineNum, apCondition);
-    while (1);
-}
+// BOOL K2_CALLCONV_REGS KernArch_ExTrapMount(K2_EXCEPTION_TRAP *apTrap);
+BEGIN_X32_PROC(KernArch_ExTrapMount)
+    // ecx has pointer to exception trap record
+    // edx has garbage
 
-K2STAT 
-K2_CALLCONV_REGS 
-KernEx_TrapDismount(
-    K2_EXCEPTION_TRAP *apTrap
-    )
-{
-    K2OSKERN_OBJ_THREAD * pThisThread;
+    // make sure there is enough room for an exception context here
+    // this will cause a stack fault HERE if there isnt enough room
+    sub %esp, (X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT - 4) // -4 for the return address already pushed
+    push 0                                              // push so that its a stack fault and not an access violation
+    add %esp, X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT       // restore takes into account push 0 just done
 
-    pThisThread = K2OSKERN_CURRENT_THREAD;
-    K2_ASSERT(apTrap == pThisThread->mpKernExTrapStack);
-    pThisThread->mpKernExTrapStack = apTrap->mpNextTrap;
+    // now put the saved state onto the stack using pusha
+    //
+    pusha   // esp will get stack before push
+    pushf   // active flags
+    cli     // disable interrupts
 
-    return apTrap->mTrapResult;
-}
+    // push return address and jump into C
+    push offset exTrap_Return
+.extern X32Kern_MountExceptionTrap
+    jmp X32Kern_MountExceptionTrap
 
+exTrap_Return:
+    // back from C
+    popf                // pop active flags (should restore interrupts)
+    add %esp, (8 * 4)   // reverse pusha
+    xor %eax, %eax      // force clear eax (return false from mount)
+    ret
 
-#if 0
+END_X32_PROC(KernArch_ExTrapMount)
 
-// handled as an access violation for now
-K2OSKERN_Debug("0x%08X (errorCode %08X) %sMode %sPresent %s page fault\n",
-    faultAddress, apContext->Exception_ErrorCode,
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_FROM_USER) ? "User" : "Kernel",
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_PRESENT) ? "" : "Not",
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_ON_WRITE) ? "Write" : "Read");
+    .end
 
-
-#endif

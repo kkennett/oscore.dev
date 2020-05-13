@@ -130,9 +130,9 @@ dlx_entry(
     gData.mpShared->FuncTab.HeapFree = K2OS_HeapFree;
 
     gData.mpShared->FuncTab.Assert = KernEx_Assert;
-    gData.mpShared->FuncTab.ExTrap_Mount = KernEx_TrapMount;
+    gData.mpShared->FuncTab.ExTrap_Mount = KernArch_ExTrapMount;
     gData.mpShared->FuncTab.ExTrap_Dismount = KernEx_TrapDismount;
-    gData.mpShared->FuncTab.RaiseException = KernEx_RaiseException;
+    gData.mpShared->FuncTab.RaiseException = KernArch_RaiseException;
 
     K2OSKERN_SeqIntrInit(&gData.ObjTreeSeqLock);
 

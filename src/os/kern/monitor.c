@@ -42,8 +42,8 @@ void KernMonitor_OneTimeInit(void)
 
 void KernMonitor_Run(void)
 {
-    K2OSKERN_CPUCORE *      pThisCore;
-    K2OSKERN_OBJ_THREAD *   pThread;
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    K2OSKERN_OBJ_THREAD *       pThread;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
     K2_ASSERT(pThisCore->mIsExecuting);

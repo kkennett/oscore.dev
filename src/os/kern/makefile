@@ -79,6 +79,7 @@ SOURCES += alarm.c
 SOURCES += schedex_alarm.c
 SOURCES += service.c
 SOURCES += schedex_notify.c
+SOURCES += schedex_threadstop.c
 
 SOURCES += osapi_addr.c 
 SOURCES += osapi_alarm.c 

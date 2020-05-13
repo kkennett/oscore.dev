@@ -75,8 +75,8 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
 
 void X32Kern_ThreadCallSched(X32_EXCEPTION_CONTEXT aContext)
 {
-    K2OSKERN_CPUCORE *      pThisCore;
-    K2OSKERN_OBJ_THREAD *   pActiveThread;
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    K2OSKERN_OBJ_THREAD *       pActiveThread;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
     K2_ASSERT(pThisCore->mIsInMonitor == FALSE);

@@ -100,7 +100,7 @@ BOOL KernSched_Exec_ThreadExit(void)
 
     if (KernSchedEx_MsgSend(
         gData.mpMsgBox_K2OSEXEC, 
-        &pExitingThread->MsgExit,
+        &pExitingThread->MsgSvc,
         &msgIo, 
         &stat))
         changedSomething = TRUE;

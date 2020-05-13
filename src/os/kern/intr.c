@@ -32,7 +32,7 @@
 
 #include "kern.h"
 
-void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent)
+void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent)
 {
     K2OSKERN_CPUCORE_EVENT *    pNext;
     UINT32                      old;

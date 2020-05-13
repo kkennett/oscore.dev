@@ -32,7 +32,7 @@
 
 #include "x32kern.h"
 
-void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore)
+void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore)
 {
     K2OSKERN_OBJ_THREAD *   pThread;
     K2OSKERN_OBJ_PROCESS *  pOldProc;
@@ -52,7 +52,7 @@ void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE *apThisCore)
     }
 }
 
-void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore)
+void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
 {
     K2OSKERN_OBJ_THREAD *   pThread;
     K2OSKERN_OBJ_PROCESS *  pProc;

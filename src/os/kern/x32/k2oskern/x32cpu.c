@@ -281,11 +281,11 @@ static void sStartCpu(UINT32 aCpuIndex)
 
 void KernArch_LaunchCores(void)
 {
-    UINT32              index;
-    X32_PAGEDIR *       pKernelPageDir;
-    X32_PAGEDIR *       pPageDir;
-    X32_PAGETABLE *     pPageTable;
-    K2OSKERN_CPUCORE *  pAuxCore;
+    UINT32                      index;
+    X32_PAGEDIR *               pKernelPageDir;
+    X32_PAGEDIR *               pPageDir;
+    X32_PAGETABLE *             pPageTable;
+    K2OSKERN_CPUCORE volatile * pAuxCore;
 
     if (gData.mCpuCount > 1)
     {

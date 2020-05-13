@@ -74,6 +74,10 @@ static void sInit_BeforeVirt(void)
     pThreadPage = K2OSKERN_THREAD_PAGE_FROM_THREAD(pThread);
     pThread->mStackPtr_Kernel = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - 4]);
 
+    stat = KernMsg_Create(&pThread->MsgSvc);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+    pThread->MsgSvc.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+
     stat = KernObj_Add(&pThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
@@ -162,10 +166,10 @@ K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PR
     pNewThread->Info.mProcessId = apProc->mId;
     K2MEM_Copy(&pNewThread->Info.CreateInfo, apCreate, sizeof(K2OS_THREADCREATE));
 
-    stat = KernMsg_Create(&pNewThread->MsgExit);
+    stat = KernMsg_Create(&pNewThread->MsgSvc);
     if (K2STAT_IS_ERROR(stat))
         return stat;
-    pNewThread->MsgExit.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    pNewThread->MsgSvc.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
 
     disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
     K2OSKERN_SeqIntrLock(&apProc->ThreadListSeqLock);
@@ -251,7 +255,7 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
     K2OSKERN_SeqIntrUnlock(&pProc->ThreadListSeqLock, FALSE);
     K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
 
-    KernObj_Release(&apThread->MsgExit.Hdr);
+    KernObj_Release(&apThread->MsgSvc.Hdr);
 
     //
     // thread is GONE after this call
