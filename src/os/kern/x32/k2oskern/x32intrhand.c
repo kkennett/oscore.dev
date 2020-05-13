@@ -264,6 +264,7 @@ X32Kern_InterruptHandler(
         if ((forceEnterMonitor) ||
             (pThisCore->mpPendingEventListHead != NULL))
         {
+            pThisCore->mpActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
             pThisCore->mIsInMonitor = TRUE;
 
             sgInIntr[pThisCore->mCoreIx] = FALSE;

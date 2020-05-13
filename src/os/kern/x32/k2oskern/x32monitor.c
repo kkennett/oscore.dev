@@ -85,6 +85,11 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
     //
     K2_ASSERT((*((UINT32 *)pThread->mStackPtr_Kernel)) == (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL));
 
+    //
+    // interrupts must be enabled or something is wrong.
+    //
+    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)pThread->mStackPtr_Kernel)->KernelMode.EFLAGS & X32_EFLAGS_INTENABLE);
+
     X32Kern_InterruptReturn(
         pThread->mStackPtr_Kernel,
         (apThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);

@@ -32,9 +32,10 @@
 
 #include <lib/k2ramheap.h>
 
-#define DBG_ALLOC_PATTERN 0
+#define DBG_ALLOC_PATTERN   0
+#define K2_STATIC           static      
 
-static
+K2_STATIC
 BOOL
 sCheckHdrSent(
     K2OS_RAMHEAP_NODE * apNode,
@@ -58,7 +59,7 @@ sCheckHdrSent(
     return FALSE;
 }
 
-static
+K2_STATIC
 BOOL
 sCheckEndSent(
     K2OS_RAMHEAP_NODE *apNode
@@ -69,7 +70,7 @@ sCheckEndSent(
     return (*pEnd == K2OS_RAMHEAP_NODE_ENDSENT);
 }
 
-static
+K2_STATIC
 K2OS_RAMHEAP_CHUNK *
 sScanForAddrChunk(
     K2OS_RAMHEAP *  apHeap,
@@ -93,7 +94,7 @@ sScanForAddrChunk(
     return NULL;
 }
 
-static
+K2_STATIC
 void
 sLockHeap(
     K2OS_RAMHEAP * apHeap
@@ -104,7 +105,7 @@ sLockHeap(
     apHeap->mLockDisp = apHeap->fLock(apHeap);
 }
 
-static
+K2_STATIC
 void
 sUnlockHeap(
     K2OS_RAMHEAP * apHeap
@@ -117,7 +118,7 @@ sUnlockHeap(
 
 #if 0
 
-static
+K2_STATIC
 void
 sDump(
     K2OS_RAMHEAP *apHeap
@@ -171,7 +172,7 @@ sDump(
 
 #endif
 
-static
+K2_STATIC
 void
 sCheckLockedHeap(
     K2OS_RAMHEAP *apHeap
@@ -337,7 +338,7 @@ sCheckLockedHeap(
     K2_ASSERT(checkOverhead == apHeap->HeapState.mTotalOverhead);
 }
 
-static
+K2_STATIC
 int
 sAddrCompare(
     UINT32          aKey,
@@ -351,7 +352,7 @@ sAddrCompare(
     return (int)((aKey - sizeof(K2OS_RAMHEAP_NODE)) - ((UINT32)K2_GET_CONTAINER(K2OS_RAMHEAP_NODE, apTreeNode, TreeNode)));
 }
 
-static
+K2_STATIC
 int
 sSizeCompare(
     UINT32          aKey,
@@ -378,7 +379,7 @@ K2OS_RAMHEAP_Init(
     apHeap->mLockDisp = 0;
 }
 
-static 
+K2_STATIC 
 void
 sAllocFromNode(
     K2OS_RAMHEAP *      apHeap,
@@ -446,7 +447,7 @@ sAllocFromNode(
     apHeap->HeapState.mTotalAlloc += apAllocFromNode->TreeNode.mUserVal;
 }
 
-static
+K2_STATIC
 K2STAT
 sPushBreak(
     K2OS_RAMHEAP *          apHeap,
@@ -523,7 +524,7 @@ sPushBreak(
     return K2STAT_OK;
 }
 
-static
+K2_STATIC
 K2STAT
 sGrowHeapChunk(
     K2OS_RAMHEAP *      apHeap,
@@ -557,7 +558,7 @@ sGrowHeapChunk(
     return K2STAT_NO_ERROR;
 }
 
-static
+K2_STATIC
 void
 iAddAndAllocFromChunk(
     K2OS_RAMHEAP *  apHeap,
@@ -674,7 +675,7 @@ K2OS_RAMHEAP_AddAndAllocFromChunk(
     return K2STAT_NO_ERROR;
 }
 
-static
+K2_STATIC
 K2STAT
 sNewHeapChunk(
     K2OS_RAMHEAP *  apHeap,
@@ -716,7 +717,7 @@ sNewHeapChunk(
     return K2STAT_NO_ERROR;
 }
 
-static
+K2_STATIC
 K2STAT
 sGrowHeap(
     K2OS_RAMHEAP *  apHeap,
@@ -803,7 +804,7 @@ K2OS_RAMHEAP_Alloc(
     return stat;
 }
 
-static
+K2_STATIC
 void
 sFreeNode(
     K2OS_RAMHEAP *          apHeap,

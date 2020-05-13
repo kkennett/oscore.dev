@@ -73,7 +73,7 @@ BEGIN_X32_PROC(X32_GetCoreInterruptMask)
    pushf
    pop %eax
    and  %eax, X32_EFLAGS_INTENABLE
-   jz   wasDisabled
+   jz   getWasDisabled
    xor  %eax, %eax
    ret
 getWasDisabled:

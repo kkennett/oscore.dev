@@ -113,6 +113,11 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread)
         K2_ASSERT(0);
     }
 
+    if (FALSE == K2OSKERN_GetIntr())
+    {
+        K2OSKERN_Panic("Interrupts disabled (%08X) at KernThread_Entry!\n", X32_ReadEFLAGS());
+    }
+
     apThisThread->Info.mExitCode = apThisThread->Info.CreateInfo.mEntrypoint(apThisThread->Info.CreateInfo.mpArg);
 
 //    K2OSKERN_Debug("Thread(%d) calling scheduler for exit with Code %08X\n", apThisThread->Env.mId, apThisThread->Info.mExitCode);
