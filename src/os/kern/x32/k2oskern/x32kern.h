@@ -162,4 +162,28 @@ void K2_CALLCONV_REGS X32Kern_KernelExTrapReturn(X32_EXCEPTION_CONTEXT *apSrcCon
 
 /* --------------------------------------------------------------------------------- */
 
+#define SYM_NAME_MAX_LEN    80
+
+void
+X32Kern_DumpStackTrace(
+    K2OSKERN_OBJ_PROCESS *apProc,
+    UINT32 aEIP,
+    UINT32 aEBP,
+    UINT32 aESP,
+    char *  apBuffer
+);
+
+void
+X32Kern_DumpUserModeExceptionContext(
+    X32_EXCEPTION_CONTEXT *apContext
+);
+
+void
+X32Kern_DumpKernelModeExceptionContext(
+    X32_EXCEPTION_CONTEXT * apContext
+);
+
+
+/* --------------------------------------------------------------------------------- */
+
 #endif // __X32KERN_H

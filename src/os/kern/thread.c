@@ -34,7 +34,18 @@
 
 void KernThread_Dump(K2OSKERN_OBJ_THREAD *apThread)
 {
-    K2OSKERN_Debug("DUMP THREAD %08X\n", apThread);
+    K2OSKERN_Debug("\n---------------------------\nDUMP THREAD %d\n---------------------------\n", apThread->Env.mId);
+    K2OSKERN_Debug("%s THREAD\n", apThread->mIsKernelThread ? "KERNEL" : "USER");
+    if (!apThread->mIsKernelThread)
+        K2OSKERN_Debug("IN %s MODE\n", apThread->mIsInKernelMode ? "KERNEL" : "USER");
+    K2OSKERN_Debug("AT          %08X\n", apThread);
+    K2OSKERN_Debug("IN PROCESS  %d\n", apThread->mpProc->mId);
+    K2OSKERN_Debug("STACK SEG   %08X\n", apThread->mpStackSeg);
+    K2OSKERN_Debug("    %08X for %08X\n",
+        apThread->mpStackSeg->ProcSegTreeNode.mUserVal,
+        apThread->mpStackSeg->mPagesBytes);
+    KernArch_DumpThreadContext(apThread);
+    K2OSKERN_Debug("---------------------------\n");
 }
 
 static void sInit_BeforeVirt(void)

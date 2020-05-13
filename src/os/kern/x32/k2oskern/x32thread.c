@@ -106,3 +106,34 @@ void X32Kern_ThreadCallSched(X32_EXCEPTION_CONTEXT aContext)
     K2_ASSERT(0);
 }
 
+void KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread)
+{
+    char                    symDump[SYM_NAME_MAX_LEN];
+    X32_EXCEPTION_CONTEXT * pEx;
+
+    if (apThread->mIsInKernelMode)
+    {
+        pEx = (X32_EXCEPTION_CONTEXT *)apThread->mStackPtr_Kernel;
+        X32Kern_DumpKernelModeExceptionContext(pEx);
+        X32Kern_DumpStackTrace(apThread->mpProc,
+            pEx->KernelMode.EIP,
+            pEx->REGS.EBP,
+            ((UINT32)pEx) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
+            symDump);
+    }
+    else
+    {
+        //
+        // user mode exception context sits on thread kernel stack
+        // right after kernel exception context
+        //
+        pEx = (X32_EXCEPTION_CONTEXT *)
+            apThread->mStackPtr_Kernel + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT;
+        X32Kern_DumpUserModeExceptionContext(pEx);
+        X32Kern_DumpStackTrace(apThread->mpProc,
+            pEx->UserMode.EIP,
+            pEx->REGS.EBP,
+            pEx->UserMode.ESP,
+            symDump);
+    }
+}

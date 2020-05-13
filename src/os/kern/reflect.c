@@ -48,7 +48,7 @@ sThreadStopped(
     K2OSKERN_OBJ_THREAD * apStoppedThread
 )
 {
-    K2OSKERN_Debug("Thread %d stopped\n", apStoppedThread->Env.mId);
+    KernThread_Dump(apStoppedThread);
     K2_ASSERT(0);
 }
 

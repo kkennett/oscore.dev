@@ -1406,6 +1406,8 @@ UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 
 void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
 
+void    KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread);
+
 BOOL K2_CALLCONV_REGS KernArch_ExTrapMount(K2_EXCEPTION_TRAP *apTrap);
 void K2_CALLCONV_REGS KernArch_RaiseException(K2STAT aExceptionCode);
 
