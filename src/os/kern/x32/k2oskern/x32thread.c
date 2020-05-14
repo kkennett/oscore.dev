@@ -137,3 +137,4 @@ void KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread)
             symDump);
     }
 }
+

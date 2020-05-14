@@ -48,8 +48,15 @@ sThreadStopped(
     K2OSKERN_OBJ_THREAD * apStoppedThread
 )
 {
+    //
+    // just dump thre thread and stop
+    //
+    K2OSKERN_Debug("\nThread %d Stopped:\n", apStoppedThread->Env.mId);
+    K2OSKERN_Debug("Ex_Code = %08X\n", apStoppedThread->mEx_Code);
+    K2OSKERN_Debug("Ex Addr = %08X\n", apStoppedThread->mEx_FaultAddr);
+    K2OSKERN_Debug("Ex %s a page fault\n", apStoppedThread->mEx_IsPageFault ? "is" : "is not");
     KernThread_Dump(apStoppedThread);
-    K2_ASSERT(0);
+    K2OSKERN_Panic(NULL);
 }
 
 void

@@ -122,8 +122,19 @@ sDumpCommonExContext(
     X32_EXCEPTION_CONTEXT *apContext
 )
 {
-    K2OSKERN_Debug("ErrCode 0x%08X\n", apContext->Exception_ErrorCode);
     K2OSKERN_Debug("Vector  0x%08X\n", apContext->Exception_Vector);
+    K2OSKERN_Debug("ErrCode 0x%08X", apContext->Exception_ErrorCode);
+    if (apContext->Exception_Vector == X32_EX_PAGE_FAULT)
+    {
+        K2OSKERN_Debug(" PAGE FAULT %sMode %sPresent %s\n",
+            (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_FROM_USER) ? "User" : "Kernel",
+            (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_PRESENT) ? "" : "Not",
+            (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_ON_WRITE) ? "Write" : "Read");
+    }
+    else
+    {
+        K2OSKERN_Debug("\n");
+    }
     K2OSKERN_Debug("EAX     0x%08X\n", apContext->REGS.EAX);
     K2OSKERN_Debug("ECX     0x%08X\n", apContext->REGS.ECX);
     K2OSKERN_Debug("EDX     0x%08X\n", apContext->REGS.EDX);

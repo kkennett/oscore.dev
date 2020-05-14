@@ -58,16 +58,3 @@ KernEx_TrapDismount(
 
     return apTrap->mTrapResult;
 }
-
-
-#if 0
-
-// handled as an access violation for now
-K2OSKERN_Debug("0x%08X (errorCode %08X) %sMode %sPresent %s page fault\n",
-    faultAddress, apContext->Exception_ErrorCode,
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_FROM_USER) ? "User" : "Kernel",
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_PRESENT) ? "" : "Not",
-    (apContext->Exception_ErrorCode & X32_EX_PAGE_FAULT_ON_WRITE) ? "Write" : "Read");
-
-
-#endif
