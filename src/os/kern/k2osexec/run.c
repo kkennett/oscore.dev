@@ -170,7 +170,6 @@ K2OSEXEC_Run(
                 
                 pWorkList = pWorkList->mpNext;
 
-                sCallExec(pHold);
                 stat = K2_EXTRAP(&trap, sCallExec(pHold));
                 if (K2STAT_IS_EXCEPTION(stat))
                 {

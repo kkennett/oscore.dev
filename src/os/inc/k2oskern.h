@@ -481,7 +481,7 @@ K2OSKERN_NotifyRead(
     { 0x612a5d97, 0xc492, 0x44b3, { 0x94, 0xa1, 0xac, 0xe4, 0x75, 0xeb, 0x93, 0xe } };
 
 //
-// filesys provider service calls
+// driver store service calls
 //
 #define DRVSTORE_CALL_OPCODE_HIGH           0x700C0000
 #define DRVSTORE_CALL_OPCODE_HIGH_MASK      0x7FFFF000

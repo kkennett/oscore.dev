@@ -132,6 +132,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
     K2_ASSERT(((UINT32)apSec) >= K2OS_KVA_KERN_BASE);
     if (((NULL == apSec) || (((UINT32)apSec)) < K2OS_KVA_KERN_BASE))
     {
+        K2_ASSERT(0);
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return FALSE;
     }

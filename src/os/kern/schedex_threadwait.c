@@ -437,6 +437,10 @@ BOOL KernSched_Exec_ThreadWait(void)
         }
         else
         {
+            if (pThread->Sched.State.mRunState != KernThreadRunState_Transition)
+            {
+                K2OSKERN_Debug("**State = %d\n", pThread->Sched.State.mRunState);
+            }
             K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Transition);
         }
 
