@@ -259,12 +259,16 @@ X32Kern_InterruptHandler(
         X32Kern_EOI(aContext.Exception_Vector);
     }
 
-    if (!pThisCore->mIsInMonitor)
+    if ((!pThisCore->mIsInMonitor) || (pThisCore->mIsIdle))
     {
         if ((forceEnterMonitor) ||
             (pThisCore->mpPendingEventListHead != NULL))
         {
-            pThisCore->mpActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
+            K2Trace(K2TRACE_X32INTR_MONITOR_ENTER, 2, pThisCore->mCoreIx, aContext.Exception_Vector);
+
+            if (pThisCore->mpActiveThread != NULL)
+                pThisCore->mpActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
+
             pThisCore->mIsInMonitor = TRUE;
 
             sgInIntr[pThisCore->mCoreIx] = FALSE;

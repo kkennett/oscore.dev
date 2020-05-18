@@ -178,7 +178,8 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
     pInitCtx = (X32_EXCEPTION_CONTEXT *)stackPtr;
     pInitCtx->DS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
     pInitCtx->REGS.ESP_Before_PushA = (UINT32)&pInitCtx->Exception_Vector;
-    pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO;
+//    pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO;
+    pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_SBO;
     pInitCtx->KernelMode.CS = X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL;
 
     if (aCpuCoreIndex == 0)

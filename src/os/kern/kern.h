@@ -55,6 +55,44 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 
 /* --------------------------------------------------------------------------------- */
 
+#define TRACING_ON 0
+
+#if TRACING_ON
+
+#define K2TRACE_CPUCORE_SCHED_CALL          1
+#define K2TRACE_SCHED_EXEC_ITEM             2
+#define K2TRACE_SCHED_ARM_TIMER             3
+#define K2TRACE_SCHED_ENTERED               4
+#define K2TRACE_SCHED_LEFT                  5
+#define K2TRACE_SCHED_CALL_CLEAR_ACTIVE     6
+#define K2TRACE_SCHED_STOP_CLEAR_ACTIVE     7
+#define K2TRACE_CPUCORE_TIMER_FIRED         8
+#define K2TRACE_CPUCORE_THREAD_STOP         9
+#define K2TRACE_CPUCORE_WAKE_UP             10
+#define K2TRACE_CPUCORE_ICI_STOP_THREAD     11
+#define K2TRACE_CPUCORE_ICI_STOP_NOTHREAD   12
+#define K2TRACE_CPUCORE_ICI_TLBINV          13
+#define K2TRACE_CPUCORE_ICI_PAGEDIR         14
+#define K2TRACE_CPUCORE_ICI_PANIC           15
+#define K2TRACE_CPUCORE_ICI_DEBUG           16
+#define K2TRACE_MONITOR_END_IDLE            17
+#define K2TRACE_MONITOR_ENTER               18
+#define K2TRACE_MONITOR_SET_THREAD_ACTIVE   19
+#define K2TRACE_MONITOR_START_IDLE          20
+#define K2TRACE_MONITOR_RESUME_THREAD       21
+#define K2TRACE_X32INTR_MONITOR_ENTER       22
+
+void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...);
+#define K2Trace(x, count, args...)   K2OSKERN_Trace((UINT32)K2OS_SysUpTimeMs(), (x), (count), args)
+
+#else
+
+#define K2Trace(args...)
+
+#endif
+
+/* --------------------------------------------------------------------------------- */
+
 typedef struct _K2OSKERN_CPUCORE_EVENT      K2OSKERN_CPUCORE_EVENT;
 typedef struct _K2OSKERN_CPUCORE            K2OSKERN_CPUCORE;
 typedef struct _K2OSKERN_COREPAGE           K2OSKERN_COREPAGE;

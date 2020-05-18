@@ -74,38 +74,51 @@ sProcessOneCpuCoreEvent(
     switch (aEventType)
     {
     case KernCpuCoreEvent_SchedulerCall:
+        K2Trace(K2TRACE_CPUCORE_SCHED_CALL, 1, apThisCore->mCoreIx);
         KernSched_RespondToCallFromThread(apThisCore);
         break;
     case KernCpuCoreEvent_SchedTimerFired:
+        K2Trace(K2TRACE_CPUCORE_TIMER_FIRED, 1, apThisCore->mCoreIx);
         KernSched_TimerFired(apThisCore);
         break;
     case KernCpuCoreEvent_ThreadStop:
+        K2Trace(K2TRACE_CPUCORE_THREAD_STOP, 1, apThisCore->mCoreIx);
         KernSched_ThreadStop(apThisCore);
         break;
     case KernCpuCoreEvent_Ici_Wakeup:
         //
         // no-op. we just brought the core out of idle into its monitor
         //
+        K2Trace(K2TRACE_CPUCORE_WAKE_UP, 1, apThisCore->mCoreIx);
         break;
     case KernCpuCoreEvent_Ici_Stop:
         if (apThisCore->mpActiveThread != NULL)
         {
+            K2Trace(K2TRACE_CPUCORE_ICI_STOP_THREAD, 2, apThisCore->mCoreIx, apThisCore->mpActiveThread->Env.mId);
             apThisCore->Sched.mLastStopAbsTimeMs = aEventTime;
             apThisCore->mpActiveThread->Sched.mAbsTimeAtStop = aEventTime;
             apThisCore->mpActiveThread = NULL;
             K2_CpuWriteBarrier();
         }
+        else
+        {
+            K2Trace(K2TRACE_CPUCORE_ICI_STOP_NOTHREAD, 1, apThisCore->mCoreIx);
+        }
         break;
     case KernCpuCoreEvent_Ici_TlbInv:
+        K2Trace(K2TRACE_CPUCORE_ICI_TLBINV, 1, apThisCore->mCoreIx);
         KernSched_PerCpuTlbInvEvent(apThisCore);
         break;
     case KernCpuCoreEvent_Ici_PageDirUpdate:
+        K2Trace(K2TRACE_CPUCORE_ICI_PAGEDIR, 1, apThisCore->mCoreIx);
         K2_ASSERT(0);
         break;
     case KernCpuCoreEvent_Ici_Panic:
+        K2Trace(K2TRACE_CPUCORE_ICI_PANIC, 1, apThisCore->mCoreIx);
         KernPanic_Ici(apThisCore);
         break;
     case KernCpuCoreEvent_Ici_Debug:
+        K2Trace(K2TRACE_CPUCORE_ICI_DEBUG, 1, apThisCore->mCoreIx);
         K2_ASSERT(0);
         break;
     default:
@@ -218,7 +231,7 @@ void KernCpuCore_SendIciToOneCore(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 
 
     pEvent->mEventType = aEventType;
     pEvent->mSrcCoreIx = apThisCore->mCoreIx;
-    pEvent->mEventAbsTimeMs = K2OS_SysUpTimeMs();
+    pEvent->mEventAbsTimeMs = (UINT32)K2OS_SysUpTimeMs();
     K2_CpuWriteBarrier();
     KernArch_SendIci(apThisCore->mCoreIx, TRUE, aTargetCoreIx);
 }

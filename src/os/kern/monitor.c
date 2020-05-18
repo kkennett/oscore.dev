@@ -52,16 +52,20 @@ void KernMonitor_Run(void)
     if (pThisCore->mIsIdle)
     {
         pThisCore->mIsIdle = FALSE;
-//        K2OSKERN_Debug("!Core %d: Leave idle\n", pThisCore->mCoreIx);
+        K2Trace(K2TRACE_MONITOR_END_IDLE, 1, pThisCore->mCoreIx);
     }
-//    else
-//        K2OSKERN_Debug("!Core %d: Enter monitor\n", pThisCore->mCoreIx);
+    else
+    {
+        K2Trace(K2TRACE_MONITOR_ENTER, 1, pThisCore->mCoreIx);
+    }
 
     /* interrupts MUST BE ON running here */
 #ifdef K2_DEBUG
-    if (FALSE == K2OSKERN_GetIntr())
-        K2OSKERN_Panic("Interrupts disabled in monitor!\n");
+    if (FALSE != K2OSKERN_GetIntr())
+        K2OSKERN_Panic("Interrupts enabled on entry to monitor!\n");
 #endif
+
+    K2OSKERN_SetIntr(TRUE);
 
     do
     {
@@ -81,6 +85,7 @@ void KernMonitor_Run(void)
                     pThread = pThisCore->mpAssignThread;
                     if (pThread != NULL)
                     {
+                        K2Trace(K2TRACE_MONITOR_SET_THREAD_ACTIVE, 2, pThisCore->mCoreIx, pThread->Env.mId);
                         pThisCore->mpActiveThread = pThread;
                         pThisCore->mpAssignThread = NULL;
                     }
@@ -93,7 +98,7 @@ void KernMonitor_Run(void)
                 if (pThread == NULL)
                 {
                     pThisCore->mIsIdle = TRUE;
-//                    K2OSKERN_Debug("!Core %d: Enter idle\n", pThisCore->mCoreIx);
+                    K2Trace(K2TRACE_MONITOR_START_IDLE, 1, pThisCore->mCoreIx);
                     //
                     // interrupts are off. exiting from this function
                     // returns to the caller, which knows this and will
@@ -106,7 +111,7 @@ void KernMonitor_Run(void)
                 //
                 // we have a thread to run, so return to it
                 //
-//                K2OSKERN_Debug("!Core %d run Thread %d\n", pThisCore->mCoreIx, pThread->Env.mId);
+                K2Trace(K2TRACE_MONITOR_RESUME_THREAD, 2, pThisCore->mCoreIx, pThread->Env.mId);
                 KernArch_SwitchFromMonitorToThread(pThisCore);
 
                 //

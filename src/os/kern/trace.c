@@ -30,30 +30,9 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "x32kernasm.inc"
+#include "kern.h"
 
-.extern KernMonitor_OneTimeInit
-.extern KernMonitor_Run
+void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
+{
 
-BEGIN_X32_PROC(X32Kern_MonitorOneTimeInit)
-    call KernMonitor_OneTimeInit
-BEGIN_X32_PROC(X32Kern_MonitorMainLoop)
-    call KernMonitor_Run
-    // if we return we are WFI on this core
-Wait_For_Interrupt:
-    sti
-    hlt 
-    // should never return but if we do keep waiting for interrupt
-    jmp Wait_For_Interrupt
-END_X32_PROC(X32Kern_MonitorMainLoop)
-
-//void K2_CALLCONV_REGS X32Kern_EnterMonitor(UINT32 aESP);
-BEGIN_X32_PROC(X32Kern_EnterMonitor)
-    mov %esp, %ecx
-    mov %ebp, 0
-//    sti
-    jmp X32Kern_MonitorMainLoop
-END_X32_PROC(X32Kern_EnterMonitor)
-  
-    .end
-
+}

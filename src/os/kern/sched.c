@@ -297,6 +297,8 @@ BOOL sExecItems(void)
 
             K2ATOMIC_Dec((INT32 volatile *)&gData.Sched.mReq);
 
+            K2Trace(K2TRACE_SCHED_EXEC_ITEM, 2, gData.Sched.mpSchedulingCore->mCoreIx, gData.Sched.mpActiveItem->mSchedItemType);
+
             K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType != KernSchedItem_Invalid);
 
             K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType < KernSchedItemType_Count);
@@ -383,7 +385,7 @@ BOOL sExecItems(void)
         // this will NOT get called and threads just run until 
         // something comes into the scheduler again
         // 
-//        K2OSKERN_Debug("%6d.Core %d: ArmSchedTimer(%d)\n", (UINT32)K2OS_SysUpTimeMs(), gData.Sched.mpSchedulingCore->mCoreIx, (UINT32)armTimerMs);
+        K2Trace(K2TRACE_SCHED_ARM_TIMER, 2, gData.Sched.mpSchedulingCore->mCoreIx, (UINT32)armTimerMs);
         KernSched_ArmSchedTimer((UINT32)armTimerMs);
     }
 
@@ -474,7 +476,7 @@ void KernSched_Check(K2OSKERN_CPUCORE volatile *apThisCore)
     //
     // if we get here we are the scheduling core 
     //
-//    K2OSKERN_Debug("%6d.Core %d: Entered Scheduler\n", (UINT32)K2OS_SysUpTimeMs(), apThisCore->mCoreIx);
+    K2Trace(K2TRACE_SCHED_ENTERED, 1, apThisCore->mCoreIx);
 
     gData.Sched.mpSchedulingCore = apThisCore;
 
@@ -506,7 +508,7 @@ void KernSched_Check(K2OSKERN_CPUCORE volatile *apThisCore)
     // 
     // if we got here we left the scheduler
     //
-//    K2OSKERN_Debug("%6d.Core %d: Left Scheduler\n", (UINT32)K2OS_SysUpTimeMs(), apThisCore->mCoreIx);
+    K2Trace(K2TRACE_SCHED_LEFT, 1, apThisCore->mCoreIx);
 }
 
 static
@@ -548,6 +550,7 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE volatile *apThisCore)
     // althought not practically possible, thread may have disappeared completely here
     // so we can no longer reference it
     //
+    K2Trace(K2TRACE_SCHED_CALL_CLEAR_ACTIVE, 1, apThisCore->mCoreIx);
     apThisCore->Sched.mLastStopAbsTimeMs = absTime;
     apThisCore->mpActiveThread = NULL;
     K2_CpuWriteBarrier();
@@ -569,6 +572,7 @@ void KernSched_ThreadStop(K2OSKERN_CPUCORE volatile *apThisCore)
     // althought not practically possible, thread may have disappeared completely here
     // so we can no longer reference it
     //
+    K2Trace(K2TRACE_SCHED_STOP_CLEAR_ACTIVE, 1, apThisCore->mCoreIx);
     apThisCore->Sched.mLastStopAbsTimeMs = absTime;
     apThisCore->mpActiveThread = NULL;
     K2_CpuWriteBarrier();
