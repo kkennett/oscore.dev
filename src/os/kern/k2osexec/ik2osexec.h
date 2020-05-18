@@ -162,6 +162,12 @@ union _DEV_NODE_RES
     DEV_NODE_RES_BUS    Bus;
 };
 
+typedef struct _DEV_DRIVER DEV_DRIVER;
+struct _DEV_DRIVER
+{
+    UINT32 a;
+};
+
 struct _DEV_NODE
 {
     K2TREE_NODE         DevTreeNode;   // should be first thing to make casts fast
@@ -183,18 +189,20 @@ struct _DEV_NODE
     INTR_LINE *         mpIntrLine;
     K2LIST_LINK         IntrLineDevListLink;
 
+    UINT32              mScanIter;
+    DEV_DRIVER *        mpDriver;
+
     K2LIST_ANCHOR       IoList;
     K2LIST_ANCHOR       PhysList;
 };
 
-void 
-Dev_Init(
-    void
-);
-
 extern K2TREE_ANCHOR    gDev_Tree;
 extern K2OSKERN_SEQLOCK gDev_SeqLock;
 extern DEV_NODE *       gpDev_RootNode;
+
+void        Dev_Init(void);
+DEV_NODE *  Dev_ScanForNeededDrivers(UINT32 aScanIter);
+BOOL        Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** apppRetTypeIds);
 
 /* ----------------------------------------------------------------------------- */
 

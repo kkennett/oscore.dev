@@ -39,8 +39,6 @@
 K2_GUID128 const gK2OSEXEC_DriverStoreInterfaceGuid = K2OS_INTERFACE_ID_DRIVERSTORE;
 char const *     gpK2OSEXEC_DriverStoreInterfaceGuidStr = "{612A5D97-C492-44B3-94A1-ACE475EB930E}";
 
-K2OS_TOKEN gDrvStore_TokNotify = NULL;
-
 typedef struct _SERWORK_DRV_NOTIFY SERWORK_DRV_NOTIFY;
 struct _SERWORK_DRV_NOTIFY
 {
@@ -53,18 +51,109 @@ struct _SERWORK_DRV_NOTIFY
 typedef struct _DRVSTORE DRVSTORE;
 struct _DRVSTORE
 {
-    K2OSKERN_DRVSTORE_INFO  Info;
-    UINT32                  mInterfaceId;
-    K2LIST_LINK             StoreListLink;
+    UINT32                      mInterfaceId;
+    K2OSEXEC_DRVSTORE_INFO      Info;
+    K2OSEXEC_DRVSTORE_DIRECT    Direct;
+    K2LIST_LINK                 StoreListLink;
 };
 
-static K2LIST_ANCHOR sgStoreList;
+typedef struct _SERWORK_DRV_SCANHW SERWORK_DRV_SCANHW;
+struct _SERWORK_DRV_SCANHW
+{
+    SERWORK_ITEM_HDR    Hdr;
+    UINT32              mInterfaceId;
+};
+
+K2OS_TOKEN              gDrvStore_TokNotify = NULL;
+static K2LIST_ANCHOR    sgStoreList;
+static UINT32           sgScanIter;
+
+K2_STATIC
+K2STAT
+sLoadDriver(
+    DEV_NODE *      apDevNode,
+    DRVSTORE *      apStore,
+    char const *    apMatchId
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2_STATIC
+void sDrvStore_ScanHw(SERWORK_ITEM_HDR *apItem)
+{
+    SERWORK_DRV_SCANHW *pScan;
+    K2LIST_LINK *       pListLink;
+    DRVSTORE *          pStore;
+    DEV_NODE *          pDevNode;
+    K2_EXCEPTION_TRAP   trap;
+    char **             ppTypeIds;
+    UINT32              numTypeIds;
+    UINT32              foundIndex;
+    K2STAT              stat;
+
+    pScan = (SERWORK_DRV_SCANHW *)apItem;
+
+    pListLink = sgStoreList.mpHead;
+    do {
+        pStore = K2_GET_CONTAINER(DRVSTORE, pListLink, StoreListLink);
+        if (pStore->mInterfaceId == pScan->mInterfaceId)
+            break;
+    } while (pListLink != NULL);
+
+    K2OS_HeapFree(pScan);
+
+    if (pListLink == NULL)
+        return;
+
+    ++sgScanIter;
+    numTypeIds = 0;
+    ppTypeIds = NULL;
+
+    K2OSKERN_Debug("+ScanHw, Using Driver Store \"%s\"\n", pStore->Info.StoreName);
+    do {
+        pDevNode = Dev_ScanForNeededDrivers(sgScanIter);
+        if (NULL == pDevNode)
+            break;
+
+        do {
+            if (!Dev_CollectTypeIds(pDevNode, &numTypeIds, &ppTypeIds))
+                break;
+
+            K2_ASSERT(numTypeIds > 0);
+            K2_ASSERT(ppTypeIds != NULL);
+
+            foundIndex = (UINT32)-1;
+            stat = K2_EXTRAP(&trap, pStore->Direct.FindDriver(numTypeIds, (char const **)ppTypeIds, &foundIndex));
+            if (!K2STAT_IS_ERROR(stat))
+            {
+                K2_ASSERT(foundIndex < numTypeIds);
+                stat = sLoadDriver(pDevNode, pStore, ppTypeIds[foundIndex]);
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    K2OSKERN_Debug("Failed to load driver for matching id \"%s\"\n", ppTypeIds[foundIndex]);
+                }
+            }
+
+            do {
+                numTypeIds--;
+                K2_ASSERT(ppTypeIds[numTypeIds] != NULL);
+                K2OS_HeapFree(ppTypeIds[numTypeIds]);
+            } while (numTypeIds > 0);
+            K2OS_HeapFree(ppTypeIds);
+
+        } while (0);
+
+    } while (1);
+    K2OSKERN_Debug("-ScanHw\n");
+}
 
 K2_STATIC 
 void sDrvStore_Arrive(UINT32 aStoreInterfaceId)
 {
-    DRVSTORE *  pNewStore;
-    K2STAT      stat;
+    DRVSTORE *              pNewStore;
+    K2STAT                  stat;
+    SERWORK_DRV_SCANHW *    pScan;
 
     pNewStore = (DRVSTORE *)K2OS_HeapAlloc(sizeof(DRVSTORE));
     if (pNewStore == NULL)
@@ -73,29 +162,44 @@ void sDrvStore_Arrive(UINT32 aStoreInterfaceId)
         return;
     }
 
-    do {
-        stat = K2OSKERN_ServiceCall(
-            aStoreInterfaceId,
-            DRVSTORE_CALL_OPCODE_GET_INFO,
-            NULL, 0,
-            &pNewStore->Info, sizeof(K2OSKERN_DRVSTORE_INFO),
-            NULL);
-        if (K2STAT_IS_ERROR(stat))
-        {
-            K2OSKERN_Debug("Driver Store did not return info after arrival, error %08X\n", stat);
-            break;
-        }
+    stat = K2OSKERN_ServiceCall(
+        aStoreInterfaceId,
+        DRVSTORE_CALL_OPCODE_GET_INFO,
+        NULL, 0,
+        &pNewStore->Info, sizeof(K2OSEXEC_DRVSTORE_INFO),
+        NULL);
+    if (!K2STAT_IS_ERROR(stat))
+    {
         K2OSKERN_Debug("Driver Store \"%s\" arrived\n", pNewStore->Info.StoreName);
 
-        pNewStore->mInterfaceId = aStoreInterfaceId;
-        K2LIST_AddAtTail(&sgStoreList, &pNewStore->StoreListLink);
+        stat = K2OSKERN_ServiceCall(
+            aStoreInterfaceId,
+            DRVSTORE_CALL_OPCODE_GET_DIRECT,
+            NULL, 0,
+            &pNewStore->Direct, sizeof(K2OSEXEC_DRVSTORE_DIRECT),
+            NULL);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            pNewStore->mInterfaceId = aStoreInterfaceId;
+            K2LIST_AddAtTail(&sgStoreList, &pNewStore->StoreListLink);
 
-    } while (0);
+            pScan = (SERWORK_DRV_SCANHW *)K2OS_HeapAlloc(sizeof(SERWORK_DRV_SCANHW));
+            pScan->mInterfaceId = aStoreInterfaceId;
+            Run_AddSerializedWork(&pScan->Hdr, sDrvStore_ScanHw);
+        }
+        else
+        {
+            K2OSKERN_Debug("Driver Store did not return direct interface, error %08X\n", stat);
+        }
+    }
+    else
+    {
+        K2OSKERN_Debug("Driver Store did not return info after arrival, error %08X\n", stat);
+    }
 
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_HeapFree(pNewStore);
-        return;
     }
 }
 
@@ -111,6 +215,9 @@ void sDrvStore_Depart(UINT32 aStoreInterfaceId)
         if (pStore->mInterfaceId == aStoreInterfaceId)
             break;
     } while (pListLink != NULL);
+
+    if (pListLink == NULL)
+        return;
 
     K2OSKERN_Debug("Driver Store \"%s\" departed\n", pStore->Info.StoreName);
 
@@ -181,6 +288,7 @@ void DrvStore_Init(void)
     K2OS_TOKEN tokSubscrip;
 
     K2LIST_Init(&sgStoreList);
+    sgScanIter = 0;
 
     gDrvStore_TokNotify = K2OSKERN_NotifyCreate();
     K2_ASSERT(gDrvStore_TokNotify != NULL);

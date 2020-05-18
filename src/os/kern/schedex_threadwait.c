@@ -447,7 +447,7 @@ BOOL KernSched_Exec_ThreadWait(void)
         pThread->Sched.State.mRunState = nextRunState;
     }
 
-    K2_ASSERT(pThread->Sched.State.mRunState = KernThreadRunState_Waiting);
+    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Waiting);
     K2_ASSERT((pWait->mNumEntries > 0) || (gData.Sched.mpActiveItem->Args.ThreadWait.mTimeoutMs > 0));
 
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_THREAD_WAITED;

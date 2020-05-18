@@ -32,6 +32,8 @@
 
 #include "..\x32pc.h"
 
+#define K2_STATIC  static
+
 #define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
 #define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
 #define DRVSTORE_IFACE_CONTEXT  ((void *)0xF00DDEAD)
@@ -69,11 +71,28 @@ FsProvServiceCall(
     return K2STAT_NO_ERROR;
 }
 
-static K2OSKERN_DRVSTORE_INFO const sgDrvStoreInfo =
+static K2OSEXEC_DRVSTORE_INFO const sgDrvStoreInfo =
 {
-    K2OSKERN_DRVSTORE_ID_HAL,     // {AFA9A8C6-D494-4D7B-9423-169E416C2396}
+    K2OSEXEC_DRVSTORE_ID_HAL,     // {AFA9A8C6-D494-4D7B-9423-169E416C2396}
     "HAL BuiltIn",
     0x00010000
+};
+
+K2_STATIC
+K2STAT 
+sDrvStore_FindDriver(
+    UINT32          aNumTypeIds,
+    char const **   appTypeIds,
+    UINT32 *        apRetSelect
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+static K2OSEXEC_DRVSTORE_DIRECT const sgDrvStoreDirect =
+{
+    0x00010000,
+    sDrvStore_FindDriver
 };
 
 K2STAT
@@ -86,18 +105,37 @@ DrvStoreServiceCall(
     UINT32 *        apRetActualOut
 )
 {
-    if (((aCallCmd & DRVSTORE_CALL_OPCODE_HIGH_MASK) != DRVSTORE_CALL_OPCODE_HIGH) ||
-        (aCallCmd != DRVSTORE_CALL_OPCODE_GET_INFO))
+    if ((aCallCmd & DRVSTORE_CALL_OPCODE_HIGH_MASK) != DRVSTORE_CALL_OPCODE_HIGH)
         return K2STAT_ERROR_UNSUPPORTED;
-    if (apInBuf != NULL)
-        return K2STAT_ERROR_INBUF_NOT_NULL;
-    if (apOutBuf == NULL)
-        return K2STAT_ERROR_OUTBUF_NULL;
-    if (aOutBufBytes < sizeof(sgDrvStoreInfo))
-        return K2STAT_ERROR_OUTBUF_TOO_SMALL;
 
-    K2MEM_Copy(apOutBuf, &sgDrvStoreInfo, sizeof(sgDrvStoreInfo));
-    *apRetActualOut = sizeof(sgDrvStoreInfo);
+    if (aCallCmd == DRVSTORE_CALL_OPCODE_GET_INFO)
+    {
+        if (apInBuf != NULL)
+            return K2STAT_ERROR_INBUF_NOT_NULL;
+        if (apOutBuf == NULL)
+            return K2STAT_ERROR_OUTBUF_NULL;
+        if (aOutBufBytes < sizeof(sgDrvStoreInfo))
+            return K2STAT_ERROR_OUTBUF_TOO_SMALL;
+        K2MEM_Copy(apOutBuf, &sgDrvStoreInfo, sizeof(sgDrvStoreInfo));
+        *apRetActualOut = sizeof(sgDrvStoreInfo);
+    }
+    else if (aCallCmd == DRVSTORE_CALL_OPCODE_GET_DIRECT)
+    {
+        if (apInBuf != NULL)
+            return K2STAT_ERROR_INBUF_NOT_NULL;
+        if (apOutBuf == NULL)
+            return K2STAT_ERROR_OUTBUF_NULL;
+        if (aOutBufBytes < sizeof(sgDrvStoreDirect))
+            return K2STAT_ERROR_OUTBUF_TOO_SMALL;
+        K2MEM_Copy(apOutBuf, &sgDrvStoreDirect, sizeof(sgDrvStoreDirect));
+        *apRetActualOut = sizeof(sgDrvStoreDirect);
+    }
+    else
+    {
+        return K2STAT_ERROR_NOT_IMPL;
+    }
+
+
 
     return K2STAT_NO_ERROR;
 }

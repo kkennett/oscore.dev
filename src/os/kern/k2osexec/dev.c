@@ -32,7 +32,8 @@
 
 #include "ik2osexec.h"
 
-#define DUMP_DEVICES 0
+#define K2_STATIC       static
+#define DUMP_DEVICES    0
 
 K2TREE_ANCHOR       gDev_Tree;
 K2OSKERN_SEQLOCK    gDev_SeqLock;
@@ -267,3 +268,71 @@ void Dev_Init(void)
 #endif
 }
 
+K2_STATIC
+DEV_NODE *
+sDev_ScanForNeededDrivers(DEV_NODE *apDevNode, UINT32 aScanIter)
+{
+    BOOL            actionNode;
+    K2LIST_LINK *   pListLink;
+
+    if ((NULL == apDevNode->mpDriver) &&
+        ((NULL != apDevNode->mpIntrLine) ||
+            (0 != apDevNode->IoList.mNodeCount) ||
+            (0 != apDevNode->PhysList.mNodeCount)))
+        actionNode = TRUE;
+    else
+        actionNode = FALSE;
+
+    if (apDevNode->mScanIter == aScanIter)
+    {
+        //
+        // this scan already looked at this node
+        //
+        if (actionNode)
+            return NULL;
+
+        // fall through scan children
+    }
+    else
+    {
+        //
+        // this scan has not looked at this node before
+        //
+        apDevNode->mScanIter = aScanIter;
+        if (actionNode)
+        {
+            K2OSKERN_Debug("Scan Found Node %08X\n", apDevNode);
+            K2OSKERN_Debug("IntrPtr %08X\n", apDevNode->mpIntrLine);
+            K2OSKERN_Debug("IO list count %d\n", apDevNode->IoList.mNodeCount);
+            K2OSKERN_Debug("Phys list count %d\n", apDevNode->PhysList.mNodeCount);
+            return apDevNode;
+        }
+
+        // fall through scan children
+    }
+
+    pListLink = apDevNode->ChildList.mpHead;
+    if (pListLink != NULL)
+    {
+        do {
+            apDevNode = sDev_ScanForNeededDrivers(K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink), aScanIter);
+            if (apDevNode != NULL)
+                return apDevNode;
+
+            pListLink = pListLink->mpNext;
+        } while (pListLink != NULL);
+    }
+
+    return NULL;
+}
+
+DEV_NODE * 
+Dev_ScanForNeededDrivers(UINT32 aScanIter)
+{
+    return sDev_ScanForNeededDrivers(gpDev_RootNode, aScanIter);
+}
+
+BOOL Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** apppRetTypeIds)
+{
+    return FALSE;
+}
