@@ -32,7 +32,42 @@
 
 #include "kern.h"
 
+#if TRACING_ON
+
 void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
 {
+    UINT32 dec;
+    UINT32 cur;
+    UINT32 v;
+    VALIST argPtr;
 
+    dec = (3 + aCount) * sizeof(UINT32);
+
+    do {
+        cur = gData.mTrace;
+        v = cur - dec;
+        if (v < gData.mTraceBottom)
+            return;
+    } while (cur != K2ATOMIC_CompareExchange(&gData.mTrace, v, cur));
+
+    *((UINT32 *)cur) = aTime;
+    cur -= sizeof(UINT32);
+
+    *((UINT32 *)cur) = aCode;
+    cur -= sizeof(UINT32);
+
+    if (aCount > 0)
+    {
+        K2_VASTART(argPtr, aCount);
+        do {
+            *((UINT32 *)cur) = K2_VAARG(argPtr, UINT32);
+            cur -= sizeof(UINT32);
+        } while (--aCount);
+
+        K2_VAEND(argPtr);
+    }
+
+    *((UINT32 *)cur) = dec;
 }
+
+#endif

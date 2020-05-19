@@ -42,6 +42,10 @@ K2_CACHEINFO const * gpK2OSKERN_CacheInfo;
 //
 KERN_DATA gData;
 
+#if TRACING_ON
+static UINT8 sgTraceBuffer[1024 * 1024];
+#endif
+
 //
 // dlx_entry needs to call this.  all other calls are in init.c
 //
@@ -146,6 +150,12 @@ dlx_entry(
     // rest of the proc0 stuff
     //
     K2MEM_Zero(gpProc0, sizeof(K2OSKERN_OBJ_PROCESS));
+
+#if TRACING_ON
+    gData.mTraceBottom = (UINT32)sgTraceBuffer;
+    gData.mTraceTop = gData.mTraceBottom + sizeof(sgTraceBuffer);
+    gData.mTrace = gData.mTraceTop - sizeof(UINT32);
+#endif
 
     //
     // first init is with no support functions.  reinit will not get called

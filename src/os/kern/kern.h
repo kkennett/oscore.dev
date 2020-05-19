@@ -1360,6 +1360,12 @@ struct _KERN_DATA
     // File System Providers
     K2LIST_ANCHOR                       FsProvList;
 
+#if TRACING_ON
+    UINT32 volatile     mTrace;
+    UINT32              mTraceTop;
+    UINT32              mTraceBottom;
+#endif
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                              mA32VectorPagePhys;
