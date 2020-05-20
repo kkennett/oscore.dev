@@ -36,18 +36,33 @@
 
 void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
 {
-    UINT32 dec;
-    UINT32 cur;
-    UINT32 v;
-    VALIST argPtr;
+    UINT32  dec;
+    UINT32  cur;
+    UINT32  v;
+    VALIST  argPtr;
+    BOOL    disp;
 
     dec = (3 + aCount) * sizeof(UINT32);
 
+    disp = K2OSKERN_SetIntr(FALSE);
     do {
+        K2OSKERN_SetIntr(disp);
+        //
+        // if intr was enabled when we started func, then 
+        // interrupts are on here while we spin
+        //
         cur = gData.mTrace;
         v = cur - dec;
         if (v < gData.mTraceBottom)
             return;
+        //
+        // turn off interrupts while we try to update trace
+        // pointer.  if we successfully do it then interrupts stay off
+        // and we put them back after we've written our stuff.  this is
+        // done so that we don't get interrupted in the middle of a trace
+        // write.  This is not a seqLock - so we're not blocking other 
+        // cores here. 
+        disp = K2OSKERN_SetIntr(FALSE);
     } while (cur != K2ATOMIC_CompareExchange(&gData.mTrace, v, cur));
 
     *((UINT32 *)cur) = aTime;
@@ -68,6 +83,8 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
     }
 
     *((UINT32 *)cur) = dec;
+
+    K2OSKERN_SetIntr(disp);
 }
 
 #endif

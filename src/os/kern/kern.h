@@ -55,7 +55,7 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 
 /* --------------------------------------------------------------------------------- */
 
-#define TRACING_ON 0
+#define TRACING_ON 1
 
 #if TRACING_ON
 
