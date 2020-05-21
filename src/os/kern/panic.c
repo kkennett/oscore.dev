@@ -88,6 +88,10 @@ K2OSKERN_Panic(
         } while (gData.mCoresInPanic < gData.mCpuCount);
     }
 
+#if TRACING_ON
+    K2OSKERN_TraceDump();
+#endif
+
     KernArch_Panic(pThisCore, (apFormat == NULL) ? FALSE : TRUE);
 
     while (1);

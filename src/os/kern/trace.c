@@ -65,26 +65,53 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
         disp = K2OSKERN_SetIntr(FALSE);
     } while (cur != K2ATOMIC_CompareExchange(&gData.mTrace, v, cur));
 
-    *((UINT32 *)cur) = aTime;
     cur -= sizeof(UINT32);
+    *((UINT32 *)cur) = dec;
 
-    *((UINT32 *)cur) = aCode;
     cur -= sizeof(UINT32);
+    *((UINT32 *)cur) = aTime;
+
+    cur -= sizeof(UINT32);
+    *((UINT32 *)cur) = aCode;
 
     if (aCount > 0)
     {
         K2_VASTART(argPtr, aCount);
         do {
-            *((UINT32 *)cur) = K2_VAARG(argPtr, UINT32);
             cur -= sizeof(UINT32);
+            *((UINT32 *)cur) = K2_VAARG(argPtr, UINT32);
         } while (--aCount);
 
         K2_VAEND(argPtr);
     }
 
-    *((UINT32 *)cur) = dec;
-
     K2OSKERN_SetIntr(disp);
+}
+
+void K2OSKERN_TraceDump(void)
+{
+    UINT32 cur;
+    UINT32 count;
+    UINT32 time;
+    UINT32 code;
+
+    K2OSKERN_SetIntr(FALSE);
+
+    cur = gData.mTraceTop;
+    while (cur > gData.mTrace)
+    {
+        cur -= sizeof(UINT32);
+        count = *((UINT32 *)cur);
+
+        cur -= sizeof(UINT32);
+        time = *((UINT32 *)cur);
+
+        cur -= sizeof(UINT32);
+        code = *((UINT32 *)cur);
+
+        K2OSKERN_Debug("%8d %3d (%d)\n", time, code, count - (3 * sizeof(UINT32)));
+        cur -= count - (3 * sizeof(UINT32));
+    }
 }
 
 #endif

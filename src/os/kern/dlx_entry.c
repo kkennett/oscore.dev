@@ -154,7 +154,7 @@ dlx_entry(
 #if TRACING_ON
     gData.mTraceBottom = (UINT32)sgTraceBuffer;
     gData.mTraceTop = gData.mTraceBottom + sizeof(sgTraceBuffer);
-    gData.mTrace = gData.mTraceTop - sizeof(UINT32);
+    gData.mTrace = gData.mTraceTop;
 #endif
 
     //

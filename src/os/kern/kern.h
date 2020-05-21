@@ -85,6 +85,8 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...);
 #define K2Trace(x, count, args...)   K2OSKERN_Trace((UINT32)K2OS_SysUpTimeMs(), (x), (count), args)
 
+void K2OSKERN_TraceDump(void);
+
 #else
 
 #define K2Trace(args...)
