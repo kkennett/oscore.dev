@@ -328,6 +328,8 @@ BOOL sExecItems(void)
                 if (sgSchedHandlers[gData.Sched.mpActiveItem->mSchedItemType]())
                     changedSomething = TRUE;
 
+                gData.Sched.mpActiveItemThread->Sched.mActionPending = FALSE;
+
                 gData.Sched.mpActiveItemThread = NULL;
             }
 
@@ -416,7 +418,7 @@ void KernSched_Exec(void)
         if (pCpuCore->mpActiveThread == NULL)
         {
             pThread = pCpuCore->Sched.mpRunThread;
-            if (pThread != NULL)
+            if ((pThread != NULL) && (!pThread->Sched.mActionPending))
             {
                 K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Running);
 
@@ -542,6 +544,8 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE volatile *apThisCore)
     pThread = apThisCore->mpActiveThread;
     K2_ASSERT(pThread != NULL);
 
+    pThread->Sched.mActionPending = TRUE;
+
     absTime = pThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs;
 
     sQueueSchedItem(&pThread->Sched.Item);
@@ -563,6 +567,8 @@ void KernSched_ThreadStop(K2OSKERN_CPUCORE volatile *apThisCore)
 
     pThread = apThisCore->mpActiveThread;
     K2_ASSERT(pThread != NULL);
+
+    pThread->Sched.mActionPending = TRUE;
 
     absTime = pThread->Sched.Item.CpuCoreEvent.mEventAbsTimeMs;
 

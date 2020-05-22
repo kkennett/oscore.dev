@@ -55,7 +55,7 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 
 /* --------------------------------------------------------------------------------- */
 
-#define TRACING_ON 1
+#define TRACING_ON 0
 
 #if TRACING_ON
 
@@ -531,6 +531,7 @@ struct _K2OSKERN_SCHED_THREAD
     UINT32              mLastRunCoreIx;
     K2LIST_LINK         ReadyListLink;
     K2LIST_ANCHOR       OwnedCritSecList;
+    BOOL                mActionPending;
     KernThreadState     State;
 };
 
