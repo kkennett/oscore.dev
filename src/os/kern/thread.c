@@ -458,7 +458,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
     {
         if (ix == aObjCount)
         {
-//            K2OSKERN_Debug("Thread %d +Wait\n", pThisThread->Env.mId);
+            K2Trace(K2TRACE_THREAD_START_WAIT, 1, pThisThread->Env.mId);
             pMacro->mNumEntries = aObjCount;
             pMacro->mWaitAll = aWaitAll;
 
@@ -469,8 +469,7 @@ UINT32 KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL a
 
             stat = pThisThread->Sched.Item.mSchedCallResult;
             result = pMacro->mWaitResult;
-
-//            K2OSKERN_Debug("Thread %d -Wait stat %08X result %08X\n", pThisThread->Env.mId, stat, result);
+            K2Trace(K2TRACE_THREAD_END_WAIT, 3, pThisThread->Env.mId, stat, result);
         }
     }
     else

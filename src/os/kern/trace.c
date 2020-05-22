@@ -34,6 +34,38 @@
 
 #if TRACING_ON
 
+static char const * const sgpNames[] =
+{
+    "<ZERO>",
+    "CPUCORE_SCHED_CALL          ",
+    "SCHED_EXEC_ITEM             ",
+    "SCHED_ARM_TIMER             ",
+    "SCHED_ENTERED               ",
+    "SCHED_LEFT                  ",
+    "SCHED_CALL_CLEAR_ACTIVE     ",
+    "SCHED_STOP_CLEAR_ACTIVE     ",
+    "CPUCORE_TIMER_FIRED         ",
+    "CPUCORE_THREAD_STOP         ",
+    "CPUCORE_WAKE_UP             ",
+    "CPUCORE_ICI_STOP_THREAD     ",
+    "CPUCORE_ICI_STOP_NOTHREAD   ",
+    "CPUCORE_ICI_TLBINV          ",
+    "CPUCORE_ICI_PAGEDIR         ",
+    "CPUCORE_ICI_PANIC           ",
+    "CPUCORE_ICI_DEBUG           ",
+    "MONITOR_END_IDLE            ",
+    "MONITOR_ENTER               ",
+    "MONITOR_SET_THREAD_ACTIVE   ",
+    "MONITOR_START_IDLE          ",
+    "MONITOR_RESUME_THREAD       ",
+    "X32INTR_MONITOR_ENTER       ",
+    "THREAD_START_WAIT           ",
+    "THREAD_END_WAIT             ",
+    "THREAD_SEC_WAIT             ",
+    "THREAD_ENTERED_SEC          ",
+    "THREAD_LEFT_SEC             "
+};
+
 void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
 {
     UINT32  dec;
@@ -42,7 +74,10 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
     VALIST  argPtr;
     BOOL    disp;
 
-    dec = (3 + aCount) * sizeof(UINT32);
+    if (!gData.mTraceStarted)
+        return;
+
+    dec = (3 + aCount);
 
     disp = K2OSKERN_SetIntr(FALSE);
     do {
@@ -52,7 +87,7 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
         // interrupts are on here while we spin
         //
         cur = gData.mTrace;
-        v = cur - dec;
+        v = cur - (dec * sizeof(UINT32));
         if (v < gData.mTraceBottom)
             return;
         //
@@ -102,15 +137,26 @@ void K2OSKERN_TraceDump(void)
     {
         cur -= sizeof(UINT32);
         count = *((UINT32 *)cur);
+        count--;
 
         cur -= sizeof(UINT32);
         time = *((UINT32 *)cur);
+        count--;
 
         cur -= sizeof(UINT32);
         code = *((UINT32 *)cur);
+        count--;
 
-        K2OSKERN_Debug("%8d %3d (%d)\n", time, code, count - (3 * sizeof(UINT32)));
-        cur -= count - (3 * sizeof(UINT32));
+        K2OSKERN_Debug("%8d %s", time, sgpNames[code]);
+
+        if (count > 0)
+        {
+            do {
+                cur -= sizeof(UINT32);
+                K2OSKERN_Debug(" %08X", *((UINT32 *)cur));
+            } while (--count);
+        }
+        K2OSKERN_Debug("\n");
     }
 }
 

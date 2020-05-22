@@ -81,6 +81,11 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 #define K2TRACE_MONITOR_START_IDLE          20
 #define K2TRACE_MONITOR_RESUME_THREAD       21
 #define K2TRACE_X32INTR_MONITOR_ENTER       22
+#define K2TRACE_THREAD_START_WAIT           23
+#define K2TRACE_THREAD_END_WAIT             24
+#define K2TRACE_THREAD_SEC_WAIT             25
+#define K2TRACE_THREAD_ENTERED_SEC          26
+#define K2TRACE_THREAD_LEFT_SEC             27
 
 void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...);
 #define K2Trace(x, count, args...)   K2OSKERN_Trace((UINT32)K2OS_SysUpTimeMs(), (x), (count), args)
@@ -1363,6 +1368,7 @@ struct _KERN_DATA
     K2LIST_ANCHOR                       FsProvList;
 
 #if TRACING_ON
+    BOOL                mTraceStarted;
     UINT32 volatile     mTrace;
     UINT32              mTraceTop;
     UINT32              mTraceBottom;

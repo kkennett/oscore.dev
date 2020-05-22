@@ -170,6 +170,8 @@ K2OSEXEC_Run(
                 
                 pWorkList = pWorkList->mpNext;
 
+                K2OSKERN_Panic("Force Panic\n");
+
                 stat = K2_EXTRAP(&trap, sCallExec(pHold));
                 if (K2STAT_IS_EXCEPTION(stat))
                 {

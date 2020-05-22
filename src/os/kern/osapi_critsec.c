@@ -158,6 +158,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
     }
     else
     {
+        K2Trace(K2TRACE_THREAD_SEC_WAIT, 1, pThisThread->Env.mId);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }
@@ -189,6 +190,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
 
     if (gotIntoSec)
     {
+        K2Trace(K2TRACE_THREAD_ENTERED_SEC, 2, pThisThread->Env.mId, pSec);
         pSec->mpOwner = pThisThread;
         K2LIST_AddAtHead(&pThisThread->Sched.OwnedCritSecList, &pSec->ThreadOwnedCritSecLink);
         pSec->mRecursionCount = 1;
@@ -254,6 +256,8 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecLeave(K2OS_CRITSEC *apSec)
         stat = KernEvent_Change(&pSec->Event, TRUE);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
+
+    K2Trace(K2TRACE_THREAD_LEFT_SEC, 2, pThisThread->Env.mId, pSec);
 
     return TRUE;
 }
