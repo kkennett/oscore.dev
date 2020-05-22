@@ -158,7 +158,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecEnter(K2OS_CRITSEC *apSec)
     }
     else
     {
-        K2Trace(K2TRACE_THREAD_SEC_WAIT, 1, pThisThread->Env.mId);
+        K2Trace(K2TRACE_THREAD_SEC_WAIT, 2, pThisThread->Env.mId, pSec);
         pSec->mWaitingThreadsCount++;
         gotIntoSec = FALSE;
     }

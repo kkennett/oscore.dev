@@ -114,7 +114,9 @@ sExec_Init(
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Debug("*** HAL has no OnSysReady()\n");
 
+#if TRACING_ON
     gData.mTraceStarted = TRUE;
+#endif
 
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
 

@@ -53,6 +53,7 @@ K2OSKERN_Panic(
 {
     K2OSKERN_CPUCORE volatile * pThisCore;
     VALIST                      vList;
+    UINT32                      deathSpin;
 
     K2OSKERN_SetIntr(FALSE);
 
@@ -66,6 +67,8 @@ K2OSKERN_Panic(
     }
 
     K2ATOMIC_Inc(&gData.mCoresInPanic);
+
+    K2Trace0(K2TRACE_PANIC);
 
     K2OSKERN_Debug("\n\n-------------------\nCore %d PANIC:\n  ", pThisCore->mCoreIx);
     
@@ -81,10 +84,16 @@ K2OSKERN_Panic(
     if (gData.mCpuCount > 1)
     {
         KernCpuCore_SendIciToAllOtherCores(pThisCore, KernCpuCoreEvent_Ici_Panic);
+        deathSpin = 0xF000;
         do {
             K2_CpuReadBarrier();
             if (gData.mpShared->FuncTab.MicroStall)
                 gData.mpShared->FuncTab.MicroStall(100);
+            if (--deathSpin == 0)
+            {
+                K2OSKERN_Debug("DeathSpin break\n");
+                break;
+            }
         } while (gData.mCoresInPanic < gData.mCpuCount);
     }
 

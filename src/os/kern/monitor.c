@@ -52,11 +52,11 @@ void KernMonitor_Run(void)
     if (pThisCore->mIsIdle)
     {
         pThisCore->mIsIdle = FALSE;
-        K2Trace(K2TRACE_MONITOR_END_IDLE, 1, pThisCore->mCoreIx);
+        K2Trace0(K2TRACE_MONITOR_END_IDLE);
     }
     else
     {
-        K2Trace(K2TRACE_MONITOR_ENTER, 1, pThisCore->mCoreIx);
+        K2Trace0(K2TRACE_MONITOR_ENTER);
     }
 
     /* interrupts MUST BE ON running here */
@@ -85,9 +85,10 @@ void KernMonitor_Run(void)
                     pThread = pThisCore->mpAssignThread;
                     if (pThread != NULL)
                     {
-                        K2Trace(K2TRACE_MONITOR_SET_THREAD_ACTIVE, 2, pThisCore->mCoreIx, pThread->Env.mId);
+                        K2Trace(K2TRACE_MONITOR_SET_THREAD_ACTIVE, 1, pThread->Env.mId);
                         pThisCore->mpActiveThread = pThread;
                         pThisCore->mpAssignThread = NULL;
+                        K2_CpuWriteBarrier();
                     }
                 }
                 else
@@ -98,7 +99,7 @@ void KernMonitor_Run(void)
                 if (pThread == NULL)
                 {
                     pThisCore->mIsIdle = TRUE;
-                    K2Trace(K2TRACE_MONITOR_START_IDLE, 1, pThisCore->mCoreIx);
+                    K2Trace0(K2TRACE_MONITOR_START_IDLE);
                     //
                     // interrupts are off. exiting from this function
                     // returns to the caller, which knows this and will
@@ -111,7 +112,7 @@ void KernMonitor_Run(void)
                 //
                 // we have a thread to run, so return to it
                 //
-                K2Trace(K2TRACE_MONITOR_RESUME_THREAD, 2, pThisCore->mCoreIx, pThread->Env.mId);
+                K2Trace(K2TRACE_MONITOR_RESUME_THREAD, 1, pThread->Env.mId);
                 KernArch_SwitchFromMonitorToThread(pThisCore);
 
                 //

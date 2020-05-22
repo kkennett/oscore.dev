@@ -36,37 +36,39 @@
 
 static char const * const sgpNames[] =
 {
-    "<ZERO>",
-    "CPUCORE_SCHED_CALL          ",
-    "SCHED_EXEC_ITEM             ",
-    "SCHED_ARM_TIMER             ",
-    "SCHED_ENTERED               ",
-    "SCHED_LEFT                  ",
-    "SCHED_CALL_CLEAR_ACTIVE     ",
-    "SCHED_STOP_CLEAR_ACTIVE     ",
-    "CPUCORE_TIMER_FIRED         ",
-    "CPUCORE_THREAD_STOP         ",
-    "CPUCORE_WAKE_UP             ",
-    "CPUCORE_ICI_STOP_THREAD     ",
-    "CPUCORE_ICI_STOP_NOTHREAD   ",
-    "CPUCORE_ICI_TLBINV          ",
-    "CPUCORE_ICI_PAGEDIR         ",
-    "CPUCORE_ICI_PANIC           ",
-    "CPUCORE_ICI_DEBUG           ",
-    "MONITOR_END_IDLE            ",
-    "MONITOR_ENTER               ",
-    "MONITOR_SET_THREAD_ACTIVE   ",
-    "MONITOR_START_IDLE          ",
-    "MONITOR_RESUME_THREAD       ",
-    "X32INTR_MONITOR_ENTER       ",
-    "THREAD_START_WAIT           ",
-    "THREAD_END_WAIT             ",
-    "THREAD_SEC_WAIT             ",
-    "THREAD_ENTERED_SEC          ",
-    "THREAD_LEFT_SEC             "
+    "<ZERO>                         ",
+    "CPUCORE_SCHED_CALL             ",
+    "SCHED_EXEC_ITEM                ",
+    "SCHED_ARM_TIMER                ",
+    "SCHED_ENTERED                  ",
+    "SCHED_LEFT                     ",
+    "SCHED_CALL_CLEAR_ACTIVE        ",
+    "SCHED_STOP_CLEAR_ACTIVE        ",
+    "CPUCORE_TIMER_FIRED            ",
+    "CPUCORE_THREAD_STOP            ",
+    "CPUCORE_WAKE_UP                ",
+    "CPUCORE_ICI_STOP_THREAD        ",
+    "CPUCORE_ICI_STOP_NOTHREAD      ",
+    "CPUCORE_ICI_TLBINV             ",
+    "CPUCORE_ICI_PAGEDIR            ",
+    "CPUCORE_ICI_PANIC              ",
+    "CPUCORE_ICI_DEBUG              ",
+    "MONITOR_END_IDLE               ",
+    "MONITOR_ENTER                  ",
+    "MONITOR_SET_THREAD_ACTIVE      ",
+    "MONITOR_START_IDLE             ",
+    "MONITOR_RESUME_THREAD          ",
+    "X32INTR_MONITOR_ENTER          ",
+    "THREAD_START_WAIT              ",
+    "THREAD_END_WAIT                ",
+    "THREAD_SEC_WAIT                ",
+    "THREAD_ENTERED_SEC             ",
+    "THREAD_LEFT_SEC                ",
+    "************PANIC************* ",
+    "K2TRACE_SCHED_ASSIGN_RUNTHREAD "
 };
 
-void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
+void K2OSKERN_Trace(UINT32 aCode, UINT32 aCount, ...)
 {
     UINT32  dec;
     UINT32  cur;
@@ -77,7 +79,7 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
     if (!gData.mTraceStarted)
         return;
 
-    dec = (3 + aCount);
+    dec = (4 + aCount);
 
     disp = K2OSKERN_SetIntr(FALSE);
     do {
@@ -104,7 +106,10 @@ void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...)
     *((UINT32 *)cur) = dec;
 
     cur -= sizeof(UINT32);
-    *((UINT32 *)cur) = aTime;
+    *((UINT32 *)cur) = (UINT32)K2OS_SysUpTimeMs();
+
+    cur -= sizeof(UINT32);
+    *((UINT32 *)cur) = K2OSKERN_GET_CURRENT_CPUCORE->mCoreIx;
 
     cur -= sizeof(UINT32);
     *((UINT32 *)cur) = aCode;
@@ -129,8 +134,10 @@ void K2OSKERN_TraceDump(void)
     UINT32 count;
     UINT32 time;
     UINT32 code;
+    UINT32 core;
+    BOOL   disp;
 
-    K2OSKERN_SetIntr(FALSE);
+    disp = K2OSKERN_SetIntr(FALSE);
 
     cur = gData.mTraceTop;
     while (cur > gData.mTrace)
@@ -144,10 +151,14 @@ void K2OSKERN_TraceDump(void)
         count--;
 
         cur -= sizeof(UINT32);
+        core = *((UINT32 *)cur);
+        count--;
+
+        cur -= sizeof(UINT32);
         code = *((UINT32 *)cur);
         count--;
 
-        K2OSKERN_Debug("%8d %s", time, sgpNames[code]);
+        K2OSKERN_Debug("%8d %d %s", time, core, sgpNames[code]);
 
         if (count > 0)
         {
@@ -158,6 +169,8 @@ void K2OSKERN_TraceDump(void)
         }
         K2OSKERN_Debug("\n");
     }
+
+    K2OSKERN_SetIntr(disp);
 }
 
 #endif

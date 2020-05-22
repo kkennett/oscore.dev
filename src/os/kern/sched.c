@@ -297,7 +297,7 @@ BOOL sExecItems(void)
 
             K2ATOMIC_Dec((INT32 volatile *)&gData.Sched.mReq);
 
-            K2Trace(K2TRACE_SCHED_EXEC_ITEM, 2, gData.Sched.mpSchedulingCore->mCoreIx, gData.Sched.mpActiveItem->mSchedItemType);
+            K2Trace(K2TRACE_SCHED_EXEC_ITEM, 1, gData.Sched.mpActiveItem->mSchedItemType);
 
             K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType != KernSchedItem_Invalid);
 
@@ -385,7 +385,7 @@ BOOL sExecItems(void)
         // this will NOT get called and threads just run until 
         // something comes into the scheduler again
         // 
-        K2Trace(K2TRACE_SCHED_ARM_TIMER, 2, gData.Sched.mpSchedulingCore->mCoreIx, (UINT32)armTimerMs);
+        K2Trace(K2TRACE_SCHED_ARM_TIMER, 1, (UINT32)armTimerMs);
         KernSched_ArmSchedTimer((UINT32)armTimerMs);
     }
 
@@ -476,7 +476,7 @@ void KernSched_Check(K2OSKERN_CPUCORE volatile *apThisCore)
     //
     // if we get here we are the scheduling core 
     //
-    K2Trace(K2TRACE_SCHED_ENTERED, 1, apThisCore->mCoreIx);
+    K2Trace0(K2TRACE_SCHED_ENTERED);
 
     gData.Sched.mpSchedulingCore = apThisCore;
 
@@ -508,7 +508,7 @@ void KernSched_Check(K2OSKERN_CPUCORE volatile *apThisCore)
     // 
     // if we got here we left the scheduler
     //
-    K2Trace(K2TRACE_SCHED_LEFT, 1, apThisCore->mCoreIx);
+    K2Trace0(K2TRACE_SCHED_LEFT);
 }
 
 static
@@ -550,7 +550,7 @@ void KernSched_RespondToCallFromThread(K2OSKERN_CPUCORE volatile *apThisCore)
     // althought not practically possible, thread may have disappeared completely here
     // so we can no longer reference it
     //
-    K2Trace(K2TRACE_SCHED_CALL_CLEAR_ACTIVE, 1, apThisCore->mCoreIx);
+    K2Trace0(K2TRACE_SCHED_CALL_CLEAR_ACTIVE);
     apThisCore->Sched.mLastStopAbsTimeMs = absTime;
     apThisCore->mpActiveThread = NULL;
     K2_CpuWriteBarrier();
@@ -572,7 +572,7 @@ void KernSched_ThreadStop(K2OSKERN_CPUCORE volatile *apThisCore)
     // althought not practically possible, thread may have disappeared completely here
     // so we can no longer reference it
     //
-    K2Trace(K2TRACE_SCHED_STOP_CLEAR_ACTIVE, 1, apThisCore->mCoreIx);
+    K2Trace0(K2TRACE_SCHED_STOP_CLEAR_ACTIVE);
     apThisCore->Sched.mLastStopAbsTimeMs = absTime;
     apThisCore->mpActiveThread = NULL;
     K2_CpuWriteBarrier();
@@ -601,6 +601,7 @@ void sPutThreadOntoIdleCore(K2OSKERN_CPUCORE volatile *apCore, K2OSKERN_OBJ_THRE
 
     apCore->Sched.mCoreActivePrio = apThread->Sched.mThreadActivePrio;
     apCore->Sched.mExecFlags = K2OSKERN_SCHED_CPUCORE_EXECFLAG_CHANGED;
+    K2Trace(K2TRACE_SCHED_ASSIGN_RUNTHREAD, 2, apCore->mCoreIx, apThread->Env.mId);
     apCore->Sched.mpRunThread = apThread;
     gData.Sched.mIdleCoreCount--;
     apThread->Sched.State.mRunState = KernThreadRunState_Running;
@@ -636,6 +637,7 @@ void KernSched_PreemptCore(K2OSKERN_CPUCORE volatile *apCore, K2OSKERN_OBJ_THREA
 
     apNextThread->Sched.State.mRunState = KernThreadRunState_Running;
 
+    K2Trace(K2TRACE_SCHED_ASSIGN_RUNTHREAD, 2, apCore->mCoreIx, apNextThread->Env.mId);
     apCore->Sched.mpRunThread = apNextThread;
 
     apNextThread->Sched.mQuantumLeft = apNextThread->Sched.Attr.mQuantum;

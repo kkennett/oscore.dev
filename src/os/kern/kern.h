@@ -86,15 +86,20 @@ K2_STATIC_ASSERT(K2OSKERN_PTE_PRESENT_BIT == X32_PTE_PRESENT);
 #define K2TRACE_THREAD_SEC_WAIT             25
 #define K2TRACE_THREAD_ENTERED_SEC          26
 #define K2TRACE_THREAD_LEFT_SEC             27
+#define K2TRACE_PANIC                       28
+#define K2TRACE_SCHED_ASSIGN_RUNTHREAD      29
 
-void K2OSKERN_Trace(UINT32 aTime, UINT32 aCode, UINT32 aCount, ...);
-#define K2Trace(x, count, args...)   K2OSKERN_Trace((UINT32)K2OS_SysUpTimeMs(), (x), (count), args)
+void K2OSKERN_Trace(UINT32 aCode, UINT32 aCount, ...);
+
+#define K2Trace(x, count, args...)  K2OSKERN_Trace((x), (count), args)
+#define K2Trace0(x)                 K2OSKERN_Trace((x), 0)
 
 void K2OSKERN_TraceDump(void);
 
 #else
 
 #define K2Trace(args...)
+#define K2Trace0(x) 
 
 #endif
 

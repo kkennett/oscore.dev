@@ -264,7 +264,7 @@ X32Kern_InterruptHandler(
         if ((forceEnterMonitor) ||
             (pThisCore->mpPendingEventListHead != NULL))
         {
-            K2Trace(K2TRACE_X32INTR_MONITOR_ENTER, 2, pThisCore->mCoreIx, aContext.Exception_Vector);
+            K2Trace(K2TRACE_X32INTR_MONITOR_ENTER, 1, aContext.Exception_Vector);
 
             if (pThisCore->mpActiveThread != NULL)
                 pThisCore->mpActiveThread->mStackPtr_Kernel = (UINT32)&aContext;
