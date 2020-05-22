@@ -211,7 +211,6 @@ struct _K2OSKERN_CPUCORE
     BOOL volatile                       mIsExecuting;
     BOOL                                mIsInMonitor;
     BOOL volatile                       mIsIdle;
-    BOOL                                mGoToMonitorAfterIntr;
 
     K2OSKERN_OBJ_PROCESS *              mpActiveProc;
     K2OSKERN_OBJ_THREAD * volatile      mpAssignThread;
