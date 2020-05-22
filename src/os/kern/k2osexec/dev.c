@@ -334,5 +334,121 @@ Dev_ScanForNeededDrivers(UINT32 aScanIter)
 
 BOOL Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** apppRetTypeIds)
 {
-    return FALSE;
+    ACPI_DEVICE_INFO *  pDevInfo;
+    UINT32              numIds;
+    UINT32              bufSize;
+    UINT32              ix;
+    char **             ppRetIds;
+    char *              pOut;
+
+    //
+    // count them first
+    //
+    bufSize = 0;
+    numIds = 0;
+
+    pDevInfo = apDevNode->mpAcpiInfo;
+    if (pDevInfo != NULL)
+    {
+        if (pDevInfo->Valid & ACPI_VALID_HID)
+        {
+            bufSize += pDevInfo->HardwareId.Length + 10;    // ACPI/HID/ + null
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_UID)
+        {
+            bufSize += pDevInfo->UniqueId.Length + 10;      // ACPI/UID/ + null
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_CLS)
+        {
+            bufSize += pDevInfo->ClassCode.Length + 10;     // ACPI/CLS/ + null
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_CID)
+        {
+            for (ix = 0; ix < pDevInfo->CompatibleIdList.Count; ix++)
+            {
+                bufSize += pDevInfo->CompatibleIdList.Ids[ix].Length + 10;  // ACPI/CID/ + null
+                numIds++;
+            }
+        }
+    }
+
+    if (apDevNode->mpPci != NULL)
+    {
+        bufSize += 17;   // PCI/VIDD/PIDD/RV + null
+        numIds++;
+    }
+
+    if (0 == numIds)
+        return FALSE;
+
+    ix = (sizeof(char *) * numIds) + bufSize;
+
+    ppRetIds = (char **)K2OS_HeapAlloc(ix);
+    if (NULL == ppRetIds)
+        return FALSE;
+
+    *apppRetTypeIds = ppRetIds;
+    *apRetNumTypeIds = numIds;
+
+    K2MEM_Zero(ppRetIds, ix);
+
+    pOut = ((char *)(ppRetIds)) + (numIds * sizeof(char *));
+    numIds = 0;
+
+    if (pDevInfo != NULL)
+    {
+        if (pDevInfo->Valid & ACPI_VALID_HID)
+        {
+            ppRetIds[numIds] = pOut;
+            K2ASC_Printf(pOut, "ACPI/HID/%.*s", pDevInfo->HardwareId.Length, pDevInfo->HardwareId.String);
+            pOut += pDevInfo->HardwareId.Length + 10;
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_UID)
+        {
+            ppRetIds[numIds] = pOut;
+            K2ASC_Printf(pOut, "ACPI/UID/%.*s", pDevInfo->UniqueId.Length, pDevInfo->UniqueId.String);
+            pOut += pDevInfo->UniqueId.Length + 10;
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_CLS)
+        {
+            ppRetIds[numIds] = pOut;
+            K2ASC_Printf(pOut, "ACPI/CLS/%.*s", pDevInfo->ClassCode.Length, pDevInfo->ClassCode.String);
+            pOut += pDevInfo->ClassCode.Length + 10;
+            numIds++;
+        }
+
+        if (pDevInfo->Valid & ACPI_VALID_CID)
+        {
+            for (ix = 0; ix < pDevInfo->CompatibleIdList.Count; ix++)
+            {
+                ppRetIds[numIds] = pOut;
+                K2ASC_Printf(pOut, "ACPI/CID/%.*s", pDevInfo->CompatibleIdList.Ids[ix].Length, pDevInfo->CompatibleIdList.Ids[ix].String);
+                pOut += pDevInfo->CompatibleIdList.Ids[ix].Length + 10;
+                numIds++;
+            }
+        }
+    }
+
+    if (apDevNode->mpPci != NULL)
+    {
+        ppRetIds[numIds] = pOut;
+        K2ASC_Printf(pOut, "PCI/%04X/%04X/%02X", 
+            apDevNode->mpPci->PciCfg.AsTypeX.mVendorId,
+            apDevNode->mpPci->PciCfg.AsTypeX.mDeviceId,
+            apDevNode->mpPci->PciCfg.AsTypeX.mRevision
+            );
+        numIds++;
+    }
+
+    return TRUE;
 }

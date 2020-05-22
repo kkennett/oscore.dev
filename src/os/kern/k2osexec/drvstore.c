@@ -135,11 +135,6 @@ void sDrvStore_ScanHw(SERWORK_ITEM_HDR *apItem)
                 }
             }
 
-            do {
-                numTypeIds--;
-                K2_ASSERT(ppTypeIds[numTypeIds] != NULL);
-                K2OS_HeapFree(ppTypeIds[numTypeIds]);
-            } while (numTypeIds > 0);
             K2OS_HeapFree(ppTypeIds);
 
         } while (0);

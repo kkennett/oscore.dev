@@ -86,6 +86,14 @@ sDrvStore_FindDriver(
     UINT32 *        apRetSelect
 )
 {
+    char const **pTry;
+
+    pTry = appTypeIds;
+    K2OSKERN_Debug("FindDriver(%d)\n", aNumTypeIds);
+    do {
+        K2OSKERN_Debug("  [%s]\n", *pTry);
+        pTry++;
+    } while (--aNumTypeIds);
     return K2STAT_ERROR_NOT_IMPL;
 }
 
