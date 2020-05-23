@@ -35,6 +35,7 @@
 #define K2_STATIC       static
 #define DUMP_DEVICES    0
 
+UINT32              gDev_LastInstance;
 K2TREE_ANCHOR       gDev_Tree;
 K2OSKERN_SEQLOCK    gDev_SeqLock;
 DEV_NODE *          gpDev_RootNode;
@@ -85,8 +86,9 @@ sInitialDeviceWalkCallback(
                 K2LIST_Init(&pDevNode->PhysList);
                 K2LIST_Init(&pDevNode->IoList);
                 pDevNode->mpParent = pWalkCtx->Working[pWalkCtx->mLevel - 1];
+                pDevNode->mhAcpiObject = Object;
                 pDevNode->mpAcpiInfo = pDevInfo;
-                pDevNode->DevTreeNode.mUserVal = (UINT32)Object;
+                pDevNode->DevTreeNode.mUserVal = ++gDev_LastInstance;
                 K2TREE_Insert(&gDev_Tree, pDevNode->DevTreeNode.mUserVal, &pDevNode->DevTreeNode);
                 if (pDevNode->mpParent != NULL)
                     K2LIST_AddAtTail(&pDevNode->mpParent->ChildList, &pDevNode->ChildListLink);
@@ -208,6 +210,7 @@ void Dev_Init(void)
     void *          pWalkRet;
     WALKCTX         walkCtx;
 
+    gDev_LastInstance = 0;
     K2TREE_Init(&gDev_Tree, NULL);
     K2OSKERN_SeqIntrInit(&gDev_SeqLock);
     gpDev_RootNode = NULL;
@@ -275,8 +278,9 @@ sDev_ScanForNeededDrivers(DEV_NODE *apDevNode, UINT32 aScanIter)
     BOOL            actionNode;
     K2LIST_LINK *   pListLink;
 
-    if ((NULL == apDevNode->mpDriver) &&
-        ((NULL != apDevNode->mpIntrLine) ||
+    if ((0 == apDevNode->mDriverStoreHandle) &&
+        ((NULL != apDevNode->mpPci) ||
+         (NULL != apDevNode->mpIntrLine) ||
             (0 != apDevNode->IoList.mNodeCount) ||
             (0 != apDevNode->PhysList.mNodeCount)))
         actionNode = TRUE;
@@ -301,10 +305,10 @@ sDev_ScanForNeededDrivers(DEV_NODE *apDevNode, UINT32 aScanIter)
         apDevNode->mScanIter = aScanIter;
         if (actionNode)
         {
-            K2OSKERN_Debug("Scan Found Node %08X\n", apDevNode);
-            K2OSKERN_Debug("IntrPtr %08X\n", apDevNode->mpIntrLine);
-            K2OSKERN_Debug("IO list count %d\n", apDevNode->IoList.mNodeCount);
-            K2OSKERN_Debug("Phys list count %d\n", apDevNode->PhysList.mNodeCount);
+//            K2OSKERN_Debug("Scan Found Node %08X\n", apDevNode);
+//            K2OSKERN_Debug("IntrPtr %08X\n", apDevNode->mpIntrLine);
+//            K2OSKERN_Debug("IO list count %d\n", apDevNode->IoList.mNodeCount);
+//            K2OSKERN_Debug("Phys list count %d\n", apDevNode->PhysList.mNodeCount);
             return apDevNode;
         }
 

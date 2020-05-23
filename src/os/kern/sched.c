@@ -155,7 +155,7 @@ void KernSched_AddCurrentCore(void)
     pThread->Sched.State.mRunState = KernThreadRunState_Running;
     pThisCore->Sched.mpRunThread = pThread;
     gData.Sched.mIdleCoreCount--;
-    pThread->Sched.mLastRunCoreIx = gData.mCpuCount;
+    pThread->Sched.mLastRunCoreIx = 0;
 
     pThisCore->Sched.mCoreActivePrio = pThread->Sched.mThreadActivePrio;
     KernSched_InsertCore(pThisCore, TRUE);

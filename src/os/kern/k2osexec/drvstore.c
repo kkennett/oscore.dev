@@ -76,7 +76,31 @@ sLoadDriver(
     char const *    apMatchId
 )
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2STAT              stat;
+    UINT32              storeHandle;
+    K2_EXCEPTION_TRAP   trap;
+
+    storeHandle = 0;
+    stat = K2_EXTRAP(&trap, apStore->Direct.PrepareDriverInstance(apMatchId, &storeHandle));
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+    if (0 == storeHandle)
+    {
+        K2_EXTRAP(&trap, apStore->Direct.PurgeDriverInstance(0));
+        return K2STAT_ERROR_UNKNOWN;
+    }
+
+    stat = K2_EXTRAP(&trap, apStore->Direct.ActivateDriver(storeHandle, apDevNode->DevTreeNode.mUserVal));
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2_EXTRAP(&trap, apStore->Direct.PurgeDriverInstance(storeHandle));
+        return stat;
+    }
+
+    apDevNode->mpDriverStore = apStore;
+    apDevNode->mDriverStoreHandle = storeHandle;
+
+    return K2STAT_NO_ERROR;
 }
 
 K2_STATIC

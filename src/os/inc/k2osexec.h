@@ -85,13 +85,19 @@ struct _K2OSEXEC_DRVSTORE_INFO
 #define K2OSEXEC_DRVSTORE_CURRENT_VERSION   0x00010000
 
 typedef K2STAT (*K2OSEXEC_pf_DriverStore_FindDriver)(UINT32 aNumTypeIds, char const **appTypeIds, UINT32 *apRetSelect);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_PrepareDriverInstance)(char const *apTypeId, UINT32 *apRetStoreHandle);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_ActivateDriver)(UINT32 aStoreHandle, UINT32 aDevInstanceId);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_PurgeDriverInstance)(UINT32 aStoreHandle);
 
 typedef struct _K2OSEXEC_DRVSTORE_DIRECT K2OSEXEC_DRVSTORE_DIRECT;
 struct _K2OSEXEC_DRVSTORE_DIRECT
 {
     UINT32  mVersion;
 
-    K2OSEXEC_pf_DriverStore_FindDriver  FindDriver;
+    K2OSEXEC_pf_DriverStore_FindDriver              FindDriver;
+    K2OSEXEC_pf_DriverStore_PrepareDriverInstance   PrepareDriverInstance;
+    K2OSEXEC_pf_DriverStore_ActivateDriver          ActivateDriver;
+    K2OSEXEC_pf_DriverStore_PurgeDriverInstance     PurgeDriverInstance;
 };
 
 //

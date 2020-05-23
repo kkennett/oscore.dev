@@ -53,6 +53,7 @@ BOOL KernSched_Exec_ThreadStop(void)
     // else to do.  if the core goes idle we just stop the thread but other wise we
     // preempt it with something
     //
+    K2OSKERN_Debug("LastRunCoreIx = %d\n", pThread->Sched.mLastRunCoreIx);
     K2_ASSERT(pThread->Sched.mLastRunCoreIx < gData.mCpuCount);
     pCore = K2OSKERN_COREIX_TO_CPUCORE(pThread->Sched.mLastRunCoreIx);
 

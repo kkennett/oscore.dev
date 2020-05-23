@@ -392,7 +392,7 @@ sRes_EnumCurrent(
     //
     // get current resources from ACPI
     //
-    hAcpi = (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal;
+    hAcpi = apDevNode->mhAcpiObject;
     if (0 != hAcpi)
     {
         apDevNode->Res.Device.CurrentAcpiRes.Pointer = NULL;

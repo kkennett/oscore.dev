@@ -130,7 +130,6 @@ struct _DEV_NODE_PCI
     PCICFG          PciCfg;             // copy of first part of pci config space
     UINT32          mBarsFound;
     UINT32          mBarSize[6];
-    ACPI_HANDLE     mhAcpiDevice;       // same as parent DEV_NODE DevTreeNode.mUserVal
     PCI_SEGMENT *   mpSeg;
     UINT32          mVirtConfigAddr;    // 0 if on intel system with no ECAM
     K2TREE_NODE     PciTreeNode;
@@ -162,11 +161,7 @@ union _DEV_NODE_RES
     DEV_NODE_RES_BUS    Bus;
 };
 
-typedef struct _DEV_DRIVER DEV_DRIVER;
-struct _DEV_DRIVER
-{
-    UINT32 a;
-};
+typedef struct _DRVSTORE DRVSTORE;
 
 struct _DEV_NODE
 {
@@ -176,9 +171,7 @@ struct _DEV_NODE
     K2LIST_ANCHOR       ChildList;
     K2LIST_LINK         ChildListLink;
 
-    // ACPI_HANDLE of object is DevTreeNode.mUserVal, indexing gDev_Tree
-    // devices with no acpi node are indexed at zero
-
+    ACPI_HANDLE         mhAcpiObject;
     ACPI_DEVICE_INFO *  mpAcpiInfo;
 
     DEV_NODE_PCI *      mpPci;
@@ -190,12 +183,14 @@ struct _DEV_NODE
     K2LIST_LINK         IntrLineDevListLink;
 
     UINT32              mScanIter;
-    DEV_DRIVER *        mpDriver;
+    DRVSTORE *          mpDriverStore;
+    UINT32              mDriverStoreHandle;
 
     K2LIST_ANCHOR       IoList;
     K2LIST_ANCHOR       PhysList;
 };
 
+extern UINT32           gDev_LastInstance;
 extern K2TREE_ANCHOR    gDev_Tree;
 extern K2OSKERN_SEQLOCK gDev_SeqLock;
 extern DEV_NODE *       gpDev_RootNode;

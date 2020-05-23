@@ -477,12 +477,12 @@ sDiscoveredChildPciDevice(
     PCI_SEGMENT *   pPciSeg;
     UINT32          subBus;
 
+//    K2OSKERN_Debug("DisoveredChild %d/%d\n", apChildPci->Id.Device, apChildPci->Id.Function);
     pListLink = apParentDev->ChildList.mpHead;
     if (pListLink != NULL)
     {
         do {
             pChildDev = K2_GET_CONTAINER(DEV_NODE, pListLink, ChildListLink);
-            pListLink = pListLink->mpNext;
             if (pChildDev->mpAcpiInfo != NULL)
             {
                 // 
@@ -495,22 +495,19 @@ sDiscoveredChildPciDevice(
                     //
                     // match!
                     //
-//                    K2OSKERN_Debug("Matched PCI Device at %d/%d (VID %04X PID %04X) with Acpi Dev %08X\n",
-//                        apChildPci->Id.Device, apChildPci->Id.Function, 
-//                        apChildPci->mVenLo_DevHi & 0xFFFF, (apChildPci->mVenLo_DevHi >> 16) & 0xFFFF,
-//                        pChildDev);
+  //                  K2OSKERN_Debug("  Matched with ACPI node %08X\n", pChildDev->mpAcpiInfo);
                     K2_ASSERT(pChildDev->mpPci == NULL);
                     pChildDev->mpPci = apChildPci;
                     break;
                 }
             }
+            pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
     }
 
     if (pListLink == NULL)
     {
-//        K2OSKERN_Debug("Did not match %d/%d with any known ACPI node\n",
-//            apChildPci->Id.Device, apChildPci->Id.Function);
+//        K2OSKERN_Debug("  Did not match with any known ACPI node\n");
 
         pChildDev = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
         K2_ASSERT(pChildDev != NULL);
@@ -524,6 +521,8 @@ sDiscoveredChildPciDevice(
         K2LIST_Init(&pChildDev->IoList);
 
         K2LIST_AddAtTail(&apParentDev->ChildList, &pChildDev->ChildListLink);
+
+        pChildDev->DevTreeNode.mUserVal = ++gDev_LastInstance;
 
         K2TREE_Insert(&gDev_Tree, pChildDev->DevTreeNode.mUserVal, &pChildDev->DevTreeNode);
     }
@@ -584,6 +583,7 @@ sDiscoverOneBus(
     UINT32          functionIx;
     ACPI_PCI_ID     pciId;
     DEV_NODE_PCI *  pPciDev;
+    DEV_NODE_PCI *  pSubDev;
 
     K2_ASSERT(0 != (apDevNode->mResFlags & DEV_NODE_RESFLAGS_IS_BUS));
 
@@ -608,7 +608,11 @@ sDiscoverOneBus(
                 //
                 do {
                     pciId.Function = ++functionIx;
-                    (void)sgfGetPciDevFromId(&pciId);
+                    pSubDev = sgfGetPciDevFromId(&pciId);
+                    if (pSubDev != NULL)
+                    {
+                        sDiscoveredChildPciDevice(apDevNode, pSubDev);
+                    }
                 } while (functionIx < 7);
             }
         }
@@ -635,7 +639,7 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     // what segment is this bridge on?
     //
     acpiStatus = K2OSACPI_RunDeviceNumericMethod(
-        (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal,
+        apDevNode->mhAcpiObject,
         "_SEG",
         &Value64);
     if (!ACPI_FAILURE(acpiStatus))
@@ -651,7 +655,7 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     // what is the bridge's bus number
     //
     acpiStatus = K2OSACPI_RunDeviceNumericMethod(
-        (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal,
+        apDevNode->mhAcpiObject,
         "_BBN",
         &Value64);
     if (!ACPI_FAILURE(acpiStatus))
@@ -696,7 +700,7 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     apDevNode->Res.Bus.IntRoutingTable.Pointer = NULL;
     apDevNode->Res.Bus.IntRoutingTable.Length = ACPI_ALLOCATE_BUFFER;
     acpiStatus = AcpiGetIrqRoutingTable(
-        (ACPI_HANDLE)apDevNode->DevTreeNode.mUserVal,
+        apDevNode->mhAcpiObject,
         &apDevNode->Res.Bus.IntRoutingTable);
     if (ACPI_FAILURE(acpiStatus))
     {
@@ -738,6 +742,7 @@ void Pci_CheckManualScan(void)
     pTryNode->mpParent = gpDev_RootNode;
     pTryNode->mResFlags = DEV_NODE_RESFLAGS_IS_BUS;
     K2LIST_AddAtTail(&gpDev_RootNode->ChildList, &pTryNode->ChildListLink);
+    pTryNode->DevTreeNode.mUserVal = ++gDev_LastInstance;
     K2TREE_Insert(&gDev_Tree, pTryNode->DevTreeNode.mUserVal, &pTryNode->DevTreeNode);
 
     sDiscoverOneBus(pTryNode);

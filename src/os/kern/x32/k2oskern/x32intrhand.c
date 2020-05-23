@@ -90,6 +90,27 @@ sPopTrap(
     K2OSKERN_Panic("ExTrap returned\n");
 }
 
+static 
+void 
+sAbort(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    X32_EXCEPTION_CONTEXT *     apContext
+)
+{
+    K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
+    K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
+    K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
+    X32Kern_DumpKernelModeExceptionContext(apContext);
+    X32Kern_DumpStackTrace(
+        gpProc0,
+        apContext->KernelMode.EIP,
+        apContext->REGS.EBP,
+        ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
+        &sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN]
+    );
+    K2OSKERN_Panic(NULL);
+}
+
 BOOL 
 sOnException(
     K2OSKERN_CPUCORE volatile * apThisCore,
@@ -141,18 +162,7 @@ sOnException(
 
     if (apThisCore->mIsInMonitor)
     {
-        K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
-        K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
-        K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
-        X32Kern_DumpKernelModeExceptionContext(apContext);
-        X32Kern_DumpStackTrace(
-            gpProc0,
-            apContext->KernelMode.EIP,
-            apContext->REGS.EBP,
-            ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
-            &sgSymDump[apThisCore->mCoreIx * SYM_NAME_MAX_LEN]
-            );
-        K2OSKERN_Panic(NULL);
+        sAbort(apThisCore, apContext);
     }
 
     //
@@ -178,6 +188,11 @@ sOnException(
     else
     {
         K2_ASSERT(0);
+    }
+
+    if (NULL == gData.mpMsgBox_K2OSEXEC)
+    {
+        sAbort(apThisCore, apContext);
     }
 
     pCurThread->mEx_FaultAddr = X32_ReadCR2();

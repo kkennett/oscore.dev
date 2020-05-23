@@ -78,6 +78,8 @@ static K2OSEXEC_DRVSTORE_INFO const sgDrvStoreInfo =
     0x00010000
 };
 
+static char const * const sgpRootHubId = "ACPI/HID/PNP0A03";
+
 K2_STATIC
 K2STAT 
 sDrvStore_FindDriver(
@@ -86,21 +88,61 @@ sDrvStore_FindDriver(
     UINT32 *        apRetSelect
 )
 {
-    char const **pTry;
+    UINT32 ix;
 
-    pTry = appTypeIds;
-    K2OSKERN_Debug("FindDriver(%d)\n", aNumTypeIds);
-    do {
-        K2OSKERN_Debug("  [%s]\n", *pTry);
-        pTry++;
-    } while (--aNumTypeIds);
-    return K2STAT_ERROR_NOT_IMPL;
+    for (ix = 0; ix < aNumTypeIds; ix++)
+    {
+        K2OSKERN_Debug("  %s\n", appTypeIds[ix]);
+        if (0 == K2ASC_CompIns(appTypeIds[ix], sgpRootHubId))
+            break;
+    }
+    if (ix == aNumTypeIds)
+    {
+        return K2STAT_ERROR_NOT_FOUND;
+    }
+
+    //
+    // request for PCI root bridge driver
+    //
+
+    *apRetSelect = ix;
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT sDrvStore_PrepareDriverInstance(char const *apTypeId, UINT32 *apRetStoreHandle)
+{
+    if (0 != K2ASC_CompIns(apTypeId, sgpRootHubId))
+        return K2STAT_ERROR_NOT_FOUND;
+
+    *apRetStoreHandle = 1;
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT sDrvStore_ActivateDriver(UINT32 aStoreHandle, UINT32 aDevInstanceId)
+{
+    if (aStoreHandle != 1)
+        return K2STAT_ERROR_NOT_FOUND;
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT sDrvStore_PurgeDriverInstance(UINT32 aStoreHandle)
+{
+    if (aStoreHandle != 1)
+        return K2STAT_ERROR_NOT_FOUND;
+
+    return K2STAT_NO_ERROR;
 }
 
 static K2OSEXEC_DRVSTORE_DIRECT const sgDrvStoreDirect =
 {
     0x00010000,
-    sDrvStore_FindDriver
+    sDrvStore_FindDriver,
+    sDrvStore_PrepareDriverInstance,
+    sDrvStore_ActivateDriver,
+    sDrvStore_PurgeDriverInstance
 };
 
 K2STAT
