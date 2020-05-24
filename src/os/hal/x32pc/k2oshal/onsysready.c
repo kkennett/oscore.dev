@@ -34,6 +34,23 @@
 
 #define K2_STATIC  static
 
+K2STAT Ide_Prepare(UINT32 *apRetStoreHandle)
+{
+    *apRetStoreHandle = 2;
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT Ide_Activate(UINT32 aStoreHandle, UINT32 aDeviceInstanceId)
+{
+    K2OSKERN_Debug("Activate IDE (%d) on device %d\n", aStoreHandle, aDeviceInstanceId);
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT Ide_Deactivate(UINT32 aStoreHandle)
+{
+    return K2STAT_NO_ERROR;
+}
+
 #define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
 #define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
 #define DRVSTORE_IFACE_CONTEXT  ((void *)0xF00DDEAD)
@@ -79,6 +96,7 @@ static K2OSEXEC_DRVSTORE_INFO const sgDrvStoreInfo =
 };
 
 static char const * const sgpRootHubId = "ACPI/HID/PNP0A03";
+static char const * const sgpIdeId = "PCI/8086/7111";
 
 K2_STATIC
 K2STAT 
@@ -95,6 +113,8 @@ sDrvStore_FindDriver(
         K2OSKERN_Debug("  %s\n", appTypeIds[ix]);
         if (0 == K2ASC_CompIns(appTypeIds[ix], sgpRootHubId))
             break;
+        if (0 == K2ASC_CompInsLen(appTypeIds[ix], sgpIdeId, K2ASC_Len(sgpIdeId)))
+            break;
     }
     if (ix == aNumTypeIds)
     {
@@ -102,7 +122,7 @@ sDrvStore_FindDriver(
     }
 
     //
-    // request for PCI root bridge driver
+    // request for PCI root bridge driver or built-in IDE driver
     //
 
     *apRetSelect = ix;
@@ -112,28 +132,32 @@ sDrvStore_FindDriver(
 
 K2STAT sDrvStore_PrepareDriverInstance(char const *apTypeId, UINT32 *apRetStoreHandle)
 {
-    if (0 != K2ASC_CompIns(apTypeId, sgpRootHubId))
-        return K2STAT_ERROR_NOT_FOUND;
+    if (0 == K2ASC_CompIns(apTypeId, sgpRootHubId))
+    {
+        *apRetStoreHandle = 1;
+        return K2STAT_NO_ERROR;
+    }
 
-    *apRetStoreHandle = 1;
+    if (0 == K2ASC_CompInsLen(apTypeId, sgpIdeId, K2ASC_Len(sgpIdeId)))
+        return Ide_Prepare(apRetStoreHandle);
 
-    return K2STAT_NO_ERROR;
+    return K2STAT_ERROR_NOT_FOUND;
 }
 
 K2STAT sDrvStore_ActivateDriver(UINT32 aStoreHandle, UINT32 aDevInstanceId)
 {
-    if (aStoreHandle != 1)
-        return K2STAT_ERROR_NOT_FOUND;
+    if (aStoreHandle == 1)
+        return K2STAT_NO_ERROR;
 
-    return K2STAT_NO_ERROR;
+    return Ide_Activate(aStoreHandle, aDevInstanceId);
 }
 
 K2STAT sDrvStore_PurgeDriverInstance(UINT32 aStoreHandle)
 {
-    if (aStoreHandle != 1)
-        return K2STAT_ERROR_NOT_FOUND;
+    if (aStoreHandle == 1)
+        return K2STAT_NO_ERROR;
 
-    return K2STAT_NO_ERROR;
+    return Ide_Deactivate(aStoreHandle);
 }
 
 static K2OSEXEC_DRVSTORE_DIRECT const sgDrvStoreDirect =
