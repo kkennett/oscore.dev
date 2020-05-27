@@ -102,6 +102,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "k2zipfile", "lib\k2zipfile\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "k2sort", "lib\k2sort\k2sort.vcxproj", "{30C9F540-AE50-4E53-AB8D-154DE959D486}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "lib\zlib\zlib.vcxproj", "{47DBC145-D0DD-4F13-A117-E31DCE242130}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -184,6 +186,10 @@ Global
 		{30C9F540-AE50-4E53-AB8D-154DE959D486}.Debug|x86.Build.0 = Debug|Win32
 		{30C9F540-AE50-4E53-AB8D-154DE959D486}.Release|x86.ActiveCfg = Release|Win32
 		{30C9F540-AE50-4E53-AB8D-154DE959D486}.Release|x86.Build.0 = Release|Win32
+		{47DBC145-D0DD-4F13-A117-E31DCE242130}.Debug|x86.ActiveCfg = Debug|Win32
+		{47DBC145-D0DD-4F13-A117-E31DCE242130}.Debug|x86.Build.0 = Debug|Win32
+		{47DBC145-D0DD-4F13-A117-E31DCE242130}.Release|x86.ActiveCfg = Release|Win32
+		{47DBC145-D0DD-4F13-A117-E31DCE242130}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
