@@ -30,53 +30,16 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#ifndef __UDOOQUAD_H
+#define __UDOOQUAD_H
+
+/* --------------------------------------------------------------------------------- */
+
 #include <k2oshal.h>
-#include "..\udooquad.h"
-
-static UINT32 sgDebugPageAddr = 0;
-
-void
-K2_CALLCONV_REGS
-K2OSHAL_DebugOut(
-    UINT8 aByte
-)
-{
-    if (sgDebugPageAddr == 0)
-        return;
-    if (aByte == '\n')
-    {
-        while ((K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_UTS) & IMX6_UART_UTS_TXEMPTY) == 0);
-        K2MMIO_Write32(sgDebugPageAddr + IMX6_UART_OFFSET_UTXD, '\r');
-    }
-    while ((K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_UTS) & IMX6_UART_UTS_TXEMPTY) == 0);
-    K2MMIO_Write32(sgDebugPageAddr + IMX6_UART_OFFSET_UTXD, aByte);
-}
-
-BOOL
-K2_CALLCONV_REGS
-K2OSHAL_DebugIn(
-    UINT8 *apRetData
-)
-{
-    if (sgDebugPageAddr == 0)
-        return FALSE;
-    if (0 == (K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_USR2) & IMX6_UART_USR2_RDR))
-        return FALSE;
-    *apRetData = (UINT8)(K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_URXD) & 0xFF);
-    return TRUE;
-}
-
-K2STAT
-K2_CALLCONV_REGS
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
-)
-{
-    K2OSKERN_Esc(K2OSKERN_ESC_GET_DEBUGPAGE, (void *)&sgDebugPageAddr);
-    K2OS_DebugPrint("k2oshal init\n");
-    return 0;
-}
+#include <k2osexec.h>
+#include "imx6def.inc"
 
 
+/* --------------------------------------------------------------------------------- */
 
+#endif // __UDOOQUAD_H

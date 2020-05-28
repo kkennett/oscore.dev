@@ -162,8 +162,10 @@ void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *a
     BOOL                    usedPT;
     UINT32 *                pPtPageCount;
 
+#if !K2_TARGET_ARCH_IS_ARM
     K2LIST_LINK *           pListLink;
     K2OSKERN_OBJ_PROCESS *  pProc;
+#endif
 
     virtAddr = apCurThread->mWorkMapAddr;
 
@@ -219,7 +221,7 @@ void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *a
         //
         // a32 - install it into the system common page table
         //
-        pde = (physPageAddr & K2VMAP32_PAGEPHYS_MASK) | A32_TTBE_PAGETABLE_PROTO;
+        pde = (physPageAddr & K2_VA32_PAGEFRAME_MASK) | A32_TTBE_PAGETABLE_PROTO;
         pPDE[0] = pde;
         pPDE[1] = (pde + 0x400);
         pPDE[2] = (pde + 0x800);

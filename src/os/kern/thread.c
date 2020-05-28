@@ -115,7 +115,7 @@ void K2_CALLCONV_REGS KernThread_Entry(K2OSKERN_OBJ_THREAD *apThisThread)
 
     if (FALSE == K2OSKERN_GetIntr())
     {
-        K2OSKERN_Panic("Interrupts disabled (%08X) at KernThread_Entry!\n", X32_ReadEFLAGS());
+        K2OSKERN_Panic("Interrupts disabled at KernThread_Entry!\n");
     }
 
     apThisThread->Info.mExitCode = apThisThread->Info.CreateInfo.mEntrypoint(apThisThread->Info.CreateInfo.mpArg);

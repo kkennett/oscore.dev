@@ -104,7 +104,9 @@ sExec_Init(
     gData.DlxHost.Finalize = initInfo.mfDlxFinalize;
     gData.DlxHost.Purge = initInfo.mfDlxPurge;
 
+#if !K2_TARGET_ARCH_IS_ARM
     K2_ASSERT(initInfo.SysTickDevIrqConfig.mSourceIrq <= X32_DEVIRQ_LVT_ERROR);
+#endif
 
     stat = DLX_FindExport(
         gData.mpDlxHal,
