@@ -114,7 +114,7 @@ sExec_Init(
         "K2OSHAL_OnSystemReady",
         (UINT32 *)apfSysReady);
     if (K2STAT_IS_ERROR(stat))
-        K2OSKERN_Debug("*** HAL has no OnSysReady()\n");
+        K2OSKERN_Debug("*** HAL has no OnSystemReady()\n");
 
 #if TRACING_ON
     gData.mTraceStarted = TRUE;

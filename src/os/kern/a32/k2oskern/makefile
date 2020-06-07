@@ -59,6 +59,8 @@ SOURCES += a32time.c
 SOURCE_LIBS += @shared/lib/k2archa32
 SOURCE_LIBS += @shared/lib/k2heap
 SOURCE_LIBS += @shared/lib/k2bit
+SOURCE_LIBS += @shared/lib/k2dlxsupp
+SOURCE_LIBS += @shared/lib/k2elf32
 
 SOURCE_LIBS += @os/lib/k2ramheap
 
