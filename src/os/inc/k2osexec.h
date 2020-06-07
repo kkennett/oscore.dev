@@ -33,6 +33,7 @@
 #define __K2OSEXEC_H
 
 #include "k2oskern.h"
+#include <spec/k2pci.h>
 
 #if __cplusplus
 extern "C" {
@@ -53,6 +54,30 @@ extern char const *     gpK2OSEXEC_FsProvInterfaceGuidStr;
 
 extern K2_GUID128 const gK2OSEXEC_FileSysInterfaceGuid;
 extern char const *     gpK2OSEXEC_FileSysInterfaceGuidStr;
+
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2OSEXEC_PCI_ID K2OSEXEC_PCI_ID;
+struct _K2OSEXEC_PCI_ID
+{
+    UINT16  mSegment;
+    UINT16  mBus;
+    UINT16  mDevice;
+    UINT16  mFunction;
+};
+
+typedef struct _K2OSEXEC_PCI_DEV_INFO K2OSEXEC_PCI_DEV_INFO;
+struct _K2OSEXEC_PCI_DEV_INFO
+{
+    K2OSEXEC_PCI_ID Id;
+    UINT32          mBarsFoundCount;
+    UINT32          mBarSize[6];
+    PCICFG          Cfg;
+};
+
+K2OSEXEC_PCI_DEV_INFO const * K2OSEXEC_DevPci_GetInfo(UINT32 aDevInstanceId);
 
 //
 //------------------------------------------------------------------------

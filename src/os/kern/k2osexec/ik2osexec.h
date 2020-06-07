@@ -37,7 +37,6 @@
 #include "..\k2osacpi\k2osacpi.h"
 #include "..\kernexec.h"
 #include <lib/k2heap.h>
-#include <spec/k2pci.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -125,14 +124,11 @@ Phys_Init(
 
 struct _DEV_NODE_PCI
 {
-    DEV_NODE *      mpDevNode;          // set once we find it in DEV_NODE tree
-    ACPI_PCI_ID     Id;
-    PCICFG          PciCfg;             // copy of first part of pci config space
-    UINT32          mBarsFound;
-    UINT32          mBarSize[6];
-    PCI_SEGMENT *   mpSeg;
-    UINT32          mVirtConfigAddr;    // 0 if on intel system with no ECAM
-    K2TREE_NODE     PciTreeNode;
+    DEV_NODE *              mpDevNode;          // set once we find it in DEV_NODE tree
+    K2OSEXEC_PCI_DEV_INFO   Info;
+    PCI_SEGMENT *           mpSeg;
+    UINT32                  mVirtConfigAddr;    // 0 if on intel system with no ECAM
+    K2TREE_NODE             PciTreeNode;
 };
 
 #define DEV_NODE_RESFLAGS_IS_BUS            0x80000000

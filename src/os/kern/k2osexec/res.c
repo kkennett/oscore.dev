@@ -56,6 +56,7 @@ sRes_QueryPciDeviceBars(
     RES_IO_HEAPNODE *   pResIoHeapNode;
     PHYS_HEAPNODE *     pPhysHeapNode;
     K2TREE_NODE *       pTreeNode;
+    UINT32              left;
 
     barRegOffset = K2_FIELDOFFSET(PCICFG, AsType0.mBar0);
 
@@ -64,7 +65,7 @@ sRes_QueryPciDeviceBars(
     //
     // get resources described by BARs
     //
-    val8 = apPci->PciCfg.AsTypeX.mHeaderType & 0x3;
+    val8 = apPci->Info.Cfg.AsTypeX.mHeaderType & 0x3;
     if (val8 < 2)
     {
         if (val8 == 0)
@@ -73,30 +74,30 @@ sRes_QueryPciDeviceBars(
             numBars = 2;
         for (ix = 0; ix < numBars; ix++)
         {
-            acpiStatus = AcpiOsReadPciConfiguration(&apPci->Id, barRegOffset, &val64, 32);
+            acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)&apPci->Info.Id, barRegOffset, &val64, 32);
             if (!ACPI_FAILURE(acpiStatus))
             {
                 barSave = (UINT32)(val64 & 0xFFFFFFFFull);
-                if (barSave == 0)
-                    break;
-
-                apPci->mBarsFound++;
-                if (barSave & PCI_BAR_TYPE_IO_BIT)
-                    maskVal = PCI_BAR_BASEMASK_IO;
-                else
-                    maskVal = PCI_BAR_BASEMASK_MEMORY;
-                val64 = maskVal | (barSave & ~maskVal);
-                acpiStatus = AcpiOsWritePciConfiguration(&apPci->Id, barRegOffset, val64, 32);
-                if (!ACPI_FAILURE(acpiStatus))
+                if (barSave != 0)
                 {
-                    acpiStatus = AcpiOsReadPciConfiguration(&apPci->Id, barRegOffset, &val64, 32);
+                    apPci->Info.mBarsFoundCount++;
+                    if (barSave & PCI_BAR_TYPE_IO_BIT)
+                        maskVal = PCI_BAR_BASEMASK_IO;
+                    else
+                        maskVal = PCI_BAR_BASEMASK_MEMORY;
+                    val64 = maskVal | (barSave & ~maskVal);
+                    acpiStatus = AcpiOsWritePciConfiguration((ACPI_PCI_ID *)&apPci->Info.Id, barRegOffset, val64, 32);
                     if (!ACPI_FAILURE(acpiStatus))
                     {
-                        barVal = ((UINT32)val64) & maskVal;
-                        acpiStatus = AcpiOsWritePciConfiguration(&apPci->Id, barRegOffset, (UINT64)barSave, 32);
+                        acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)&apPci->Info.Id, barRegOffset, &val64, 32);
                         if (!ACPI_FAILURE(acpiStatus))
                         {
-                            apPci->mBarSize[ix] = barVal = (~barVal) + 1;
+                            barVal = ((UINT32)val64) & maskVal;
+                            acpiStatus = AcpiOsWritePciConfiguration((ACPI_PCI_ID *)&apPci->Info.Id, barRegOffset, (UINT64)barSave, 32);
+                            if (!ACPI_FAILURE(acpiStatus))
+                            {
+                                apPci->Info.mBarSize[ix] = barVal = (~barVal) + 1;
+                            }
                         }
                     }
                 }
@@ -107,62 +108,68 @@ sRes_QueryPciDeviceBars(
 
     K2OSKERN_SetIntr(disp);
 
-    pBar = &apPci->PciCfg.AsType0.mBar0;
-    for (ix = 0; ix < apPci->mBarsFound; ix++)
+    pBar = &apPci->Info.Cfg.AsType0.mBar0;
+    left = apPci->Info.mBarsFoundCount;
+    if (left > 0)
     {
-        barSave = pBar[ix];
-        barVal = apPci->mBarSize[ix];
-
-        K2_ASSERT(barSave != 0);
-
-        if (barSave & PCI_BAR_TYPE_IO_BIT)
-        {
-            K2_ASSERT((barSave & 0xFFFF0000) == 0);
-//            K2OSKERN_Debug("Adding PCI IO space reservation - %04X, %04X\n",
-//                barSave & PCI_BAR_BASEMASK_IO, barVal);
-            stat = K2HEAP_AllocNodeAt(&gRes_IoSpaceHeap, barSave & PCI_BAR_BASEMASK_IO, barVal, (K2HEAP_NODE **)&pResIoHeapNode);
-            if (K2STAT_IS_ERROR(stat))
+        K2_ASSERT(left <= numBars);
+        ix = 0;
+        do {
+            barSave = pBar[ix];
+            if (barSave != 0)
             {
-                K2OSKERN_Debug("***PCI IO space reservation failed\n");
-            }
-            else
-            {
-                pResIoHeapNode->mpDevNode = apDevNode;
-                K2LIST_AddAtTail(&apDevNode->IoList, &pResIoHeapNode->DevNodeIoListLink);
-            }
-        }
-        else
-        {
-            stat = K2HEAP_AllocNodeAt(&gPhys_SpaceHeap, barSave & PCI_BAR_BASEMASK_MEMORY, barVal, (K2HEAP_NODE **)&pPhysHeapNode);
-            if (K2STAT_IS_ERROR(stat))
-            {
-                pPhysHeapNode = NULL;
-                pTreeNode = K2TREE_Find(&gPhys_SpaceHeap.AddrTree, barSave & PCI_BAR_BASEMASK_MEMORY);
-                if (pTreeNode != NULL)
+                barVal = apPci->Info.mBarSize[ix];
+                if (barSave & PCI_BAR_TYPE_IO_BIT)
                 {
-                    pPhysHeapNode = K2_GET_CONTAINER(PHYS_HEAPNODE, pTreeNode, HeapNode.AddrTreeNode);
-                    if (pPhysHeapNode->HeapNode.SizeTreeNode.mUserVal != barVal)
+                    K2_ASSERT((barSave & 0xFFFF0000) == 0);
+                    //            K2OSKERN_Debug("Adding PCI IO space reservation - %04X, %04X\n",
+                    //                barSave & PCI_BAR_BASEMASK_IO, barVal);
+                    stat = K2HEAP_AllocNodeAt(&gRes_IoSpaceHeap, barSave & PCI_BAR_BASEMASK_IO, barVal, (K2HEAP_NODE **)&pResIoHeapNode);
+                    if (K2STAT_IS_ERROR(stat))
                     {
-                        pPhysHeapNode = NULL;
+                        K2OSKERN_Debug("***PCI IO space reservation failed\n");
                     }
-                    else if (pPhysHeapNode->mpDevNode != NULL)
+                    else
+                    {
+                        pResIoHeapNode->mpDevNode = apDevNode;
+                        K2LIST_AddAtTail(&apDevNode->IoList, &pResIoHeapNode->DevNodeIoListLink);
+                    }
+                }
+                else
+                {
+                    stat = K2HEAP_AllocNodeAt(&gPhys_SpaceHeap, barSave & PCI_BAR_BASEMASK_MEMORY, barVal, (K2HEAP_NODE **)&pPhysHeapNode);
+                    if (K2STAT_IS_ERROR(stat))
                     {
                         pPhysHeapNode = NULL;
+                        pTreeNode = K2TREE_Find(&gPhys_SpaceHeap.AddrTree, barSave & PCI_BAR_BASEMASK_MEMORY);
+                        if (pTreeNode != NULL)
+                        {
+                            pPhysHeapNode = K2_GET_CONTAINER(PHYS_HEAPNODE, pTreeNode, HeapNode.AddrTreeNode);
+                            if (pPhysHeapNode->HeapNode.SizeTreeNode.mUserVal != barVal)
+                            {
+                                pPhysHeapNode = NULL;
+                            }
+                            else if (pPhysHeapNode->mpDevNode != NULL)
+                            {
+                                pPhysHeapNode = NULL;
+                            }
+                        }
+                    }
+                    if (pPhysHeapNode == NULL)
+                    {
+                        K2OSKERN_Debug("FAILED Adding PCI MEM space reservation - %08X, %08X\n",
+                            barSave & PCI_BAR_BASEMASK_MEMORY, barVal);
+                    }
+                    else
+                    {
+                        pPhysHeapNode->mpDevNode = apDevNode;
+                        pPhysHeapNode->mDisp = PHYS_DISP_DEVNODE;
+                        K2LIST_AddAtTail(&apDevNode->PhysList, &pPhysHeapNode->DevNodePhysListLink);
                     }
                 }
             }
-            if (pPhysHeapNode == NULL)
-            {
-                K2OSKERN_Debug("FAILED Adding PCI MEM space reservation - %08X, %08X\n",
-                    barSave & PCI_BAR_BASEMASK_MEMORY, barVal);
-            }
-            else
-            {
-                pPhysHeapNode->mpDevNode = apDevNode;
-                pPhysHeapNode->mDisp = PHYS_DISP_DEVNODE;
-                K2LIST_AddAtTail(&apDevNode->PhysList, &pPhysHeapNode->DevNodePhysListLink);
-            }
-        }
+            ix++;
+        } while (--left > 0);
     }
 }
 

@@ -178,10 +178,10 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
             pPci->Id.Bus,
             pPci->Id.Device,
             pPci->Id.Function,
-            pPci->PciCfg.AsTypeX.mVendorId,
-            pPci->PciCfg.AsTypeX.mDeviceId,
-            pPci->PciCfg.AsTypeX.mInterruptPin,
-            pPci->PciCfg.AsTypeX.mInterruptLine
+            pPci->Info.Cfg.AsTypeX.mVendorId,
+            pPci->Info.Cfg.AsTypeX.mDeviceId,
+            pPci->Info.Cfg.AsTypeX.mInterruptPin,
+            pPci->Info.Cfg.AsTypeX.mInterruptLine
             );
     }
     else
@@ -447,12 +447,34 @@ BOOL Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** a
     {
         ppRetIds[numIds] = pOut;
         K2ASC_Printf(pOut, "PCI/%04X/%04X/%02X", 
-            apDevNode->mpPci->PciCfg.AsTypeX.mVendorId,
-            apDevNode->mpPci->PciCfg.AsTypeX.mDeviceId,
-            apDevNode->mpPci->PciCfg.AsTypeX.mRevision
+            apDevNode->mpPci->Info.Cfg.AsTypeX.mVendorId,
+            apDevNode->mpPci->Info.Cfg.AsTypeX.mDeviceId,
+            apDevNode->mpPci->Info.Cfg.AsTypeX.mRevision
             );
         numIds++;
     }
 
     return TRUE;
+}
+
+K2OSEXEC_PCI_DEV_INFO const * K2OSEXEC_DevPci_GetInfo(UINT32 aDevInstanceId)
+{
+    BOOL            disp;
+    K2TREE_NODE *   pTreeNode;
+    DEV_NODE *      pDevNode;
+
+    disp = K2OSKERN_SeqIntrLock(&gDev_SeqLock);
+
+    pTreeNode = K2TREE_Find(&gDev_Tree, aDevInstanceId);
+
+    K2OSKERN_SeqIntrUnlock(&gDev_SeqLock, disp);
+
+    if (pTreeNode == NULL)
+        return NULL;
+
+    pDevNode = K2_GET_CONTAINER(DEV_NODE, pTreeNode, DevTreeNode);
+    if (pDevNode->mpPci == NULL)
+        return NULL;
+
+    return &pDevNode->mpPci->Info;
 }

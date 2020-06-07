@@ -37,7 +37,7 @@
 K2LIST_ANCHOR        gPci_SegList;
 K2OSKERN_SEQLOCK     gPci_SeqLock;
 
-typedef DEV_NODE_PCI * (*pf_GetPciDev)(ACPI_PCI_ID * PciId);
+typedef DEV_NODE_PCI * (*pf_GetPciDev)(K2OSEXEC_PCI_ID * PciId);
 
 #if !K2_TARGET_ARCH_IS_ARM
 
@@ -57,7 +57,7 @@ static pf_GetPciDev sgfGetPciDevFromId = NULL;
 static 
 DEV_NODE_PCI *
 sECAM_GetPciDevFromId(
-    ACPI_PCI_ID *   PciId
+    K2OSEXEC_PCI_ID *   apPciId
 )
 {
     PCI_SEGMENT *   pPciSeg;
@@ -83,8 +83,8 @@ sECAM_GetPciDevFromId(
 
         do {
             pPciSeg = K2_GET_CONTAINER(PCI_SEGMENT, pListLink, PciSegListLink);
-            if ((PciId->Bus >= pPciSeg->mpMcfgAlloc->StartBusNumber) &&
-                (PciId->Bus <= pPciSeg->mpMcfgAlloc->EndBusNumber))
+            if ((apPciId->mBus >= pPciSeg->mpMcfgAlloc->StartBusNumber) &&
+                (apPciId->mBus <= pPciSeg->mpMcfgAlloc->EndBusNumber))
                 break;
             pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
@@ -93,9 +93,9 @@ sECAM_GetPciDevFromId(
             break;
 
         funcIndexInSegment =
-            ((PciId->Bus - pPciSeg->mpMcfgAlloc->StartBusNumber) * (32 * 8)) +
-            (PciId->Device * 8) +
-            PciId->Function;
+            ((apPciId->mBus - pPciSeg->mpMcfgAlloc->StartBusNumber) * (32 * 8)) +
+            (apPciId->mDevice * 8) +
+            apPciId->mFunction;
 
         K2_ASSERT(funcIndexInSegment < ((pPciSeg->mpMcfgAlloc->EndBusNumber - pPciSeg->mpMcfgAlloc->StartBusNumber + 1) * 32 * 8));
 
@@ -149,11 +149,11 @@ sECAM_GetPciDevFromId(
 
         K2MEM_Zero(pPciDev, sizeof(DEV_NODE_PCI));
 
-        pPciDev->Id = *PciId;
-        pPciDev->PciCfg.mAsUINT32[0] = val32;
+        pPciDev->Info.Id = *apPciId;
+        pPciDev->Info.Cfg.mAsUINT32[0] = val32;
         for (ix = 1; ix < 16; ix++)
         {
-            pPciDev->PciCfg.mAsUINT32[ix] = *(((UINT32 *)virtAddr)+ix);
+            pPciDev->Info.Cfg.mAsUINT32[ix] = *(((UINT32 *)virtAddr)+ix);
         }
         pPciDev->mpSeg = pPciSeg;
         pPciDev->mVirtConfigAddr = virtAddr;
@@ -189,16 +189,16 @@ sECAM_ReadPciConfiguration(
     DEV_NODE_PCI *  pPciDev;
     UINT32          val32;
 
-    pPciDev = sgfGetPciDevFromId(PciId);
+    pPciDev = sgfGetPciDevFromId((K2OSEXEC_PCI_ID *)PciId);
     if (pPciDev == NULL)
     {
         *Value = 0xFFFFFFFFFFFFFFFFull;
         return AE_OK;
     }
 
-    K2_ASSERT(pPciDev->Id.Bus == PciId->Bus);
-    K2_ASSERT(pPciDev->Id.Device == PciId->Device);
-    K2_ASSERT(pPciDev->Id.Function == PciId->Function);
+    K2_ASSERT(pPciDev->Info.Id.mBus == PciId->Bus);
+    K2_ASSERT(pPciDev->Info.Id.mDevice == PciId->Device);
+    K2_ASSERT(pPciDev->Info.Id.mFunction == PciId->Function);
 
     val32 = (*((UINT32 *)(pPciDev->mVirtConfigAddr + (Reg & 0xFC)))) >> ((Reg & 3) * 8);
 
@@ -234,13 +234,13 @@ sECAM_WritePciConfiguration(
     UINT32          mask32;
     UINT32          reg;
 
-    pPciDev = sgfGetPciDevFromId(PciId);
+    pPciDev = sgfGetPciDevFromId((K2OSEXEC_PCI_ID *)PciId);
     if (pPciDev == NULL)
         return AE_ERROR;
 
-    K2_ASSERT(pPciDev->Id.Bus == PciId->Bus);
-    K2_ASSERT(pPciDev->Id.Device == PciId->Device);
-    K2_ASSERT(pPciDev->Id.Function == PciId->Function);
+    K2_ASSERT(pPciDev->Info.Id.mBus == PciId->Bus);
+    K2_ASSERT(pPciDev->Info.Id.mDevice == PciId->Device);
+    K2_ASSERT(pPciDev->Info.Id.mFunction == PciId->Function);
 
     switch (Width)
     {
@@ -275,7 +275,7 @@ sECAM_WritePciConfiguration(
 static
 DEV_NODE_PCI *
 sCAM_GetPciDevFromId(
-    ACPI_PCI_ID *   PciId
+    K2OSEXEC_PCI_ID * apPciId
 )
 {
     UINT32          devIndexOnBus;
@@ -287,8 +287,8 @@ sCAM_GetPciDevFromId(
     UINT32          ix;
 
     devIndexOnBus =
-        (PciId->Device * 8) +
-        PciId->Function;
+        (apPciId->mDevice * 8) +
+        apPciId->mFunction;
 
     K2_ASSERT(devIndexOnBus < (32 * 8));
 
@@ -297,7 +297,7 @@ sCAM_GetPciDevFromId(
     if (pTreeNode != NULL)
         return K2_GET_CONTAINER(DEV_NODE_PCI, pTreeNode, PciTreeNode);
 
-    acpiStatus = AcpiOsReadPciConfiguration(PciId, 0, &val32, 32);
+    acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)apPciId, 0, &val32, 32);
     if (ACPI_FAILURE(acpiStatus))
         return NULL;
 
@@ -317,14 +317,14 @@ sCAM_GetPciDevFromId(
 
     K2MEM_Zero(pPciDev, sizeof(DEV_NODE_PCI));
 
-    pPciDev->Id = *PciId;
-    pPciDev->PciCfg.mAsUINT32[0] = (UINT32)val32;
+    pPciDev->Info.Id = *apPciId;
+    pPciDev->Info.Cfg.mAsUINT32[0] = (UINT32)val32;
     for (ix = 1; ix < 16; ix++)
     {
-        acpiStatus = AcpiOsReadPciConfiguration(PciId, ix*4, &val32, 32);
+        acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)apPciId, ix*4, &val32, 32);
         if (!ACPI_FAILURE(acpiStatus))
         {
-            pPciDev->PciCfg.mAsUINT32[ix] = (UINT32)(val32 & 0xFFFFFFFFull);
+            pPciDev->Info.Cfg.mAsUINT32[ix] = (UINT32)(val32 & 0xFFFFFFFFull);
         }
     }
     pPciDev->mpSeg = &sgCAMSegment;
@@ -477,7 +477,7 @@ sDiscoveredChildPciDevice(
     PCI_SEGMENT *   pPciSeg;
     UINT32          subBus;
 
-//    K2OSKERN_Debug("DisoveredChild %d/%d\n", apChildPci->Id.Device, apChildPci->Id.Function);
+//    K2OSKERN_Debug("DisoveredChild %d/%d\n", apChildPci->Info.Id.mDevice, apChildPci->Info.Id.mFunction);
     pListLink = apParentDev->ChildList.mpHead;
     if (pListLink != NULL)
     {
@@ -489,8 +489,8 @@ sDiscoveredChildPciDevice(
                 // high word of address is device
                 // low word of device is function
                 //
-                if ((((pChildDev->mpAcpiInfo->Address >> 16) & 0xFFFF) == (UINT32)apChildPci->Id.Device) &&
-                    ((pChildDev->mpAcpiInfo->Address & 0xFFFF) == (UINT32)apChildPci->Id.Function))
+                if ((((pChildDev->mpAcpiInfo->Address >> 16) & 0xFFFF) == (UINT32)apChildPci->Info.Id.mDevice) &&
+                    ((pChildDev->mpAcpiInfo->Address & 0xFFFF) == (UINT32)apChildPci->Info.Id.mFunction))
                 {
                     //
                     // match!
@@ -532,21 +532,21 @@ sDiscoveredChildPciDevice(
     //
     // ok - now is this new thing we just created or latched onto a bus bridge?
     //
-    acpiStatus = AcpiOsReadPciConfiguration(&apChildPci->Id, 0xE, &val64, 8);
+    acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)&apChildPci->Info.Id, 0xE, &val64, 8);
     if (ACPI_FAILURE(acpiStatus))
         return;
 
     if (0 == (val64 & 0x1))
         return;
 
-    acpiStatus = AcpiOsReadPciConfiguration(&apChildPci->Id, 0x18, &val64, 32);
+    acpiStatus = AcpiOsReadPciConfiguration((ACPI_PCI_ID *)&apChildPci->Info.Id, 0x18, &val64, 32);
     if (ACPI_FAILURE(acpiStatus))
         return;
 
     subBus = (UINT32)((val64 >> 8) & 0xFF);
 
-    K2_ASSERT((val64 & 0xFF) == apChildPci->Id.Bus);
-    K2_ASSERT(subBus != apChildPci->Id.Bus);
+    K2_ASSERT((val64 & 0xFF) == apChildPci->Info.Id.mBus);
+    K2_ASSERT(subBus != apChildPci->Info.Id.mBus);
 
     //
     // we have a PCI-PCI bus bridge
@@ -554,7 +554,7 @@ sDiscoveredChildPciDevice(
     pChildDev->mResFlags =
         DEV_NODE_RESFLAGS_IS_BUS |
         ((subBus << DEV_NODE_RESFLAGS_BUS_BUSID_SHIFT) & DEV_NODE_RESFLAGS_BUS_BUSID_MASK) |
-        ((((UINT32)apChildPci->Id.Segment) << DEV_NODE_RESFLAGS_BUS_SEGID_SHIFT) & DEV_NODE_RESFLAGS_BUS_SEGID_MASK);
+        ((((UINT32)apChildPci->Info.Id.mSegment) << DEV_NODE_RESFLAGS_BUS_SEGID_SHIFT) & DEV_NODE_RESFLAGS_BUS_SEGID_MASK);
 
     pListLink = gPci_SegList.mpHead;
     K2_ASSERT(pListLink != NULL);
@@ -581,19 +581,19 @@ sDiscoverOneBus(
 {
     UINT32          deviceIx;
     UINT32          functionIx;
-    ACPI_PCI_ID     pciId;
+    K2OSEXEC_PCI_ID pciId;
     DEV_NODE_PCI *  pPciDev;
     DEV_NODE_PCI *  pSubDev;
 
     K2_ASSERT(0 != (apDevNode->mResFlags & DEV_NODE_RESFLAGS_IS_BUS));
 
-    pciId.Segment = (apDevNode->mResFlags & DEV_NODE_RESFLAGS_BUS_SEGID_MASK) >> DEV_NODE_RESFLAGS_BUS_SEGID_SHIFT;
-    pciId.Bus = (apDevNode->mResFlags & DEV_NODE_RESFLAGS_BUS_BUSID_MASK) >> DEV_NODE_RESFLAGS_BUS_BUSID_SHIFT;
+    pciId.mSegment = (apDevNode->mResFlags & DEV_NODE_RESFLAGS_BUS_SEGID_MASK) >> DEV_NODE_RESFLAGS_BUS_SEGID_SHIFT;
+    pciId.mBus = (apDevNode->mResFlags & DEV_NODE_RESFLAGS_BUS_BUSID_MASK) >> DEV_NODE_RESFLAGS_BUS_BUSID_SHIFT;
 
     for (deviceIx = 0; deviceIx < 32; deviceIx++)
     {
-        pciId.Device = deviceIx;
-        pciId.Function = functionIx = 0;
+        pciId.mDevice = deviceIx;
+        pciId.mFunction = functionIx = 0;
         pPciDev = sgfGetPciDevFromId(&pciId);
         if (pPciDev != NULL)
         {
@@ -601,13 +601,13 @@ sDiscoverOneBus(
             // function 0 is present
             //
             sDiscoveredChildPciDevice(apDevNode, pPciDev);
-            if (0 != (pPciDev->PciCfg.AsTypeX.mHeaderType & 0x80))
+            if (0 != (pPciDev->Info.Cfg.AsTypeX.mHeaderType & 0x80))
             {
                 //
                 // flagged as multifunction device
                 //
                 do {
-                    pciId.Function = ++functionIx;
+                    pciId.mFunction = ++functionIx;
                     pSubDev = sgfGetPciDevFromId(&pciId);
                     if (pSubDev != NULL)
                     {

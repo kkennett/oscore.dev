@@ -165,7 +165,7 @@ sAttachViaPci_NoAcpiInfo(
 
 //    K2OSKERN_Debug("PCI(%d/%d)\n", pPci->Id.Device, pPci->Id.Function);
     
-    lineIndex = pPci->PciCfg.AsTypeX.mInterruptLine;
+    lineIndex = pPci->Info.Cfg.AsTypeX.mInterruptLine;
     K2_ASSERT(0xFF != lineIndex);
 
     pIntrLine = &gpIntr_Lines[lineIndex];
@@ -326,7 +326,7 @@ sIntr_AttachPciAcpi(
     //
     // has no _CRS resources assigned, or _CRS did not mention an IRQ entry
     //
-    lineIndex = apPci->PciCfg.AsTypeX.mInterruptLine;
+    lineIndex = apPci->Info.Cfg.AsTypeX.mInterruptLine;
     if (lineIndex == 0xFF)
         return;
 
@@ -415,7 +415,7 @@ void Intr_Init(void)
             }
             else if (NULL != pDevNode->mpPci)
             {
-                if (0xFF != pDevNode->mpPci->PciCfg.AsTypeX.mInterruptLine)
+                if (0xFF != pDevNode->mpPci->Info.Cfg.AsTypeX.mInterruptLine)
                     sAttachViaPci_NoAcpiInfo(pDevNode);
             }
         } while (0);

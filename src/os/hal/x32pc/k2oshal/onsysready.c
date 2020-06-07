@@ -42,7 +42,28 @@ K2STAT Ide_Prepare(UINT32 *apRetStoreHandle)
 
 K2STAT Ide_Activate(UINT32 aStoreHandle, UINT32 aDeviceInstanceId)
 {
+    K2OSEXEC_PCI_DEV_INFO const *   pInfo;
+    UINT32                          ix;
+    UINT32 const *                  pBars;
+
     K2OSKERN_Debug("Activate IDE (%d) on device %d\n", aStoreHandle, aDeviceInstanceId);
+
+    pInfo = K2OSEXEC_DevPci_GetInfo(aDeviceInstanceId);
+    if (pInfo == NULL)
+    {
+        K2OSKERN_Debug("*** no info\n");
+        return K2STAT_ERROR_NOT_FOUND;
+    }
+
+    K2OSKERN_Debug("  PCI %d/%d\n", pInfo->Id.mDevice, pInfo->Id.mFunction);
+    K2OSKERN_Debug("  %d bars\n", pInfo->mBarsFoundCount);
+    pBars = &pInfo->Cfg.AsType0.mBar0;
+    for (ix = 0; ix < 6; ix++)
+    {
+        if (pBars[ix] != 0)
+            K2OSKERN_Debug("    [%d] = %08X, %08X\n", ix, pBars[ix], pInfo->mBarSize[ix]);
+    }
+
     return K2STAT_NO_ERROR;
 }
 
