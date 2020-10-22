@@ -535,14 +535,14 @@ typedef struct _ACPI_MADT_SUB_GIC_DISTRIBUTOR ACPI_MADT_SUB_GIC_DISTRIBUTOR;
 K2_PACKED_PUSH
 struct _ACPI_CSRT_RESOURCE_GROUP_HEADER
 {
-    UINT32 Length;			    // Length
-    UINT32 VendorID;		    // 4 bytes
-    UINT32 SubVendorId;		    // 4 bytes
-    UINT16 DeviceId;		    // 2 bytes
-    UINT16 SubdeviceId;		    // 2 bytes
-    UINT16 Revision;		    // 2 bytes
-    UINT16 Reserved;		    // 2 bytes
-    UINT32 SharedInfoLength;	// 4 bytes
+    UINT32 Length;               // Length
+    UINT32 VendorID;             // 4 bytes
+    UINT32 SubVendorId;          // 4 bytes
+    UINT16 DeviceId;             // 2 bytes
+    UINT16 SubdeviceId;          // 2 bytes
+    UINT16 Revision;             // 2 bytes
+    UINT16 Reserved;             // 2 bytes
+    UINT32 SharedInfoLength;     // 4 bytes
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _ACPI_CSRT_RESOURCE_GROUP_HEADER ACPI_CSRT_RESOURCE_GROUP_HEADER;
@@ -550,10 +550,10 @@ typedef struct _ACPI_CSRT_RESOURCE_GROUP_HEADER ACPI_CSRT_RESOURCE_GROUP_HEADER;
 K2_PACKED_PUSH
 struct _ACPI_CSRT_RESOURCE_DESCRIPTOR_HEADER
 {
-    UINT32 Length;			// 4 bytes
-    UINT16 ResourceType;	// 2 bytes
-    UINT16 ResourceSubType;	// 2 bytes
-    UINT32 UID;				// 4 bytes    
+    UINT32 Length;              // 4 bytes
+    UINT16 ResourceType;        // 2 bytes
+    UINT16 ResourceSubType;     // 2 bytes
+    UINT32 UID;                 // 4 bytes    
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _ACPI_CSRT_RESOURCE_DESCRIPTOR_HEADER ACPI_CSRT_RESOURCE_DESCRIPTOR_HEADER;

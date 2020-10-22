@@ -60,20 +60,20 @@ typedef UINT32  Elf32_Word;
 K2_PACKED_PUSH
 struct _Elf32_Ehdr 
 {
-	UINT8       e_ident[EI_NIDENT];
-	Elf32_Half	e_type;
-	Elf32_Half  e_machine;
-	Elf32_Word  e_version;
-	Elf32_Addr  e_entry;
-	Elf32_Off   e_phoff;
-	Elf32_Off   e_shoff;
-	Elf32_Word  e_flags;
-	Elf32_Half  e_ehsize;
-	Elf32_Half  e_phentsize;
-	Elf32_Half  e_phnum;
-	Elf32_Half  e_shentsize;
-	Elf32_Half  e_shnum;
-	Elf32_Half  e_shstrndx;
+    UINT8       e_ident[EI_NIDENT];
+    Elf32_Half  e_type;
+    Elf32_Half  e_machine;
+    Elf32_Word  e_version;
+    Elf32_Addr  e_entry;
+    Elf32_Off   e_phoff;
+    Elf32_Off   e_shoff;
+    Elf32_Word  e_flags;
+    Elf32_Half  e_ehsize;
+    Elf32_Half  e_phentsize;
+    Elf32_Half  e_phnum;
+    Elf32_Half  e_shentsize;
+    Elf32_Half  e_shnum;
+    Elf32_Half  e_shstrndx;
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _Elf32_Ehdr Elf32_Ehdr;
@@ -81,16 +81,16 @@ typedef struct _Elf32_Ehdr Elf32_Ehdr;
 K2_PACKED_PUSH
 struct _Elf32_Shdr 
 {
-    Elf32_Word	sh_name;
-    Elf32_Word	sh_type;
-    Elf32_Word	sh_flags;
-    Elf32_Addr	sh_addr;
-    Elf32_Off	sh_offset;
-    Elf32_Word	sh_size;
-    Elf32_Word	sh_link;
-    Elf32_Word	sh_info;
-    Elf32_Word	sh_addralign;
-    Elf32_Word	sh_entsize;
+    Elf32_Word    sh_name;
+    Elf32_Word    sh_type;
+    Elf32_Word    sh_flags;
+    Elf32_Addr    sh_addr;
+    Elf32_Off     sh_offset;
+    Elf32_Word    sh_size;
+    Elf32_Word    sh_link;
+    Elf32_Word    sh_info;
+    Elf32_Word    sh_addralign;
+    Elf32_Word    sh_entsize;
 } K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _Elf32_Shdr Elf32_Shdr;
@@ -98,9 +98,9 @@ typedef struct _Elf32_Shdr Elf32_Shdr;
 K2_PACKED_PUSH
 struct _Elf32_Chdr 
 {
-    Elf32_Word	ch_type;
-    Elf32_Word	ch_size;
-    Elf32_Word	ch_addralign;
+    Elf32_Word    ch_type;
+    Elf32_Word    ch_size;
+    Elf32_Word    ch_addralign;
 }  K2_PACKED_ATTRIB;
 K2_PACKED_POP
 typedef struct _Elf32_Chdr Elf32_Chdr;
