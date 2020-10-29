@@ -52,6 +52,7 @@ K2ReadOnlyMappedFile * K2ReadOnlyMappedFile::Create(char const *apFileName)
 	HANDLE                  hFile;
 	LARGE_INTEGER           liSize;
 	K2ReadOnlyMappedFile *  pRet;
+	FILETIME				fileTime;
 
 	if ((apFileName == NULL) ||
 		((*apFileName) == 0))
@@ -72,6 +73,9 @@ K2ReadOnlyMappedFile * K2ReadOnlyMappedFile::Create(char const *apFileName)
 		if (!GetFileSizeEx(hFile, &liSize))
 			break;
 
+		if (!GetFileTime(hFile, NULL, NULL, &fileTime))
+			break;
+
 		if (liSize.HighPart != 0)
 			break;  /* file is too big */
 
@@ -81,7 +85,7 @@ K2ReadOnlyMappedFile * K2ReadOnlyMappedFile::Create(char const *apFileName)
 
 		pData = MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
 		if (pData != NULL)
-			pRet = new K2ReadOnlyMappedFile(apFileName, hFile, hMap, liSize.QuadPart, pData);
+			pRet = new K2ReadOnlyMappedFile(apFileName, hFile, hMap, liSize.QuadPart, fileTime, pData);
 
 	} while (false);
 
@@ -102,6 +106,7 @@ K2ReadWriteMappedFile * K2ReadWriteMappedFile::Create(char const *apFileName)
 	HANDLE                  hFile;
 	LARGE_INTEGER           liSize;
 	K2ReadWriteMappedFile * pRet;
+	FILETIME				fileTime;
 
 	if ((apFileName == NULL) ||
 		((*apFileName) == 0))
@@ -122,6 +127,9 @@ K2ReadWriteMappedFile * K2ReadWriteMappedFile::Create(char const *apFileName)
 		if (!GetFileSizeEx(hFile, &liSize))
 			break;
 
+		if (!GetFileTime(hFile, NULL, NULL, &fileTime))
+			break;
+
 		if (liSize.HighPart != 0)
 			break;  /* file is too big */
 
@@ -131,7 +139,7 @@ K2ReadWriteMappedFile * K2ReadWriteMappedFile::Create(char const *apFileName)
 
 		pData = MapViewOfFile(hMap, FILE_MAP_COPY, 0, 0, 0);
 		if (pData != NULL)
-			pRet = new K2ReadWriteMappedFile(apFileName, hFile, hMap, liSize.QuadPart, pData);
+			pRet = new K2ReadWriteMappedFile(apFileName, hFile, hMap, liSize.QuadPart, fileTime, pData);
 
 	} while (false);
 

@@ -433,6 +433,7 @@ static void sDirify(K2ZIPFILE_DIR *pThisDir, K2ZIPFILE_ENTRY *apEntries, UINT32 
     pNewDir->mpNameOnly = apEntries->mpNameOnly;
     pNewDir->mNameOnlyLen = subLen;
     pNewDir->mpNextSib = NULL;
+    pNewDir->mUserVal = 0;
     if (!pThisDir->mpSubDirList)
         pThisDir->mpSubDirList = pNewDir;
     else
@@ -477,11 +478,11 @@ static void sDirify(K2ZIPFILE_DIR *pThisDir, K2ZIPFILE_ENTRY *apEntries, UINT32 
 
 K2STAT
 K2ZIPFILE_CreateParse(
-    UINT8 const *           apFileData,
-    UINT32                  aFileBytes,
-    K2ZIPFILE_pf_Alloc      afAlloc,
-    K2ZIPFILE_pf_Free       afFree,
-    K2ZIPFILE_DIR const **  appRetDir
+    UINT8 const *       apFileData,
+    UINT32              aFileBytes,
+    K2ZIPFILE_pf_Alloc  afAlloc,
+    K2ZIPFILE_pf_Free   afFree,
+    K2ZIPFILE_DIR **    appRetDir
 )
 {
     UINT8 const *           pScan;
@@ -496,7 +497,7 @@ K2ZIPFILE_CreateParse(
     UINT32                  dirCount;
     K2ZIPFILE_DIR *         pThisDir;
 
-    if (!appRetDir)
+    if ((apFileData == NULL) || (aFileBytes==0) || (!appRetDir) || (afAlloc == NULL) || (afFree == NULL))
         return K2STAT_ERROR_BAD_ARGUMENT;
     *appRetDir = NULL;
 
@@ -522,6 +523,8 @@ K2ZIPFILE_CreateParse(
         pWorkFile->mpNameOnly = ((char const *)pScan) + sizeof(ZIPFILE_RAW_FILEENTRY);
         pWorkFile->mNameOnlyLen = entry.mFileNameLen;
         pWorkFile->mCompBytes = entry.mCompSizeBytes;
+        pWorkFile->mDosDateTime = entry.mDosDateTime;
+        pWorkFile->mUserVal = 0;
         pWorkFile++;
         pScan += sZIP_EntryBytes(&entry);
     }
@@ -568,10 +571,12 @@ K2ZIPFILE_CreateParse(
         K2MEM_Copy(&entry, pScan, sizeof(ZIPFILE_RAW_FILEENTRY));
         pWorkFile->mpNameOnly = ((char const *)pScan) + sizeof(ZIPFILE_RAW_FILEENTRY);
         pWorkFile->mNameOnlyLen = entry.mFileNameLen;
-        pWorkFile->mpCompData = ((UINT8 const *)pWorkFile->mpNameOnly) + entry.mFileNameLen + entry.mExtraLen;
+        pWorkFile->mpCompData = ((UINT8 *)pWorkFile->mpNameOnly) + entry.mFileNameLen + entry.mExtraLen;
         pWorkFile->mCompBytes = entry.mCompSizeBytes;
         pWorkFile->mUncompBytes = entry.mUncompSizeBytes;
         pWorkFile->mUncompCRC = entry.mCRC;
+        pWorkFile->mDosDateTime = entry.mDosDateTime;
+        pWorkFile->mUserVal = 0;
         pWorkFile++;
         pScan += sZIP_EntryBytes(&entry);
     }

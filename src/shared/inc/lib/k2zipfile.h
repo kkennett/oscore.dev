@@ -51,10 +51,14 @@ struct _K2ZIPFILE_ENTRY
     char const *    mpNameOnly;
     UINT32          mNameOnlyLen;
 
-    UINT8 const *   mpCompData;
+    UINT32          mDosDateTime;
+
+    UINT8 *         mpCompData;
     UINT32          mCompBytes;
     UINT32          mUncompBytes;
     UINT32          mUncompCRC;
+
+    UINT32          mUserVal;
 };
 
 struct _K2ZIPFILE_DIR
@@ -67,6 +71,8 @@ struct _K2ZIPFILE_DIR
     K2ZIPFILE_ENTRY *   mpEntryArray;
     K2ZIPFILE_DIR *     mpSubDirList;
     K2ZIPFILE_DIR *     mpNextSib;
+
+    UINT32              mUserVal;
 };
 
 typedef void * (*K2ZIPFILE_pf_Alloc)(UINT32 aBytes);
@@ -74,11 +80,11 @@ typedef void   (*K2ZIPFILE_pf_Free)(void *apAddr);
 
 K2STAT 
 K2ZIPFILE_CreateParse(
-    UINT8 const *           apFileData,
-    UINT32                  aFileBytes,
-    K2ZIPFILE_pf_Alloc      afAlloc,
-    K2ZIPFILE_pf_Free       afFree,
-    K2ZIPFILE_DIR const **  appRetDir
+    UINT8 const *       apFileData,
+    UINT32              aFileBytes,
+    K2ZIPFILE_pf_Alloc  afAlloc,
+    K2ZIPFILE_pf_Free   afFree,
+    K2ZIPFILE_DIR  **   appRetDir
 );
 
 

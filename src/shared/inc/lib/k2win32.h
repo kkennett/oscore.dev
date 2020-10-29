@@ -63,12 +63,18 @@ public:
         return (UINT32)(mFileBytes & 0xFFFFFFFF);
     }
 
+    FILETIME const & FileTime(void) const
+    {
+        return mFileTime;
+    }
+
 protected:
-    K2MappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, void *apMapped) :
+    K2MappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, FILETIME const &aFileTime, void *apMapped) :
         mhFile(ahFile),
         mhMap(ahMap),
         mFileBytes(aFileBytes),
-        mpMapped(apMapped)
+        mpMapped(apMapped),
+        mFileTime(aFileTime)
     {
         int copyLen = (int)strlen(apFileName);
         mpFileName = new char[copyLen+4];
@@ -89,6 +95,7 @@ protected:
     HANDLE const    mhFile;
     HANDLE const    mhMap;
     UINT64 const    mFileBytes;
+    FILETIME const  mFileTime;
     void * const    mpMapped;
 };
 
@@ -102,8 +109,8 @@ public:
         return mpMapped;
     }
 private:
-    K2ReadOnlyMappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, void const *apMapped) :
-        K2MappedFile(apFileName, ahFile, ahMap, aFileBytes, (void *)apMapped)
+    K2ReadOnlyMappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, FILETIME const &aFileTime, void const *apMapped) :
+        K2MappedFile(apFileName, ahFile, ahMap, aFileBytes, aFileTime, (void *)apMapped)
     {
     }
 };
@@ -118,8 +125,8 @@ public:
         return mpMapped;
     }
 private:
-    K2ReadWriteMappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, void *apMapped) :
-        K2MappedFile(apFileName, ahFile, ahMap, aFileBytes, apMapped)
+    K2ReadWriteMappedFile(char const *apFileName, HANDLE ahFile, HANDLE ahMap, UINT64 aFileBytes, FILETIME const &aFileTime, void *apMapped) :
+        K2MappedFile(apFileName, ahFile, ahMap, aFileBytes, aFileTime, apMapped)
     {
     }
 };
