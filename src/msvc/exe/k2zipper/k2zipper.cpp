@@ -35,6 +35,35 @@
 #include <lib/zlib.h>
 #include <lib/k2crc.h>
 
+
+typedef struct _K2ROFS_FILE K2ROFS_FILE;
+typedef struct _K2ROFS_DIR  K2ROFS_DIR;
+typedef struct _K2ROFS      K2ROFS;
+
+struct _K2ROFS
+{
+    UINT32  mSectorCount;       // in entire ROFS
+    UINT32  mRootDir;           // byte offset from K2ROFS to K2ROFS_DIR of root
+    UINT32  mStringField;       // byte offset from K2ROFS to char array for names
+};
+
+struct _K2ROFS_DIR
+{
+    UINT32  mName;              // offset in stringfield
+    UINT32  mSubCount;          // number of subdirectories
+    UINT32  mFileCount;         // number of files
+    // K2ROFS_FILE * mFileCount
+    // K2ROFS_DIR offsets from K2ROFS * mSubCount
+};
+
+struct _K2ROFS_FILE
+{
+    UINT32  mName;              // offset in stringfield
+    UINT32  mTime;              // dos datetime
+    UINT32  mStartSectorOffset; // sector offset from ROFS
+    UINT32  mSizeBytes;         // round up to 512 and divide to get sector count
+};
+
 static
 void
 K2_CALLCONV_REGS
@@ -49,241 +78,182 @@ myAssert(
 
 extern "C" K2_pf_ASSERT K2_Assert = myAssert;
 
-void * intZalloc(void *pOpaque, unsigned int nItems, unsigned int nSize)
+class RofsFile;
+
+UINT32 gStringFieldSize = 0;
+
+class RofsDir
 {
-    return malloc(nItems * nSize);
-}
-
-void intZfree(void *pOpaque, void *ptr)
-{
-    free(ptr);
-}
-
-bool sCheckDiff(char const *pPath, char *pPathEnd, K2ZIPFILE_DIR * pWorkDir, bool *apFatal)
-{
-    UINT                    ix;
-    DWORD                   fAttr;
-    bool                    retVal;
-    FILETIME                localFileTime;
-    WORD                    fatDate;
-    WORD                    fatTime;
-    DWORD                   dosDateTime;
-    K2ReadOnlyMappedFile *  pExistingFile;
-    bool                    thisFileChanged;
-    UINT32                  unCompCrc;
-    K2ZIPFILE_DIR *         pSub;
-    z_stream                stream;
-    int                     zErr;
-    K2ZIPFILE_ENTRY         entry;
-
-    retVal = false;
-    *apFatal = false;
-    dosDateTime = 0;
-    unCompCrc = 0;
-
-    for (ix = 0; ix < pWorkDir->mNumEntries; ix++)
+public:
+    RofsDir(RofsDir *apParent) :
+        mpParent(apParent)
     {
-        strncpy_s(pPathEnd, _MAX_PATH - 1 - ((UINT32)(pPathEnd - pPath)),
-            pWorkDir->mpEntryArray[ix].mpNameOnly, pWorkDir->mpEntryArray[ix].mNameOnlyLen);
-        pPathEnd[pWorkDir->mpEntryArray[ix].mNameOnlyLen] = 0;
+        mpName = NULL;
+        mNameLen = 0;
+        mSubCount = 0;
+        mpSubs = NULL;
+        mFileCount = 0;
+        mpFiles = NULL;
+        mpTarget = NULL;
 
-        fAttr = GetFileAttributes(pPath);
-        if ((fAttr == INVALID_FILE_ATTRIBUTES) ||
-            (fAttr & FILE_ATTRIBUTE_DIRECTORY))
+        if (apParent != NULL)
         {
-            printf("k2zipper: could not get attributes of \"%s\". Assuming it's gone.\n", pPath);
-            thisFileChanged = true;
-            pWorkDir->mpEntryArray[ix].mUserVal = 0xFFFFFFFF;
-            continue;
+            mpParentNextSubLink = apParent->mpSubs;
+            apParent->mpSubs = this;
+            apParent->mSubCount++;
         }
-
-        pExistingFile = K2ReadOnlyMappedFile::Create(pPath);
-        if (pExistingFile == NULL)
-        {
-            printf("k2zipper: could not map in \"%s\"\n", pPath);
-            *apFatal = true;
-            return true;
-        }
-
-        do {
-            thisFileChanged = false;
-
-            if (pWorkDir->mpEntryArray[ix].mUncompBytes != pExistingFile->FileBytes())
-            {
-                printf("k2zipper: different file size \"%s\"\n", pPath);
-                thisFileChanged = true;
-                break;
-            }
-
-            if ((!FileTimeToLocalFileTime(&pExistingFile->FileTime(), &localFileTime)) ||
-                (!FileTimeToDosDateTime(&localFileTime, &fatDate, &fatTime)))
-            {
-                printf("\nk2zipper: could not convert file time of \"%s\"\n\n", pPath);
-                thisFileChanged = true;
-                *apFatal = true;
-                break;
-            }
-
-            dosDateTime = (((UINT32)fatDate) << 16) | (((UINT32)fatTime) & 0xFFFF);
-            if (pWorkDir->mpEntryArray[ix].mDosDateTime != dosDateTime)
-            {
-                printf("k2zipper: different file time \"%s\"\n", pPath);
-                thisFileChanged = true;
-                break;
-            }
-
-            unCompCrc = K2CRC_Calc32(0, pExistingFile->DataPtr(), pExistingFile->FileBytes());
-            if (pWorkDir->mpEntryArray[ix].mUncompCRC != unCompCrc)
-            {
-                printf("k2zipper: different content \"%s\"\n", pPath);
-                thisFileChanged = true;
-                break;
-            }
-
-        } while (false);
-
-        if (!(*apFatal))
-        {
-            if (thisFileChanged)
-            {
-                // 
-                // compress the new file, update the entry, and point to it instead
-                //
-                retVal = true;
-
-                K2MEM_Copy(&entry, &pWorkDir->mpEntryArray[ix], sizeof(K2ZIPFILE_ENTRY));
-
-                entry.mDosDateTime = dosDateTime;
-                entry.mUncompBytes = pExistingFile->FileBytes();
-                entry.mUncompCRC = unCompCrc;
-                entry.mCompBytes = 0;
-                entry.mpCompData = (UINT8 *)malloc(entry.mUncompBytes * 2);
-
-                K2MEM_Zero(&stream, sizeof(stream));
-
-                stream.zalloc = intZalloc;
-                stream.zfree = intZfree;
-                stream.opaque = NULL;
-
-                zErr = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
-                if (zErr != Z_OK)
-                {
-                    printf("k2zipper: could not initialize compressor for \"%s\"\n", pPath);
-                    *apFatal = true;
-                }
-                else
-                {
-                    stream.next_out = entry.mpCompData;
-                    stream.avail_out = entry.mUncompBytes * 2;
-                    stream.next_in = (z_const Bytef *)pExistingFile->DataPtr();
-                    stream.avail_in = entry.mUncompBytes;
-
-                    zErr = deflate(&stream, Z_FINISH);
-                    if (zErr != Z_STREAM_END)
-                    {
-                        printf("k2zipper: compressor failed for \"%s\"\n", pPath);
-                        *apFatal = true;
-                    }
-                    else
-                    {
-                        entry.mCompBytes = stream.total_out;
-                        entry.mUserVal = 1;
-                        K2MEM_Copy(&pWorkDir->mpEntryArray[ix], &entry, sizeof(K2ZIPFILE_ENTRY));
-                    }
-
-                    deflateEnd(&stream);
-                }
-            }
-            else
-            {
-                //
-                // compressed file is the same as the one on disk
-                //
-                printf(" k2zipper: same \"%s\"\n", pPath);
-                pWorkDir->mpEntryArray[ix].mUserVal = 0;
-            }
-        }
-
-        pExistingFile->Release();
-
-        if (*apFatal)
-            return true;
+        else
+            mpParentNextSubLink = NULL;
     }
 
-    pSub = pWorkDir->mpSubDirList;
-    if (pSub != NULL)
+    int Init(char const *apName)
     {
-        do {
-            strncpy_s(pPathEnd, _MAX_PATH - 1 - ((UINT32)(pPathEnd - pPath)),
-                pSub->mpNameOnly, pSub->mNameOnlyLen);
-            pPathEnd[pSub->mNameOnlyLen] = 0;
-
-            fAttr = GetFileAttributes(pPath);
-            if ((fAttr == INVALID_FILE_ATTRIBUTES) ||
-                (!(fAttr & FILE_ATTRIBUTE_DIRECTORY)))
-            {
-                printf("k2zipper: could not get attributes of dir \"%s\". Assuming it's gone.\n", pPath);
-                pSub->mUserVal = 0xFFFFFFFF;
-            }
-            else
-            {
-                pPathEnd[pSub->mNameOnlyLen] = '\\';
-                pPathEnd[pSub->mNameOnlyLen + 1] = 0;
-
-                thisFileChanged = sCheckDiff(pPath, pPathEnd + pSub->mNameOnlyLen + 1, pSub, apFatal);
-                if (*apFatal)
-                    return true;
-
-                if (thisFileChanged)
-                {
-                    pSub->mUserVal = 1;
-                    retVal = true;
-                }
-                else
-                    pSub->mUserVal = 0;
-            }
-
-            pSub = pSub->mpNextSib;
-        } while (pSub != NULL);
+        mNameLen = strlen(apName);
+        gStringFieldSize += mNameLen + 1;
+        mpName = new char[(mNameLen + 4) & ~3];
+        if (mpName == NULL)
+            return K2STAT_ERROR_OUT_OF_MEMORY;
+        strcpy_s(mpName, mNameLen + 1, apName);
+        return 0;
     }
 
-    return retVal;
+    ~RofsDir(void);
+
+    RofsDir * const mpParent;
+    UINT32          mSubCount;
+    RofsDir *       mpSubs;
+    RofsDir *       mpParentNextSubLink;
+    UINT32          mFileCount;
+    RofsFile *      mpFiles;
+    char *          mpName;
+    UINT32          mNameLen;
+    K2ROFS_DIR *    mpTarget;
+};
+
+class RofsFile
+{
+public:
+    RofsFile(RofsDir *apParent) :
+        mpParent(apParent)
+    {
+        mpName = NULL;
+        mNameLen = 0;
+        mpTarget = NULL;
+        mpParentNextFileLink = apParent->mpFiles;
+        apParent->mpFiles = this;
+        apParent->mFileCount++;
+        mpMap = NULL;
+    }
+
+    int Init(char const *apPath, char const *apNameOnly)
+    {
+        mNameLen = strlen(apNameOnly);
+        gStringFieldSize += mNameLen + 1;
+        mpName = new char[(mNameLen + 4) & ~3];
+        if (mpName == NULL)
+            return K2STAT_ERROR_OUT_OF_MEMORY;
+        strcpy_s(mpName, mNameLen + 1, apNameOnly);
+
+        mpMap = K2ReadOnlyMappedFile::Create(apPath);
+        if (mpMap == NULL)
+            return K2STAT_ERROR_OUT_OF_MEMORY;
+
+        return 0;
+    }
+
+    ~RofsFile(void)
+    {
+        if (mpMap != NULL)
+        {
+            mpMap->Release();
+            mpMap = NULL;
+        }
+        if (mpName != NULL)
+            delete[] mpName;
+    }
+
+    RofsDir * const         mpParent;
+    char *                  mpName;
+    UINT32                  mNameLen;
+    K2ReadOnlyMappedFile *  mpMap;
+    RofsFile *              mpParentNextFileLink;
+    K2ROFS_FILE *           mpTarget;
+};
+
+RofsDir::~RofsDir(void)
+{
+    RofsDir  *pSub;
+    RofsFile *pFile;
+
+    while (mpSubs)
+    {
+        pSub = mpSubs;
+        mpSubs = pSub->mpParentNextSubLink;
+        delete pSub;
+    }
+
+    while (mpFiles)
+    {
+        pFile = mpFiles;
+        mpFiles = pFile->mpParentNextFileLink;
+        delete pFile;
+    }
 }
 
-bool sCheckForNew(char const *pPath, char *pPathEnd, K2ZIPFILE_DIR * pWorkDir, bool *apFatal)
+RofsDir *   gpRoot = NULL;
+
+int LoadOne(RofsDir *apTarget, char const *apPath, char *apEnd)
 {
     HANDLE          hFind;
     WIN32_FIND_DATA findData;
     UINT32          nameLen;
-    bool            subNew;
     bool            retVal;
+    RofsDir *       pSub;
+    RofsFile *      pFile;
 
     retVal = false;
 
-    strcpy_s(pPathEnd, _MAX_PATH - 1 - ((UINT32)(pPathEnd - pPath)), "*.*");
-    pPathEnd[3] = 0;
+    strcpy_s(apEnd, _MAX_PATH - 1 - ((UINT32)(apEnd - apPath)), "*.*");
+    apEnd[3] = 0;
 
-    hFind = FindFirstFile(pPath, &findData);
+    hFind = FindFirstFile(apPath, &findData);
     if (hFind == INVALID_HANDLE_VALUE)
-        return false;
+        return ERROR_FILE_NOT_FOUND;
+
     do {
         nameLen = strlen(findData.cFileName);
 
-        strncpy_s(pPathEnd, _MAX_PATH - 1 - ((UINT32)(pPathEnd - pPath)),
+        strncpy_s(apEnd, _MAX_PATH - 1 - ((UINT32)(apEnd - apPath)),
             findData.cFileName, nameLen);
-        pPathEnd[nameLen] = 0;
+        apEnd[nameLen] = 0;
 
         if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
         {
             if ((0 != strcmp(findData.cFileName, ".")) &&
                 (0 != strcmp(findData.cFileName, "..")))
             {
-                pPathEnd[nameLen] = '\\';
-                pPathEnd[nameLen + 1] = 0;
-                subNew = sCheckForNew(pPath, pPathEnd + nameLen + 1, pWorkDir, apFatal);
-                if (subNew)
-                    retVal = true;
+                apEnd[nameLen] = '\\';
+                apEnd[nameLen + 1] = 0;
+
+                pSub = new RofsDir(apTarget);
+                if (pSub == NULL)
+                    return K2STAT_ERROR_OUT_OF_MEMORY;
+                retVal = pSub->Init(findData.cFileName);
+                if (retVal != 0)
+                    return retVal;
+                retVal = LoadOne(pSub, apPath, apEnd + nameLen + 1);
+                if (retVal != 0)
+                    return retVal;
             }
+        }
+        else
+        {
+            pFile = new RofsFile(apTarget);
+            if (pFile == NULL)
+                return K2STAT_ERROR_OUT_OF_MEMORY;
+            retVal = pFile->Init(apPath, findData.cFileName);
+            if (retVal != 0)
+                return retVal;
         }
 
     } while (FindNextFile(hFind, &findData));
@@ -291,20 +261,235 @@ bool sCheckForNew(char const *pPath, char *pPathEnd, K2ZIPFILE_DIR * pWorkDir, b
     return retVal;
 }
 
+int LoadItAll(char const *apPath, char *apEnd)
+{
+    int         result;
+
+    gpRoot = new RofsDir(NULL);
+    if (gpRoot == NULL)
+        return K2STAT_ERROR_OUT_OF_MEMORY;
+    
+    result = gpRoot->Init("\\");
+
+    if (result == 0)
+        result = LoadOne(gpRoot, apPath, apEnd);
+
+    if (result != 0)
+        delete gpRoot;
+
+    return result;
+}
+
+static UINT32 sCount(RofsDir *apDir, UINT32 *apPayloadSectors)
+{
+    UINT32      ret;
+    RofsDir *   pSub;
+    RofsFile *  pFile;
+
+    ret = sizeof(K2ROFS_DIR);
+    ret += apDir->mFileCount * sizeof(K2ROFS_FILE);
+    ret += apDir->mSubCount * sizeof(UINT32);
+
+    pFile = apDir->mpFiles;
+    while (pFile != NULL)
+    {
+        *apPayloadSectors += ((pFile->mpMap->FileBytes() + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+        pFile = pFile->mpParentNextFileLink;
+    }
+
+    pSub = apDir->mpSubs;
+    while (pSub != NULL)
+    {
+        ret += sCount(pSub, apPayloadSectors);
+        pSub = pSub->mpParentNextSubLink;
+    }
+
+    return ret;
+}
+
+static void sFill(UINT8 *apBase, UINT8 **apWork, RofsDir *apDir, char **apStrings, UINT8 **apPayload)
+{
+    K2ROFS_DIR *    pOutDir;
+    RofsFile *      pFile;
+    RofsDir *       pSub;
+    UINT32          payloadSectors;
+    K2ROFS_FILE *   pOutFile;
+    FILETIME        localFileTime;
+    UINT32 *        pOffsets;
+
+    pOutDir = (K2ROFS_DIR *)(*apWork);
+    apDir->mpTarget = pOutDir;
+    (*apWork) += sizeof(K2ROFS_DIR);
+
+    pOutDir->mName = (UINT32)((*apStrings) - (char *)apBase);
+    K2MEM_Copy((*apStrings), apDir->mpName, apDir->mNameLen);
+    (*apStrings) += apDir->mNameLen + 1;
+
+    pOutDir->mFileCount = apDir->mFileCount;
+
+    pFile = apDir->mpFiles;
+    while (pFile)
+    {
+        pOutFile = (K2ROFS_FILE *)(*apWork);
+        pFile->mpTarget = pOutFile;
+        (*apWork) += sizeof(K2ROFS_FILE);
+
+        pOutFile->mName = (UINT32)((*apStrings) - (char *)apBase);
+        K2MEM_Copy((*apStrings), pFile->mpName, pFile->mNameLen);
+        (*apStrings) += pFile->mNameLen + 1;
+
+        pOutFile->mSizeBytes = pFile->mpMap->FileBytes();
+        pOutFile->mStartSectorOffset = ((UINT32)((*apPayload) - apBase)) / DLX_SECTOR_BYTES;
+
+        payloadSectors = ((pFile->mpMap->FileBytes() + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+        K2MEM_Copy((*apPayload), pFile->mpMap->DataPtr(), pFile->mpMap->FileBytes());
+        (*apPayload) += payloadSectors * DLX_SECTOR_BYTES;
+
+        FileTimeToLocalFileTime(&pFile->mpMap->FileTime(), &localFileTime);
+        FileTimeToDosDateTime(&localFileTime, ((WORD *)&pOutFile->mTime) + 1, ((WORD *)&pOutFile->mTime));
+
+        pFile = pFile->mpParentNextFileLink;
+    }
+
+    pOutDir->mSubCount = apDir->mSubCount;
+    pOffsets = (UINT32 *)(*apWork);
+    (*apWork) += apDir->mSubCount * sizeof(UINT32);
+
+    pSub = apDir->mpSubs;
+    while (pSub)
+    {
+        *pOffsets = (UINT32)((*apWork) - apBase);
+        pOffsets++;
+
+        sFill(apBase, apWork, pSub, apStrings, apPayload);
+
+        pSub = pSub->mpParentNextSubLink;
+    }
+}
+
+static void sPrefix(int aLevel)
+{
+    while (aLevel)
+    {
+        --aLevel;
+        printf(" ");
+    }
+}
+
+static void sDumpDir(UINT8 const *apBase, K2ROFS_DIR const *apDir, int aLevel)
+{
+    UINT32              ix;
+    K2ROFS_FILE const * pFiles;
+    UINT32 const *      pOffsets;
+    UINT8 const *       pPayload;
+
+    sPrefix(aLevel);
+
+    printf("[%s]\n", ((char const *)apBase) + apDir->mName);
+
+    pFiles = (K2ROFS_FILE const *)(((UINT8 *)apDir) + sizeof(K2ROFS_DIR));
+    pOffsets = (UINT32 const *)(((UINT8 *)pFiles) + (apDir->mFileCount * sizeof(K2ROFS_FILE)));
+
+    for (ix = 0; ix < apDir->mFileCount; ix++)
+    {
+        sPrefix(aLevel + 2);
+        pPayload = apBase + (pFiles[ix].mStartSectorOffset * DLX_SECTOR_BYTES);
+        printf(" %8d %08X %s\n", pFiles[ix].mSizeBytes, (UINT32)pPayload, (char *)(pFiles[ix].mName + apBase));
+    }
+
+    for (ix = 0; ix < apDir->mSubCount; ix++)
+    {
+        sDumpDir(apBase, (K2ROFS_DIR *)(apBase + pOffsets[ix]), aLevel + 2);
+    }
+}
+
+static void sDump(K2ROFS const *apRofs)
+{
+    sDumpDir((UINT8 const *)apRofs, (K2ROFS_DIR const *)(((UINT8 const *)apRofs) + apRofs->mRootDir), 0);
+}
+
+int CreateOutputFile(char const *apOutFileName)
+{
+    UINT32      totalOut;
+    UINT32      payloadSectors;
+    UINT8 *     pAlloc;
+    UINT8 *     pOutRaw;
+    UINT8 *     pOutWork;
+    K2ROFS *    pROFS;
+    UINT32      stringsOffset;
+    UINT32      payloadsOffset;
+    char *      pStrings;
+    UINT8 *     pPayloads;
+    HANDLE      hFile;
+    DWORD       wrote;
+    BOOL        ok;
+
+    totalOut = sizeof(K2ROFS);
+    payloadSectors = 0;
+
+    totalOut += sCount(gpRoot, &payloadSectors);
+
+    // add strings at the end of the dir structure
+    stringsOffset = totalOut;
+    totalOut += gStringFieldSize;
+
+    // round up, convert to sectors
+    totalOut = ((totalOut + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+    
+    // now add all the payloads
+    payloadsOffset = totalOut * DLX_SECTOR_BYTES;
+    totalOut += payloadSectors;
+
+    // alloc aligned
+    pAlloc = (UINT8 *)malloc((totalOut * DLX_SECTOR_BYTES) + (DLX_SECTOR_BYTES-1));
+    pOutRaw = (UINT8 *)((((UINT32)pAlloc) + (DLX_SECTOR_BYTES - 1)) & DLX_SECTORINDEX_MASK);
+
+    K2MEM_Zero(pOutRaw, totalOut * DLX_SECTOR_BYTES);
+
+    pOutWork = pOutRaw;
+    pStrings = (char *)pOutRaw + stringsOffset;
+    pPayloads = pOutRaw + payloadsOffset;
+
+    pROFS = (K2ROFS *)pOutWork;
+    pROFS->mRootDir = sizeof(K2ROFS);
+    pROFS->mSectorCount = totalOut;
+    pROFS->mStringField = stringsOffset;
+
+    pOutWork += sizeof(K2ROFS);
+
+    sFill(pOutRaw, &pOutWork, gpRoot, &pStrings, &pPayloads);
+
+    sDump(pROFS);
+
+    hFile = CreateFile(apOutFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+    {
+        printf("\n***k2zipper - could not create target file \"%s\"\n", apOutFileName);
+        return GetLastError();
+    }
+    ok = WriteFile(hFile, pOutRaw, totalOut * DLX_SECTOR_BYTES, &wrote, NULL);
+    if (!ok)
+    {
+        printf("\n***k2zipper - failed to write output file\n");
+    }
+
+    CloseHandle(hFile);
+
+    free(pAlloc);
+
+    return ok ? 0 : -1;
+}
+
 int main(int argc, char **argv)
 {
-    K2STAT                  stat;
-    DWORD                   fAttr;
-    char                    dirPath[_MAX_PATH];
-    char *                  pEnd;
-    bool                    someDiff;
-    K2ReadOnlyMappedFile *  pExistingFile;
-    K2ZIPFILE_DIR *         pExistingRootDir;
-    bool                    fatalError;
+    DWORD   fAttr;
+    char    dirPath[_MAX_PATH];
+    char *  pEnd;
+    int     result;
 
     if (argc < 3)
     {
-        printf("\nk2zipper: need dir target and existing/target filename\n\n");
+        printf("\nk2zipper: need source dir and target filename\n\n");
         return -1;
     }
 
@@ -331,48 +516,13 @@ int main(int argc, char **argv)
     else
         pEnd++;
 
-    fatalError = false;
+    result = LoadItAll(dirPath, pEnd);
+    if (result != 0)
+        return result;
 
-    pExistingFile = K2ReadOnlyMappedFile::Create(argv[2]);
-    pExistingRootDir = NULL;
-    if (pExistingFile != NULL)
-    {
-        stat = K2ZIPFILE_CreateParse((UINT8 const *)pExistingFile->DataPtr(), pExistingFile->FileBytes(), malloc, free, &pExistingRootDir);
-        if (K2STAT_IS_ERROR(stat))
-        {
-            printf("\nk2zipper: existing target file is not parseable as a ZIP file\n\n");
-            return -3;
-        }
+    result = CreateOutputFile(argv[2]);
 
-        someDiff = sCheckDiff(dirPath, pEnd, pExistingRootDir, &fatalError);
-    }
-    else
-        someDiff = true;
+    delete gpRoot;
 
-    if (fatalError)
-    {
-        printf("\nk2zipper: fatal error\n");
-        if (pExistingFile != NULL)
-        {
-            if (pExistingRootDir)
-                free(pExistingRootDir);
-            pExistingFile->Release();
-        }
-        return -4;
-    }
-
-    //
-    // now we scan the source dir for new files that weren't there before
-    //
-    someDiff = sCheckForNew(dirPath, pEnd, pExistingRootDir, &fatalError);
-
-    if (!someDiff)
-    {
-        printf("\nk2zipper: no diff\n");
-        return 0;
-    }
-
-//    ghOutFile = CreateFile(argv[2], GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    return 0;
+    return result;
 }
