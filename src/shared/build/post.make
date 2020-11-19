@@ -49,7 +49,11 @@ else
 ifeq ($(TARGET_TYPE),DLX)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
 else
+ifeq ($(TARGET_TYPE),BUILTIN)
+K2_TARGET_PATH := $(K2_TARGET_BASE)/builtin/$(K2_BUILD_SPEC)
+else
 K2_TARGET_PATH := $(K2_TARGET_BASE)/elf/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+endif
 endif
 endif
 endif
@@ -282,6 +286,73 @@ $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 endif
 
 #========================================================================================
+# BUILTIN
+#========================================================================================
+ifeq ($(TARGET_TYPE),BUILTIN)
+
+K2_TARGET_TYPE_DEFINED := TRUE
+
+ifeq ($(K2_ARCH),X32)
+KERN_STOCK_SOURCE_DLX := @os/crt/crtkern/x32/k2oscrt
+KERN_STOCK_SOURCE_DLX += @os/kern/x32/k2oskern 
+else
+ifeq ($(K2_ARCH),A32)
+KERN_STOCK_SOURCE_DLX := @os/crt/crtkern/a32/k2oscrt
+KERN_STOCK_SOURCE_DLX += @os/kern/a32/k2oskern 
+else
+$(error unknown arch)
+endif
+endif
+
+KERN_STOCK_SOURCE_DLX += @os/kern/k2osexec
+KERN_STOCK_SOURCE_DLX += @os/kern/k2osacpi
+
+KERN_STOCK_SOURCE_DLX += $(IMAGE_HAL)
+
+K2_TARGET_NAME_SPEC := builtin.img
+K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME)/$(K2_TARGET_NAME_SPEC)
+
+CHECK_REFSRC_ONE_K2_LIB = checkref_$(1)
+CHECK_REFSRC_ONE_LIB = $(if $(findstring @,$(libdep)), $(call CHECK_REFSRC_ONE_K2_LIB,$(subst @,,$(libdep))),$(libdep))
+CHECK_REFSRC_KERN_DLX = $(foreach libdep,$(KERN_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
+CHECK_REFSRC_DLX = $(foreach libdep,$(SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
+
+CHECK_STOCK_KERN_DLX = $(foreach libdep,$(KERN_STOCK_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
+
+default: $(CHECK_STOCK_KERN_DLX) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX) $(K2_TARGET_FULL_SPEC)
+
+$(CHECK_STOCK_KERN_DLX) $(CHECK_REFSRC_DLX) $(CHECK_REFSRC_KERN_DLX):
+	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
+
+GEN_ONE_IMAGE_DLX = $(K2_TARGET_PATH)\builtin\$(notdir $(1)).dlx
+GEN_ONE_IMAGE_KERN_DLX = $(K2_TARGET_PATH)\builtin\kern\$(notdir $(1)).dlx
+
+REFSRCDLX = $(foreach dlxdep,$(SOURCE_DLX),$(call GEN_ONE_IMAGE_DLX,$(dlxdep)))
+REFKRNSRCDLX = $(foreach dlxdep,$(KERN_SOURCE_DLX),$(call GEN_ONE_IMAGE_KERN_DLX,$(dlxdep)))
+
+$(REFSRCDLX):
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
+	@copy $(subst /,\,$(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)/$(notdir $@)) $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
+
+$(REFKRNSRCDLX):
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin\kern) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin\kern)
+	@copy $(subst /,\,$(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)/kern/$(notdir $@)) $(subst /,\,$(K2_TARGET_PATH)/$(K2_TARGET_NAME)/builtin/kern)
+
+$(K2_TARGET_FULL_SPEC): makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(REFSRCDLX) $(REFTRGDLX) $(REFKRNSRCDLX) $(REFKRNTRGDLX)
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
+	@echo -------- Creating image $@ --------
+	k2zipper $(subst /,\,$(K2_TARGET_PATH)/$(K2_TARGET_NAME)/builtin) $(subst /,\,$@)
+
+endif
+
+#========================================================================================
 # Unknown
 #========================================================================================
 ifneq ($(K2_TARGET_TYPE_DEFINED),TRUE)
@@ -332,13 +403,3 @@ $(K2_OBJECT_PATH)/%.o : %.cpp makefile $(K2_ROOT)/src/shared/build/pre.make $(K2
 -include $(OBJECTS:.o=.d)
 
 #========================================================================================
-
-#
-# notes 
-#
-#pushd <dir_to_zip>
-#zip -FS -o -r -q <temp_path>\<dir_to_zip>.zip .
-#popd
-#objcopy -I binary -O elf32-little -B i386 --rename-section .data=.rodata.<dir_to_zip>.zip,alloc,load,readonly,data,contents <tmp_path>/<dir_to_zip>.zip <obj_path>/<dir_to_zip>.o
-#_binary_builtin_zip_start
-#_binary_builtin_zip_size
