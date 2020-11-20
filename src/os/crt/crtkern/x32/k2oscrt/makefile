@@ -41,16 +41,15 @@ SOURCES += x32entry_asm.s
 SOURCES += x32entry.c
 SOURCES += x32cache.c
 
-SOURCE_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2mem
+STATIC_LIBS += @shared/lib/k2asc
+STATIC_LIBS += @shared/lib/k2list
+STATIC_LIBS += @shared/lib/k2tree
+STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2crc
 
-SOURCE_LIBS += @shared/lib/k2mem
-SOURCE_LIBS += @shared/lib/k2asc
-SOURCE_LIBS += @shared/lib/k2list
-SOURCE_LIBS += @shared/lib/k2tree
-SOURCE_LIBS += @shared/lib/k2atomic
-SOURCE_LIBS += @shared/lib/k2crc
-
-KERN_SOURCE_LIBS += @os/crt/crtkern
+STATIC_KERNEL_LIBS += @os/crt/crtkern
 
 include $(K2_ROOT)/src/shared/build/post.make
 

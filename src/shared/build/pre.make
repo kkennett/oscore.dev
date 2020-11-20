@@ -62,7 +62,6 @@ K2_TARGET_NAME := $(notdir $(K2_SUBPATH))
 K2_SOURCE_PATH := $(K2_ROOT)/src/$(K2_SUBPATH)
 K2_TARGET_BASE ?= $(K2_ROOT)/bld/out/gcc
 K2_TEMP_BASE   ?= $(K2_ROOT)/bld/tmp/gcc
-K2_TARGET_PRE  := $(K2_ROOT)/pre
 
 GCCOPT_SYSTEM += -D__K2OS__
 

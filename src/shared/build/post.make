@@ -30,83 +30,61 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
+#========================================================================================
+# ARCHITECTURE OPTIONS
+#========================================================================================
 ifneq ($(TARGET_SPECIFIC_ARCH),)
 ifneq ($(K2_ARCH),$(TARGET_SPECIFIC_ARCH))
 $(error This component for $(TARGET_SPECIFIC_ARCH) only)
 endif
 endif
+ifeq ($(K2_ARCH),A32)
+GCCOPT += -march=armv7-a
+endif
+ifeq ($(K2_ARCH),X32)
+GCCOPT += -march=i686 -m32 -malign-double 
+endif
+
 
 #========================================================================================
 # CHECK TARGET TYPES AND FORM TARGET PATH
 #========================================================================================
-
 ifeq ($(TARGET_TYPE),OBJ)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 else
 ifeq ($(TARGET_TYPE),LIB)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)
+ifneq ($(K2_KERNEL),)
+K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+else
+K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+endif
 else
 ifeq ($(TARGET_TYPE),DLX)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
 else
-ifeq ($(TARGET_TYPE),BUILTIN)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/builtin/$(K2_BUILD_SPEC)
+ifeq ($(TARGET_TYPE),IMAGE)
+K2_TARGET_PATH := $(K2_TARGET_BASE)/image/$(K2_BUILD_SPEC)
 else
-K2_TARGET_PATH := $(K2_TARGET_BASE)/elf/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+$(error No Valid TARGET_TYPE defined.)
 endif
 endif
 endif
 endif
 
 K2_OBJECT_PATH := $(K2_TEMP_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+OBJECT_FROM_SOURCE = $(K2_OBJECT_PATH)/$(addsuffix .o, $(basename $(source)))
+OBJECTS = $(foreach source, $(SOURCES), $(OBJECT_FROM_SOURCE))
 
 ifneq ($(K2_KERNEL),)
-K2_TARGET_PATH := $(K2_TARGET_PATH)/kern
 K2_SPEC_KERNEL := -k
 else
 K2_SPEC_KERNEL := 
 endif
 
-.PHONY: default clean
+.PHONY: default clean always
 
 #========================================================================================
-# SOURCE LIBRARIES, DLX
-#========================================================================================
-
-OBJECT_FROM_SOURCE = $(K2_OBJECT_PATH)/$(addsuffix .o, $(basename $(source)))
-OBJECTS = $(foreach source, $(SOURCES), $(OBJECT_FROM_SOURCE))
-ONE_OBJECT = $(foreach source, $(firstword $(SOURCES)), $(OBJECT_FROM_SOURCE))
-
-REF_ONE_K2_SRC_LIB = $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/$(notdir $(1)).lib
-REF_ONE_SRC_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_SRC_LIB,$(subst @,,$(libdep))),$(libdep))
-
-REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(REF_ONE_SRC_LIB))
-REFSRCDLX_LIBS = $(foreach libdep,$(SOURCE_DLX),$(REF_ONE_SRC_LIB))
-
-REF_ONE_K2_KERN_SRC_LIB = $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/kern/$(notdir $(1)).lib
-REF_ONE_KERN_SRC_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_KERN_SRC_LIB,$(subst @,,$(libdep))),$(libdep))
-
-REFKRNSRC_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(REF_ONE_KERN_SRC_LIB))
-REFKRNSRCDLX_LIBS = $(foreach libdep,$(KERN_SOURCE_DLX),$(REF_ONE_KERN_SRC_LIB))
-
-#========================================================================================
-# TARGET LIBRARIES, DLX
-#========================================================================================
-
-REF_ONE_K2_TRG_LIB = $(K2_TARGET_PRE)/lib/$(K2_BUILD_SPEC)/$(notdir $(1)).lib
-REF_ONE_TRG_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_TRG_LIB,$(subst @,,$(libdep))),$(libdep))
-
-REFTRG_LIBS = $(foreach libdep,$(TARGET_LIBS),$(REF_ONE_TRG_LIB))
-REFTRGDLX_LIBS = $(foreach libdep,$(TARGET_DLX),$(REF_ONE_TRG_LIB))
-
-REF_ONE_K2_KERN_TRG_LIB = $(K2_TARGET_PRE)/lib/$(K2_BUILD_SPEC)/kern/$(notdir $(1)).lib
-REF_ONE_KERN_TRG_LIB = $(if $(findstring @,$(libdep)), $(call REF_ONE_K2_KERN_TRG_LIB,$(subst @,,$(libdep))),$(libdep))
-
-REFKRNTRG_LIBS = $(foreach libdep,$(KERN_TARGET_LIBS),$(REF_ONE_KERN_TRG_LIB))
-REFKRNTRGDLX_LIBS = $(foreach libdep,$(KERN_TARGET_DLX),$(REF_ONE_KERN_TRG_LIB))
-
-#========================================================================================
-# DEFAULT OPTIONS
+# DEFAULT OPTIONS AND RULES
 #========================================================================================
 GCCOPT     += -c -nostdinc -fno-common -Wall -I $(K2_ROOT)/src/shared/inc
 GCCOPT_S   += 
@@ -115,23 +93,34 @@ GCCOPT_CPP +=
 LDOPT      += -q -static -nostdlib --no-define-common --no-undefined
 LDENTRY    ?= -e __entry
 
-#========================================================================================
-# ARCHITECTURE OPTIONS
-#========================================================================================
-ifeq ($(K2_ARCH),A32)
-GCCOPT += -march=armv7-a
-endif
-ifeq ($(K2_ARCH),X32)
-GCCOPT += -march=i686 -m32 -malign-double 
-endif
+BUILD_CONTROL_FILES = makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
+
+$(K2_OBJECT_PATH)/%.o : %.s  $(BUILD_CONTROL_FILES)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+	@echo $(TARGET_NAMEONLY) - Preprocess $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
+	@gcc -x assembler-with-cpp -E $(GCCOPT) $(GCCOPT_S) -D_ASSEMBLER -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).s $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
+	@echo $(TARGET_NAMEONLY) - Assemble $<
+	@gcc $(GCCOPT) -o $(K2_OBJECT_PATH)/$(basename $<).o $(K2_OBJECT_PATH)/$(basename $<).s
+
+$(K2_OBJECT_PATH)/%.o : %.c $(BUILD_CONTROL_FILES)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+	@echo $(TARGET_NAMEONLY) - Compile $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
+	@gcc -x c $(GCCOPT) $(GCCOPT_C) $(GCCOPT_DEBUG) -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).o $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
+
+$(K2_OBJECT_PATH)/%.o : %.cpp $(BUILD_CONTROL_FILES)
+	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
+	@echo $(TARGET_NAMEONLY) - Compile $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
+	@gcc -x c++ $(GCCOPT) $(GCCOPT_C) $(GCCOPT_CPP) $(GCCOPT_DEBUG) -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).o $<
+	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
+
 
 #========================================================================================
-# PICK TARGET
-#========================================================================================
-K2_TARGET_TYPE_DEFINED := FALSE
-
-#========================================================================================
-# OBJ
+# TARGET_TYPE == OBJ
 #========================================================================================
 ifeq ($(TARGET_TYPE),OBJ)
 K2_TARGET_TYPE_DEFINED := TRUE
@@ -141,62 +130,42 @@ K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
 
 default: $(K2_TARGET_FULL_SPEC)
 
-$(K2_TARGET_FULL_SPEC): $(ONE_OBJECT) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
+ONE_OBJECT = $(foreach source, $(firstword $(SOURCES)), $(OBJECT_FROM_SOURCE))
+
+$(K2_TARGET_FULL_SPEC): $(ONE_OBJECT) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@echo -------- Placing OBJ $@ --------
 	@copy $(subst /,\,$(ONE_OBJECT)) $(subst /,\,$(K2_TARGET_FULL_SPEC)) > nul
 
 endif
 
+
 #========================================================================================
-# LIB
+# TARGET_TYPE == LIB
 #========================================================================================
 ifeq ($(TARGET_TYPE),LIB)
-K2_TARGET_TYPE_DEFINED := TRUE
 
 K2_TARGET_NAME_SPEC := $(K2_TARGET_NAME).lib
 K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
 
 default: $(K2_TARGET_FULL_SPEC)
 
-$(K2_TARGET_FULL_SPEC): $(OBJECTS) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
+$(K2_TARGET_FULL_SPEC): $(OBJECTS) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@echo -------- Creating LIB $@ --------
 	@ar rco $@ $(OBJECTS)
 
 endif
 	
-#========================================================================================
-# ELF
-#========================================================================================
-ifeq ($(TARGET_TYPE),ELF)
-
-K2_TARGET_TYPE_DEFINED := TRUE
-
-K2_TARGET_NAME_SPEC := $(K2_TARGET_NAME).elf
-K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
-
-CHECK_REFSRC_ONE_K2_LIB = checkref_$(1)
-CHECK_REFSRC_ONE_LIB = $(if $(findstring @,$(libdep)), $(call CHECK_REFSRC_ONE_K2_LIB,$(subst @,,$(libdep))),$(libdep))
-CHECK_REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
-CHECK_REFSRC_KERN_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
-
-default: $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(K2_TARGET_FULL_SPEC)
-
-$(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS):
-	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
-
-$(K2_TARGET_FULL_SPEC): $(OBJECTS) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRNSRC_LIBS) $(REFKRNTRG_LIBS)
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
-	@echo --------Creating ELF $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFTRG_LIBS) $(REFKRNSRC_LIBS) $(REFKRNTRG_LIBS) -)
-	
-endif
 
 #========================================================================================
-# DLX
+# TARGET_TYPE == DLX
 #========================================================================================
 ifeq ($(TARGET_TYPE),DLX)
+
+ifeq ($(DLX_INF),)
+$(error No DLX_INF specified)
+endif
 
 GCCOPT += -DK2_DLX
 
@@ -217,67 +186,74 @@ LDENTRY := -e __K2OS_dlx_crt
 CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crtstub/crtstub.o
 
 ifneq ($(K2_KERNEL),)
-#ifeq ($(K2_USE_CRT_SRC),)
-#KERN_TARGET_DLX += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
-#else
-KERN_SOURCE_DLX += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
-#endif
+IMPORT_LIBS += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
 else
-#ifeq ($(K2_USE_CRT_SRC),)
-#TARGET_DLX += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
-#else
-SOURCE_DLX += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
-#endif
+IMPORT_LIBS += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
 endif
 
 endif
-
-K2_TARGET_TYPE_DEFINED := TRUE
 
 K2_TARGET_NAME_SPEC := $(K2_TARGET_NAME).dlx
 K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
 K2_TARGET_ELFNAME_SPEC := $(K2_TARGET_NAME).elf
 K2_TARGET_ELFFULL_SPEC := $(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)/$(K2_TARGET_ELFNAME_SPEC)
 
+default: $(K2_TARGET_FULL_SPEC)
+
 ifneq ($(K2_KERNEL),)
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)/kern
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)
 else
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/srclib/$(K2_BUILD_SPEC)
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)
 endif
 
 ifeq ($(DLX_STACK),)
 DLX_STACK := 0
 endif
 
-ifeq ($(DLX_INF),)
-$(error No DLX_INF specified)
+$(CRTSTUB_OBJ) : always
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC),,$(@D))
+	@echo.
+
+$(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/%.lib : always
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC),,$(@D))
+	@echo.
+
+ONE_K2_STATIC_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_STATIC_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_LIB,$(subst @,,$(libdep))),$(libdep))
+STATIC_LIBRARIES = $(foreach libdep, $(STATIC_LIBS), $(EXPAND_ONE_STATIC_LIB))
+
+$(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/%.lib : always
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC),,$(@D))
+	@echo.
+
+ONE_K2_STATIC_KERNEL_LIB = $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_STATIC_KERNEL_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_KERNEL_LIB,$(subst @,,$(libdep))),$(libdep))
+STATIC_KERNEL_LIBRARIES = $(foreach libdep, $(STATIC_KERNEL_LIBS), $(EXPAND_ONE_STATIC_KERNEL_LIB))
+
+
+
+IMPORT_LIBRARIES = $(foreach libdep, $(IMPORT_LIBS), $(EXPAND_ONE_IMPORT_LIB))
+
+
+
+ifneq ($(K2_KERNEL),)
+LIBRARIES = $(STATIC_LIBRARIES) $(STATIC_KERNEL_LIBRARIES) $(IMPORT_LIBRARIES) $(IMPORT_KERNEL_LIBRARIES)
 else
-DLX_INF_O := $(K2_OBJECT_PATH)/exp_$(K2_TARGET_NAME).o
-EXPORT_CMD := k2export -i $(DLX_INF) -o $(DLX_INF_O) $(LIBGCC_PATH) $(OBJECTS) $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) 
+LIBRARIES = $(STATIC_LIBRARIES) $(IMPORT_LIBRARIES)
 endif
 
-CHECK_REFSRC_ONE_K2_LIB = checkref_$(1)
-CHECK_REFSRC_ONE_LIB = $(if $(findstring @,$(libdep)), $(call CHECK_REFSRC_ONE_K2_LIB,$(subst @,,$(libdep))),$(libdep))
-CHECK_REFSRC_LIBS = $(foreach libdep,$(SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
-CHECK_REFSRC_KERN_LIBS = $(foreach libdep,$(KERN_SOURCE_LIBS),$(CHECK_REFSRC_ONE_LIB))
-CHECK_REFSRC_KERN_DLX = $(foreach libdep,$(KERN_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-CHECK_REFSRC_DLX = $(foreach libdep,$(SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-CHECK_CRTSTUB_OBJ = checkref_os/crtstub
+DLX_INF_O := $(K2_OBJECT_PATH)/exp_$(K2_TARGET_NAME).o
+EXPORT_CMD := k2export -i $(DLX_INF) -o $(DLX_INF_O) $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ)
 
-default: $(CHECK_REFSRC_LIBS) $(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX) $(K2_TARGET_FULL_SPEC)
-
-$(CHECK_CRTSTUB_OBJ) $(CHECK_REFSRC_LIBS) $(CHECK_REFSRC_KERN_LIBS) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX):
-	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
-
-$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(CRT_OBJ) makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(DLX_INF)
+$(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH)) md $(subst /,\,$(K2_TARGET_EXPORTLIB_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)) md $(subst /,\,$(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH))
 	@-if not exist $(subst /,\,$(K2_OBJECT_PATH)) md $(subst /,\,$(K2_OBJECT_PATH))
-	@echo -------- Create Exports from ELF for DLX $@ --------
+	@echo -------- Create Exports for DLX from ELF $@ --------
 	@$(EXPORT_CMD)
 	@echo -------- Linking ELF for DLX $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(CRT_OBJ) $(REFSRC_LIBS) $(REFKRNSRC_LIBS) $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFTRG_LIBS) $(REFKRNTRG_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(DLX_INF_O) $(CRTSTUB_OBJ) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF_O) $(DLX_IMPORT_LIBRARIES) -)
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------
@@ -286,120 +262,18 @@ $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 endif
 
 #========================================================================================
-# BUILTIN
+# Autodependencies
 #========================================================================================
-ifeq ($(TARGET_TYPE),BUILTIN)
+-include $(OBJECTS:.o=.d)
 
-K2_TARGET_TYPE_DEFINED := TRUE
-
-ifeq ($(K2_ARCH),X32)
-KERN_STOCK_SOURCE_DLX := @os/crt/crtkern/x32/k2oscrt
-KERN_STOCK_SOURCE_DLX += @os/kern/x32/k2oskern 
-else
-ifeq ($(K2_ARCH),A32)
-KERN_STOCK_SOURCE_DLX := @os/crt/crtkern/a32/k2oscrt
-KERN_STOCK_SOURCE_DLX += @os/kern/a32/k2oskern 
-else
-$(error unknown arch)
-endif
-endif
-
-KERN_STOCK_SOURCE_DLX += @os/kern/k2osexec
-KERN_STOCK_SOURCE_DLX += @os/kern/k2osacpi
-
-KERN_STOCK_SOURCE_DLX += $(IMAGE_HAL)
-
-K2_TARGET_NAME_SPEC := builtin.img
-K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME)/$(K2_TARGET_NAME_SPEC)
-
-CHECK_REFSRC_ONE_K2_LIB = checkref_$(1)
-CHECK_REFSRC_ONE_LIB = $(if $(findstring @,$(libdep)), $(call CHECK_REFSRC_ONE_K2_LIB,$(subst @,,$(libdep))),$(libdep))
-CHECK_REFSRC_KERN_DLX = $(foreach libdep,$(KERN_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-CHECK_REFSRC_DLX = $(foreach libdep,$(SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-
-CHECK_STOCK_KERN_DLX = $(foreach libdep,$(KERN_STOCK_SOURCE_DLX),$(CHECK_REFSRC_ONE_LIB))
-
-default: $(CHECK_STOCK_KERN_DLX) $(CHECK_REFSRC_KERN_DLX) $(CHECK_REFSRC_DLX) $(K2_TARGET_FULL_SPEC)
-
-$(CHECK_STOCK_KERN_DLX) $(CHECK_REFSRC_DLX) $(CHECK_REFSRC_KERN_DLX):
-	MAKE -S -C $(K2_ROOT)/src/$(subst checkref_,,$@)
-
-GEN_ONE_IMAGE_DLX = $(K2_TARGET_PATH)\builtin\$(notdir $(1)).dlx
-GEN_ONE_IMAGE_KERN_DLX = $(K2_TARGET_PATH)\builtin\kern\$(notdir $(1)).dlx
-
-REFSRCDLX = $(foreach dlxdep,$(SOURCE_DLX),$(call GEN_ONE_IMAGE_DLX,$(dlxdep)))
-REFKRNSRCDLX = $(foreach dlxdep,$(KERN_SOURCE_DLX),$(call GEN_ONE_IMAGE_KERN_DLX,$(dlxdep)))
-
-$(REFSRCDLX):
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
-	@copy $(subst /,\,$(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)/$(notdir $@)) $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
-
-$(REFKRNSRCDLX):
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin\kern) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin\kern)
-	@copy $(subst /,\,$(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)/kern/$(notdir $@)) $(subst /,\,$(K2_TARGET_PATH)/$(K2_TARGET_NAME)/builtin/kern)
-
-$(K2_TARGET_FULL_SPEC): makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(REFKRNSRCDLX_LIBS) $(REFSRCDLX_LIBS) $(REFKRNTRGDLX_LIBS) $(REFTRGDLX_LIBS) $(REFSRCDLX) $(REFTRGDLX) $(REFKRNSRCDLX) $(REFKRNTRGDLX)
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME))
-	@-if not exist $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin) md $(subst /,\,$(K2_TARGET_PATH)\$(K2_TARGET_NAME)\builtin)
-	@echo -------- Creating image $@ --------
-	k2zipper $(subst /,\,$(K2_TARGET_PATH)/$(K2_TARGET_NAME)/builtin) $(subst /,\,$@)
-
-endif
 
 #========================================================================================
-# Unknown
-#========================================================================================
-ifneq ($(K2_TARGET_TYPE_DEFINED),TRUE)
-$(error No Valid TARGET_TYPE defined.)
-endif
-
-#========================================================================================
-# clean target
+# optional clean
 #========================================================================================
 clean:
 	@-if exist "$(subst /,\,$(K2_TARGET_FULL_SPEC))" del "$(subst /,\,$(K2_TARGET_FULL_SPEC))"
 	@-if exist "$(subst /,\,$(K2_OBJECT_PATH))" rd /s /q "$(subst /,\,$(K2_OBJECT_PATH))"
 	@echo --------$(K2_TARGET_FULL_SPEC) Cleaned --------
 
-
-#========================================================================================
-# S
-#========================================================================================
-$(K2_OBJECT_PATH)/%.o : %.s makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
-	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
-	@echo $(TARGET_NAMEONLY) - Preprocess $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
-	@gcc -x assembler-with-cpp -E $(GCCOPT) $(GCCOPT_S) -D_ASSEMBLER -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).s $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
-	@echo $(TARGET_NAMEONLY) - Assemble $<
-	@gcc $(GCCOPT) -o $(K2_OBJECT_PATH)/$(basename $<).o $(K2_OBJECT_PATH)/$(basename $<).s
-
-#========================================================================================
-# C and CPP
-#========================================================================================
-$(K2_OBJECT_PATH)/%.o : %.c makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
-	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
-	@echo $(TARGET_NAMEONLY) - Compile $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
-	@gcc -x c $(GCCOPT) $(GCCOPT_C) $(GCCOPT_DEBUG) -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).o $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
-
-$(K2_OBJECT_PATH)/%.o : %.cpp makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
-	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
-	@echo $(TARGET_NAMEONLY) - Compile $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d) del $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).d)
-	@gcc -x c++ $(GCCOPT) $(GCCOPT_C) $(GCCOPT_CPP) $(GCCOPT_DEBUG) -MT '$(K2_OBJECT_PATH)/$(notdir $@)' -MD -MF $(K2_OBJECT_PATH)/$(basename $<).dx -o $(K2_OBJECT_PATH)/$(basename $<).o $<
-	@if exist $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) ren $(subst /,\,$(K2_OBJECT_PATH)/$(basename $<).dx) $(notdir $(basename $<).d)
-
-#========================================================================================
-# Autodependencies
-#========================================================================================
--include $(OBJECTS:.o=.d)
 
 #========================================================================================
