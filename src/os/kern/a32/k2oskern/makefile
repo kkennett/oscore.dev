@@ -56,15 +56,15 @@ SOURCES += a32monitorasm.s
 SOURCES += a32auxcoreasm.s
 SOURCES += a32time.c
 
-SOURCE_LIBS += @shared/lib/k2archa32
-SOURCE_LIBS += @shared/lib/k2heap
-SOURCE_LIBS += @shared/lib/k2bit
-SOURCE_LIBS += @shared/lib/k2dlxsupp
-SOURCE_LIBS += @shared/lib/k2elf32
+STATIC_LIBS += @shared/lib/k2archa32
+STATIC_LIBS += @shared/lib/k2heap
+STATIC_LIBS += @shared/lib/k2bit
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
 
-SOURCE_LIBS += @os/lib/k2ramheap
+STATIC_LIBS += @os/lib/k2ramheap
 
-KERN_SOURCE_LIBS += @os/kern
+STATIC_KERNEL_LIBS += @os/kern
 
 include $(K2_ROOT)/src/shared/build/post.make
 

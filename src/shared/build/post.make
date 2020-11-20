@@ -60,7 +60,11 @@ K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 endif
 else
 ifeq ($(TARGET_TYPE),DLX)
+ifneq ($(K2_KERNEL),)
+K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)
+else
 K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
+endif
 else
 ifeq ($(TARGET_TYPE),IMAGE)
 K2_TARGET_PATH := $(K2_TARGET_BASE)/image/$(K2_BUILD_SPEC)
@@ -169,6 +173,10 @@ endif
 
 GCCOPT += -DK2_DLX
 
+ifeq ($(DLX_STACK),)
+DLX_STACK := 0
+endif
+
 LDOPT += --script $(K2_ROOT)/src/shared/build/gcc_link.l
 
 ifeq ($(basename $(K2_TARGET_NAME)),k2oscrt)
@@ -186,12 +194,14 @@ LDENTRY := -e __K2OS_dlx_crt
 CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crtstub/crtstub.o
 
 ifneq ($(K2_KERNEL),)
-IMPORT_LIBS += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
+IMPORT_KERNEL_LIBS += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
 else
 IMPORT_LIBS += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
 endif
 
 endif
+
+#========================================================================================
 
 K2_TARGET_NAME_SPEC := $(K2_TARGET_NAME).dlx
 K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
@@ -200,41 +210,66 @@ K2_TARGET_ELFFULL_SPEC := $(K2_TARGET_PATH)/srcelf/$(K2_SUBPATH)/$(K2_TARGET_ELF
 
 default: $(K2_TARGET_FULL_SPEC)
 
+#========================================================================================
+
 ifneq ($(K2_KERNEL),)
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/dlxlib/kern/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 else
-K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)
+K2_TARGET_EXPORTLIB_PATH := $(K2_TARGET_BASE)/dlxlib/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 endif
 
-ifeq ($(DLX_STACK),)
-DLX_STACK := 0
-endif
+K2_TARGET_EXPORTLIB = $(K2_TARGET_EXPORTLIB_PATH)/$(K2_TARGET_NAME).lib
+
+K2_TARGET_KERNEL_IMPORTLIB_PATH := $(K2_TARGET_BASE)/dlxlib/kern/$(K2_BUILD_SPEC)
+K2_TARGET_IMPORTLIB_PATH := $(K2_TARGET_BASE)/dlxlib/$(K2_BUILD_SPEC)
+
+#========================================================================================
 
 $(CRTSTUB_OBJ) : always
-	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC),,$(@D))
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/,,$(@D))
 	@echo.
 
+#========================================================================================
+
 $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/%.lib : always
-	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC),,$(@D))
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/,,$(@D))
 	@echo.
 
 ONE_K2_STATIC_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
 EXPAND_ONE_STATIC_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_LIB,$(subst @,,$(libdep))),$(libdep))
 STATIC_LIBRARIES = $(foreach libdep, $(STATIC_LIBS), $(EXPAND_ONE_STATIC_LIB))
 
+#========================================================================================
+
 $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/%.lib : always
-	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC),,$(@D))
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/,,$(@D))
 	@echo.
 
 ONE_K2_STATIC_KERNEL_LIB = $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
 EXPAND_ONE_STATIC_KERNEL_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_KERNEL_LIB,$(subst @,,$(libdep))),$(libdep))
 STATIC_KERNEL_LIBRARIES = $(foreach libdep, $(STATIC_KERNEL_LIBS), $(EXPAND_ONE_STATIC_KERNEL_LIB))
 
+#========================================================================================
 
+$(K2_TARGET_IMPORTLIB_PATH)/%.lib: always 
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/dlxlib/$(K2_BUILD_SPEC)/,,$(@D))
+	@echo.
 
+ONE_K2_IMPORT_LIB = $(K2_TARGET_IMPORTLIB_PATH)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_IMPORT_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_IMPORT_LIB,$(subst @,,$(libdep))),$(libdep))
 IMPORT_LIBRARIES = $(foreach libdep, $(IMPORT_LIBS), $(EXPAND_ONE_IMPORT_LIB))
 
+#========================================================================================
 
+$(K2_TARGET_KERNEL_IMPORTLIB_PATH)/%.lib: always 
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/dlxlib/kern/$(K2_BUILD_SPEC)/,,$(@D))
+	@echo.
+
+ONE_K2_IMPORT_KERNEL_LIB = $(K2_TARGET_KERNEL_IMPORTLIB_PATH)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_IMPORT_KERNEL_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_IMPORT_KERNEL_LIB,$(subst @,,$(libdep))),$(libdep))
+IMPORT_KERNEL_LIBRARIES = $(foreach libdep, $(IMPORT_KERNEL_LIBS), $(EXPAND_ONE_IMPORT_KERNEL_LIB))
+
+#========================================================================================
 
 ifneq ($(K2_KERNEL),)
 LIBRARIES = $(STATIC_LIBRARIES) $(STATIC_KERNEL_LIBRARIES) $(IMPORT_LIBRARIES) $(IMPORT_KERNEL_LIBRARIES)
@@ -257,7 +292,7 @@ $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF) $(B
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------
-	@k2elf2dlx $(K2_SPEC_KERNEL) -s $(DLX_STACK) -i $(K2_TARGET_ELFFULL_SPEC) -o $(K2_TARGET_FULL_SPEC) -l $(K2_TARGET_EXPORTLIB_PATH)/$(K2_TARGET_NAME).lib
+	@k2elf2dlx $(K2_SPEC_KERNEL) -s $(DLX_STACK) -i $(K2_TARGET_ELFFULL_SPEC) -o $(K2_TARGET_FULL_SPEC) -l $(K2_TARGET_EXPORTLIB)
 	
 endif
 

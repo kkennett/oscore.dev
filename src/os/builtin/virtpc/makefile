@@ -36,7 +36,7 @@ TARGET_TYPE = BUILTIN
 
 IMAGE_HAL = @os/hal/x32pc/k2oshal
 
-KERN_SOURCE_DLX += @os/driver/pcibus
+IMPORT_KERNEL_LIBS += @os/driver/pcibus
 
 include $(K2_ROOT)/src/shared/build/post.make
 

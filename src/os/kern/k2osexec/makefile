@@ -35,8 +35,8 @@ include $(K2_ROOT)/src/os/build/k2ospre.make
 TARGET_TYPE = DLX
 K2_KERNEL := TRUE
 
-KERN_SOURCE_DLX += @os/kern/$(K2_ARCH)/k2oskern 
-KERN_SOURCE_DLX += @os/kern/k2osacpi
+IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
+IMPORT_KERNEL_LIBS += @os/kern/k2osacpi
 
 DLX_INF := k2osexec.inf
 
@@ -62,15 +62,15 @@ SOURCES += dlxsupp.c
 SOURCES += fsprov.c
 SOURCES += drvstore.c
 
-SOURCE_LIBS += @shared/lib/k2heap
+STATIC_LIBS += @shared/lib/k2heap
 
 ifeq ($(K2_ARCH),X32)
 SOURCES += x32pitasm.s
-SOURCE_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2archx32
 endif
 
 ifeq ($(K2_ARCH),A32)
-SOURCE_LIBS += @shared/lib/k2archa32
+STATIC_LIBS += @shared/lib/k2archa32
 endif
 
 include $(K2_ROOT)/src/shared/build/post.make

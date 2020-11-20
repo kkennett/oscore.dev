@@ -37,7 +37,7 @@ DLX_INF := k2osroot.inf
 
 SOURCES += entry.c
 
-SOURCE_DLX += @os/k2osuser
+IMPORT_LIBS += @os/k2osuser
 
 include $(K2_ROOT)/src/shared/build/post.make
 

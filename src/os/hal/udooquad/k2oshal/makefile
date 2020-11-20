@@ -43,13 +43,13 @@ DLX_INF := ../../k2oshal.inf
 SOURCES += udooquad.c
 SOURCES += onsysready.c
 
-SOURCE_LIBS += @shared/lib/k2archa32
+STATIC_LIBS += @shared/lib/k2archa32
 
 #
 # Link to kernel
 #
-KERN_SOURCE_DLX += @os/kern/a32/k2oskern 
-KERN_SOURCE_DLX += @os/kern/k2osexec
+IMPORT_KERNEL_LIBS += @os/kern/a32/k2oskern 
+IMPORT_KERNEL_LIBS += @os/kern/k2osexec
 
 include $(K2_ROOT)/src/shared/build/post.make
 

@@ -39,7 +39,7 @@ TARGET_TYPE = DLX
 
 K2_KERNEL := TRUE
 
-KERN_SOURCE_DLX += @os/kern/$(K2_ARCH)/k2oskern 
+IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
 
 DLX_INF := k2osacpi.inf
 
@@ -262,11 +262,11 @@ SOURCES += acpica/source/components/utilities/utxfinit.c
 SOURCES += acpica/source/components/utilities/utxfmutex.c
 
 ifeq ($(K2_ARCH),X32)
-SOURCE_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2archx32
 endif
 
 ifeq ($(K2_ARCH),A32)
-SOURCE_LIBS += @shared/lib/k2archa32
+STATIC_LIBS += @shared/lib/k2archa32
 endif
 
 include $(K2_ROOT)/src/shared/build/post.make

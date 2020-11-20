@@ -40,16 +40,16 @@ SOURCES += a32entry.c
 SOURCES += a32cache.c
 SOURCES += a32divzero.c
 
-SOURCE_LIBS += @shared/lib/k2mem
-SOURCE_LIBS += @shared/lib/k2asc
-SOURCE_LIBS += @shared/lib/k2list
-SOURCE_LIBS += @shared/lib/k2tree
-SOURCE_LIBS += @shared/lib/k2atomic
-SOURCE_LIBS += @shared/lib/k2crc
-SOURCE_LIBS += @shared/lib/k2dlxsupp
-SOURCE_LIBS += @shared/lib/k2elf32
+STATIC_LIBS += @shared/lib/k2mem
+STATIC_LIBS += @shared/lib/k2asc
+STATIC_LIBS += @shared/lib/k2list
+STATIC_LIBS += @shared/lib/k2tree
+STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2crc
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
 
-SOURCE_LIBS += @os/crt/crtuser
+STATIC_LIBS += @os/crt/crtuser
 
 include $(K2_ROOT)/src/shared/build/post.make
 

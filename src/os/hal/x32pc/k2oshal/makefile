@@ -43,14 +43,14 @@ DLX_INF := ../../k2oshal.inf
 SOURCES += x32pc.c
 SOURCES += onsysready.c
 
-SOURCE_LIBS += @os/hal/x32pc/dbgser
-SOURCE_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @os/hal/x32pc/dbgser
+STATIC_LIBS += @shared/lib/k2archx32
 
 #
 # Link to kernel
 #
-KERN_SOURCE_DLX += @os/kern/x32/k2oskern 
-KERN_SOURCE_DLX += @os/kern/k2osexec
+IMPORT_KERNEL_LIBS += @os/kern/x32/k2oskern 
+IMPORT_KERNEL_LIBS += @os/kern/k2osexec
 
 include $(K2_ROOT)/src/shared/build/post.make
 
