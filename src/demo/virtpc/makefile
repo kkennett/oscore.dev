@@ -32,11 +32,11 @@
 
 include $(K2_ROOT)/src/os/build/k2ospre.make
 
-TARGET_TYPE = BUILTIN
+TARGET_TYPE = IMAGE
 
-IMAGE_HAL = @os/hal/x32pc/k2oshal
+IMAGE_HAL_DLX = @os/hal/x32pc/k2oshal
 
-IMPORT_KERNEL_LIBS += @os/driver/pcibus
+BUILTIN_KERNEL_DRIVERS += @os/driver/pcibus
 
 include $(K2_ROOT)/src/shared/build/post.make
 
