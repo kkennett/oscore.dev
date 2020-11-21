@@ -302,7 +302,7 @@ endif
 #========================================================================================
 ifeq ($(TARGET_TYPE),IMAGE)
 
-K2_TARGET_NAME_SPEC := k2oskern.img
+K2_TARGET_NAME_SPEC := builtin.img
 K2_TARGET_OUT_PATH := $(K2_TARGET_PATH)/$(K2_SUBPATH)
 
 K2_TARGET_DISK_PATH := $(K2_TARGET_OUT_PATH)/bootdisk
@@ -317,21 +317,22 @@ K2_TARGET_FULL_SPEC := $(K2_TARGET_OS_KERN_PATH)/$(K2_TARGET_NAME_SPEC)
 
 default: $(K2_TARGET_FULL_SPEC)
 
+#========================================================================================
+
 STOCK_IMAGE_KERN_DLX := @os/crt/crtkern/$(K2_ARCH)/k2oscrt
 STOCK_IMAGE_KERN_DLX += @os/kern/$(K2_ARCH)/k2oskern 
 STOCK_IMAGE_KERN_DLX += @os/kern/k2osacpi 
 STOCK_IMAGE_KERN_DLX += @os/kern/k2osexec 
 
-ONE_K2_BULITIN_KERNEL_DLX = builtin_$(basename $(1))
-EXPAND_ONE_BUILTIN_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_BULITIN_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
-BUILTIN_KERNEL_DRIVER_DLX = $(foreach dlxdep, $(BUILTIN_KERNEL_DRIVERS), $(EXPAND_ONE_BUILTIN_KERNEL_DLX))
-BUILT_IMAGE_HAL_DLX = $(foreach dlxdep, $(firstword $(IMAGE_HAL_DLX)), $(EXPAND_ONE_BUILTIN_KERNEL_DLX))
-BUILT_STOCK_IMAGE_KERN_DLX = $(foreach dlxdep, $(STOCK_IMAGE_KERN_DLX), $(EXPAND_ONE_BUILTIN_KERNEL_DLX))
+ONE_K2_STOCK_KERNEL_DLX = stock_$(basename $(1))
+EXPAND_ONE_STOCK_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_STOCK_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
+BUILT_IMAGE_HAL_DLX = $(foreach dlxdep, $(firstword $(IMAGE_HAL_DLX)), $(EXPAND_ONE_STOCK_KERNEL_DLX))
+BUILT_STOCK_IMAGE_KERN_DLX = $(foreach dlxdep, $(STOCK_IMAGE_KERN_DLX), $(EXPAND_ONE_STOCK_KERNEL_DLX))
 
-$(BUILTIN_KERNEL_DRIVER_DLX) $(BUILT_IMAGE_HAL_DLX) $(BUILT_STOCK_IMAGE_KERN_DLX):
-	@MAKE -S -C $(K2_ROOT)/src/$(subst builtin_,,$@)
-	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH))
-	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) 1>NUL
+$(BUILT_IMAGE_HAL_DLX) $(BUILT_STOCK_IMAGE_KERN_DLX):
+	@MAKE -S -C $(K2_ROOT)/src/$(subst stock_,,$@)
+	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
+	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) 1>NUL
 	@echo.
 
 CHECK_REF_ONE_K2_HAL = checkhal_$(1)
@@ -339,6 +340,20 @@ CHECK_HAL_DLX = $(if $(findstring @,$(haldlx)), $(call CHECK_REF_ONE_K2_HAL,$(su
 CHECK_HAL = $(foreach haldlx, $(firstword $(IMAGE_HAL_DLX)), $(CHECK_HAL_DLX))
 $(CHECK_HAL):
 	@$(foreach wrong_thing, $(subst k2oshal,,$(@F)), $(error IMAGE_HAL_DLX must end in DLX named 'k2oshal'))
+
+#========================================================================================
+
+ONE_K2_BULITIN_KERNEL_DLX = builtin_$(basename $(1))
+EXPAND_ONE_BUILTIN_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_BULITIN_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
+BUILTIN_KERNEL_DRIVER_DLX = $(foreach dlxdep, $(BUILTIN_KERNEL_DRIVERS), $(EXPAND_ONE_BUILTIN_KERNEL_DLX))
+
+$(BUILTIN_KERNEL_DRIVER_DLX):
+	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH))
+	@MAKE -S -C $(K2_ROOT)/src/$(subst builtin_,,$@)
+	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) 1>NUL
+	@echo.
+
+#========================================================================================
 
 $(K2_TARGET_FULL_SPEC): $(CHECK_HAL) $(BUILTIN_KERNEL_DRIVER_DLX) $(BUILT_IMAGE_HAL_DLX) $(BUILT_STOCK_IMAGE_KERN_DLX) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_OUT_PATH)) md $(subst /,\,$(K2_TARGET_OUT_PATH))

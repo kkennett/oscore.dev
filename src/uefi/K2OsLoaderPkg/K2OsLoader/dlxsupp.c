@@ -137,6 +137,99 @@ static EFIFILE * sFindFile(K2DLXSUPP_HOST_FILE aHostFile)
     return (EFIFILE *)pLink;
 }
 
+static EFI_STATUS sLoadRofs(void)
+{
+    EFI_STATUS              efiStatus;
+    EFI_FILE_PROTOCOL *     pProt;
+    UINTN                   infoSize;
+    EFI_FILE_INFO *         pFileInfo;
+    UINT32                  filePages;
+    EFI_PHYSICAL_ADDRESS    pagesPhys;
+    UINTN                   bytesToRead;
+
+    //
+    // load the builtin ROFS now from sgpKernDir.  shove physical address into gData.LoadInfo.mBuiltinRofsPhys
+    //
+    efiStatus = sgpKernDir->Open(
+        sgpKernDir,
+        &pProt,
+        L"builtin.img",
+        EFI_FILE_MODE_READ,
+        0);
+    if (EFI_ERROR(efiStatus))
+        return efiStatus;
+
+    do {
+        infoSize = 0;
+        efiStatus = pProt->GetInfo(
+            pProt,
+            (EFI_GUID *)&sgEfiFileInfoId,
+            &infoSize, NULL);
+        if (efiStatus != EFI_BUFFER_TOO_SMALL)
+        {
+            K2Printf(L"*** could not retrieve size of file info, status %r\n", efiStatus);
+            break;
+        }
+
+        efiStatus = gBS->AllocatePool(EfiLoaderData, infoSize, (void **)&pFileInfo);
+        if (efiStatus != EFI_SUCCESS)
+        {
+            K2Printf(L"*** could not allocate memory for file info, status %r\n", efiStatus);
+            break;
+        }
+
+        do
+        {
+            efiStatus = pProt->GetInfo(
+                pProt,
+                (EFI_GUID *)&sgEfiFileInfoId,
+                &infoSize, pFileInfo);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** could not get file info, status %r\n", efiStatus);
+                break;
+            }
+
+            bytesToRead = (UINTN)pFileInfo->FileSize;
+
+            filePages = (UINT32)(K2_ROUNDUP(bytesToRead, K2_VA32_MEMPAGE_BYTES) / K2_VA32_MEMPAGE_BYTES);
+
+            efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_BUILTIN, filePages, &pagesPhys);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** AllocatePages for builtin failed with status %r\n", efiStatus);
+                break;
+            }
+
+            do {
+                gData.LoadInfo.mBuiltinRofsPhys = ((UINT32)pagesPhys);
+
+                K2MEM_Zero((void *)gData.LoadInfo.mBuiltinRofsPhys, filePages * K2_VA32_MEMPAGE_BYTES);
+
+                efiStatus = pProt->Read(pProt, &bytesToRead, (void *)((UINT32)pagesPhys));
+                if (EFI_ERROR(efiStatus))
+                {
+                    K2Printf(L"*** ReadSectors failed with efi Status %r\n", efiStatus);
+                }
+
+            } while (0);
+
+            if (EFI_ERROR(efiStatus))
+            {
+                gBS->FreePages(pagesPhys, filePages);
+            }
+
+        } while (0);
+
+        gBS->FreePool(pFileInfo);
+
+    } while (0);
+
+    pProt->Close(pProt);
+
+    return efiStatus;
+}
+
 EFI_STATUS sysDLX_Init(IN EFI_HANDLE ImageHandle)
 {
     EFI_STATUS status;
@@ -186,6 +279,15 @@ EFI_STATUS sysDLX_Init(IN EFI_HANDLE ImageHandle)
                 if (status != EFI_SUCCESS)
                 {
                     K2Printf(L"*** Open %s failed with %r\n", sgpKernSubDir, status);
+                    break;
+                }
+
+                status = sLoadRofs();
+                if (status != EFI_SUCCESS)
+                {
+                    K2Printf(L"*** Could not load builtin image 'builtin.img' from %s with error %r\n", sgpKernSubDir);
+                    sgpKernDir->Close(sgpKernDir);
+                    sgpKernDir = NULL;
                     break;
                 }
 

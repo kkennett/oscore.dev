@@ -83,7 +83,7 @@
 #define K2OS_UEFI_LOADINFO_OFFSET_EFIST                 0x0004
 #define K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY          0x0008      // encoded in code bytes in uefi loader. careful
 #define K2OS_UEFI_LOADINFO_OFFSET_KERNDLX_ENTRY         0x000C
-#define K2OS_UEFI_LOADINFO_OFFSET_UNUSED_10             0x0010
+#define K2OS_UEFI_LOADINFO_OFFSET_BUILTIN_ROFS_PHYS     0x0010
 #define K2OS_UEFI_LOADINFO_OFFSET_DLXCRT                0x0014
 #define K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS        0x0018      // encoded in code bytes in uefi loader. careful
 #define K2OS_UEFI_LOADINFO_OFFSET_ZEROPAGE_PHYS         0x001C
@@ -120,6 +120,7 @@
 #define K2OS_EFIMEMTYPE_EFI_MAP         0x8000000B  //  EFI memory map
 #define K2OS_EFIMEMTYPE_FW_TABLES       0x8000000C  //  Firmware ACPI and SMBIOS tables
 #define K2OS_EFIMEMTYPE_ARCH_SPEC       0x8000000D  //  Architecture Specific reservation
+#define K2OS_EFIMEMTYPE_BUILTIN         0x8000000E  //  Builtin Read Only File System (ROFS)
 #define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_ARCH_SPEC
 
 /* --------------------------------------------------------------------------------- */

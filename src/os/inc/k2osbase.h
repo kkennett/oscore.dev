@@ -105,7 +105,7 @@ struct _K2OS_UEFI_LOADINFO
     K2EFI_SYSTEM_TABLE *    mpEFIST;
     DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
     DLX_pf_ENTRYPOINT       mKernDlxEntry;
-    UINT32                  mUnused_10;
+    UINT32                  mBuiltinRofsPhys;
     DLX *                   mpDlxCrt;
     UINT32                  mTransBasePhys;
     UINT32                  mZeroPagePhys;
