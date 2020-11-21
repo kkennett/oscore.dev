@@ -467,6 +467,7 @@ static UINT32 sMemTypeToPageList(UINT32 aMemType)
         case K2OS_EFIMEMTYPE_DATA:
         case K2OS_EFIMEMTYPE_DLX:
         case K2OS_EFIMEMTYPE_FW_TABLES:
+        case K2OS_EFIMEMTYPE_BUILTIN:
             return KernPhysPageList_Non_KData;
 
         case K2OS_EFIMEMTYPE_LOADER:

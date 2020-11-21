@@ -121,7 +121,7 @@
 #define K2OS_EFIMEMTYPE_FW_TABLES       0x8000000C  //  Firmware ACPI and SMBIOS tables
 #define K2OS_EFIMEMTYPE_ARCH_SPEC       0x8000000D  //  Architecture Specific reservation
 #define K2OS_EFIMEMTYPE_BUILTIN         0x8000000E  //  Builtin Read Only File System (ROFS)
-#define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_ARCH_SPEC
+#define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_BUILTIN
 
 /* --------------------------------------------------------------------------------- */
 
