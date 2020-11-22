@@ -35,34 +35,8 @@
 #include <lib/zlib.h>
 #include <lib/k2crc.h>
 
-
-typedef struct _K2ROFS_FILE K2ROFS_FILE;
-typedef struct _K2ROFS_DIR  K2ROFS_DIR;
-typedef struct _K2ROFS      K2ROFS;
-
-struct _K2ROFS
-{
-    UINT32  mSectorCount;       // in entire ROFS
-    UINT32  mRootDir;           // byte offset from K2ROFS to K2ROFS_DIR of root
-    UINT32  mStringField;       // byte offset from K2ROFS to char array for names
-};
-
-struct _K2ROFS_DIR
-{
-    UINT32  mName;              // offset in stringfield
-    UINT32  mSubCount;          // number of subdirectories
-    UINT32  mFileCount;         // number of files
-    // K2ROFS_FILE * mFileCount
-    // K2ROFS_DIR offsets from K2ROFS * mSubCount
-};
-
-struct _K2ROFS_FILE
-{
-    UINT32  mName;              // offset in stringfield
-    UINT32  mTime;              // dos datetime
-    UINT32  mStartSectorOffset; // sector offset from ROFS
-    UINT32  mSizeBytes;         // round up to 512 and divide to get sector count
-};
+#include <spec/k2rofs.h>
+#include <lib/k2rofshelp.h>
 
 static
 void
@@ -293,7 +267,7 @@ static UINT32 sCount(RofsDir *apDir, UINT32 *apPayloadSectors)
     pFile = apDir->mpFiles;
     while (pFile != NULL)
     {
-        *apPayloadSectors += ((pFile->mpMap->FileBytes() + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+        *apPayloadSectors += ((pFile->mpMap->FileBytes() + (K2ROFS_SECTOR_BYTES - 1)) / K2ROFS_SECTOR_BYTES);
         pFile = pFile->mpParentNextFileLink;
     }
 
@@ -339,11 +313,11 @@ static void sFill(UINT8 *apBase, UINT8 **apWork, RofsDir *apDir, char **apString
         (*apStrings) += pFile->mNameLen + 1;
 
         pOutFile->mSizeBytes = pFile->mpMap->FileBytes();
-        pOutFile->mStartSectorOffset = ((UINT32)((*apPayload) - apBase)) / DLX_SECTOR_BYTES;
+        pOutFile->mStartSectorOffset = ((UINT32)((*apPayload) - apBase)) / K2ROFS_SECTOR_BYTES;
 
-        payloadSectors = ((pFile->mpMap->FileBytes() + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+        payloadSectors = ((pFile->mpMap->FileBytes() + (K2ROFS_SECTOR_BYTES - 1)) / K2ROFS_SECTOR_BYTES);
         K2MEM_Copy((*apPayload), pFile->mpMap->DataPtr(), pFile->mpMap->FileBytes());
-        (*apPayload) += payloadSectors * DLX_SECTOR_BYTES;
+        (*apPayload) += payloadSectors * K2ROFS_SECTOR_BYTES;
 
         FileTimeToLocalFileTime(&pFile->mpMap->FileTime(), &localFileTime);
         FileTimeToDosDateTime(&localFileTime, ((WORD *)&pOutFile->mTime) + 1, ((WORD *)&pOutFile->mTime));
@@ -376,36 +350,31 @@ static void sPrefix(int aLevel)
     }
 }
 
-static void sDumpDir(UINT8 const *apBase, K2ROFS_DIR const *apDir, int aLevel)
+static void sDumpDir(K2ROFS const *apBase, K2ROFS_DIR const *apDir, int aLevel)
 {
     UINT32              ix;
-    K2ROFS_FILE const * pFiles;
-    UINT32 const *      pOffsets;
-    UINT8 const *       pPayload;
+    K2ROFS_FILE const * pFile;
 
     sPrefix(aLevel);
 
-    printf("[%s]\n", ((char const *)apBase) + apDir->mName);
-
-    pFiles = (K2ROFS_FILE const *)(((UINT8 *)apDir) + sizeof(K2ROFS_DIR));
-    pOffsets = (UINT32 const *)(((UINT8 *)pFiles) + (apDir->mFileCount * sizeof(K2ROFS_FILE)));
+    printf("[%s]\n", K2ROFS_NAMESTR(apBase, apDir->mName));
 
     for (ix = 0; ix < apDir->mFileCount; ix++)
     {
         sPrefix(aLevel + 2);
-        pPayload = apBase + (pFiles[ix].mStartSectorOffset * DLX_SECTOR_BYTES);
-        printf(" %8d %08X %s\n", pFiles[ix].mSizeBytes, (UINT32)pPayload, (char *)(pFiles[ix].mName + apBase));
+        pFile = K2ROFSHELP_SubFileIx(apBase, apDir, ix);
+        printf(" %8d %08X %s\n", pFile->mSizeBytes, (UINT32)K2ROFS_FILEDATA(apBase, pFile), K2ROFS_NAMESTR(apBase, pFile->mName));
     }
 
     for (ix = 0; ix < apDir->mSubCount; ix++)
     {
-        sDumpDir(apBase, (K2ROFS_DIR *)(apBase + pOffsets[ix]), aLevel + 2);
+        sDumpDir(apBase, K2ROFSHELP_SubDirIx(apBase, apDir, ix), aLevel + 2);
     }
 }
 
 static void sDump(K2ROFS const *apRofs)
 {
-    sDumpDir((UINT8 const *)apRofs, (K2ROFS_DIR const *)(((UINT8 const *)apRofs) + apRofs->mRootDir), 0);
+    sDumpDir(apRofs, K2ROFS_ROOTDIR(apRofs), 0);
 }
 
 int CreateOutputFile(char const *apOutFileName)
@@ -434,17 +403,17 @@ int CreateOutputFile(char const *apOutFileName)
     totalOut += gStringFieldSize;
 
     // round up, convert to sectors
-    totalOut = ((totalOut + (DLX_SECTOR_BYTES - 1)) / DLX_SECTOR_BYTES);
+    totalOut = ((totalOut + (K2ROFS_SECTOR_BYTES - 1)) / K2ROFS_SECTOR_BYTES);
     
     // now add all the payloads
-    payloadsOffset = totalOut * DLX_SECTOR_BYTES;
+    payloadsOffset = totalOut * K2ROFS_SECTOR_BYTES;
     totalOut += payloadSectors;
 
     // alloc aligned
-    pAlloc = (UINT8 *)malloc((totalOut * DLX_SECTOR_BYTES) + (DLX_SECTOR_BYTES-1));
-    pOutRaw = (UINT8 *)((((UINT32)pAlloc) + (DLX_SECTOR_BYTES - 1)) & DLX_SECTORINDEX_MASK);
+    pAlloc = (UINT8 *)malloc((totalOut * K2ROFS_SECTOR_BYTES) + (K2ROFS_SECTOR_BYTES-1));
+    pOutRaw = (UINT8 *)((((UINT32)pAlloc) + (K2ROFS_SECTOR_BYTES - 1)) & DLX_SECTORINDEX_MASK);
 
-    K2MEM_Zero(pOutRaw, totalOut * DLX_SECTOR_BYTES);
+    K2MEM_Zero(pOutRaw, totalOut * K2ROFS_SECTOR_BYTES);
 
     pOutWork = pOutRaw;
     pStrings = (char *)pOutRaw + stringsOffset;
@@ -453,7 +422,6 @@ int CreateOutputFile(char const *apOutFileName)
     pROFS = (K2ROFS *)pOutWork;
     pROFS->mRootDir = sizeof(K2ROFS);
     pROFS->mSectorCount = totalOut;
-    pROFS->mStringField = stringsOffset;
 
     pOutWork += sizeof(K2ROFS);
 
@@ -467,7 +435,7 @@ int CreateOutputFile(char const *apOutFileName)
         printf("\n***k2zipper - could not create target file \"%s\"\n", apOutFileName);
         return GetLastError();
     }
-    ok = WriteFile(hFile, pOutRaw, totalOut * DLX_SECTOR_BYTES, &wrote, NULL);
+    ok = WriteFile(hFile, pOutRaw, totalOut * K2ROFS_SECTOR_BYTES, &wrote, NULL);
     if (!ok)
     {
         printf("\n***k2zipper - failed to write output file\n");
