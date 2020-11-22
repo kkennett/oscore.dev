@@ -53,7 +53,8 @@ static char const * sgK2TypeNames[] =
     "TRANSITION      ",
     "EFI_MAP         ",
     "FW_TABLES       ",
-    "ARCH_SPEC       "
+    "ARCH_SPEC       ",
+    "BUILTIN         "
 };
 
 static char const * sgEfiTypeNames[K2EFI_MEMTYPE_COUNT] =

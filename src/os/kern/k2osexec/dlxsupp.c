@@ -32,7 +32,8 @@
 
 #include "ik2osexec.h"
 
-static K2OS_CRITSEC sgDlx_Sec;
+static K2OS_CRITSEC         sgDlx_Sec;
+static K2ROFS_DIR const *   sgpBuiltinRoot;
 
 K2STAT Dlx_CritSec(BOOL aEnter)
 {
@@ -99,4 +100,10 @@ Dlx_Init(
 
     ok = K2OS_CritSecInit(&sgDlx_Sec);
     K2_ASSERT(ok);
+
+    sgpBuiltinRoot = K2ROFS_ROOTDIR(apInitInfo->mpBuiltinRofs);
+    K2_ASSERT(sgpBuiltinRoot != NULL);
+
+
+
 }

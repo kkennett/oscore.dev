@@ -63,6 +63,7 @@ SOURCES += fsprov.c
 SOURCES += drvstore.c
 
 STATIC_LIBS += @shared/lib/k2heap
+STATIC_LIBS += @shared/lib/k2rofshelp
 
 ifeq ($(K2_ARCH),X32)
 SOURCES += x32pitasm.s

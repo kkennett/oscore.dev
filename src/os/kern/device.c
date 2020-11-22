@@ -32,8 +32,6 @@
 
 #include "kern.h"
 
-#define DEVMAP_CHUNK 128
-
 K2STAT
 K2OSKERN_MapDevice(
     UINT32      aPhysDeviceAddr,
@@ -93,7 +91,7 @@ K2OSKERN_MapDevice(
             //
             // map the device pages to the virtual range just created
             //
-            chunkLeft = DEVMAP_CHUNK;
+            chunkLeft = KERN_MEMMAP_CHUNK;
             virtAddr = pSeg->ProcSegTreeNode.mUserVal;
 
             disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
@@ -107,17 +105,20 @@ K2OSKERN_MapDevice(
                 virtAddr += K2_VA32_MEMPAGE_BYTES;
                 aPhysDeviceAddr += K2_VA32_MEMPAGE_BYTES;
 
+                if (--aPageCount == 0)
+                    break;
+
                 if (--chunkLeft == 0)
                 {
                     if (aPageCount > 1)
                     {
                         K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
                         disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
-                        chunkLeft = DEVMAP_CHUNK;
+                        chunkLeft = KERN_MEMMAP_CHUNK;
                     }
                 }
 
-            } while (--aPageCount);
+            } while (1);
 
             K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
         }

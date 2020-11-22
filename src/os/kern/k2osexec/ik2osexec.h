@@ -37,6 +37,7 @@
 #include "..\k2osacpi\k2osacpi.h"
 #include "..\kernexec.h"
 #include <lib/k2heap.h>
+#include <lib/k2rofshelp.h>
 
 #ifdef __cplusplus
 extern "C" {

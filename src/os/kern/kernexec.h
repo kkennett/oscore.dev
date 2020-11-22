@@ -35,6 +35,7 @@
 
 #include <k2oshal.h>
 #include <lib/k2dlxsupp.h>
+#include <spec/k2rofs.h>
 
 /* --------------------------------------------------------------------------------- */
 
@@ -47,6 +48,7 @@ struct _K2OSEXEC_INIT_INFO
     UINT32                      mEfiMapSize;
     UINT32                      mEfiMemDescSize;
     UINT32                      mEfiMemDescVer;
+    K2ROFS const *              mpBuiltinRofs;
 
     //
     // OUTPUT

@@ -620,7 +620,7 @@ struct _K2OSKERN_CRITSEC
 #define K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK   0x00040000
 #define K2OSKERN_SEG_ATTR_TYPE_SPARSE       0x00050000
 #define K2OSKERN_SEG_ATTR_TYPE_DEVMAP       0x00060000
-#define K2OSKERN_SEG_ATTR_TYPE_PHYSBUF      0x00070000
+#define K2OSKERN_SEG_ATTR_TYPE_BUILTIN      0x00070000
 #define K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
 #define K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB     0x00090000
 #define K2OSKERN_SEG_ATTR_TYPE_COUNT        0x000A0000
@@ -1406,6 +1406,8 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
 /* --------------------------------------------------------------------------------- */
 
+#define KERN_MEMMAP_CHUNK 128
+
 void   KernMem_Start(void);
 
 UINT32 KernMem_CountPT(UINT32 aVirtAddr, UINT32 aPageCount);
@@ -1424,6 +1426,8 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags);
 void   KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, BOOL aClearNp);
+
+K2STAT KernMem_MapContigPhys(UINT32 aContigPhysAddr, UINT32 aPageCount, UINT32 aSegAndMemPageAttr, UINT32 * apRetVirtAddr);
 
 /* --------------------------------------------------------------------------------- */
 

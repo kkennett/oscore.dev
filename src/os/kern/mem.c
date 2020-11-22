@@ -209,8 +209,8 @@ sDumpHeapNode(
                 case K2OSKERN_SEG_ATTR_TYPE_DEVMAP:
                     pStr = "DEVMAP";
                     break;
-                case K2OSKERN_SEG_ATTR_TYPE_PHYSBUF:
-                    pStr = "PHYSBUF";
+                case K2OSKERN_SEG_ATTR_TYPE_BUILTIN:
+                    pStr = "BUILTIN";
                     break;
                 case K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB:
                     pStr = "SEGSLAB";
@@ -1264,7 +1264,7 @@ static KernPhysPageList sGetSegTargetPageList(K2OSKERN_OBJ_SEGMENT *apSegSrc)
         targetPageList = KernPhysPageList_Error;
         break;
 
-    case K2OSKERN_SEG_ATTR_TYPE_PHYSBUF:
+    case K2OSKERN_SEG_ATTR_TYPE_BUILTIN:
         targetPageList = KernPhysPageList_General;
         break;
 
@@ -2120,3 +2120,109 @@ void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
         K2OSKERN_SetIntr(disp);
     }
 }
+
+K2STAT KernMem_MapContigPhys(
+    UINT32      aContigPhysAddr,
+    UINT32      aPageCount,
+    UINT32      aSegAndMemPageAttr,
+    UINT32 *    apRetVirtAddr
+)
+{
+    K2STAT                  stat;
+    BOOL                    disp;
+    UINT32                  virtAddr;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+    UINT32                  chunkLeft;
+
+    if (gData.mKernInitStage < KernInitStage_MemReady)
+        return K2STAT_ERROR_API_ORDER;
+
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
+    pSeg = NULL;
+    stat = KernMem_SegAllocToThread(pCurThread);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return stat;
+    }
+
+    pSeg = pCurThread->mpWorkSeg;
+
+    K2_ASSERT(pSeg != NULL);
+
+    do {
+
+        stat = KernMem_VirtAllocToThread(pCurThread, 0, aPageCount, FALSE);
+        if (K2STAT_IS_ERROR(stat))
+            break;
+
+        K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+        pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+        pSeg->Hdr.mRefCount = 1;
+        K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
+        pSeg->mSegAndMemPageAttr = aSegAndMemPageAttr;
+
+        K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
+        K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
+
+        stat = KernMem_CreateSegmentFromThread(pCurThread, pSeg, NULL);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            K2_ASSERT(pCurThread->mpWorkSeg == NULL);
+
+            *apRetVirtAddr = pSeg->ProcSegTreeNode.mUserVal;
+            K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
+            K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
+
+            //
+            // map the device pages to the virtual range just created
+            //
+            chunkLeft = KERN_MEMMAP_CHUNK;
+            virtAddr = pSeg->ProcSegTreeNode.mUserVal;
+
+            disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+
+            do {
+                KernMap_MakeOnePresentPage(
+                    K2OS_KVA_KERNVAMAP_BASE,
+                    virtAddr,
+                    aContigPhysAddr,
+                    aSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_MASK);
+                virtAddr += K2_VA32_MEMPAGE_BYTES;
+                aContigPhysAddr += K2_VA32_MEMPAGE_BYTES;
+
+                if (--aPageCount == 0)
+                    break;
+
+                if (--chunkLeft == 0)
+                {
+                    if (aPageCount > 1)
+                    {
+                        K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+                        disp = K2OSKERN_SeqIntrLock(&gData.KernVirtMapLock);
+                        chunkLeft = KERN_MEMMAP_CHUNK;
+                    }
+                }
+
+            } while (1);
+
+            K2OSKERN_SeqIntrUnlock(&gData.KernVirtMapLock, disp);
+        }
+        else
+        {
+            KernMem_VirtFreeFromThread(pCurThread);
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernMem_SegFreeFromThread(pCurThread);
+        K2OS_ThreadSetStatus(stat);
+    }
+
+    return stat;
+}
+
