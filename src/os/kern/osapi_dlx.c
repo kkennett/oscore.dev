@@ -34,6 +34,42 @@
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId)
 {
+    DLX *   pDlx;
+    char *  pFullPath;
+
+    if (aTokPath == NULL)
+    {
+        //
+        // attempting to load from builtin file system
+        // strip any prefixed path from the apRelFilePath
+        //
+
+    }
+    else
+    {
+        //
+        // addref path object and resolve path string
+        //
+    }
+
+    //
+    // concatenate apRelFilePath path to resolved path string
+    //
+    stat = DLX_Acquire(pFullPath, &pDlx);
+
+    //
+    // release reference on path object
+    //
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+    
+
+
+
     K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
     return NULL;
 }
