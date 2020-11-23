@@ -86,5 +86,7 @@ K2OSEXEC_Init(
     DrvStore_Init();
 
     Time_Start(apInitInfo);
+
+    Builtin_Init(apInitInfo);
 }
 

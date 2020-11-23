@@ -61,6 +61,7 @@ SOURCES += msg.c
 SOURCES += dlxsupp.c
 SOURCES += fsprov.c
 SOURCES += drvstore.c
+SOURCES += builtin.c
 
 STATIC_LIBS += @shared/lib/k2heap
 STATIC_LIBS += @shared/lib/k2rofshelp

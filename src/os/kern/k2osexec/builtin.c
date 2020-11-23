@@ -32,71 +32,50 @@
 
 #include "ik2osexec.h"
 
-static K2OS_CRITSEC sgDlx_Sec;
+static K2ROFS_DIR const * sgpBuiltinRoot;
+static K2ROFS_DIR const * sgpBuiltinKern;
 
-K2STAT Dlx_CritSec(BOOL aEnter)
-{
-    BOOL ok;
-    if (aEnter)
-        ok = K2OS_CritSecEnter(&sgDlx_Sec);
-    else
-        ok = K2OS_CritSecLeave(&sgDlx_Sec);
-    if (!ok)
-        return K2OS_ThreadGetStatus();
-    return K2STAT_OK;
-}
-
-K2STAT Dlx_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT Dlx_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT Dlx_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-BOOL   Dlx_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
-{
-    return FALSE;
-}
-
-K2STAT Dlx_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT Dlx_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-K2STAT Dlx_Purge(K2DLXSUPP_HOST_FILE aHostFile)
-{
-    return K2STAT_ERROR_NOT_IMPL;
-}
-
-void
-Dlx_Init(
+void 
+Builtin_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
-    BOOL    ok;
+    UINT32              ix;
+    K2ROFS_FILE const * pFile;
+    char const *        pDlxName;
+    char const *        pExt;
+    char                ch;
+    K2OS_TOKEN          tokDlx;
 
-    apInitInfo->mfDlxCritSec = Dlx_CritSec;
-    apInitInfo->mfDlxOpen = Dlx_Open;
-    apInitInfo->mfDlxReadSectors = Dlx_ReadSectors;
-    apInitInfo->mfDlxPrepare = Dlx_Prepare;
-    apInitInfo->mfDlxPreCallback = Dlx_PreCallback;
-    apInitInfo->mfDlxPostCallback = Dlx_PostCallback;
-    apInitInfo->mfDlxFinalize = Dlx_Finalize;
-    apInitInfo->mfDlxPurge = Dlx_Purge;
+    sgpBuiltinRoot = K2ROFS_ROOTDIR(apInitInfo->mpBuiltinRofs);
+    K2_ASSERT(sgpBuiltinRoot != NULL);
 
-    ok = K2OS_CritSecInit(&sgDlx_Sec);
-    K2_ASSERT(ok);
+    sgpBuiltinKern = K2ROFSHELP_SubDir(apInitInfo->mpBuiltinRofs, sgpBuiltinRoot, "kern");
+    K2_ASSERT(sgpBuiltinKern != NULL);
+
+    for (ix = 0; ix < sgpBuiltinKern->mFileCount; ix++)
+    {
+        pFile = K2ROFSHELP_SubFileIx(apInitInfo->mpBuiltinRofs, sgpBuiltinKern, ix);
+        pDlxName = K2ROFS_NAMESTR(apInitInfo->mpBuiltinRofs, pFile->mName);
+        pExt = pDlxName;
+        do {
+            ch = *pExt;
+            pExt++;
+            if (ch == '.')
+            {
+                if (0 == K2ASC_CompIns(pExt, "dlx"))
+                {
+                    //
+                    // try to load this DLX 
+                    //
+                    tokDlx = K2OS_DlxLoad(NULL, pDlxName, NULL);
+                    if (tokDlx == NULL)
+                    {
+                        K2OSKERN_Debug("  *** FAILED TO LOAD BUILTIN DLX \"%s\". Error %08X\n", pDlxName, K2OS_ThreadGetStatus());
+                    }
+                    break;
+                }
+            }
+        } while (ch != 0);
+    }
 }
