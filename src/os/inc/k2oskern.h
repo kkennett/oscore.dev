@@ -197,6 +197,55 @@ K2OSKERN_GetCpuIndex(
 //------------------------------------------------------------------------
 //
 
+typedef struct _K2OSKERN_OBJ_HEADER K2OSKERN_OBJ_HEADER;
+
+typedef
+K2STAT
+(*K2OSKERN_pf_CreateTokenNoAddRef)(
+    UINT32                  aObjCount, 
+    K2OSKERN_OBJ_HEADER **  appObjHdr, 
+    K2OS_TOKEN *            apRetTokens
+    );
+
+K2STAT 
+K2OSKERN_CreateTokenNoAddRef(
+    UINT32                  aObjCount, 
+    K2OSKERN_OBJ_HEADER **  appObjHdr, 
+    K2OS_TOKEN *            apRetTokens
+);
+
+typedef 
+K2STAT
+(*K2OSKERN_pf_TranslateTokensToAddRefObjs)(
+    UINT32                  aTokenCount, 
+    K2OS_TOKEN const *      apTokens, 
+    K2OSKERN_OBJ_HEADER **  appRetObjHdrs
+    );
+
+K2STAT
+K2OSKERN_TranslateTokensToAddRefObjs(
+    UINT32                  aTokenCount,
+    K2OS_TOKEN const *      apTokens,
+    K2OSKERN_OBJ_HEADER **  appRetObjHdrs
+    );
+
+typedef
+K2OS_TOKEN
+(*K2OSKERN_pf_CreateTokenFromAddRefOfNamedObject)(
+    K2OS_TOKEN      aNameToken, 
+    K2OS_ObjectType aObjType
+    );
+
+K2OS_TOKEN
+K2OSKERN_CreateTokenFromAddRefOfNamedObject(
+    K2OS_TOKEN      aNameToken,
+    K2OS_ObjectType aObjType
+    );
+
+//
+//------------------------------------------------------------------------
+//
+
 typedef
 K2STAT
 (*K2OSKERN_pf_MapDevice)(

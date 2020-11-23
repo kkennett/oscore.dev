@@ -117,13 +117,10 @@ typedef union  _K2OSKERN_SCHED_ITEM_ARGS    K2OSKERN_SCHED_ITEM_ARGS;
 
 typedef struct _K2OSKERN_CRITSEC            K2OSKERN_CRITSEC;
 
-typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
-
 typedef struct _K2OSKERN_OBJ_SEGMENT        K2OSKERN_OBJ_SEGMENT;
 typedef struct _K2OSKERN_OBJ_DLX            K2OSKERN_OBJ_DLX;
 typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
 typedef struct _K2OSKERN_OBJ_EVENT          K2OSKERN_OBJ_EVENT;
-typedef struct _K2OSKERN_OBJ_NAME           K2OSKERN_OBJ_NAME;
 typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
 typedef struct _K2OSKERN_OBJ_SEM            K2OSKERN_OBJ_SEM;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
@@ -237,21 +234,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_COREPAGE) == K2_VA32_MEMPAGE_BYTES);
 
 #define K2OSKERN_COREIX_TO_COREPAGE(x)  ((K2OSKERN_COREPAGE *)(K2OS_KVA_COREPAGES_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
 #define K2OSKERN_GET_CURRENT_COREPAGE   K2OSKERN_COREIX_TO_COREPAGE(K2OSKERN_GetCpuIndex())
-
-/* --------------------------------------------------------------------------------- */
-
-#define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
-#define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
-
-struct _K2OSKERN_OBJ_HEADER
-{
-    K2OS_ObjectType     mObjType;
-    UINT32              mObjFlags;
-    INT32 volatile      mRefCount;
-    K2TREE_NODE         ObjTreeNode;
-    K2OSKERN_OBJ_NAME * mpName;
-    K2LIST_ANCHOR       WaitEntryPrioList;
-};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1401,8 +1383,17 @@ void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 
-void   KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
+
+void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
+K2STAT KernDlxSupp_CritSec(BOOL aEnter);
+K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
+K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
+BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
+K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
+K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
+K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1420,7 +1411,7 @@ void   KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
 
 K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread);
 K2STAT KernMem_SegFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread);
-void   KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg);
+void   KernMem_SegDispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, K2OSKERN_OBJ_SEGMENT *apDst);
 
@@ -1488,7 +1479,7 @@ K2STAT                  KernThread_Kill(K2OSKERN_OBJ_THREAD *apThread, UINT32 aF
 K2STAT                  KernThread_SetAttr(K2OSKERN_OBJ_THREAD *apThread, K2OS_THREADATTR const *apNewAttr);
 K2STAT                  KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PROCESS *apProc, K2OS_THREADCREATE const *apCreate);
 K2STAT                  KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *apThread);
-K2STAT                  KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread);
+void                    KernThread_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32                  KernThread_Wait(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, BOOL aWaitAll, UINT32 aTimeoutMs);
 
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg);
@@ -1579,7 +1570,7 @@ void KernInit_CpuCore(void);
 /* --------------------------------------------------------------------------------- */
 
 void KernIntr_QueueCpuCoreEvent(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_CPUCORE_EVENT volatile * apCoreEvent);
-void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr);
+void KernIntr_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1592,30 +1583,24 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
 
 K2STAT KernName_Define(K2OSKERN_OBJ_NAME *apName, char const *apString, K2OSKERN_OBJ_NAME **appRetActual);
 K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER **appRetObj);
-void   KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj);
+void   KernName_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
 K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, BOOL aAutoReset, BOOL aInitialState);
 K2STAT KernEvent_Change(K2OSKERN_OBJ_EVENT *apEvtObj, BOOL aSetReset);
-void   KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvtObj);
-
-/* --------------------------------------------------------------------------------- */
-
-K2STAT      KernTok_CreateNoAddRef(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens);
-K2STAT      KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
-K2OS_TOKEN  KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType);
+void   KernEvent_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
 K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32 aMaxCount, UINT32 aInitCount);
 K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewCount);
-void   KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem);
+void   KernSem_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
 K2STAT KernAlarm_Create(K2OSKERN_OBJ_ALARM *apAlarm, K2OSKERN_OBJ_NAME *apName, UINT32 aIntervalMs, BOOL aIsPeriodic);
-void   KernAlarm_Dispose(K2OSKERN_OBJ_ALARM *apAlarm);
+void   KernAlarm_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
@@ -1623,21 +1608,20 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
 K2STAT KernMailbox_SetBlock(K2OSKERN_OBJ_MAILBOX *apMailbox, BOOL aSetBlock);
 K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo, UINT32 *apRetRequestId);
 K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K2OS_MSGIO const *apRetRespIo);
-void   KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox);
+void   KernMailbox_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg);
 K2STAT KernMsg_Send(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO const *apMsgIo);
 K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg, BOOL aClear);
 K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, BOOL aClear);
-void   KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg);
+void   KernMsg_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 
-void   KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService);
-void   KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish);
-
-void   KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify);
-void   KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip);
+void   KernService_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
+void   KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
+void   KernNotify_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
+void   KernSubscrip_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 

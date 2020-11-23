@@ -58,7 +58,6 @@ SOURCES += dev.c
 SOURCES += res.c
 SOURCES += intr.c
 SOURCES += msg.c
-SOURCES += dlxsupp.c
 SOURCES += fsprov.c
 SOURCES += drvstore.c
 SOURCES += builtin.c

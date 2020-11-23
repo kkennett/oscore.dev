@@ -46,7 +46,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL
 
     if (aTokName != NULL)
     {
-        stat = KernTok_TranslateToAddRefObjs(1, &aTokName, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokName, (K2OSKERN_OBJ_HEADER **)&pNameObj);
         if (!K2STAT_IS_ERROR(stat))
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
@@ -78,7 +78,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL
         }
 
         pObjHdr = &pMailboxObj->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokMailbox);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokMailbox);
         if (K2STAT_IS_ERROR(stat))
         {
             KernObj_Release(&pMailboxObj->Hdr);
@@ -112,7 +112,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxSetBlock(K2OS_TOKEN aTokMailbox, BOOL 
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
@@ -159,7 +159,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGI
     K2MEM_Zero(&actMsgIo, sizeof(actMsgIo));
     actReqId = 0;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)
@@ -204,7 +204,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32
 
     K2MEM_Copy(&msgIo, apRespIo, sizeof(K2OS_MSGIO));
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMailboxObj->Hdr.mObjType == K2OS_Obj_Mailbox)

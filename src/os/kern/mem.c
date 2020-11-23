@@ -1622,6 +1622,7 @@ K2STAT KernMem_SegAllocToThread(K2OSKERN_OBJ_THREAD *apCurThread)
                 K2MEM_Zero(&tempSeg, sizeof(tempSeg));
                 tempSeg.Hdr.mObjType = K2OS_Obj_Segment;
                 tempSeg.Hdr.mRefCount = 1;
+                tempSeg.Hdr.Dispose = KernMem_SegDispose;
                 K2LIST_Init(&tempSeg.Hdr.WaitEntryPrioList);
                 tempSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB;
 
@@ -2042,7 +2043,7 @@ void KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OB
     }
 }
 
-void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
+void KernMem_SegDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                    disp;
     K2OSKERN_OBJ_THREAD *   pCurThread;
@@ -2052,6 +2053,8 @@ void KernMem_SegDispose(K2OSKERN_OBJ_SEGMENT *apSeg)
     UINT32                  segPageCount;
     UINT32                  scanIx;
     UINT32                  foundCount;
+
+    K2OSKERN_OBJ_SEGMENT *apSeg = (K2OSKERN_OBJ_SEGMENT *)apObjHdr;
 
     K2_ASSERT((apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT) == 0);
 
@@ -2161,6 +2164,7 @@ K2STAT KernMem_MapContigPhys(
         K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
         pSeg->Hdr.mObjType = K2OS_Obj_Segment;
         pSeg->Hdr.mRefCount = 1;
+        pSeg->Hdr.Dispose = KernMem_SegDispose;
         K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
         pSeg->mSegAndMemPageAttr = aSegAndMemPageAttr;
 

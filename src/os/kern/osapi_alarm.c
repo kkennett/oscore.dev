@@ -52,7 +52,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
     pNameObj = NULL;
     if (aNameToken != NULL)
     {
-        stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
         if (!K2STAT_IS_ERROR(stat))
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
@@ -84,7 +84,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
         }
 
         pObjHdr = &pAlarmObj->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokAlarm);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokAlarm);
         if (K2STAT_IS_ERROR(stat))
         {
             KernObj_Release(&pAlarmObj->Hdr);
@@ -109,5 +109,5 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_AlarmAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Alarm);
+    return K2OSKERN_CreateTokenFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Alarm);
 }

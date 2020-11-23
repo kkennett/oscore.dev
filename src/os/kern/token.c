@@ -32,7 +32,12 @@
 
 #include "kern.h"
 
-K2STAT KernTok_CreateNoAddRef(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr, K2OS_TOKEN *apRetTokens)
+K2STAT
+K2OSKERN_CreateTokenNoAddRef(
+    UINT32                  aObjCount,
+    K2OSKERN_OBJ_HEADER **  appObjHdr,
+    K2OS_TOKEN *            apRetTokens
+)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_PROCESS *  pCurProcess;
@@ -196,7 +201,13 @@ K2STAT KernTok_CreateNoAddRef(UINT32 aObjCount, K2OSKERN_OBJ_HEADER **appObjHdr,
     return K2STAT_NO_ERROR;
 }
 
-K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs)
+
+K2STAT
+K2OSKERN_TranslateTokensToAddRefObjs(
+    UINT32                  aTokenCount,
+    K2OS_TOKEN const *      apTokens,
+    K2OSKERN_OBJ_HEADER **  appRetObjHdrs
+)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_PROCESS *  pCurProcess;
@@ -283,7 +294,9 @@ K2STAT KernTok_TranslateToAddRefObjs(UINT32 aTokenCount, K2OS_TOKEN const *apTok
     return stat;
 }
 
-BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
+BOOL 
+K2_CALLCONV_CALLERCLEANS 
+K2OS_TokenDestroy(K2OS_TOKEN aToken)
 {
     K2STAT                  stat;
     K2OSKERN_OBJ_PROCESS *  pCurProcess;
@@ -361,7 +374,11 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken)
     return stat;
 }
 
-K2OS_TOKEN KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_ObjectType aObjType)
+K2OS_TOKEN
+K2OSKERN_CreateTokenFromAddRefOfNamedObject(
+    K2OS_TOKEN      aNameToken,
+    K2OS_ObjectType aObjType
+)
 {
     K2STAT                  stat;
     K2STAT                  stat2;
@@ -378,7 +395,7 @@ K2OS_TOKEN KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_Obj
 
     tokObject = NULL;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pNameObj->Hdr.mObjType == K2OS_Obj_Name)
@@ -408,7 +425,7 @@ K2OS_TOKEN KernTok_CreateFromAddRefOfNamedObject(K2OS_TOKEN aNameToken, K2OS_Obj
                 //
                 // creating a token will ***NOT*** add a reference
                 //
-                stat = KernTok_CreateNoAddRef(1, &pRefObj, &tokObject);
+                stat = K2OSKERN_CreateTokenNoAddRef(1, &pRefObj, &tokObject);
                 if (K2STAT_IS_ERROR(stat))
                 {
                     stat2 = KernObj_Release(pRefObj);

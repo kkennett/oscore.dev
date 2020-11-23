@@ -87,7 +87,7 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
 }
 
-void KernDlx_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile)
+void KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile)
 {
     //
     // this happens right after dlx_entry for kernel has completed
@@ -247,4 +247,44 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
     }
 
     return symAddr;
+}
+
+K2STAT KernDlxSupp_CritSec(BOOL aEnter)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT * apRetResult)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO * apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC * apRetAlloc)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
+{
+    return FALSE;
+}
+
+K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * apUpdateAlloc)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
+{
+    return K2STAT_ERROR_NOT_IMPL;
 }

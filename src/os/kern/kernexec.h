@@ -34,8 +34,29 @@
 #define __KERNEXEC_H
 
 #include <k2oshal.h>
-#include <lib/k2dlxsupp.h>
 #include <spec/k2rofs.h>
+
+/* --------------------------------------------------------------------------------- */
+
+typedef struct _K2OSKERN_OBJ_NAME           K2OSKERN_OBJ_NAME;
+typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
+
+#define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
+#define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
+
+typedef void (*K2OSKERN_pf_ObjDispose)(K2OSKERN_OBJ_HEADER *apObj);
+
+struct _K2OSKERN_OBJ_HEADER
+{
+    K2OS_ObjectType         mObjType;
+    UINT32                  mObjFlags;
+    INT32 volatile          mRefCount;
+    K2OSKERN_pf_ObjDispose  Dispose;
+
+    K2TREE_NODE             ObjTreeNode;
+    K2OSKERN_OBJ_NAME *     mpName;
+    K2LIST_ANCHOR           WaitEntryPrioList;
+};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -54,15 +75,6 @@ struct _K2OSEXEC_INIT_INFO
     // OUTPUT
     //
     K2OSKERN_IRQ_CONFIG         SysTickDevIrqConfig;
-
-    pfK2DLXSUPP_CritSec         mfDlxCritSec;
-    pfK2DLXSUPP_Open            mfDlxOpen;
-    pfK2DLXSUPP_ReadSectors     mfDlxReadSectors;
-    pfK2DLXSUPP_Prepare         mfDlxPrepare;
-    pfK2DLXSUPP_PreCallback     mfDlxPreCallback;
-    pfK2DLXSUPP_PostCallback    mfDlxPostCallback;
-    pfK2DLXSUPP_Finalize        mfDlxFinalize;
-    pfK2DLXSUPP_Purge           mfDlxPurge;
 };
 
 typedef

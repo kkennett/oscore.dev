@@ -58,6 +58,7 @@ K2STAT KernSem_Create(K2OSKERN_OBJ_SEM *apSem, K2OSKERN_OBJ_NAME *apName, UINT32
     apSem->Hdr.mObjFlags = 0;
     apSem->Hdr.mpName = NULL;
     apSem->Hdr.mRefCount = 1;
+    apSem->Hdr.Dispose = KernSem_Dispose;
     K2LIST_Init(&apSem->Hdr.WaitEntryPrioList);
     apSem->mCurCount = aInitCount;
     apSem->mMaxCount = aMaxCount;
@@ -123,9 +124,11 @@ K2STAT KernSem_Release(K2OSKERN_OBJ_SEM *apSem, UINT32 aCount, UINT32 *apRetNewC
     return stat;
 }
 
-void KernSem_Dispose(K2OSKERN_OBJ_SEM *apSem)
+void KernSem_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL check;
+
+    K2OSKERN_OBJ_SEM *apSem = (K2OSKERN_OBJ_SEM *)apObjHdr;
 
     K2_ASSERT(apSem != NULL);
     K2_ASSERT(apSem->Hdr.mObjType == K2OS_Obj_Semaphore);

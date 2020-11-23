@@ -59,8 +59,16 @@ sHalThread(
     void *apParam
 )
 {
-    K2OSHAL_pf_OnSystemReady fReady;
-    fReady = (K2OSHAL_pf_OnSystemReady)apParam;
+    K2OSHAL_pf_OnSystemReady fReady = (K2OSHAL_pf_OnSystemReady)apParam;
+
+    //
+    // run builtin driver loads here
+    //
+    Builtin_Run();
+
+    //
+    // continue on to HAL thread
+    //
     return fReady();
 }
 

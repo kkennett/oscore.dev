@@ -102,7 +102,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRet
                 break;
             }
 
-            stat = KernTok_CreateNoAddRef(aMsgCount, (K2OSKERN_OBJ_HEADER **)ppMsg, pTokens);
+            stat = K2OSKERN_CreateTokenNoAddRef(aMsgCount, (K2OSKERN_OBJ_HEADER **)ppMsg, pTokens);
             if (K2STAT_IS_ERROR(stat))
             {
                 for (ix = 0; ix < aMsgCount; ix++)
@@ -170,7 +170,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKE
 
     K2MEM_Copy(&msgIo, apMsgIo, sizeof(K2OS_MSGIO));
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMsg->Hdr.mObjType == K2OS_Obj_Msg)
@@ -204,7 +204,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg, BOOL aClear)
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMsg->Hdr.mObjType == K2OS_Obj_Msg)
@@ -240,7 +240,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGI
     K2MEM_Zero(apRetRespIo, sizeof(K2OS_MSGIO));
     K2MEM_Zero(&actResp, sizeof(K2OS_MSGIO));
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMsg, (K2OSKERN_OBJ_HEADER **)&pMsg);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pMsg->Hdr.mObjType == K2OS_Obj_Msg)

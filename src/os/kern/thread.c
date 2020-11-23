@@ -168,6 +168,7 @@ K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PR
 
     pNewThread->Hdr.mObjType = K2OS_Obj_Thread;
     pNewThread->Hdr.mRefCount = 1;
+    pNewThread->Hdr.Dispose = KernThread_Dispose;
     K2LIST_Init(&pNewThread->Hdr.WaitEntryPrioList);
     pNewThread->mpProc = apProc;
     pNewThread->mIsKernelThread = (((UINT32)apCreate->mEntrypoint) >= K2OS_KVA_KERN_BASE) ? TRUE : FALSE;
@@ -229,11 +230,13 @@ K2STAT KernThread_Start(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_THREAD *
     return apThisThread->Sched.Item.mSchedCallResult;
 }
 
-K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
+void KernThread_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                    disp;
     K2OSKERN_OBJ_PROCESS *  pProc;
     K2OSKERN_OBJ_SEGMENT *  pSeg;
+
+    K2OSKERN_OBJ_THREAD *apThread = (K2OSKERN_OBJ_THREAD *)apObjHdr;
 
     K2_ASSERT(apThread != NULL);
     K2_ASSERT(apThread->Hdr.mObjType == K2OS_Obj_Thread);
@@ -277,8 +280,6 @@ K2STAT KernThread_Dispose(K2OSKERN_OBJ_THREAD *apThread)
     // thread is GONE after this call
     //
     KernObj_Release(&pSeg->Hdr);
-
-    return K2STAT_NO_ERROR;
 }
 
 K2OSKERN_OBJ_HEADER * 

@@ -234,10 +234,6 @@ void Msg_Init(void);
 
 /* ----------------------------------------------------------------------------- */
 
-void Dlx_Init(K2OSEXEC_INIT_INFO * apInitInfo);
-
-/* ----------------------------------------------------------------------------- */
-
 void FsProv_Init(void);
 void FsProv_OnNotify(void);
 
@@ -271,6 +267,11 @@ extern K2ROFS_DIR const * gpBuiltinRoot;
 void 
 Builtin_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
+);
+
+void
+Builtin_Run(
+    void
 );
 
 /* ----------------------------------------------------------------------------- */

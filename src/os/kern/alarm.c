@@ -54,6 +54,7 @@ K2STAT KernAlarm_Create(K2OSKERN_OBJ_ALARM *apAlarm, K2OSKERN_OBJ_NAME *apName, 
     apAlarm->Hdr.mObjFlags = 0;
     apAlarm->Hdr.mpName = NULL;
     apAlarm->Hdr.mRefCount = 1;
+    apAlarm->Hdr.Dispose = KernAlarm_Dispose;
 
     K2LIST_Init(&apAlarm->Hdr.WaitEntryPrioList);
 
@@ -84,11 +85,13 @@ K2STAT KernAlarm_Create(K2OSKERN_OBJ_ALARM *apAlarm, K2OSKERN_OBJ_NAME *apName, 
     return stat;
 }
 
-void KernAlarm_Dispose(K2OSKERN_OBJ_ALARM *apAlarm)
+void KernAlarm_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                    check;
     K2STAT                  stat;
     K2OSKERN_OBJ_THREAD *   pThisThread;
+
+    K2OSKERN_OBJ_ALARM *apAlarm = (K2OSKERN_OBJ_ALARM *)apObjHdr;
 
     K2_ASSERT(apAlarm != NULL);
     K2_ASSERT(apAlarm->Hdr.mObjType == K2OS_Obj_Alarm);

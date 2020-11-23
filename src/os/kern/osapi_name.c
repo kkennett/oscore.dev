@@ -110,7 +110,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName)
         // name object now exists - storage is only released
         // via object release
         pObjHdr = &pName->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokName);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokName);
         if (K2STAT_IS_ERROR(stat))
         {
             //
@@ -149,7 +149,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRet
     K2MEM_Zero(apRetName, K2OS_NAME_MAX_LEN + 1);
     K2MEM_Zero(name, K2OS_NAME_MAX_LEN + 1);
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
@@ -189,7 +189,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken)
 
     tokName = NULL;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aObjectToken, &pObjHdr);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aObjectToken, &pObjHdr);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
@@ -211,7 +211,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken)
         if (!K2STAT_IS_ERROR(stat))
         {
             pNameObjHdr = &pNameObj->Hdr;
-            stat = KernTok_CreateNoAddRef(1, &pNameObjHdr, &tokName);
+            stat = K2OSKERN_CreateTokenNoAddRef(1, &pNameObjHdr, &tokName);
             if (K2STAT_IS_ERROR(stat))
             {
                 //

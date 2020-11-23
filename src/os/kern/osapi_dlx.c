@@ -34,9 +34,6 @@
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId)
 {
-    DLX *   pDlx;
-    char *  pFullPath;
-
     if (aTokPath == NULL)
     {
         //
@@ -55,18 +52,11 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char 
     //
     // concatenate apRelFilePath path to resolved path string
     //
-    stat = DLX_Acquire(pFullPath, &pDlx);
 
     //
     // release reference on path object
     //
-
-    if (K2STAT_IS_ERROR(stat))
-    {
-        K2OS_ThreadSetStatus(stat);
-        return NULL;
-    }
-    
+  
 
 
 
@@ -93,7 +83,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apR
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokDlx, (K2OSKERN_OBJ_HEADER **)&pDlxObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokDlx, (K2OSKERN_OBJ_HEADER **)&pDlxObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pDlxObj->Hdr.mObjType == K2OS_Obj_DLX)
@@ -129,7 +119,7 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aD
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokDlx, (K2OSKERN_OBJ_HEADER **)&pDlxObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokDlx, (K2OSKERN_OBJ_HEADER **)&pDlxObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pDlxObj->Hdr.mObjType == K2OS_Obj_DLX)
@@ -259,7 +249,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress,
     //
     tokDlx = NULL;
     pObjHdr = &pDlxObj->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokDlx);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
     if (K2STAT_IS_ERROR(stat))
     {
         stat2 = KernObj_Release(&pDlxObj->Hdr);

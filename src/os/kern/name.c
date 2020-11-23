@@ -60,6 +60,7 @@ K2STAT KernName_Define(K2OSKERN_OBJ_NAME *apName, char const *apString, K2OSKERN
     apName->Hdr.mObjFlags = 0;
     apName->Hdr.mpName = NULL;
     apName->Hdr.mRefCount = 1;
+    apName->Hdr.Dispose = KernName_Dispose;
     K2LIST_Init(&apName->Hdr.WaitEntryPrioList);
 
     apName->mpObject = NULL;
@@ -102,7 +103,7 @@ K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER *
 
     *appRetObj = NULL;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
@@ -146,9 +147,11 @@ K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER *
     return stat;
 }
 
-void KernName_Dispose(K2OSKERN_OBJ_NAME *apNameObj)
+void KernName_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL check;
+
+    K2OSKERN_OBJ_NAME *apNameObj = (K2OSKERN_OBJ_NAME *)apObjHdr;
 
     K2_ASSERT(apNameObj != NULL);
     K2_ASSERT(apNameObj->Hdr.mObjType == K2OS_Obj_Name);

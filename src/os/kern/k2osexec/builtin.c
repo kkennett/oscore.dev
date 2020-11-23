@@ -32,12 +32,27 @@
 
 #include "ik2osexec.h"
 
+static K2ROFS const *     sgpRofs;
 static K2ROFS_DIR const * sgpBuiltinRoot;
 static K2ROFS_DIR const * sgpBuiltinKern;
 
 void 
 Builtin_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
+)
+{
+    sgpRofs = apInitInfo->mpBuiltinRofs;
+
+    sgpBuiltinRoot = K2ROFS_ROOTDIR(sgpRofs);
+    K2_ASSERT(sgpBuiltinRoot != NULL);
+
+    sgpBuiltinKern = K2ROFSHELP_SubDir(sgpRofs, sgpBuiltinRoot, "kern");
+    K2_ASSERT(sgpBuiltinKern != NULL);
+}
+
+void
+Builtin_Run(
+    void
 )
 {
     UINT32              ix;
@@ -47,16 +62,12 @@ Builtin_Init(
     char                ch;
     K2OS_TOKEN          tokDlx;
 
-    sgpBuiltinRoot = K2ROFS_ROOTDIR(apInitInfo->mpBuiltinRofs);
-    K2_ASSERT(sgpBuiltinRoot != NULL);
-
-    sgpBuiltinKern = K2ROFSHELP_SubDir(apInitInfo->mpBuiltinRofs, sgpBuiltinRoot, "kern");
-    K2_ASSERT(sgpBuiltinKern != NULL);
+    K2OSKERN_Debug("\n\nLOADING BUILTIN DRIVERS\n");
 
     for (ix = 0; ix < sgpBuiltinKern->mFileCount; ix++)
     {
-        pFile = K2ROFSHELP_SubFileIx(apInitInfo->mpBuiltinRofs, sgpBuiltinKern, ix);
-        pDlxName = K2ROFS_NAMESTR(apInitInfo->mpBuiltinRofs, pFile->mName);
+        pFile = K2ROFSHELP_SubFileIx(sgpRofs, sgpBuiltinKern, ix);
+        pDlxName = K2ROFS_NAMESTR(sgpRofs, pFile->mName);
         pExt = pDlxName;
         do {
             ch = *pExt;

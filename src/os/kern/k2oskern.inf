@@ -64,6 +64,9 @@ K2OSKERN_InterfaceInstanceEnum
 K2OSKERN_NotifyCreate
 K2OSKERN_NotifySubscribe
 K2OSKERN_NotifyRead
+K2OSKERN_CreateTokenNoAddRef
+K2OSKERN_TranslateTokensToAddRefObjs
+K2OSKERN_CreateTokenFromAddRefOfNamedObject
 
 #
 # Generic entry for K2OS functions when running in Kernel

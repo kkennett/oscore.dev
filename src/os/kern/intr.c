@@ -79,6 +79,7 @@ K2OSKERN_InstallIntrHandler(
     pIntr->Hdr.mObjType = K2OS_Obj_Interrupt;
     pIntr->Hdr.mRefCount = 1;
     K2LIST_Init(&pIntr->Hdr.WaitEntryPrioList);
+    pIntr->Hdr.Dispose = KernIntr_Dispose;
     pIntr->mfHandler = aHandler;
     pIntr->mpHandlerContext = apContext;
     pIntr->IntrTreeNode.mUserVal = apConfig->mSourceIrq;
@@ -119,7 +120,7 @@ K2OSKERN_InstallIntrHandler(
     else
     {
         pObjHdr = &pIntr->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokIntr);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokIntr);
         K2_ASSERT(tokIntr != NULL);
 
         //
@@ -143,7 +144,7 @@ K2OSKERN_SetIntrMask(
     K2STAT              stat;
     K2OSKERN_OBJ_INTR * pIntr;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokIntr, (K2OSKERN_OBJ_HEADER **)&pIntr);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokIntr, (K2OSKERN_OBJ_HEADER **)&pIntr);
     if (K2STAT_IS_ERROR(stat))
         return stat;
 
@@ -157,9 +158,11 @@ K2OSKERN_SetIntrMask(
     return stat;
 }
 
-void KernIntr_Dispose(K2OSKERN_OBJ_INTR *apIntr)
+void KernIntr_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL disp;
+
+    K2OSKERN_OBJ_INTR *apIntr = (K2OSKERN_OBJ_INTR *)apObjHdr;
 
     K2_ASSERT(apIntr->Hdr.mObjType == K2OS_Obj_Interrupt);
     K2_ASSERT(apIntr->Hdr.mRefCount == 0);

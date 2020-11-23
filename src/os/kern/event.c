@@ -51,6 +51,7 @@ K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, 
     apEvent->Hdr.mObjFlags = 0;
     apEvent->Hdr.mpName = NULL;
     apEvent->Hdr.mRefCount = 1;
+    apEvent->Hdr.Dispose = KernEvent_Dispose;
 
     K2LIST_Init(&apEvent->Hdr.WaitEntryPrioList);
 
@@ -80,9 +81,11 @@ K2STAT KernEvent_Change(K2OSKERN_OBJ_EVENT *apEvtObj, BOOL aSetReset)
     return pThisThread->Sched.Item.mSchedCallResult;
 }
 
-void KernEvent_Dispose(K2OSKERN_OBJ_EVENT *apEvent)
+void KernEvent_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL check;
+
+    K2OSKERN_OBJ_EVENT *apEvent = (K2OSKERN_OBJ_EVENT *)apObjHdr;
 
     K2_ASSERT(apEvent != NULL);
     K2_ASSERT(apEvent->Hdr.mObjType == K2OS_Obj_Event);

@@ -319,7 +319,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetInfo(K2OS_TOKEN aThreadToken, K2OS_T
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
@@ -425,7 +425,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadKill(K2OS_TOKEN aThreadToken, UINT32 aF
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
@@ -492,7 +492,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadSetAttr(K2OS_TOKEN aThreadToken, K2OS_T
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
@@ -561,7 +561,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetAttr(K2OS_TOKEN aThreadToken, K2OS_T
 
     K2MEM_Zero(apRetAttr, sizeof(K2OS_THREADATTR));
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aThreadToken, (K2OSKERN_OBJ_HEADER **)&pThreadObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pThreadObj->Hdr.mObjType == K2OS_Obj_Thread)
@@ -679,7 +679,7 @@ BOOL   K2_CALLCONV_CALLERCLEANS K2OS_ThreadGetOwnAttr(K2OS_THREADATTR *apRetAttr
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Thread);
+    return K2OSKERN_CreateTokenFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Thread);
 }
 
 K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
@@ -745,7 +745,7 @@ K2OS_TOKEN  K2_CALLCONV_CALLERCLEANS K2OS_ThreadAcquireById(UINT32 aThreadId)
     // if it is able to be created
     //
     pRefObj = &pThread->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pRefObj, &tokThread);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pRefObj, &tokThread);
     if (K2STAT_IS_ERROR(stat))
     {
         stat = KernObj_Release(pRefObj);
@@ -818,7 +818,7 @@ UINT32 K2_CALLCONV_CALLERCLEANS K2OS_ThreadWait(UINT32 aTokenCount, K2OS_TOKEN c
     }
 
     do {
-        stat = KernTok_TranslateToAddRefObjs(aTokenCount, apTokenArray, ppObj);
+        stat = K2OSKERN_TranslateTokensToAddRefObjs(aTokenCount, apTokenArray, ppObj);
         if (K2STAT_IS_ERROR(stat))
         {
             result = stat;
@@ -938,6 +938,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
                     pSeg->Hdr.mObjType = K2OS_Obj_Segment;
                     pSeg->Hdr.mRefCount = 1;
                     K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
+                    pSeg->Hdr.Dispose = KernMem_SegDispose;
                     pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_THREAD | K2OS_MAPTYPE_KERN_DATA;
                     pSeg->Info.Thread.mpThread = pNewThread;
 
@@ -1000,7 +1001,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
         K2_ASSERT(pThisThread->mpThreadCreateSeg == NULL);
 
         pObjHdr = &pNewThread->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokThread);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokThread);
         if (!K2STAT_IS_ERROR(stat))
         {
             K2_ASSERT(tokThread != NULL);
@@ -1022,7 +1023,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_ThreadCreate(K2OS_THREADCREATE const *a
         else
         {
             K2_ASSERT(tokThread == NULL);
-            KernThread_Dispose(pNewThread);
+            KernThread_Dispose(&pNewThread->Hdr);
         }
     }
     else

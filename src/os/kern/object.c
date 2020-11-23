@@ -36,52 +36,9 @@ static char const * sgpK2OSEXEC_MailboxName = "{51646997-5DE4-4175-AC0B-94BF2B57
 
 void sObjectDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
-//    K2OSKERN_Debug("ObjectDispose(%d)\n", apObjHdr->mObjType);
-    switch (apObjHdr->mObjType)
-    {
-    case K2OS_Obj_Name:
-        KernName_Dispose((K2OSKERN_OBJ_NAME *)apObjHdr);
-        break;
-    case K2OS_Obj_Event:
-        KernEvent_Dispose((K2OSKERN_OBJ_EVENT *)apObjHdr);
-        break;
-    case K2OS_Obj_Semaphore:
-        KernSem_Dispose((K2OSKERN_OBJ_SEM *)apObjHdr);
-        break;
-    case K2OS_Obj_Segment:
-        KernMem_SegDispose((K2OSKERN_OBJ_SEGMENT *)apObjHdr);
-        break;
-    case K2OS_Obj_Thread:
-        KernThread_Dispose((K2OSKERN_OBJ_THREAD *)apObjHdr);
-        break;
-    case K2OS_Obj_Mailbox:
-        KernMailbox_Dispose((K2OSKERN_OBJ_MAILBOX *)apObjHdr);
-        break;
-    case K2OS_Obj_Interrupt:
-        KernIntr_Dispose((K2OSKERN_OBJ_INTR *)apObjHdr);
-        break;
-    case K2OS_Obj_Msg:
-        KernMsg_Dispose((K2OSKERN_OBJ_MSG *)apObjHdr);
-        break;
-    case K2OS_Obj_Alarm:
-        KernAlarm_Dispose((K2OSKERN_OBJ_ALARM *)apObjHdr);
-        break;
-    case K2OS_Obj_Service:
-        KernService_Dispose((K2OSKERN_OBJ_SERVICE *)apObjHdr);
-        break;
-    case K2OS_Obj_Publish:
-        KernPublish_Dispose((K2OSKERN_OBJ_PUBLISH *)apObjHdr);
-        break;
-    case K2OS_Obj_Notify:
-        KernNotify_Dispose((K2OSKERN_OBJ_NOTIFY *)apObjHdr);
-        break;
-    case K2OS_Obj_Subscrip:
-        KernSubscrip_Dispose((K2OSKERN_OBJ_SUBSCRIP *)apObjHdr);
-        break;
-    default:
-        K2_ASSERT(0);
-        break;
-    }
+    //    K2OSKERN_Debug("ObjectDispose(%d)\n", apObjHdr->mObjType);
+    K2_ASSERT(apObjHdr->Dispose != NULL);
+    apObjHdr->Dispose(apObjHdr);
 }
 
 K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetActual)

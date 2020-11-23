@@ -88,10 +88,8 @@ enum _K2OS_ObjectType
     K2OS_Obj_Publish = 13,
     K2OS_Obj_Notify = 14,
     K2OS_Obj_Subscrip = 15,
-    K2OS_Obj_FileSys = 16,
-    K2OS_Obj_FsDir = 17,
-    K2OS_Obj_FsFile = 18,
-    K2OS_Obj_FsPath = 19
+
+    K2OS_Obj_Ext_Base = 128
 };
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_TokenDestroy(K2OS_TOKEN aToken);

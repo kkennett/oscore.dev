@@ -54,7 +54,7 @@ K2OSKERN_ServiceCreate(
         return NULL;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailbox);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailbox);
     if (!K2STAT_IS_ERROR(stat))
     {
         do {
@@ -77,6 +77,7 @@ K2OSKERN_ServiceCreate(
             pSvc->Hdr.mObjFlags = 0;
             pSvc->Hdr.mpName = NULL;
             pSvc->Hdr.mRefCount = 1;
+            pSvc->Hdr.Dispose = KernService_Dispose;
             K2LIST_Init(&pSvc->Hdr.WaitEntryPrioList);
 
             pSvc->mpMailbox = pMailbox;
@@ -121,7 +122,7 @@ K2OSKERN_ServiceCreate(
 
     tokService = NULL;
     pObjHdr = &pSvc->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokService);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokService);
     if (K2STAT_IS_ERROR(stat))
     {
         stat2 = KernObj_Release(&pSvc->Hdr);
@@ -153,7 +154,7 @@ K2OSKERN_ServiceGetInstanceId(
         return 0;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokService, (K2OSKERN_OBJ_HEADER **)&pSvc);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokService, (K2OSKERN_OBJ_HEADER **)&pSvc);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pSvc->Hdr.mObjType != K2OS_Obj_Service)
@@ -215,7 +216,7 @@ K2OSKERN_ServicePublish(
 
     numRec = 0;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokService, (K2OSKERN_OBJ_HEADER **)&pSvc);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokService, (K2OSKERN_OBJ_HEADER **)&pSvc);
     if (!K2STAT_IS_ERROR(stat))
     {
         do {
@@ -254,6 +255,7 @@ K2OSKERN_ServicePublish(
                     pPublish->Hdr.mObjFlags = 0;
                     pPublish->Hdr.mpName = NULL;
                     pPublish->Hdr.mRefCount = 1;
+                    pPublish->Hdr.Dispose = KernPublish_Dispose;
                     K2LIST_Init(&pPublish->Hdr.WaitEntryPrioList);
 
                     pPublish->mpService = pSvc;
@@ -419,7 +421,7 @@ K2OSKERN_ServicePublish(
 
     tokPublish = NULL;
     pObjHdr = &pPublish->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokPublish);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokPublish);
     if (K2STAT_IS_ERROR(stat))
     {
         tokPublish = NULL;
@@ -492,7 +494,7 @@ K2OSKERN_PublishGetInstanceId(
         return 0;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokPublish, (K2OSKERN_OBJ_HEADER **)&pPublish);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokPublish, (K2OSKERN_OBJ_HEADER **)&pPublish);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pPublish->Hdr.mObjType != K2OS_Obj_Publish)
@@ -513,7 +515,7 @@ K2OSKERN_PublishGetInstanceId(
     return result;
 }
 
-void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
+void KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                        check;
     BOOL                        disp;
@@ -529,6 +531,8 @@ void KernPublish_Dispose(K2OSKERN_OBJ_PUBLISH *apPublish)
     K2LIST_LINK *               pListLink;
     K2OSKERN_NOTIFY_BLOCK *     pNotifyBlock;
     K2OSKERN_OBJ_THREAD *       pThisThread;
+
+    K2OSKERN_OBJ_PUBLISH *apPublish = (K2OSKERN_OBJ_PUBLISH *)apObjHdr;
 
     K2_ASSERT(apPublish->Hdr.mObjType == K2OS_Obj_Publish);
     K2_ASSERT(apPublish->Hdr.mRefCount == 0);
@@ -1014,12 +1018,14 @@ K2OSKERN_ServiceInterfaceEnum(
     return TRUE;
 }
 
-void KernService_Dispose(K2OSKERN_OBJ_SERVICE *apService)
+void KernService_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                    check;
     BOOL                    disp;
     K2STAT                  stat;
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
+
+    K2OSKERN_OBJ_SERVICE *apService = (K2OSKERN_OBJ_SERVICE *)apObjHdr;
 
     K2_ASSERT(apService->Hdr.mObjType == K2OS_Obj_Service);
     K2_ASSERT(apService->Hdr.mRefCount == 0);
@@ -1172,6 +1178,7 @@ K2OSKERN_NotifyCreate(
         K2MEM_Zero(pNotifyObj, sizeof(K2OSKERN_OBJ_NOTIFY));
         pNotifyObj->Hdr.mObjType = K2OS_Obj_Notify;
         pNotifyObj->Hdr.mRefCount = 1;
+        pNotifyObj->Hdr.Dispose = KernNotify_Dispose;
         K2LIST_Init(&pNotifyObj->Hdr.WaitEntryPrioList);
 
         K2LIST_Init(&pNotifyObj->SubscripList);
@@ -1199,7 +1206,7 @@ K2OSKERN_NotifyCreate(
     }
 
     pObjHdr = &pNotifyObj->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokNotify);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokNotify);
     if (K2STAT_IS_ERROR(stat))
     {
         KernObj_Release(&pNotifyObj->Hdr);
@@ -1239,7 +1246,7 @@ K2OSKERN_NotifySubscribe(
 
     K2MEM_Copy(&iFace.InterfaceId, apInterfaceId, sizeof(K2_GUID128));
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokNotify, (K2OSKERN_OBJ_HEADER **)&pNotify);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokNotify, (K2OSKERN_OBJ_HEADER **)&pNotify);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
@@ -1260,6 +1267,7 @@ K2OSKERN_NotifySubscribe(
             pSubscrip->Hdr.mObjFlags = 0;
             pSubscrip->Hdr.mpName = NULL;
             pSubscrip->Hdr.mRefCount = 1;
+            pSubscrip->Hdr.Dispose = KernSubscrip_Dispose;
             K2LIST_Init(&pSubscrip->Hdr.WaitEntryPrioList);
 
             pSubscrip->mpContext = apContext;
@@ -1354,7 +1362,7 @@ K2OSKERN_NotifySubscribe(
 
     tokSubscrip = NULL;
     pObjHdr = &pSubscrip->Hdr;
-    stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokSubscrip);
+    stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokSubscrip);
     if (K2STAT_IS_ERROR(stat))
     {
         stat2 = KernObj_Release(&pSubscrip->Hdr);
@@ -1368,13 +1376,15 @@ K2OSKERN_NotifySubscribe(
     return tokSubscrip;
 }
 
-void KernSubscrip_Dispose(K2OSKERN_OBJ_SUBSCRIP *apSubscrip)
+void KernSubscrip_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL                    stat;
     BOOL                    check;
     BOOL                    disp;
     K2OSKERN_IFACE *        pIFace;
     K2OSKERN_OBJ_NOTIFY *   pNotify;
+
+    K2OSKERN_OBJ_SUBSCRIP *apSubscrip = (K2OSKERN_OBJ_SUBSCRIP *)apObjHdr;
 
     K2_ASSERT(apSubscrip->Hdr.mObjType == K2OS_Obj_Subscrip);
     K2_ASSERT(apSubscrip->Hdr.mRefCount == 0);
@@ -1451,7 +1461,7 @@ K2OSKERN_NotifyRead(
         return FALSE;
     }
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aTokNotify, (K2OSKERN_OBJ_HEADER **)&pNotify);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokNotify, (K2OSKERN_OBJ_HEADER **)&pNotify);
     if (K2STAT_IS_ERROR(stat))
     {
         K2OS_ThreadSetStatus(stat);
@@ -1517,10 +1527,12 @@ K2OSKERN_NotifyRead(
     return TRUE;
 }
 
-void KernNotify_Dispose(K2OSKERN_OBJ_NOTIFY *apNotify)
+void KernNotify_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL    stat;
     BOOL    check;
+
+    K2OSKERN_OBJ_NOTIFY *apNotify = (K2OSKERN_OBJ_NOTIFY *)apObjHdr;
 
     K2_ASSERT(apNotify->Hdr.mObjType == K2OS_Obj_Notify);
     K2_ASSERT(apNotify->Hdr.mRefCount == 0);

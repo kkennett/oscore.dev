@@ -44,6 +44,7 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
     apMsg->Hdr.mObjFlags = 0;
     apMsg->Hdr.mpName = NULL;
     apMsg->Hdr.mRefCount = 1;
+    apMsg->Hdr.Dispose = KernMsg_Dispose;
     K2LIST_Init(&apMsg->Hdr.WaitEntryPrioList);
 
     apMsg->mState = KernMsgState_Ready;
@@ -162,9 +163,11 @@ K2STAT KernMsg_ReadResponse(K2OSKERN_OBJ_MSG *apMsg, K2OS_MSGIO * apRetRespIo, B
     return pThisThread->Sched.Item.mSchedCallResult;
 }
 
-void KernMsg_Dispose(K2OSKERN_OBJ_MSG *apMsg)
+void KernMsg_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL check;
+
+    K2OSKERN_OBJ_MSG *apMsg = (K2OSKERN_OBJ_MSG *)apObjHdr;
 
     K2_ASSERT(apMsg->Hdr.mObjType == K2OS_Obj_Msg);
     K2_ASSERT(apMsg->Hdr.mRefCount == 0);

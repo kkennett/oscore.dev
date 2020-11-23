@@ -51,6 +51,7 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
     apMailbox->Hdr.mObjFlags = 0;
     apMailbox->Hdr.mpName = NULL;
     apMailbox->Hdr.mRefCount = 1;
+    apMailbox->Hdr.Dispose = KernMailbox_Dispose;
     K2LIST_Init(&apMailbox->Hdr.WaitEntryPrioList);
 
     apMailbox->mBlocked = aInitBlocked;
@@ -193,9 +194,11 @@ K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K
     return stat;
 }
 
-void KernMailbox_Dispose(K2OSKERN_OBJ_MAILBOX *apMailbox)
+void KernMailbox_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL    check;
+
+    K2OSKERN_OBJ_MAILBOX *apMailbox = (K2OSKERN_OBJ_MAILBOX *)apObjHdr;
 
     K2_ASSERT(apMailbox->Hdr.mObjType == K2OS_Obj_Mailbox);
     K2_ASSERT(apMailbox->Hdr.mRefCount == 0);

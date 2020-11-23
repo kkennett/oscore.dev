@@ -53,7 +53,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, 
     pNameObj = NULL;
     if (aNameToken != NULL)
     {
-        stat = KernTok_TranslateToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
+        stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aNameToken, (K2OSKERN_OBJ_HEADER **)&pNameObj);
         if (!K2STAT_IS_ERROR(stat))
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
@@ -88,7 +88,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, 
         // creating a token will ***NOT*** add a reference
         //
         pObjHdr = &pSemObj->Hdr;
-        stat = KernTok_CreateNoAddRef(1, &pObjHdr, &tokSem);
+        stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokSem);
         if (K2STAT_IS_ERROR(stat))
         {
             stat2 = KernObj_Release(&pSemObj->Hdr);
@@ -129,7 +129,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, 
     newCount = 0;
     *apRetNewCount = (UINT32)-1;
 
-    stat = KernTok_TranslateToAddRefObjs(1, &aSemaphoreToken, (K2OSKERN_OBJ_HEADER **)&pSemObj);
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aSemaphoreToken, (K2OSKERN_OBJ_HEADER **)&pSemObj);
     if (!K2STAT_IS_ERROR(stat))
     {
         if (pSemObj->Hdr.mObjType == K2OS_Obj_Semaphore)
@@ -153,5 +153,5 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, 
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreAcquireByName(K2OS_TOKEN aNameToken)
 {
-    return KernTok_CreateFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Semaphore);
+    return K2OSKERN_CreateTokenFromAddRefOfNamedObject(aNameToken, K2OS_Obj_Semaphore);
 }
