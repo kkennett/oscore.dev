@@ -97,7 +97,20 @@ void FsProv_OnNotify(void)
     } while (1);
 }
 
-void FsProv_Init(void)
+static
+K2STAT
+sResolveDlxSpec(
+    K2OS_PATH_TOKEN aTokPath,
+    char const *    apRelSpec,
+    char **         appRetFullSpec
+)
+{
+    // resolve spec to a full name, allocating the spec buffer from the heap
+    K2OSKERN_Debug("Exec:ResolveDlxSpec(%08X, %s)\n", aTokPath, apRelSpec);
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+void FsProv_Init(K2OSEXEC_INIT_INFO * apInitInfo)
 {
     K2OS_TOKEN tokSubscrip;
 
@@ -106,4 +119,6 @@ void FsProv_Init(void)
 
     tokSubscrip = K2OSKERN_NotifySubscribe(gFsProv_TokNotify, &gK2OSEXEC_FsProvInterfaceGuid, NULL);
     K2_ASSERT(tokSubscrip != NULL);
+
+    apInitInfo->ResolveDlxSpec = sResolveDlxSpec;
 }

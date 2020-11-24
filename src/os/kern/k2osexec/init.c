@@ -79,7 +79,7 @@ K2OSEXEC_Init(
 
     Handlers_Init2();
 
-    FsProv_Init();
+    FsProv_Init(apInitInfo);
 
     DrvStore_Init();
 

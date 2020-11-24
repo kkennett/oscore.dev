@@ -60,6 +60,14 @@ struct _K2OSKERN_OBJ_HEADER
 
 /* --------------------------------------------------------------------------------- */
 
+typedef
+K2STAT
+(*K2OSEXEC_pf_ResolveDlxSpec)(
+    K2OS_PATH_TOKEN aTokPath,
+    char const *    apRelSpec,
+    char **         appRetFullSpec
+    );
+
 typedef struct _K2OSEXEC_INIT_INFO K2OSEXEC_INIT_INFO;
 struct _K2OSEXEC_INIT_INFO
 {
@@ -75,6 +83,7 @@ struct _K2OSEXEC_INIT_INFO
     // OUTPUT
     //
     K2OSKERN_IRQ_CONFIG         SysTickDevIrqConfig;
+    K2OSEXEC_pf_ResolveDlxSpec  ResolveDlxSpec;
 };
 
 typedef
@@ -98,6 +107,7 @@ void
 K2OSEXEC_Run(
     K2OSHAL_pf_OnSystemReady afReady
     );
+
 
 /* --------------------------------------------------------------------------------- */
 

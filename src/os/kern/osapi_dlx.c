@@ -34,33 +34,36 @@
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId)
 {
-    if (aTokPath == NULL)
+    K2STAT  stat;
+    char *  pUseSpec;
+
+    pUseSpec = NULL;
+    stat = gData.mfResolveDlxSpec(aTokPath, apRelFilePath, &pUseSpec);
+    if (K2STAT_IS_ERROR(stat))
     {
-        //
-        // attempting to load from builtin file system
-        // strip any prefixed path from the apRelFilePath
-        //
-
+        K2_ASSERT(pUseSpec == NULL);
+        return stat;
     }
-    else
+    K2_ASSERT(pUseSpec != NULL);
+
+
+#if 0
+    struct _K2OSKERN_OBJ_DLX
     {
-        //
-        // addref path object and resolve path string
-        //
-    }
-
-    //
-    // concatenate apRelFilePath path to resolved path string
-    //
-
-    //
-    // release reference on path object
-    //
-  
+        K2OSKERN_OBJ_HEADER     Hdr;
+        DLX *                   mpDlx;
+        K2_GUID128 const *      mpLoadMatchId;
+        K2OS_FILE_TOKEN         mTokFile;
+        K2OSKERN_OBJ_SEGMENT    PageSeg;
+        K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
+    };
+#endif
 
 
+    K2OS_HeapFree(pUseSpec);
 
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
+    K2OS_ThreadSetStatus(stat);
+
     return NULL;
 }
 

@@ -234,7 +234,7 @@ void Msg_Init(void);
 
 /* ----------------------------------------------------------------------------- */
 
-void FsProv_Init(void);
+void FsProv_Init(K2OSEXEC_INIT_INFO * apInitInfo);
 void FsProv_OnNotify(void);
 
 extern K2OS_TOKEN gFsProv_TokNotify;
@@ -264,15 +264,8 @@ void Run_AddSerializedWork(SERWORK_ITEM_HDR * apItem, SERWORKITEM_pf_Exec afExec
 
 extern K2ROFS_DIR const * gpBuiltinRoot;
 
-void 
-Builtin_Init(
-    K2OSEXEC_INIT_INFO * apInitInfo
-);
-
-void
-Builtin_Run(
-    void
-);
+void Builtin_Init(K2OSEXEC_INIT_INFO * apInitInfo);
+void Builtin_Run(void);
 
 /* ----------------------------------------------------------------------------- */
 

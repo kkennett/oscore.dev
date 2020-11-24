@@ -681,6 +681,7 @@ struct _K2OSKERN_OBJ_SEGMENT
 struct _K2OSKERN_OBJ_DLX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+    K2_GUID128 const *      mpLoadMatchId;
     DLX *                   mpDlx;
     K2OS_FILE_TOKEN         mTokFile;
     K2OSKERN_OBJ_SEGMENT    PageSeg;
@@ -1340,8 +1341,9 @@ struct _KERN_DATA
     K2OSKERN_SEQLOCK                    IntrTreeSeqLock;
     K2TREE_ANCHOR                       IntrTree;
 
-    // exec mailbox
+    // exec 
     K2OSKERN_OBJ_MAILBOX *              mpMsgBox_K2OSEXEC;
+    K2OSEXEC_pf_ResolveDlxSpec          mfResolveDlxSpec;
 
     // service
     UINT32                              mLastServInstId;

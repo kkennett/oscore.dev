@@ -32,6 +32,8 @@
 
 #include "kern.h"
 
+static K2OS_CRITSEC sgDlx_Sec;
+
 static UINT32 sSegToAttr(UINT32 aIndex)
 {
     if (aIndex == DlxSeg_Text)
@@ -251,7 +253,14 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
 K2STAT KernDlxSupp_CritSec(BOOL aEnter)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    BOOL ok;
+    if (aEnter)
+        ok = K2OS_CritSecEnter(&sgDlx_Sec);
+    else
+        ok = K2OS_CritSecLeave(&sgDlx_Sec);
+    if (!ok)
+        return K2OS_ThreadGetStatus();
+    return K2STAT_OK;
 }
 
 K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT * apRetResult)
@@ -291,8 +300,13 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 
 void KernInit_Dlx(void)
 {
+    BOOL ok;
+
     if (gData.mKernInitStage == KernInitStage_Threaded)
     {
+        ok = K2OS_CritSecInit(&sgDlx_Sec);
+        K2_ASSERT(ok);
+
         gData.DlxHost.CritSec = KernDlxSupp_CritSec;
         gData.DlxHost.Open = KernDlxSupp_Open;
         gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
