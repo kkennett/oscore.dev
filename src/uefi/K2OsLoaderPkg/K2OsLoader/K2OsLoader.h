@@ -107,7 +107,7 @@ extern LOADER_DATA gData;
 EFI_STATUS  sysDLX_Init(IN EFI_HANDLE ImageHandle);
 void        sysDLX_Done(void);
 K2STAT      sysDLX_CritSec(BOOL aEnter);
-K2STAT      sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT      sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
 K2STAT      sysDLX_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
 K2STAT      sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
 BOOL        sysDLX_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);

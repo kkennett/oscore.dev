@@ -178,6 +178,7 @@ dlx_entry(
 K2STAT
 DLX_Acquire(
     char const *    apName,
+    void *          apContext,
     DLX **          appRetDlx
 );
 

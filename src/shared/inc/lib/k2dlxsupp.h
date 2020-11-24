@@ -71,7 +71,7 @@ struct _K2DLXSUPP_OPENRESULT
 
 typedef K2STAT (*pfK2DLXSUPP_CritSec)(BOOL aEnter);
 
-typedef K2STAT (*pfK2DLXSUPP_Open)(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult);
+typedef K2STAT (*pfK2DLXSUPP_Open)(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
 
 typedef void   (*pfK2DLXSUPP_AtReInit)(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 

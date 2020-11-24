@@ -424,7 +424,7 @@ void sysDLX_Done(void)
     gData.mLoaderImageHandle = NULL;
 }
 
-K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult)
+K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult)
 {
     EFIFILE *               pFile;
     EFIFILE *               pCheckFile;
@@ -438,7 +438,7 @@ K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRES
     if (aDlxNameLen > MAX_EFI_FILE_NAME_LEN)
         aDlxNameLen = MAX_EFI_FILE_NAME_LEN - 1;
 
-    FUNCINFO((L"+sysDLX_Open(\"%.*a\", %d, 0x%08X)\n", aDlxNameLen, apDlxName, aDlxNameLen, apRetResult));
+    FUNCINFO((L"+sysDLX_Open(\"%.*a\", %d, %08X, 0x%08X)\n", aDlxNameLen, apDlxName, aDlxNameLen, apContext, apRetResult));
     status = K2STAT_ERROR_UNKNOWN;
     do
     {

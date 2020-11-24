@@ -263,7 +263,7 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
     return K2STAT_OK;
 }
 
-K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT * apRetResult)
+K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT * apRetResult)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }

@@ -248,7 +248,7 @@ K2OsLoaderEntryPoint (
                     }
 
                     K2Printf(L"Loading k2oshal.dlx...\n");
-                    k2Stat = DLX_Acquire("k2oshal.dlx", &pDlxHal);
+                    k2Stat = DLX_Acquire("k2oshal.dlx", NULL, &pDlxHal);
                     if (K2STAT_IS_ERROR(k2Stat))
                         break;
 
@@ -258,23 +258,23 @@ K2OsLoaderEntryPoint (
                         if (!sVerifyHAL(pDlxHal))
                             break;
 
-                        k2Stat = DLX_Acquire("k2osacpi.dlx", &pDlxAcpi);
+                        k2Stat = DLX_Acquire("k2osacpi.dlx", NULL, &pDlxAcpi);
                         if (K2STAT_IS_ERROR(k2Stat))
                             break;
 
                         do {
-                            k2Stat = DLX_Acquire("k2osexec.dlx", &pDlxExec);
+                            k2Stat = DLX_Acquire("k2osexec.dlx", NULL, &pDlxExec);
                             if (K2STAT_IS_ERROR(k2Stat))
                                 break;
 
                             do {
-                                k2Stat = DLX_Acquire("k2oskern.dlx", &pDlxKern);
+                                k2Stat = DLX_Acquire("k2oskern.dlx", NULL, &pDlxKern);
                                 if (K2STAT_IS_ERROR(k2Stat))
                                     break;
 
                                 do
                                 {
-                                    k2Stat = DLX_Acquire("k2oscrt.dlx", &gData.LoadInfo.mpDlxCrt);
+                                    k2Stat = DLX_Acquire("k2oscrt.dlx", NULL, &gData.LoadInfo.mpDlxCrt);
                                     if (gData.LoadInfo.mpDlxCrt == NULL)
                                         break;
 

@@ -37,6 +37,7 @@ sAcquire(
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
+    void *              apContext,
     DLX **              appRetDlx
     );
 
@@ -45,7 +46,8 @@ K2STAT
 sPrepModule(
     DLX *               apDlx,
     K2_GUID128 const *  apMatchId,
-    UINT32              aFileOffset
+    UINT32              aFileOffset,
+    void *              apContext
     )
 {
     DLX_INFO *      pInfo;
@@ -130,6 +132,7 @@ sPrepModule(
             pImport->mFileName,
             K2ASC_Len(pImport->mFileName),
             &pImport->ID,
+            apContext,
             &pSubModule);
 
         if (K2STAT_IS_ERROR(status))
@@ -156,6 +159,7 @@ sPrep(
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
+    void *              apContext,
     DLX **              appRetDlx
     )
 {
@@ -175,7 +179,7 @@ sPrep(
 
     if (gpK2DLXSUPP_Vars->Host.Open == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
-    status = gpK2DLXSUPP_Vars->Host.Open(apName, aNameLen, &openResult);
+    status = gpK2DLXSUPP_Vars->Host.Open(apName, aNameLen, apContext, &openResult);
     if (K2STAT_IS_ERROR(status))
         return K2DLXSUPP_ERRORPOINT(status);
 
@@ -417,7 +421,7 @@ sPrep(
 
         // all dlx info should be available now to let us get resources
         // and load dependencies
-        status = sPrepModule(pDlx, apMatchId, fileOffset);
+        status = sPrepModule(pDlx, apMatchId, fileOffset, apContext);
         if (!K2STAT_IS_ERROR(status))
             K2LIST_AddAtTail(&gpK2DLXSUPP_Vars->AcqList, &pDlx->ListLink);
 
@@ -552,6 +556,7 @@ sAcquire(
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
+    void *              apContext,
     DLX **              appRetDlx
     )
 {
@@ -573,7 +578,7 @@ sAcquire(
         return K2STAT_OK;
     }
 
-    status = sPrep(apName, aNameLen, apMatchId, appRetDlx);
+    status = sPrep(apName, aNameLen, apMatchId, (apMatchId==NULL) ? apContext : NULL, appRetDlx);
     if (K2STAT_IS_ERROR(status))
     {
         *appRetDlx = NULL;
@@ -600,6 +605,7 @@ sAcquire(
 K2STAT
 DLX_Acquire(
     char const *    apName,
+    void *          apContext,
     DLX **          appRetDlx
     )
 {
@@ -660,7 +666,7 @@ DLX_Acquire(
 
     K2LIST_Init(&gpK2DLXSUPP_Vars->AcqList);
 
-    status = sAcquire(pScan, nameLen, NULL, &pDlx);
+    status = sAcquire(pScan, nameLen, NULL, apContext, &pDlx);
 
     if (gpK2DLXSUPP_Vars->Host.CritSec != NULL)
         gpK2DLXSUPP_Vars->Host.CritSec(FALSE);

@@ -1389,7 +1389,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 K2STAT KernDlxSupp_CritSec(BOOL aEnter);
-K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
 K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
 K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
 BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);

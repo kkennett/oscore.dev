@@ -163,13 +163,13 @@ dlx_entry(
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
     while(K2STAT_IS_ERROR(stat));
 
-    stat = DLX_Acquire("k2oshal.dlx", &gData.mpDlxHal);
+    stat = DLX_Acquire("k2oshal.dlx", NULL, &gData.mpDlxHal);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2osacpi.dlx", &gData.mpDlxAcpi);
+    stat = DLX_Acquire("k2osacpi.dlx", NULL, &gData.mpDlxAcpi);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2osexec.dlx", &gData.mpDlxExec);
+    stat = DLX_Acquire("k2osexec.dlx", NULL, &gData.mpDlxExec);
     while(K2STAT_IS_ERROR(stat));
-    stat = DLX_Acquire("k2oskern.dlx", &gData.mpDlxKern);
+    stat = DLX_Acquire("k2oskern.dlx", NULL, &gData.mpDlxKern);
     while(K2STAT_IS_ERROR(stat));
 
     //
