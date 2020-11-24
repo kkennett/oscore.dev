@@ -288,3 +288,18 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
+
+void KernInit_Dlx(void)
+{
+    if (gData.mKernInitStage == KernInitStage_Threaded)
+    {
+        gData.DlxHost.CritSec = KernDlxSupp_CritSec;
+        gData.DlxHost.Open = KernDlxSupp_Open;
+        gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
+        gData.DlxHost.Prepare = KernDlxSupp_Prepare;
+        gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
+        gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
+        gData.DlxHost.Finalize = KernDlxSupp_Finalize;
+        gData.DlxHost.Purge = KernDlxSupp_Purge;
+    }
+}

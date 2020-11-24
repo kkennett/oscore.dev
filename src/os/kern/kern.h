@@ -1566,6 +1566,7 @@ void KernInit_Thread(void);
 void KernInit_Sched(void);
 void KernInit_Hal(void);
 void KernInit_CpuCore(void);
+void KernInit_Dlx(void);
 
 /* --------------------------------------------------------------------------------- */
 

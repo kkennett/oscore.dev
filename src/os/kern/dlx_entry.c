@@ -176,16 +176,7 @@ dlx_entry(
     // second init is with support functions. reinit will get called, and all dlx
     // have been acquired
     //
-    gData.DlxHost.CritSec = KernDlxSupp_CritSec;
-    gData.DlxHost.Open = KernDlxSupp_Open;
     gData.DlxHost.AtReInit = KernDlxSupp_AtReInit;
-    gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
-    gData.DlxHost.Prepare = KernDlxSupp_Prepare;
-    gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
-    gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
-    gData.DlxHost.Finalize = KernDlxSupp_Finalize;
-    gData.DlxHost.Purge = KernDlxSupp_Purge;
-
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
     while (K2STAT_IS_ERROR(stat));
 

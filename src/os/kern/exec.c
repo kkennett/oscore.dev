@@ -42,6 +42,7 @@ void KernInit_Stage(KernInitStage aStage)
     KernInit_Sched();
     KernInit_Hal();
     KernInit_CpuCore();
+    KernInit_Dlx();
 }
 
 static void sInit(void)
