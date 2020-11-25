@@ -99,17 +99,37 @@ void FsProv_OnNotify(void)
 
 static
 K2STAT
-sResolveDlxSpec(
+sOpenDlx(
     K2OSKERN_OBJ_HEADER *   apPathObj,
     char const *            apRelSpec,
-    char **                 appRetFullSpec
+    K2OS_TOKEN *            apRetTokDlxFile,
+    UINT32 *                apRetTotalSectors
 )
 {
-    // resolve spec to a full name, allocating the spec buffer from the heap
-    K2OSKERN_Debug("Exec:ResolveDlxSpec(%08X, %s)\n", apPathObj, apRelSpec);
-    *appRetFullSpec = NULL;
     return K2STAT_ERROR_NOT_IMPL;
 }
+
+static
+K2STAT
+sReadDlx(
+    K2OS_TOKEN  aTokDlxFile,
+    void *      apBuffer,
+    UINT32      aStartSector,
+    UINT32      aSectorCount
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+static
+K2STAT
+sDoneDlx(
+    K2OS_TOKEN  aTokDlxFile
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
 
 void FsProv_Init(K2OSEXEC_INIT_INFO * apInitInfo)
 {
@@ -121,5 +141,7 @@ void FsProv_Init(K2OSEXEC_INIT_INFO * apInitInfo)
     tokSubscrip = K2OSKERN_NotifySubscribe(gFsProv_TokNotify, &gK2OSEXEC_FsProvInterfaceGuid, NULL);
     K2_ASSERT(tokSubscrip != NULL);
 
-    apInitInfo->ResolveDlxSpec = sResolveDlxSpec;
+    apInitInfo->OpenDlx = sOpenDlx;
+    apInitInfo->ReadDlx = sReadDlx;
+    apInitInfo->DoneDlx = sDoneDlx;
 }

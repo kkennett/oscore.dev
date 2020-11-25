@@ -62,10 +62,26 @@ struct _K2OSKERN_OBJ_HEADER
 
 typedef
 K2STAT
-(*K2OSEXEC_pf_ResolveDlxSpec)(
+(*K2OSEXEC_pf_OpenDlx)(
     K2OSKERN_OBJ_HEADER *   apPathObj,
     char const *            apRelSpec,
-    char **                 appRetFullSpec
+    K2OS_TOKEN *            apRetTokDlxFile,
+    UINT32 *                apRetTotalSectors
+    );
+
+typedef
+K2STAT
+(*K2OSEXEC_pf_ReadDlx)(
+    K2OS_TOKEN  aTokDlxFile,
+    void *      apBuffer,
+    UINT32      aStartSector,
+    UINT32      aSectorCount
+    );
+
+typedef
+K2STAT
+(*K2OSEXEC_pf_DoneDlx)(
+    K2OS_TOKEN  aTokDlxFile
     );
 
 typedef struct _K2OSEXEC_INIT_INFO K2OSEXEC_INIT_INFO;
@@ -74,16 +90,18 @@ struct _K2OSEXEC_INIT_INFO
     //
     // INPUT
     //
-    UINT32                      mEfiMapSize;
-    UINT32                      mEfiMemDescSize;
-    UINT32                      mEfiMemDescVer;
-    K2ROFS const *              mpBuiltinRofs;
+    UINT32                  mEfiMapSize;
+    UINT32                  mEfiMemDescSize;
+    UINT32                  mEfiMemDescVer;
+    K2ROFS const *          mpBuiltinRofs;
 
     //
     // OUTPUT
     //
-    K2OSKERN_IRQ_CONFIG         SysTickDevIrqConfig;
-    K2OSEXEC_pf_ResolveDlxSpec  ResolveDlxSpec;
+    K2OSKERN_IRQ_CONFIG     SysTickDevIrqConfig;
+    K2OSEXEC_pf_OpenDlx     OpenDlx;
+    K2OSEXEC_pf_ReadDlx     ReadDlx;
+    K2OSEXEC_pf_DoneDlx     DoneDlx;
 };
 
 typedef

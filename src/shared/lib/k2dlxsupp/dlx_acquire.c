@@ -34,6 +34,7 @@
 static
 K2STAT
 sAcquire(
+    char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
@@ -130,6 +131,7 @@ sPrepModule(
 
         status = sAcquire(
             pImport->mFileName,
+            pImport->mFileName,
             K2ASC_Len(pImport->mFileName),
             &pImport->ID,
             apContext,
@@ -156,6 +158,7 @@ sPrepModule(
 static
 K2STAT
 sPrep(
+    char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
@@ -179,7 +182,7 @@ sPrep(
 
     if (gpK2DLXSUPP_Vars->Host.Open == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
-    status = gpK2DLXSUPP_Vars->Host.Open(apName, aNameLen, apContext, &openResult);
+    status = gpK2DLXSUPP_Vars->Host.Open(apSpec, apName, aNameLen, apContext, &openResult);
     if (K2STAT_IS_ERROR(status))
         return K2DLXSUPP_ERRORPOINT(status);
 
@@ -553,6 +556,7 @@ sExecLoads(
 static
 K2STAT
 sAcquire(
+    char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
@@ -578,7 +582,7 @@ sAcquire(
         return K2STAT_OK;
     }
 
-    status = sPrep(apName, aNameLen, apMatchId, apContext, appRetDlx);
+    status = sPrep(apSpec, apName, aNameLen, apMatchId, apContext, appRetDlx);
     if (K2STAT_IS_ERROR(status))
     {
         *appRetDlx = NULL;
@@ -604,7 +608,7 @@ sAcquire(
 
 K2STAT
 DLX_Acquire(
-    char const *    apName,
+    char const *    apFileSpec,
     void *          apContext,
     DLX **          appRetDlx
     )
@@ -615,7 +619,7 @@ DLX_Acquire(
     char            ch;
     char const *    pScan;
 
-    if ((apName == NULL) || ((*apName)==0) || (appRetDlx == NULL))
+    if ((apFileSpec == NULL) || ((*apFileSpec)==0) || (appRetDlx == NULL))
     {
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_BAD_ARGUMENT);
     }
@@ -623,7 +627,7 @@ DLX_Acquire(
     *appRetDlx = NULL;
     
     nameLen = 0;
-    pScan = apName;
+    pScan = apFileSpec;
     while (*pScan)
         pScan++;
     do
@@ -641,7 +645,7 @@ DLX_Acquire(
             }
             nameLen++;
         }
-    } while (pScan != apName);
+    } while (pScan != apFileSpec);
 
     if (nameLen == 0)
     {
@@ -666,7 +670,7 @@ DLX_Acquire(
 
     K2LIST_Init(&gpK2DLXSUPP_Vars->AcqList);
 
-    status = sAcquire(pScan, nameLen, NULL, apContext, &pDlx);
+    status = sAcquire(apFileSpec, pScan, nameLen, NULL, apContext, &pDlx);
 
     if (gpK2DLXSUPP_Vars->Host.CritSec != NULL)
         gpK2DLXSUPP_Vars->Host.CritSec(FALSE);

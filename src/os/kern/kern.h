@@ -678,12 +678,31 @@ struct _K2OSKERN_OBJ_SEGMENT
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernDlxState KernDlxState;
+enum _KernDlxState
+{
+    KernDlxState_Invalid = 0,
+    KernDlxState_BeforeOpen,
+    KernDlxState_PageSegAlloc,
+    KernDlxState_Open,
+
+    KernDlxState_Loaded,
+    KernDlxState_Count
+};
+
 struct _K2OSKERN_OBJ_DLX
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+
+    KernDlxState            mState;
+
     K2_GUID128 const *      mpLoadMatchId;
     DLX *                   mpDlx;
+
     K2OS_FILE_TOKEN         mTokFile;
+    UINT32                  mCurSector;
+    UINT32                  mFileTotalSectors;
+
     K2OSKERN_OBJ_SEGMENT    PageSeg;
     K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
 };
@@ -1343,7 +1362,9 @@ struct _KERN_DATA
 
     // exec 
     K2OSKERN_OBJ_MAILBOX *              mpMsgBox_K2OSEXEC;
-    K2OSEXEC_pf_ResolveDlxSpec          mfResolveDlxSpec;
+    K2OSEXEC_pf_OpenDlx                 mfExecOpenDlx;
+    K2OSEXEC_pf_ReadDlx                 mfExecReadDlx;
+    K2OSEXEC_pf_DoneDlx                 mfExecDoneDlx;
 
     // service
     UINT32                              mLastServInstId;
@@ -1394,10 +1415,11 @@ struct _K2OSKERN_DLXLOADCONTEXT
 };
 
 UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
+void   KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 K2STAT KernDlxSupp_CritSec(BOOL aEnter);
-K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
 K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
 K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
 BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
@@ -1429,6 +1451,8 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
 void   KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, BOOL aClearNp);
 
 K2STAT KernMem_MapContigPhys(UINT32 aContigPhysAddr, UINT32 aPageCount, UINT32 aSegAndMemPageAttr, UINT32 * apRetVirtAddr);
+
+K2STAT KernMem_AllocMapAndCreateSegment(K2OSKERN_OBJ_SEGMENT *apSeg);
 
 /* --------------------------------------------------------------------------------- */
 

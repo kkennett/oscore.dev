@@ -87,6 +87,8 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
     apDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE;
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
+
+    apDlxObj->mState = KernDlxState_Loaded;
 }
 
 void KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile)
@@ -263,26 +265,85 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
     return K2STAT_OK;
 }
 
-K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT * apRetResult)
+K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT * apRetResult)
 {
     K2STAT                      stat;
+    K2STAT                      stat2;
     K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
-    char *                      pFullSpec;
+    K2OSKERN_OBJ_DLX *          pDlxObj;
 
-    pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apContext;
-    K2_ASSERT(pLoadContext != NULL);
-    
-//    stat = gData.mfResolveDlxSpec(pLoadContext->mpPathObj, apDlxName, &pFullSpec);
+    pDlxObj = (K2OSKERN_OBJ_DLX *)K2OS_HeapAlloc(sizeof(K2OSKERN_OBJ_DLX));
+    if (pDlxObj == NULL)
+    {
+        return K2STAT_ERROR_OUT_OF_MEMORY;
+    }
 
+    do {
+        pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apContext;
+        K2_ASSERT(pLoadContext != NULL);
 
+        K2MEM_Zero(pDlxObj, sizeof(K2OSKERN_OBJ_DLX));
+        pDlxObj->Hdr.mObjType = K2OS_Obj_DLX;
+        pDlxObj->Hdr.mObjFlags = 0;
+        pDlxObj->Hdr.mRefCount = 1;
+        pDlxObj->Hdr.Dispose = KernDlx_Dispose;
+        K2LIST_Init(&pDlxObj->Hdr.WaitEntryPrioList);
 
+        pDlxObj->mpLoadMatchId = pLoadContext->mpMatchId;
+        pDlxObj->PageSeg.Hdr.mObjType = K2OS_Obj_Segment;
+        pDlxObj->PageSeg.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_EMBEDDED;
+        pDlxObj->PageSeg.Hdr.mRefCount = 1;
+        pDlxObj->PageSeg.Hdr.Dispose = KernMem_SegDispose;
+        pDlxObj->PageSeg.mPagesBytes = K2_VA32_MEMPAGE_BYTES;
+        pDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE;
+        pDlxObj->PageSeg.Info.DlxPage.mpDlxObj = pDlxObj;
+        pDlxObj->mState = KernDlxState_BeforeOpen;
 
-    return K2STAT_ERROR_NOT_IMPL;
+        stat = KernMem_AllocMapAndCreateSegment(&pDlxObj->PageSeg);
+        if (K2STAT_IS_ERROR(stat))
+            break;
+        pDlxObj->mState = KernDlxState_PageSegAlloc;
+
+        do {
+            K2_ASSERT(K2OS_KVA_KERN_BASE < pDlxObj->PageSeg.ProcSegTreeNode.mUserVal);
+
+            stat = gData.mfExecOpenDlx(pLoadContext->mpPathObj, apFileSpec, &pDlxObj->mTokFile, &pDlxObj->mFileTotalSectors);
+            if (K2STAT_IS_ERROR(stat))
+                break;
+            pDlxObj->mState = KernDlxState_Open;
+
+            apRetResult->mHostFile = (K2DLXSUPP_HOST_FILE)pDlxObj;
+            apRetResult->mFileSectorCount = pDlxObj->mFileTotalSectors;
+            apRetResult->mModulePageDataAddr = apRetResult->mModulePageLinkAddr = pDlxObj->PageSeg.ProcSegTreeNode.mUserVal;
+
+        } while (0);
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            stat2 = KernObj_Release(&pDlxObj->PageSeg.Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_HeapFree(pDlxObj);
+    }
+
+    return stat;
 }
 
 K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_DLX *  pDlx;
+    K2STAT              stat;
+
+    pDlx = (K2OSKERN_OBJ_DLX *)aHostFile;
+    stat = gData.mfExecReadDlx(pDlx->mTokFile, apBuffer, pDlx->mCurSector, aSectorCount);
+    if (!K2STAT_IS_ERROR(stat))
+        pDlx->mCurSector += aSectorCount;
+    return stat;
 }
 
 K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO * apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC * apRetAlloc)
@@ -333,4 +394,9 @@ void KernInit_Dlx(void)
         stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
+}
+
+void KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
+{
+    K2_ASSERT(0);
 }

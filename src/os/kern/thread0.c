@@ -152,8 +152,12 @@ sExec_Init(
 #if !K2_TARGET_ARCH_IS_ARM
     K2_ASSERT(initInfo.SysTickDevIrqConfig.mSourceIrq <= X32_DEVIRQ_LVT_ERROR);
 #endif
-    K2_ASSERT(initInfo.ResolveDlxSpec != NULL);
-    gData.mfResolveDlxSpec = initInfo.ResolveDlxSpec;
+    K2_ASSERT(initInfo.OpenDlx != NULL);
+    gData.mfExecOpenDlx = initInfo.OpenDlx;
+    K2_ASSERT(initInfo.ReadDlx != NULL);
+    gData.mfExecReadDlx = initInfo.ReadDlx;
+    K2_ASSERT(initInfo.DoneDlx != NULL);
+    gData.mfExecDoneDlx = initInfo.DoneDlx;
 
     //
     // get hal export for system ready callback

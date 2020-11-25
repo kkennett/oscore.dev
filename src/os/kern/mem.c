@@ -2230,3 +2230,57 @@ K2STAT KernMem_MapContigPhys(
     return stat;
 }
 
+K2STAT KernMem_AllocMapAndCreateSegment(K2OSKERN_OBJ_SEGMENT *apSeg)
+{
+    K2STAT                  stat;
+    K2OSKERN_OBJ_THREAD *   pCurThread;
+    KernPhys_Disp           physDisp;
+    UINT32                  pageCount;
+
+    pCurThread = K2OSKERN_CURRENT_THREAD;
+
+    pageCount = apSeg->mPagesBytes / K2_VA32_MEMPAGE_BYTES;
+    K2_ASSERT(pageCount > 0);
+    K2_ASSERT(pageCount * K2_VA32_MEMPAGE_BYTES == apSeg->mPagesBytes);
+
+    stat = KernMem_VirtAllocToThread(pCurThread, 0, pageCount, FALSE);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+    do {
+        if (apSeg->mSegAndMemPageAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
+        {
+            physDisp = KernPhys_Disp_Uncached;
+        }
+        else if ((apSeg->mSegAndMemPageAttr & (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU)) == (K2OS_MEMPAGE_ATTR_WRITEABLE | K2OS_MEMPAGE_ATTR_WRITE_THRU))
+        {
+            physDisp = KernPhys_Disp_Cached_WriteThrough;
+        }
+        else
+        {
+            physDisp = KernPhys_Disp_Cached;
+        }
+
+        stat = KernMem_PhysAllocToThread(pCurThread, pageCount, physDisp, FALSE);
+        if (K2STAT_IS_ERROR(stat))
+            break;
+
+        apSeg->mPagesBytes = 0;
+
+        stat = KernMem_CreateSegmentFromThread(pCurThread, apSeg, apSeg);
+
+        apSeg->mPagesBytes = pageCount * K2_VA32_MEMPAGE_BYTES;
+
+        if (K2STAT_IS_ERROR(stat))
+        {
+            KernMem_PhysFreeFromThread(pCurThread);
+        }
+
+    } while (0);
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernMem_VirtFreeFromThread(pCurThread);
+    }
+
+    return stat;
+}

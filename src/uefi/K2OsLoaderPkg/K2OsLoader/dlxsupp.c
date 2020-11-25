@@ -424,7 +424,7 @@ void sysDLX_Done(void)
     gData.mLoaderImageHandle = NULL;
 }
 
-K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult)
+K2STAT sysDLX_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult)
 {
     EFIFILE *               pFile;
     EFIFILE *               pCheckFile;
@@ -435,10 +435,10 @@ K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, 
     UINTN                   infoSize;
     CHAR16                  uniFileName[MAX_EFI_FILE_NAME_LEN];
 
-    if (aDlxNameLen > MAX_EFI_FILE_NAME_LEN)
-        aDlxNameLen = MAX_EFI_FILE_NAME_LEN - 1;
+    if (aNamePartLen > MAX_EFI_FILE_NAME_LEN)
+        aNamePartLen = MAX_EFI_FILE_NAME_LEN - 1;
 
-    FUNCINFO((L"+sysDLX_Open(\"%.*a\", %d, %08X, 0x%08X)\n", aDlxNameLen, apDlxName, aDlxNameLen, apContext, apRetResult));
+    FUNCINFO((L"+sysDLX_Open(\"%.*a\", %d, %08X, 0x%08X)\n", aNamePartLen, apNamePart, aNamePartLen, apContext, apRetResult));
     status = K2STAT_ERROR_UNKNOWN;
     do
     {
@@ -465,8 +465,8 @@ K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, 
 
             do
             {
-                K2MEM_Copy(pFile->mFileName, apDlxName, aDlxNameLen);
-                pFile->mFileName[aDlxNameLen] = 0;
+                K2MEM_Copy(pFile->mFileName, apNamePart, aNamePartLen);
+                pFile->mFileName[aNamePartLen] = 0;
 
                 pLink = gData.EfiFileList.mpHead;
                 while (pLink != NULL)
@@ -484,7 +484,7 @@ K2STAT sysDLX_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, 
                     break;
                 }
 
-                UnicodeSPrintAsciiFormat(uniFileName, sizeof(CHAR16)*MAX_EFI_FILE_NAME_LEN, "%.*a.dlx", aDlxNameLen, apDlxName);
+                UnicodeSPrintAsciiFormat(uniFileName, sizeof(CHAR16)*MAX_EFI_FILE_NAME_LEN, "%.*a.dlx", aNamePartLen, apNamePart);
                 uniFileName[MAX_EFI_FILE_NAME_LEN-1] = 0;
 
                 efiStatus = sgpKernDir->Open(
