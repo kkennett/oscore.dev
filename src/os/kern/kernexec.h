@@ -63,9 +63,9 @@ struct _K2OSKERN_OBJ_HEADER
 typedef
 K2STAT
 (*K2OSEXEC_pf_ResolveDlxSpec)(
-    K2OS_PATH_TOKEN aTokPath,
-    char const *    apRelSpec,
-    char **         appRetFullSpec
+    K2OSKERN_OBJ_HEADER *   apPathObj,
+    char const *            apRelSpec,
+    char **                 appRetFullSpec
     );
 
 typedef struct _K2OSEXEC_INIT_INFO K2OSEXEC_INIT_INFO;

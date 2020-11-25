@@ -34,43 +34,118 @@
 
 K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char const *apRelFilePath, K2_GUID128 const *apMatchId)
 {
-    K2STAT  stat;
-    char *  pUseSpec;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_DLXLOADCONTEXT loadContext;
+    DLX *                   pDlx;
+    K2OS_TOKEN              tokDlx;
+    K2OSKERN_OBJ_HEADER *   pObjHdr;
+    K2OSKERN_OBJ_HEADER *   pPathObj;
 
-    pUseSpec = NULL;
-    stat = gData.mfResolveDlxSpec(aTokPath, apRelFilePath, &pUseSpec);
+    pPathObj = NULL;
+
+    if (aTokPath != NULL)
+    {
+        stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokPath, (K2OSKERN_OBJ_HEADER **)&pPathObj);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            if (pPathObj->mObjType != K2OS_Obj_Path)
+            {
+                stat = K2STAT_ERROR_BAD_ARGUMENT;
+                stat2 = KernObj_Release(pPathObj);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+            }
+        }
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2OS_ThreadSetStatus(stat);
+            return NULL;
+        }
+    }
+
+    do {
+        loadContext.mpPathObj = pPathObj;
+        loadContext.mpMatchId = apMatchId;
+        loadContext.mpResult = NULL;
+
+        tokDlx = NULL;
+
+        stat = DLX_Acquire(apRelFilePath, &loadContext, &pDlx);
+        if (!K2STAT_IS_ERROR(stat))
+        {
+            pObjHdr = &loadContext.mpResult->Hdr;
+            stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
+            if (K2STAT_IS_ERROR(stat))
+            {
+                stat2 = KernObj_Release(&loadContext.mpResult->Hdr);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+            }
+        }
+    } while (0);
+
+    if (pPathObj != NULL)
+    {
+        KernObj_Release(pPathObj);
+    }
+
     if (K2STAT_IS_ERROR(stat))
     {
-        K2_ASSERT(pUseSpec == NULL);
-        return stat;
+        K2OS_ThreadSetStatus(stat);
     }
-    K2_ASSERT(pUseSpec != NULL);
 
-
-#if 0
-    struct _K2OSKERN_OBJ_DLX
-    {
-        K2OSKERN_OBJ_HEADER     Hdr;
-        DLX *                   mpDlx;
-        K2_GUID128 const *      mpLoadMatchId;
-        K2OS_FILE_TOKEN         mTokFile;
-        K2OSKERN_OBJ_SEGMENT    PageSeg;
-        K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
-    };
-#endif
-
-
-    K2OS_HeapFree(pUseSpec);
-
-    K2OS_ThreadSetStatus(stat);
-
-    return NULL;
+    return tokDlx;
 }
 
 K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx)
 {
-    K2OS_ThreadSetStatus(K2STAT_ERROR_NOT_IMPL);
-    return NULL;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
+    K2OS_FILE_TOKEN         tokResult;
+    K2OSKERN_OBJ_HEADER *   pFileObjHdr;
+
+    if (aTokDlx == NULL)
+    {
+        K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
+        return FALSE;
+    }
+
+    tokResult = NULL;
+
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokDlx, (K2OSKERN_OBJ_HEADER **)&pDlxObj);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        if (pDlxObj->Hdr.mObjType == K2OS_Obj_DLX)
+        {
+            if (pDlxObj->mTokFile != NULL)
+            {
+                stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &pDlxObj->mTokFile, &pFileObjHdr);
+                if (!K2STAT_IS_ERROR(stat))
+                {
+                    K2_ASSERT(pFileObjHdr->mObjType == K2OS_Obj_File);
+                    stat = K2OSKERN_CreateTokenNoAddRef(1, &pFileObjHdr, &tokResult);
+                    if (K2STAT_IS_ERROR(stat))
+                    {
+                        stat2 = KernObj_Release(pFileObjHdr);
+                        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+                    }
+                }
+            }
+        }
+        else
+            stat = K2STAT_ERROR_BAD_ARGUMENT;
+
+        stat2 = KernObj_Release(&pDlxObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+    }
+
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OS_ThreadSetStatus(stat);
+        return NULL;
+    }
+
+    return tokResult;
 }
 
 BOOL K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apRetId)

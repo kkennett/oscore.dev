@@ -265,6 +265,18 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
 
 K2STAT KernDlxSupp_Open(char const * apDlxName, UINT32 aDlxNameLen, void *apContext, K2DLXSUPP_OPENRESULT * apRetResult)
 {
+    K2STAT                      stat;
+    K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
+    char *                      pFullSpec;
+
+    pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apContext;
+    K2_ASSERT(pLoadContext != NULL);
+    
+//    stat = gData.mfResolveDlxSpec(pLoadContext->mpPathObj, apDlxName, &pFullSpec);
+
+
+
+
     return K2STAT_ERROR_NOT_IMPL;
 }
 
@@ -300,13 +312,15 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 
 void KernInit_Dlx(void)
 {
-    BOOL ok;
+    BOOL    ok;
+    K2STAT  stat;
 
     if (gData.mKernInitStage == KernInitStage_Threaded)
     {
         ok = K2OS_CritSecInit(&sgDlx_Sec);
         K2_ASSERT(ok);
 
+        gData.DlxHost.AtReInit = NULL;
         gData.DlxHost.CritSec = KernDlxSupp_CritSec;
         gData.DlxHost.Open = KernDlxSupp_Open;
         gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
@@ -315,5 +329,8 @@ void KernInit_Dlx(void)
         gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
         gData.DlxHost.Finalize = KernDlxSupp_Finalize;
         gData.DlxHost.Purge = KernDlxSupp_Purge;
+
+        stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
 }

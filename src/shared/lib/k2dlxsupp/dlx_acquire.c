@@ -578,7 +578,7 @@ sAcquire(
         return K2STAT_OK;
     }
 
-    status = sPrep(apName, aNameLen, apMatchId, (apMatchId==NULL) ? apContext : NULL, appRetDlx);
+    status = sPrep(apName, aNameLen, apMatchId, apContext, appRetDlx);
     if (K2STAT_IS_ERROR(status))
     {
         *appRetDlx = NULL;

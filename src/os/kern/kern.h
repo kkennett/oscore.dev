@@ -1385,6 +1385,14 @@ void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OSKERN_DLXLOADCONTEXT K2OSKERN_DLXLOADCONTEXT;
+struct _K2OSKERN_DLXLOADCONTEXT
+{
+    K2OSKERN_OBJ_HEADER *   mpPathObj;
+    K2_GUID128 const *      mpMatchId;
+    K2OSKERN_OBJ_DLX *      mpResult;
+};
+
 UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);

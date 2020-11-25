@@ -100,13 +100,14 @@ void FsProv_OnNotify(void)
 static
 K2STAT
 sResolveDlxSpec(
-    K2OS_PATH_TOKEN aTokPath,
-    char const *    apRelSpec,
-    char **         appRetFullSpec
+    K2OSKERN_OBJ_HEADER *   apPathObj,
+    char const *            apRelSpec,
+    char **                 appRetFullSpec
 )
 {
     // resolve spec to a full name, allocating the spec buffer from the heap
-    K2OSKERN_Debug("Exec:ResolveDlxSpec(%08X, %s)\n", aTokPath, apRelSpec);
+    K2OSKERN_Debug("Exec:ResolveDlxSpec(%08X, %s)\n", apPathObj, apRelSpec);
+    *appRetFullSpec = NULL;
     return K2STAT_ERROR_NOT_IMPL;
 }
 
