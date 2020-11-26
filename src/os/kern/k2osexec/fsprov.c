@@ -176,7 +176,7 @@ sReadDlx(
     }
     else
     {
-        stat = pFileObj->mpProvDirect->Read((FSPROV_OPAQUE)pFileObj, apBuffer, aStartSector, aSectorCount);
+        stat = pFileObj->mpProvDirect->Read(pFileObj->mOpaque, apBuffer, aStartSector, aSectorCount);
     }
 
     stat2 = K2OSKERN_ReleaseObject(&pFileObj->Hdr);
@@ -191,7 +191,27 @@ sDoneDlx(
     K2OS_TOKEN  aTokDlxFile
 )
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2STAT              stat;
+    K2STAT              stat2;
+    FSPROV_OBJ_FILE *   pFileObj;
+
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokDlxFile, (K2OSKERN_OBJ_HEADER **)&pFileObj);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    if (pFileObj->Hdr.mObjType != K2OS_Obj_File)
+    {
+        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    }
+    else
+    {
+        stat = pFileObj->mpProvDirect->Close(pFileObj->mOpaque);
+    }
+
+    stat2 = K2OSKERN_ReleaseObject(&pFileObj->Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+    return stat;
 }
 
 

@@ -346,19 +346,45 @@ K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UI
     return stat;
 }
 
-K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO * apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC * apRetAlloc)
+K2STAT 
+KernDlxSupp_Prepare(
+    K2DLXSUPP_HOST_FILE     aHostFile, 
+    DLX_INFO *              apInfo, 
+    UINT32                  aInfoSize, 
+    BOOL                    aKeepSymbols, 
+    K2DLXSUPP_SEGALLOC *    apRetAlloc
+)
 {
+    K2OSKERN_OBJ_DLX *  pDlxObj;
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    if (pDlxObj->mpLoadMatchId != NULL)
+    {
+        if (0 != K2MEM_Compare(pDlxObj->mpLoadMatchId, &apInfo->ID, sizeof(K2_GUID128)))
+            return K2STAT_ERROR_NOT_FOUND;
+    }
+
+    K2MEM_Zero(apRetAlloc, sizeof(K2DLXSUPP_SEGALLOC));
+
+    //
+    // allocate segments to hold content
+    //
+
+
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
+BOOL KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
 {
-    return FALSE;
+    K2OSKERN_Debug("%08X PRE  %s\n", aHostFile, aIsLoad ? "LOAD" : "UNLOAD");
+    return TRUE;
 }
 
 K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_Debug("%08X POST, status %08X\n", aHostFile, aUserStatus);
+    return aUserStatus;
 }
 
 K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * apUpdateAlloc)
