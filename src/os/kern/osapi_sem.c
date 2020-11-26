@@ -58,7 +58,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, 
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
             {
-                KernObj_Release(&pNameObj->Hdr);
+                K2OSKERN_ReleaseObject(&pNameObj->Hdr);
                 stat = K2STAT_ERROR_BAD_TOKEN;
             }
         }
@@ -91,7 +91,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, 
         stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokSem);
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pSemObj->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pSemObj->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
 
@@ -100,7 +100,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreCreate(K2OS_TOKEN aNameToken, 
     if (aNameToken != NULL)
     {
         K2_ASSERT(pNameObj != NULL);
-        KernObj_Release(&pNameObj->Hdr);
+        K2OSKERN_ReleaseObject(&pNameObj->Hdr);
     }
 
     if (K2STAT_IS_ERROR(stat))
@@ -136,7 +136,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_SemaphoreRelease(K2OS_TOKEN aSemaphoreToken, 
             stat = KernSem_Release(pSemObj, aRelCount, &newCount);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pSemObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pSemObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 

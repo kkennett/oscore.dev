@@ -40,7 +40,7 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
 
     if (apName != NULL)
     {
-        stat = KernObj_AddRef(&apName->Hdr);
+        stat = K2OSKERN_AddRefObject(&apName->Hdr);
         if (K2STAT_IS_ERROR(stat))
             return stat;
     }
@@ -67,12 +67,12 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
     stat = KernObj_Add(&apMailbox->Hdr, apName);
     if (K2STAT_IS_ERROR(stat))
     {
-        KernObj_Release(&apMailbox->AvailEvent.Hdr);
+        K2OSKERN_ReleaseObject(&apMailbox->AvailEvent.Hdr);
     }
 
     if (apName != NULL)
     {
-        KernObj_Release(&apName->Hdr);
+        K2OSKERN_ReleaseObject(&apName->Hdr);
     }
 
     return stat;
@@ -131,10 +131,10 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
 
         K2_ASSERT(0 == pThisThread->Sched.Item.Args.MboxRecv.mOut_RequestId);
 
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
-        stat2 = KernObj_Release(&apMailbox->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&apMailbox->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
     else
@@ -179,10 +179,10 @@ K2STAT KernMailbox_Respond(K2OSKERN_OBJ_MAILBOX *apMailbox, UINT32 aRequestId, K
     {
         K2_ASSERT(apMailbox != NULL);
 
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
-        stat2 = KernObj_Release(&apMailbox->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&apMailbox->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
     else
@@ -208,7 +208,7 @@ void KernMailbox_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2_ASSERT(apMailbox->PendingMsgList.mNodeCount == 0);
     K2_ASSERT(apMailbox->InSvcMsgList.mNodeCount == 0);
 
-    KernObj_Release(&apMailbox->AvailEvent.Hdr);
+    K2OSKERN_ReleaseObject(&apMailbox->AvailEvent.Hdr);
 
     check = !(apMailbox->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

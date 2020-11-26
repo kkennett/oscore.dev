@@ -58,7 +58,7 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
     stat = KernObj_Add(&apMsg->Hdr, NULL);
     if (K2STAT_IS_ERROR(stat))
     {
-        KernObj_Release(&apMsg->CompletionEvent.Hdr);
+        K2OSKERN_ReleaseObject(&apMsg->CompletionEvent.Hdr);
     }
 
     return stat;
@@ -134,10 +134,10 @@ K2STAT KernMsg_Abort(K2OSKERN_OBJ_MSG *apMsg, BOOL aClear)
     {
         K2_ASSERT(pMailbox != NULL);
 
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
-        stat2 = KernObj_Release(&pMailbox->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMailbox->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
     else
@@ -178,7 +178,7 @@ void KernMsg_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2_ASSERT(apMsg->CompletionEvent.mIsSignalled);
     K2_ASSERT(apMsg->mpMailbox == NULL);
 
-    KernObj_Release(&apMsg->CompletionEvent.Hdr);
+    K2OSKERN_ReleaseObject(&apMsg->CompletionEvent.Hdr);
 
     check = !(apMsg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

@@ -161,7 +161,7 @@ K2OSKERN_UnmapDevice(
     if (pTreeNode != NULL)
     {
         pSeg = K2_GET_CONTAINER(K2OSKERN_OBJ_SEGMENT, pTreeNode, ProcSegTreeNode);
-        KernObj_AddRef(&pSeg->Hdr);
+        K2OSKERN_AddRefObject(&pSeg->Hdr);
     }
     else
         pSeg = NULL;
@@ -176,7 +176,7 @@ K2OSKERN_UnmapDevice(
 
     if ((pSeg->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK) != K2OSKERN_SEG_ATTR_TYPE_DEVMAP)
     {
-        KernObj_Release(&pSeg->Hdr);
+        K2OSKERN_ReleaseObject(&pSeg->Hdr);
         K2OS_ThreadSetStatus(K2STAT_ERROR_BAD_ARGUMENT);
         return K2STAT_ERROR_BAD_ARGUMENT;
     }
@@ -184,8 +184,8 @@ K2OSKERN_UnmapDevice(
     //
     // double-release the segment
     //
-    KernObj_Release(&pSeg->Hdr);    // caller reference
-    KernObj_Release(&pSeg->Hdr);    // local reference
+    K2OSKERN_ReleaseObject(&pSeg->Hdr);    // caller reference
+    K2OSKERN_ReleaseObject(&pSeg->Hdr);    // local reference
 
     return K2STAT_NO_ERROR;
 }

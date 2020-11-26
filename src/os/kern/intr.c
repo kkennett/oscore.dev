@@ -106,7 +106,7 @@ K2OSKERN_InstallIntrHandler(
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pIntr->IrqEvent.Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pIntr->IrqEvent.Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
     }
@@ -153,7 +153,7 @@ K2OSKERN_SetIntrMask(
         KernArch_SetDevIntrMask(pIntr, aMask);
     }
 
-    KernObj_Release(&pIntr->Hdr);
+    K2OSKERN_ReleaseObject(&pIntr->Hdr);
 
     return stat;
 }
@@ -178,7 +178,7 @@ void KernIntr_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     K2OSKERN_SeqIntrUnlock(&gData.IntrTreeSeqLock, disp);
 
-    KernObj_Release(&apIntr->IrqEvent.Hdr);
+    K2OSKERN_ReleaseObject(&apIntr->IrqEvent.Hdr);
 
     disp = !(apIntr->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 

@@ -52,7 +52,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char 
             if (pPathObj->mObjType != K2OS_Obj_Path)
             {
                 stat = K2STAT_ERROR_BAD_ARGUMENT;
-                stat2 = KernObj_Release(pPathObj);
+                stat2 = K2OSKERN_ReleaseObject(pPathObj);
                 K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             }
         }
@@ -77,7 +77,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char 
             stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
             if (K2STAT_IS_ERROR(stat))
             {
-                stat2 = KernObj_Release(&loadContext.mpResult->Hdr);
+                stat2 = K2OSKERN_ReleaseObject(&loadContext.mpResult->Hdr);
                 K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             }
         }
@@ -85,7 +85,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char 
 
     if (pPathObj != NULL)
     {
-        KernObj_Release(pPathObj);
+        K2OSKERN_ReleaseObject(pPathObj);
     }
 
     if (K2STAT_IS_ERROR(stat))
@@ -126,7 +126,7 @@ K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx)
                     stat = K2OSKERN_CreateTokenNoAddRef(1, &pFileObjHdr, &tokResult);
                     if (K2STAT_IS_ERROR(stat))
                     {
-                        stat2 = KernObj_Release(pFileObjHdr);
+                        stat2 = K2OSKERN_ReleaseObject(pFileObjHdr);
                         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                     }
                 }
@@ -135,7 +135,7 @@ K2OS_FILE_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireFile(K2OS_TOKEN aTokDlx)
         else
             stat = K2STAT_ERROR_BAD_ARGUMENT;
 
-        stat2 = KernObj_Release(&pDlxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -169,7 +169,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_DlxGetId(K2OS_TOKEN aTokDlx, K2_GUID128 * apR
         else
             stat = K2STAT_ERROR_BAD_ARGUMENT;
 
-        stat2 = KernObj_Release(&pDlxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -205,7 +205,7 @@ void * K2_CALLCONV_CALLERCLEANS K2OS_DlxFindExport(K2OS_TOKEN aTokDlx, UINT32 aD
         else
             stat = K2STAT_ERROR_BAD_ARGUMENT;
 
-        stat2 = KernObj_Release(&pDlxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -300,7 +300,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress,
                 // this segment is part of a DLX 
                 //
                 pDlxObj = pSeg->Info.DlxPart.mpDlxObj;
-                KernObj_AddRef(&pDlxObj->Hdr);
+                K2OSKERN_AddRefObject(&pDlxObj->Hdr);
             }
         }
     }
@@ -330,7 +330,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxAcquireAddressOwner(UINT32 aAddress,
     stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
     if (K2STAT_IS_ERROR(stat))
     {
-        stat2 = KernObj_Release(&pDlxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         K2OS_ThreadSetStatus(stat);
         return NULL;

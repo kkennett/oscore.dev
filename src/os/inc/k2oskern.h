@@ -246,6 +246,43 @@ K2OSKERN_CreateTokenFromAddRefOfNamedObject(
 //------------------------------------------------------------------------
 //
 
+typedef 
+K2STAT 
+(*K2OSKERN_pf_AddObject)(
+    K2OSKERN_OBJ_HEADER *apObjHdr
+    );
+
+K2STAT 
+K2OSKERN_AddObject(
+    K2OSKERN_OBJ_HEADER *apObjHdr
+);
+
+typedef 
+K2STAT
+(*K2OSKERN_pf_AddRefObject)(
+    K2OSKERN_OBJ_HEADER *apHdr
+    );
+
+K2STAT 
+K2OSKERN_AddRefObject(
+    K2OSKERN_OBJ_HEADER *apHdr
+);
+
+typedef 
+K2STAT
+(*K2OSKERN_pf_ReleaseObject)(
+    K2OSKERN_OBJ_HEADER *apHdr
+    );
+
+K2STAT 
+K2OSKERN_ReleaseObject(
+    K2OSKERN_OBJ_HEADER *apHdr
+);
+
+//
+//------------------------------------------------------------------------
+//
+
 typedef
 K2STAT
 (*K2OSKERN_pf_MapDevice)(

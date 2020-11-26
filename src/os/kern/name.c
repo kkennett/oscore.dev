@@ -76,7 +76,7 @@ K2STAT KernName_Define(K2OSKERN_OBJ_NAME *apName, char const *apString, K2OSKERN
         {
             K2_ASSERT((*appRetActual) != apName);
         }
-        KernObj_Release(&apName->Event_IsOwned.Hdr);
+        K2OSKERN_ReleaseObject(&apName->Event_IsOwned.Hdr);
         K2OS_CritSecDone(&apName->OwnerSec);
         K2MEM_Zero(apName, sizeof(K2OSKERN_OBJ_NAME));
     }
@@ -108,7 +108,7 @@ K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER *
     {
         if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
         {
-            KernObj_Release(&pNameObj->Hdr);
+            K2OSKERN_ReleaseObject(&pNameObj->Hdr);
             stat = K2STAT_ERROR_BAD_TOKEN;
         }
     }
@@ -124,7 +124,7 @@ K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER *
         pObjHdr = pNameObj->mpObject;
         if (pObjHdr != NULL)
         {
-            stat = KernObj_AddRef(pObjHdr);
+            stat = K2OSKERN_AddRefObject(pObjHdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
         }
 
@@ -142,7 +142,7 @@ K2STAT KernName_TokenToAddRefObject(K2OS_TOKEN aNameToken, K2OSKERN_OBJ_HEADER *
 
     } while (0);
 
-    KernObj_Release(&pNameObj->Hdr);
+    K2OSKERN_ReleaseObject(&pNameObj->Hdr);
 
     return stat;
 }
@@ -158,7 +158,7 @@ void KernName_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2_ASSERT(apNameObj->Hdr.mRefCount == 0);
     K2_ASSERT(!(apNameObj->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_PERMANENT));
 
-    KernObj_Release(&apNameObj->Event_IsOwned.Hdr);
+    K2OSKERN_ReleaseObject(&apNameObj->Event_IsOwned.Hdr);
 
     K2OS_CritSecDone(&apNameObj->OwnerSec);
 

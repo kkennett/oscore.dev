@@ -53,7 +53,7 @@ BOOL KernSched_Exec_ThreadCreate(void)
     //
     // a thread that is not in a purgeable state holds a reference to itself.
     //
-    KernObj_AddRef(&pNewThread->Hdr);
+    K2OSKERN_AddRefObject(&pNewThread->Hdr);
 
     pNewThread->Env.mId = gData.Sched.mNextThreadId++;
 

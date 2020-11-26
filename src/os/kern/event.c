@@ -40,7 +40,7 @@ K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, 
 
     if (apName != NULL)
     {
-        stat = KernObj_AddRef(&apName->Hdr);
+        stat = K2OSKERN_AddRefObject(&apName->Hdr);
         if (K2STAT_IS_ERROR(stat))
             return stat;
     }
@@ -62,7 +62,7 @@ K2STAT KernEvent_Create(K2OSKERN_OBJ_EVENT *apEvent, K2OSKERN_OBJ_NAME *apName, 
 
     if (apName != NULL)
     {
-        KernObj_Release(&apName->Hdr);
+        K2OSKERN_ReleaseObject(&apName->Hdr);
     }
 
     return stat;

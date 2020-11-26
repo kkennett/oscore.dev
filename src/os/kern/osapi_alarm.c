@@ -57,7 +57,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
             {
-                KernObj_Release(&pNameObj->Hdr);
+                K2OSKERN_ReleaseObject(&pNameObj->Hdr);
                 stat = K2STAT_ERROR_BAD_TOKEN;
             }
         }
@@ -87,7 +87,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
         stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokAlarm);
         if (K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pAlarmObj->Hdr);
+            K2OSKERN_ReleaseObject(&pAlarmObj->Hdr);
         }
 
     } while (0);
@@ -95,7 +95,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_AlarmCreate(K2OS_TOKEN aNameToken, UINT
     if (aNameToken != NULL)
     {
         K2_ASSERT(pNameObj != NULL);
-        KernObj_Release(&pNameObj->Hdr);
+        K2OSKERN_ReleaseObject(&pNameObj->Hdr);
     }
 
     if (K2STAT_IS_ERROR(stat))

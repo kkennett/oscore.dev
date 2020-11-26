@@ -104,6 +104,10 @@ K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetA
     return stat;
 }
 
+K2STAT K2OSKERN_AddObject(K2OSKERN_OBJ_HEADER *apObjHdr)
+{
+    return KernObj_Add(apObjHdr, NULL);
+}
 K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
 {
     K2STAT          stat;
@@ -134,7 +138,7 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
         }
         else
         {
-            stat = KernObj_AddRef(&apObjName->Hdr);
+            stat = K2OSKERN_AddRefObject(&apObjName->Hdr);
         }
 
         if (K2STAT_IS_ERROR(stat))
@@ -179,7 +183,7 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
     {
         if (apObjName != NULL)
         {
-            KernObj_Release(&apObjName->Hdr);
+            K2OSKERN_ReleaseObject(&apObjName->Hdr);
         }
     }
 
@@ -205,7 +209,7 @@ K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName)
     return stat;
 }
 
-K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr)
+K2STAT K2OSKERN_AddRefObject(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     BOOL            disp;
     K2TREE_NODE *   pTreeNode;
@@ -229,7 +233,7 @@ K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr)
     return K2STAT_NO_ERROR;
 }
 
-K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
+K2STAT K2OSKERN_ReleaseObject(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
     UINT32              disp;
     K2STAT              stat;
@@ -286,7 +290,7 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
     }
     else
     {
-        K2OSKERN_Debug("!!!KernObj_Release - object %08X not found!\n");
+        K2OSKERN_Debug("!!!K2OSKERN_ReleaseObject - object %08X not found!\n");
     }
 
     K2OSKERN_SeqIntrUnlock(&gData.ObjTreeSeqLock, disp);
@@ -329,7 +333,7 @@ K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr)
 
         K2OS_CritSecLeave(&pName->OwnerSec);
 
-        stat = KernObj_Release(&pName->Hdr);
+        stat = K2OSKERN_ReleaseObject(&pName->Hdr);
 
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
 

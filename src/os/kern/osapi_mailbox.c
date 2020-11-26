@@ -51,7 +51,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
             {
-                KernObj_Release(&pNameObj->Hdr);
+                K2OSKERN_ReleaseObject(&pNameObj->Hdr);
                 stat = K2STAT_ERROR_BAD_TOKEN;
             }
         }
@@ -81,14 +81,14 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_MailboxCreate(K2OS_TOKEN aTokName, BOOL
         stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokMailbox);
         if (K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pMailboxObj->Hdr);
+            K2OSKERN_ReleaseObject(&pMailboxObj->Hdr);
         }
 
     } while (0);
 
     if (pNameObj != NULL)
     {
-        KernObj_Release(&pNameObj->Hdr);
+        K2OSKERN_ReleaseObject(&pNameObj->Hdr);
     }
 
     if (K2STAT_IS_ERROR(stat))
@@ -119,7 +119,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxSetBlock(K2OS_TOKEN aTokMailbox, BOOL 
             stat = KernMailbox_SetBlock(pMailboxObj, aBlock);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMailboxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -166,7 +166,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGI
             stat = KernMailbox_Recv(pMailboxObj, &actMsgIo, &actReqId);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMailboxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -211,7 +211,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRespond(K2OS_TOKEN aTokMailbox, UINT32
             stat = KernMailbox_Respond(pMailboxObj, aRequestId, &msgIo);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMailboxObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMailboxObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 

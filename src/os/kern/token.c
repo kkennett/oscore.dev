@@ -264,7 +264,7 @@ K2OSKERN_TranslateTokensToAddRefObjs(
             break;
         }
 
-        stat = KernObj_AddRef(pToken->InUse.mpObjHdr);
+        stat = K2OSKERN_AddRefObject(pToken->InUse.mpObjHdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
         *appRetObjHdrs = pToken->InUse.mpObjHdr;
@@ -286,7 +286,7 @@ K2OSKERN_TranslateTokensToAddRefObjs(
             do {
                 ix--;
                 appRetObjHdrs--;
-                KernObj_Release(*appRetObjHdrs);
+                K2OSKERN_ReleaseObject(*appRetObjHdrs);
             } while (ix > 0);
         }
     }
@@ -368,7 +368,7 @@ K2OS_TokenDestroy(K2OS_TOKEN aToken)
 
     if (!K2STAT_IS_ERROR(stat))
     {
-        stat = KernObj_Release(pObjHdr);
+        stat = K2OSKERN_ReleaseObject(pObjHdr);
     }
 
     return stat;
@@ -408,7 +408,7 @@ K2OSKERN_CreateTokenFromAddRefOfNamedObject(
             {
                 if (pRefObj->mObjType == aObjType)
                 {
-                    stat2 = KernObj_AddRef(pRefObj);
+                    stat2 = K2OSKERN_AddRefObject(pRefObj);
                     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                 }
                 else
@@ -428,7 +428,7 @@ K2OSKERN_CreateTokenFromAddRefOfNamedObject(
                 stat = K2OSKERN_CreateTokenNoAddRef(1, &pRefObj, &tokObject);
                 if (K2STAT_IS_ERROR(stat))
                 {
-                    stat2 = KernObj_Release(pRefObj);
+                    stat2 = K2OSKERN_ReleaseObject(pRefObj);
                     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                 }
             }
@@ -438,7 +438,7 @@ K2OSKERN_CreateTokenFromAddRefOfNamedObject(
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
 
-        stat2 = KernObj_Release(&pNameObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pNameObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 

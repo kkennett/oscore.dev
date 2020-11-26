@@ -295,7 +295,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecDone(K2OS_CRITSEC *apSec)
     // this should make anything waiting on the sec fail their wait
     // with K2OS_WAIT_ERROR
     //
-    stat = KernObj_Release(&pSec->Event.Hdr);
+    stat = K2OSKERN_ReleaseObject(&pSec->Event.Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     ok = K2OSKERN_SeqIntrLock(&pSec->SeqLock);

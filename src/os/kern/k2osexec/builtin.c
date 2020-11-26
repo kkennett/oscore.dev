@@ -36,6 +36,28 @@ static K2ROFS const *     sgpRofs;
 static K2ROFS_DIR const * sgpBuiltinRoot;
 static K2ROFS_DIR const * sgpBuiltinKern;
 
+static K2STAT sBuiltin_Open(char const *apRelSpec, FSPROV_OPAQUE *apRetFile, UINT32 *apRetTotalSectors)
+{
+
+}
+
+static K2STAT sBuiltin_Read(FSPROV_OPAQUE aFile, void *apBuffer, UINT32 aSectorOffset, UINT32 aSectorCount)
+{
+
+}
+
+static K2STAT sBuiltin_Close(FSPROV_OPAQUE aFile)
+{
+
+}
+
+K2OSEXEC_FSPROV_DIRECT gFsProv_Builtin_Direct =
+{
+    sBuiltin_Open,
+    sBuiltin_Read,
+    sBuiltin_Close
+};
+
 void 
 Builtin_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
@@ -89,4 +111,9 @@ Builtin_Run(
             }
         } while (ch != 0);
     }
+}
+
+void Builtin_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
+{
+    K2_ASSERT(0);
 }

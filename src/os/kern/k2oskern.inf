@@ -39,6 +39,8 @@ ID {010FF1BB-C4A1-45D3-BC7B-1B252C07A9F4}
 #
 # Kernel-Only exports
 #
+K2OSKERN_AddObject
+K2OSKERN_AddRefObject
 K2OSKERN_Debug
 K2OSKERN_Panic
 K2OSKERN_MicroStall
@@ -52,6 +54,7 @@ K2OSKERN_MapDevice
 K2OSKERN_UnmapDevice
 K2OSKERN_InstallIntrHandler
 K2OSKERN_Esc
+K2OSKERN_ReleaseObject
 K2OSKERN_ReflectSysMsg
 K2OSKERN_ServiceCreate
 K2OSKERN_ServiceGetInstanceId

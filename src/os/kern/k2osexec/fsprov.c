@@ -106,7 +106,51 @@ sOpenDlx(
     UINT32 *                apRetTotalSectors
 )
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    FSPROV_OPAQUE       opaque;
+    K2STAT              stat;
+    FSPROV_OBJ_FILE *   pFileObj;
+
+    if (apPathObj != NULL)
+        return K2STAT_ERROR_NOT_IMPL;
+
+    stat = gFsProv_Builtin_Direct.Open(apRelSpec, &opaque, apRetTotalSectors);
+
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    pFileObj = (FSPROV_OBJ_FILE *)K2OS_HeapAlloc(sizeof(FSPROV_OBJ_FILE));
+    if (pFileObj == NULL)
+    {
+        gFsProv_Builtin_Direct.Close(opaque);
+        return K2STAT_ERROR_OUT_OF_MEMORY;
+    }
+
+    K2MEM_Zero(pFileObj, sizeof(FSPROV_OBJ_FILE));
+    pFileObj->Hdr.mObjType = K2OS_Obj_File;
+    pFileObj->Hdr.mRefCount = 1;
+    pFileObj->Hdr.Dispose = Builtin_Dispose;
+    K2LIST_Init(&pFileObj->Hdr.WaitEntryPrioList);
+
+    pFileObj->mpProvDirect = &gFsProv_Builtin_Direct;
+    pFileObj->mOpaque = opaque;
+
+    stat = K2OSKERN_AddObject(&pFileObj->Hdr);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        gFsProv_Builtin_Direct.Close(opaque);
+        K2OS_HeapFree(pFileObj);
+        return stat;
+    }
+
+    stat = K2OSKERN_CreateTokenNoAddRef(1, (K2OSKERN_OBJ_HEADER **)&pFileObj, apRetTokDlxFile);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        K2OSKERN_ReleaseObject(&pFileObj->Hdr);
+        *apRetTokDlxFile = NULL;
+        *apRetTotalSectors = 0;
+    }
+
+    return stat;
 }
 
 static
@@ -118,7 +162,27 @@ sReadDlx(
     UINT32      aSectorCount
 )
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2STAT              stat;
+    K2STAT              stat2;
+    FSPROV_OBJ_FILE *   pFileObj;
+
+    stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokDlxFile, (K2OSKERN_OBJ_HEADER **)&pFileObj);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    if (pFileObj->Hdr.mObjType != K2OS_Obj_File)
+    {
+        stat = K2STAT_ERROR_BAD_ARGUMENT;
+    }
+    else
+    {
+        stat = pFileObj->mpProvDirect->Read((FSPROV_OPAQUE)pFileObj, apBuffer, aStartSector, aSectorCount);
+    }
+
+    stat2 = K2OSKERN_ReleaseObject(&pFileObj->Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+    return stat;
 }
 
 static

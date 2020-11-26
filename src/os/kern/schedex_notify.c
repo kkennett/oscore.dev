@@ -52,7 +52,7 @@ BOOL KernSched_Exec_NotifyLatch(void)
         pNotify = pBlock->Rec[ix].mpSubscrip->mpNotify;
         pBlock->Rec[ix].mpSubscrip = NULL;  // caller holds reference separately
         pBlock->Rec[ix].mpNotify = pNotify;
-        KernObj_AddRef(&pNotify->Hdr);
+        K2OSKERN_AddRefObject(&pNotify->Hdr);
         K2LIST_AddAtTail(&pNotify->RecList, &pBlock->Rec[ix].NotifyRecListLink);
         if (KernSchedEx_EventChange(&pNotify->AvailEvent, TRUE))
             changedSomething = TRUE;

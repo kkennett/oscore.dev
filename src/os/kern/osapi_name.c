@@ -118,7 +118,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameDefine(char const *apName)
             // we took for it. This should destroy the object we just created
             // unless the name already existed
             //
-            KernObj_Release(&pName->Hdr);
+            K2OSKERN_ReleaseObject(&pName->Hdr);
         }
 
     } while (0);
@@ -154,7 +154,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRet
     {
         if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
         {
-            KernObj_Release(&pNameObj->Hdr);
+            K2OSKERN_ReleaseObject(&pNameObj->Hdr);
             stat = K2STAT_ERROR_BAD_TOKEN;
         }
     }
@@ -166,7 +166,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_NameString(K2OS_TOKEN aNameToken, char *apRet
 
     K2ASC_Copy(name, pNameObj->NameBuffer);
 
-    KernObj_Release(&pNameObj->Hdr);
+    K2OSKERN_ReleaseObject(&pNameObj->Hdr);
 
     K2MEM_Copy(apRetName, name, K2OS_NAME_MAX_LEN + 1);
 
@@ -207,7 +207,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken)
         //
         // try to take a reference for the new token
         //
-        stat = KernObj_AddRef(&pNameObj->Hdr);
+        stat = K2OSKERN_AddRefObject(&pNameObj->Hdr);
         if (!K2STAT_IS_ERROR(stat))
         {
             pNameObjHdr = &pNameObj->Hdr;
@@ -218,12 +218,12 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_NameAcquire(K2OS_TOKEN aObjectToken)
                 // token creation failed, so we need to release the 
                 // reference we took for it
                 //
-                KernObj_Release(&pNameObj->Hdr);
+                K2OSKERN_ReleaseObject(&pNameObj->Hdr);
             }
         }
     }
 
-    KernObj_Release(pObjHdr);
+    K2OSKERN_ReleaseObject(pObjHdr);
 
     if (K2STAT_IS_ERROR(stat))
     {

@@ -224,7 +224,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
         {
             if ((segPageCount - segOffset) >= aPageCount)
             {
-                KernObj_AddRef(&pSeg->Hdr);
+                K2OSKERN_AddRefObject(&pSeg->Hdr);
             }
             else
             {
@@ -293,7 +293,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesCommit(UINT32 aPagesAddr, UINT32 aPa
 
     } while (0);
 
-    KernObj_Release(&pSeg->Hdr);
+    K2OSKERN_ReleaseObject(&pSeg->Hdr);
 
     if (K2STAT_IS_ERROR(stat))
     {
@@ -379,7 +379,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
         {
             if ((segPageCount - segOffset) >= aPageCount)
             {
-                KernObj_AddRef(&pSeg->Hdr);
+                K2OSKERN_AddRefObject(&pSeg->Hdr);
             }
             else
             {
@@ -419,7 +419,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_VirtPagesDecommit(UINT32 aPagesAddr, UINT32 a
 
     } while (0);
 
-    KernObj_Release(&pSeg->Hdr);
+    K2OSKERN_ReleaseObject(&pSeg->Hdr);
 
     if (K2STAT_IS_ERROR(stat))
     {

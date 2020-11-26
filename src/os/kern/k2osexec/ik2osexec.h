@@ -234,10 +234,19 @@ void Msg_Init(void);
 
 /* ----------------------------------------------------------------------------- */
 
+typedef struct _FSPROV_OBJ_FILE FSPROV_OBJ_FILE;
+struct _FSPROV_OBJ_FILE
+{
+    K2OSKERN_OBJ_HEADER         Hdr;
+    K2OSEXEC_FSPROV_DIRECT *    mpProvDirect;
+    FSPROV_OPAQUE               mOpaque;
+};
+
 void FsProv_Init(K2OSEXEC_INIT_INFO * apInitInfo);
 void FsProv_OnNotify(void);
 
-extern K2OS_TOKEN gFsProv_TokNotify;
+extern K2OS_TOKEN               gFsProv_TokNotify;
+extern K2OSEXEC_FSPROV_DIRECT   gFsProv_Builtin_Direct;
 
 /* ----------------------------------------------------------------------------- */
 
@@ -266,6 +275,7 @@ extern K2ROFS_DIR const * gpBuiltinRoot;
 
 void Builtin_Init(K2OSEXEC_INIT_INFO * apInitInfo);
 void Builtin_Run(void);
+void Builtin_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* ----------------------------------------------------------------------------- */
 

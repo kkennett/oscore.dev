@@ -65,8 +65,8 @@ KernSchedEx_MsgSend(
     // msg takes reference on mailbox
     // mailbox takes a reference on msg
     //
-    KernObj_AddRef(&apMailbox->Hdr);
-    KernObj_AddRef(&apMsg->Hdr);
+    K2OSKERN_AddRefObject(&apMailbox->Hdr);
+    K2OSKERN_AddRefObject(&apMsg->Hdr);
 
     apMsg->mpMailbox = apMailbox;
     wasEmpty = (apMailbox->PendingMsgList.mNodeCount == 0) ? TRUE : FALSE;

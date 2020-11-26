@@ -40,7 +40,7 @@ sThreadExited(
     K2OSKERN_Debug("Thread %d exited with code %d\n", apExitedThread->Env.mId, apExitedThread->Info.mExitCode);
     K2_ASSERT(apExitedThread->MsgSvc.Hdr.mRefCount == 1);
     apExitedThread->Sched.State.mLifeStage = KernThreadLifeStage_Cleanup;
-    KernObj_Release(&apExitedThread->Hdr);
+    K2OSKERN_ReleaseObject(&apExitedThread->Hdr);
 }
 
 void

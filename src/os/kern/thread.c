@@ -274,12 +274,12 @@ void KernThread_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2OSKERN_SeqIntrUnlock(&pProc->ThreadListSeqLock, FALSE);
     K2OSKERN_SeqIntrUnlock(&gData.ProcListSeqLock, disp);
 
-    KernObj_Release(&apThread->MsgSvc.Hdr);
+    K2OSKERN_ReleaseObject(&apThread->MsgSvc.Hdr);
 
     //
     // thread is GONE after this call
     //
-    KernObj_Release(&pSeg->Hdr);
+    K2OSKERN_ReleaseObject(&pSeg->Hdr);
 }
 
 K2OSKERN_OBJ_HEADER * 

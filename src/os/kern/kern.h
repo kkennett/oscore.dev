@@ -1611,8 +1611,6 @@ void KernIntr_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 K2STAT KernObj_AddName(K2OSKERN_OBJ_NAME *apNewName, K2OSKERN_OBJ_NAME **appRetActual);
 K2STAT KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr, K2OSKERN_OBJ_NAME *apObjName);
-K2STAT KernObj_AddRef(K2OSKERN_OBJ_HEADER *apHdr);
-K2STAT KernObj_Release(K2OSKERN_OBJ_HEADER *apHdr);
 
 /* --------------------------------------------------------------------------------- */
 

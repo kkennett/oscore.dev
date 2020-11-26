@@ -145,6 +145,23 @@ struct _K2OSEXEC_DRVSTORE_DIRECT
 #define K2OS_FSPROV_ID_HAL \
     { 0x138de9b5, 0x2549, 0x4376, { 0xbd, 0xe7, 0x2c, 0x3a, 0xf4, 0x1b, 0x21, 0x80 } }
 
+#define K2OSEXEC_FSPROV_CURRENT_VERSION   0x00010000
+
+typedef void * FSPROV_OPAQUE;
+
+typedef K2STAT(*K2OSEXEC_pf_FsProv_Open)(char const *apRelSpec, FSPROV_OPAQUE *apRetFile, UINT32 *apRetTotalSectors);
+typedef K2STAT(*K2OSEXEC_pf_FsProv_Read)(FSPROV_OPAQUE aFile, void *apBuffer, UINT32 aSectorOffset, UINT32 aSectorCount);
+typedef K2STAT(*K2OSEXEC_pf_FsProv_Close)(FSPROV_OPAQUE aFile);
+
+typedef struct _K2OSEXEC_FSPROV_DIRECT K2OSEXEC_FSPROV_DIRECT;
+struct _K2OSEXEC_FSPROV_DIRECT
+{
+    UINT32                      mVersion;
+    K2OSEXEC_pf_FsProv_Open     Open;
+    K2OSEXEC_pf_FsProv_Read     Read;
+    K2OSEXEC_pf_FsProv_Close    Close;
+};
+
 //
 //------------------------------------------------------------------------
 //

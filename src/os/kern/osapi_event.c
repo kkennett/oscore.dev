@@ -50,7 +50,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL
         {
             if (pNameObj->Hdr.mObjType != K2OS_Obj_Name)
             {
-                KernObj_Release(&pNameObj->Hdr);
+                K2OSKERN_ReleaseObject(&pNameObj->Hdr);
                 stat = K2STAT_ERROR_BAD_TOKEN;
             }
         }
@@ -80,7 +80,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL
         stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokEvent);
         if (K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pEventObj->Hdr);
+            K2OSKERN_ReleaseObject(&pEventObj->Hdr);
         }
 
     } while (0);
@@ -88,7 +88,7 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_EventCreate(K2OS_TOKEN aNameToken, BOOL
     if (aNameToken != NULL)
     {
         K2_ASSERT(pNameObj != NULL);
-        KernObj_Release(&pNameObj->Hdr);
+        K2OSKERN_ReleaseObject(&pNameObj->Hdr);
     }
 
     if (K2STAT_IS_ERROR(stat))
@@ -120,7 +120,7 @@ BOOL sSetOrReset(K2OS_TOKEN aTokEvent, BOOL aSetReset)
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
 
-        stat2 = KernObj_Release(&pEventObj->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pEventObj->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 

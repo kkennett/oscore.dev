@@ -104,7 +104,7 @@ K2OSKERN_ServiceCreate(
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pMailbox->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pMailbox->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
     }
@@ -125,7 +125,7 @@ K2OSKERN_ServiceCreate(
     stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokService);
     if (K2STAT_IS_ERROR(stat))
     {
-        stat2 = KernObj_Release(&pSvc->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pSvc->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         K2OS_ThreadSetStatus(stat);
         return NULL;
@@ -163,7 +163,7 @@ K2OSKERN_ServiceGetInstanceId(
             result = pSvc->ServTreeNode.mUserVal;
     }
 
-    stat2 = KernObj_Release(&pSvc->Hdr);
+    stat2 = K2OSKERN_ReleaseObject(&pSvc->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     
     if (K2STAT_IS_ERROR(stat))
@@ -369,7 +369,7 @@ K2OSKERN_ServicePublish(
                             needCount = 0;
                             do {
                                 ppSubscrip[needCount] = K2_GET_CONTAINER(K2OSKERN_OBJ_SUBSCRIP, pListLink, IfaceSubscripListLink);
-                                KernObj_AddRef(&ppSubscrip[needCount]->Hdr);
+                                K2OSKERN_AddRefObject(&ppSubscrip[needCount]->Hdr);
                                 needCount++;
                                 pListLink = pListLink->mpNext;
                             } while (pListLink != NULL);
@@ -403,7 +403,7 @@ K2OSKERN_ServicePublish(
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pSvc->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pSvc->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
     }
@@ -426,7 +426,7 @@ K2OSKERN_ServicePublish(
     {
         tokPublish = NULL;
 
-        stat2 = KernObj_Release(&pPublish->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pPublish->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         pPublish = NULL;
     }
@@ -458,7 +458,7 @@ K2OSKERN_ServicePublish(
 
         for (needCount = 0; needCount < numRec; needCount++)
         {
-            stat2 = KernObj_Release(&ppSubscrip[needCount]->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&ppSubscrip[needCount]->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             ppSubscrip[needCount] = NULL;
         }
@@ -503,7 +503,7 @@ K2OSKERN_PublishGetInstanceId(
             result = pPublish->IfInstTreeNode.mUserVal;
     }
 
-    stat2 = KernObj_Release(&pPublish->Hdr);
+    stat2 = K2OSKERN_ReleaseObject(&pPublish->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
     if (K2STAT_IS_ERROR(stat))
@@ -598,7 +598,7 @@ void KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
         needCount = 0;
         do {
             ppSubscrip[needCount] = K2_GET_CONTAINER(K2OSKERN_OBJ_SUBSCRIP, pListLink, IfaceSubscripListLink);
-            KernObj_AddRef(&ppSubscrip[needCount]->Hdr);
+            K2OSKERN_AddRefObject(&ppSubscrip[needCount]->Hdr);
             needCount++;
             pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
@@ -630,7 +630,7 @@ void KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
 
-    stat = KernObj_Release(&pSvc->Hdr);
+    stat = K2OSKERN_ReleaseObject(&pSvc->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     if (pIFace != NULL)
@@ -672,7 +672,7 @@ void KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
         for (needCount = 0; needCount < numRec; needCount++)
         {
-            stat2 = KernObj_Release(&ppSubscrip[needCount]->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&ppSubscrip[needCount]->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             ppSubscrip[needCount] = NULL;
         }
@@ -743,7 +743,7 @@ K2OSKERN_ServiceCall(
         {
             pPublish = K2_GET_CONTAINER(K2OSKERN_OBJ_PUBLISH, pTreeNode, IfInstTreeNode);
 
-            stat = KernObj_AddRef(&pPublish->Hdr);
+            stat = K2OSKERN_AddRefObject(&pPublish->Hdr);
             if (K2STAT_IS_ERROR(stat))
                 pTreeNode = NULL;
         }
@@ -791,7 +791,7 @@ K2OSKERN_ServiceCall(
                 }
             }
 
-            stat2 = KernObj_Release(&pPublish->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pPublish->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
         else
@@ -799,7 +799,7 @@ K2OSKERN_ServiceCall(
 
     } while (0);
 
-    stat2 = KernObj_Release(&pMsg->Hdr);
+    stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
     return stat;
@@ -1045,7 +1045,7 @@ void KernService_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
 
-    stat = KernObj_Release(&pMailbox->Hdr);
+    stat = K2OSKERN_ReleaseObject(&pMailbox->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     K2MEM_Zero(apService, sizeof(K2OSKERN_OBJ_SERVICE));
@@ -1193,7 +1193,7 @@ K2OSKERN_NotifyCreate(
         stat = KernObj_Add(&pNotifyObj->Hdr, NULL);
         if (K2STAT_IS_ERROR(stat))
         {
-            KernObj_Release(&pNotifyObj->AvailEvent.Hdr);
+            K2OSKERN_ReleaseObject(&pNotifyObj->AvailEvent.Hdr);
         }
 
     } while (0);
@@ -1209,7 +1209,7 @@ K2OSKERN_NotifyCreate(
     stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokNotify);
     if (K2STAT_IS_ERROR(stat))
     {
-        KernObj_Release(&pNotifyObj->Hdr);
+        K2OSKERN_ReleaseObject(&pNotifyObj->Hdr);
         return FALSE;
     }
 
@@ -1272,7 +1272,7 @@ K2OSKERN_NotifySubscribe(
 
             pSubscrip->mpContext = apContext;
             pSubscrip->mpNotify = pNotify;
-            KernObj_AddRef(&pNotify->Hdr);
+            K2OSKERN_AddRefObject(&pNotify->Hdr);
 
             pIFace = (K2OSKERN_IFACE *)K2OS_HeapAlloc(sizeof(K2OSKERN_IFACE));
             if (pIFace == NULL)
@@ -1338,7 +1338,7 @@ K2OSKERN_NotifySubscribe(
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pNotify->Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pNotify->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
             K2OS_HeapFree(pSubscrip);
@@ -1346,7 +1346,7 @@ K2OSKERN_NotifySubscribe(
 
     } while (0);
 
-    stat2 = KernObj_Release(&pNotify->Hdr);
+    stat2 = K2OSKERN_ReleaseObject(&pNotify->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
     if (K2STAT_IS_ERROR(stat))
@@ -1365,7 +1365,7 @@ K2OSKERN_NotifySubscribe(
     stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokSubscrip);
     if (K2STAT_IS_ERROR(stat))
     {
-        stat2 = KernObj_Release(&pSubscrip->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pSubscrip->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         K2OS_ThreadSetStatus(stat);
         return NULL;
@@ -1416,7 +1416,7 @@ void KernSubscrip_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     K2OSKERN_SeqIntrUnlock(&gData.ServTreeSeqLock, disp);
 
-    stat = KernObj_Release(&pNotify->Hdr);
+    stat = K2OSKERN_ReleaseObject(&pNotify->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     if (pIFace != NULL)
@@ -1494,7 +1494,7 @@ K2OSKERN_NotifyRead(
             {
                 K2_ASSERT(pBlock->Rec[ix].mpSubscrip == NULL);
                 K2_ASSERT(pBlock->Rec[ix].mpNotify != NULL);
-                stat2 = KernObj_Release(&pBlock->Rec[ix].mpNotify->Hdr);
+                stat2 = K2OSKERN_ReleaseObject(&pBlock->Rec[ix].mpNotify->Hdr);
                 K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             }
             K2OS_HeapFree(pBlock);
@@ -1515,7 +1515,7 @@ K2OSKERN_NotifyRead(
 
     } while (0);
 
-    stat2 = KernObj_Release(&pNotify->Hdr);
+    stat2 = K2OSKERN_ReleaseObject(&pNotify->Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
     if (K2STAT_IS_ERROR(stat))
@@ -1546,7 +1546,7 @@ void KernNotify_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     check = !(apNotify->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED);
 
-    stat = KernObj_Release(&apNotify->AvailEvent.Hdr);
+    stat = K2OSKERN_ReleaseObject(&apNotify->AvailEvent.Hdr);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     K2MEM_Zero(apNotify, sizeof(K2OSKERN_OBJ_NOTIFY));

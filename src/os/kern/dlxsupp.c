@@ -179,7 +179,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
     if (pSeg != NULL)
     {
-        stat = KernObj_AddRef(&pSeg->Hdr);
+        stat = K2OSKERN_AddRefObject(&pSeg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
         symAddr = aAddr;
     }
@@ -242,7 +242,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
 
         apRetSymName[aRetSymNameBufLen - 1] = 0;
 
-        KernObj_Release(&pSeg->Hdr);
+        K2OSKERN_ReleaseObject(&pSeg->Hdr);
     }
     else
     {
@@ -320,7 +320,7 @@ K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 
 
         if (K2STAT_IS_ERROR(stat))
         {
-            stat2 = KernObj_Release(&pDlxObj->PageSeg.Hdr);
+            stat2 = K2OSKERN_ReleaseObject(&pDlxObj->PageSeg.Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat2));
         }
 

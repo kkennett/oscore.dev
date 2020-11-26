@@ -93,7 +93,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRet
                 {
                     do {
                         --ix;
-                        stat2 = KernObj_Release(&ppMsg[ix]->Hdr);
+                        stat2 = K2OSKERN_ReleaseObject(&ppMsg[ix]->Hdr);
                         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                         ppMsg[ix] = NULL;
                     } while (ix > 0);
@@ -107,7 +107,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgCreate(UINT32 aMsgCount, K2OS_TOKEN *apRet
             {
                 for (ix = 0; ix < aMsgCount; ix++)
                 {
-                    stat2 = KernObj_Release(&ppMsg[ix]->Hdr);
+                    stat2 = K2OSKERN_ReleaseObject(&ppMsg[ix]->Hdr);
                     K2_ASSERT(!K2STAT_IS_ERROR(stat2));
                     ppMsg[ix] = NULL;
                 }
@@ -157,7 +157,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKE
     {
         if (pMailbox->Hdr.mObjType != K2OS_Obj_Mailbox)
         {
-            stat = KernObj_Release(&pMailbox->Hdr);
+            stat = K2OSKERN_ReleaseObject(&pMailbox->Hdr);
             K2_ASSERT(!K2STAT_IS_ERROR(stat));
             stat = K2STAT_ERROR_BAD_TOKEN;
         }
@@ -177,11 +177,11 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgSend(K2OS_TOKEN aTokMailboxName, K2OS_TOKE
             stat = KernMsg_Send(pMailbox, pMsg, &msgIo);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
-    KernObj_Release(&pMailbox->Hdr);
+    K2OSKERN_ReleaseObject(&pMailbox->Hdr);
 
     if (K2STAT_IS_ERROR(stat))
     {
@@ -211,7 +211,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgAbort(K2OS_TOKEN aTokMsg, BOOL aClear)
             stat = KernMsg_Abort(pMsg, aClear);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
@@ -247,7 +247,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MsgReadResponse(K2OS_TOKEN aTokMsg, K2OS_MSGI
             stat = KernMsg_ReadResponse(pMsg, &actResp, aClear);
         else
             stat = K2STAT_ERROR_BAD_TOKEN;
-        stat2 = KernObj_Release(&pMsg->Hdr);
+        stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
     }
 
