@@ -71,19 +71,14 @@ struct _K2DLXSUPP_OPENRESULT
 
 typedef K2STAT (*pfK2DLXSUPP_CritSec)(BOOL aEnter);
 
-typedef K2STAT (*pfK2DLXSUPP_Open)(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
-
 typedef void   (*pfK2DLXSUPP_AtReInit)(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 
-typedef K2STAT (*pfK2DLXSUPP_ReadSectors)(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-
-typedef K2STAT (*pfK2DLXSUPP_Prepare)(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-
-typedef BOOL   (*pfK2DLXSUPP_PreCallback)(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
-typedef K2STAT (*pfK2DLXSUPP_PostCallback)(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
-
-typedef K2STAT (*pfK2DLXSUPP_Finalize)(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
-
+typedef K2STAT (*pfK2DLXSUPP_Open)(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
+typedef K2STAT (*pfK2DLXSUPP_ReadSectors)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
+typedef K2STAT (*pfK2DLXSUPP_Prepare)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
+typedef BOOL   (*pfK2DLXSUPP_PreCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
+typedef K2STAT (*pfK2DLXSUPP_PostCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
+typedef K2STAT (*pfK2DLXSUPP_Finalize)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
 typedef K2STAT (*pfK2DLXSUPP_Purge)(K2DLXSUPP_HOST_FILE aHostFile);
 
 typedef struct _K2DLXSUPP_HOST K2DLXSUPP_HOST;

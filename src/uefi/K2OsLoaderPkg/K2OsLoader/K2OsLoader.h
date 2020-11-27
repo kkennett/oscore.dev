@@ -107,12 +107,12 @@ extern LOADER_DATA gData;
 EFI_STATUS  sysDLX_Init(IN EFI_HANDLE ImageHandle);
 void        sysDLX_Done(void);
 K2STAT      sysDLX_CritSec(BOOL aEnter);
-K2STAT      sysDLX_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
-K2STAT      sysDLX_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-K2STAT      sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-BOOL        sysDLX_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
-K2STAT      sysDLX_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
-K2STAT      sysDLX_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
+K2STAT      sysDLX_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT      sysDLX_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
+K2STAT      sysDLX_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
+BOOL        sysDLX_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
+K2STAT      sysDLX_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
+K2STAT      sysDLX_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
 K2STAT      sysDLX_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 
 BOOL        sysDLX_ConvertLoadPtr(UINT32 * apAddr);

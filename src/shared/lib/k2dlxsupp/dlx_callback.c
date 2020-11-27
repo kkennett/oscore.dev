@@ -33,6 +33,7 @@
 
 K2STAT
 iK2DLXSUPP_DoCallback(
+    void *  apAcqContext,
     DLX *   apDlx,
     BOOL    aIsLoad
     )
@@ -46,7 +47,7 @@ iK2DLXSUPP_DoCallback(
         return 0;
     
     if (gpK2DLXSUPP_Vars->Host.PreCallback != NULL)
-        callEntrypoint = gpK2DLXSUPP_Vars->Host.PreCallback(apDlx->mHostFile, aIsLoad);
+        callEntrypoint = gpK2DLXSUPP_Vars->Host.PreCallback(apAcqContext, apDlx->mHostFile, aIsLoad, apDlx);
     else
         callEntrypoint = FALSE;
 
@@ -57,7 +58,7 @@ iK2DLXSUPP_DoCallback(
         status = K2_EXTRAP(&trap, entryPoint(apDlx, aIsLoad ? DLX_ENTRY_REASON_LOAD : DLX_ENTRY_REASON_UNLOAD));
         gpK2DLXSUPP_Vars->mAcqDisabled = FALSE;
         if (gpK2DLXSUPP_Vars->Host.PostCallback != NULL)
-            status = gpK2DLXSUPP_Vars->Host.PostCallback(apDlx->mHostFile, status);
+            status = gpK2DLXSUPP_Vars->Host.PostCallback(apAcqContext, apDlx->mHostFile, status, apDlx);
         return status;
     }
 

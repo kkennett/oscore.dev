@@ -701,8 +701,13 @@ enum _KernDlxState
     KernDlxState_Open,
     KernDlxState_InPrepare,
     KernDlxState_SegsAllocated,
-
+    KernDlxState_Finalized,
+    KernDlxState_AtLoadCallback,
+    KernDlxState_AfterLoadCallback,
     KernDlxState_Loaded,
+
+    KernDlxState_AtUnloadCallback,
+    KernDlxState_AfterUnloadCallback,
     KernDlxState_Count
 };
 
@@ -1440,6 +1445,7 @@ struct _K2OSKERN_DLXLOADCONTEXT
 {
     K2OSKERN_OBJ_HEADER *   mpPathObj;
     K2_GUID128 const *      mpMatchId;
+    UINT32                  mDepth;
     K2OSKERN_OBJ_DLX *      mpResult;
 };
 
@@ -1448,12 +1454,12 @@ void   KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 K2STAT KernDlxSupp_CritSec(BOOL aEnter);
-K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult);
-K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-K2STAT KernDlxSupp_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-BOOL   KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad);
-K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus);
-K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
+K2STAT KernDlxSupp_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
+K2STAT KernDlxSupp_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
+K2STAT KernDlxSupp_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
+BOOL   KernDlxSupp_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
+K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
+K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 
 /* --------------------------------------------------------------------------------- */

@@ -33,7 +33,8 @@
 
 K2STAT
 iK2DLXSUPP_LoadSegments(
-    DLX * apDlx
+    void *  apAcqContext,
+    DLX *   apDlx
     )
 {
     Elf32_Ehdr *        pElf;
@@ -70,6 +71,7 @@ iK2DLXSUPP_LoadSegments(
                 return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
 
             status = gpK2DLXSUPP_Vars->Host.ReadSectors(
+                apAcqContext,
                 apDlx->mHostFile, 
                 (void *)apDlx->SegAlloc.Segment[segIx].mDataAddr, 
                 count);

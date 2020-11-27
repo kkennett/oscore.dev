@@ -276,7 +276,7 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
     return K2STAT_OK;
 }
 
-K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT * apRetResult)
+K2STAT KernDlxSupp_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT * apRetResult)
 {
     K2STAT                      stat;
     K2STAT                      stat2;
@@ -290,7 +290,7 @@ K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 
     }
 
     do {
-        pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apContext;
+        pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apAcqContext;
         K2_ASSERT(pLoadContext != NULL);
 
         K2MEM_Zero(pDlxObj, sizeof(K2OSKERN_OBJ_DLX));
@@ -321,8 +321,9 @@ K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 
             stat = gData.mfExecOpenDlx(pLoadContext->mpPathObj, apFileSpec, &pDlxObj->mTokFile, &pDlxObj->mFileTotalSectors);
             if (K2STAT_IS_ERROR(stat))
                 break;
-            pDlxObj->mState = KernDlxState_Open;
 
+            pDlxObj->mState = KernDlxState_Open;
+            pLoadContext->mDepth++;
             apRetResult->mHostFile = (K2DLXSUPP_HOST_FILE)pDlxObj;
             apRetResult->mFileSectorCount = pDlxObj->mFileTotalSectors;
             apRetResult->mModulePageDataAddr = apRetResult->mModulePageLinkAddr = pDlxObj->PageSeg.ProcSegTreeNode.mUserVal;
@@ -345,7 +346,7 @@ K2STAT KernDlxSupp_Open(char const * apFileSpec, char const *apNamePart, UINT32 
     return stat;
 }
 
-K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
+K2STAT KernDlxSupp_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
 {
     K2OSKERN_OBJ_DLX *  pDlx;
     K2STAT              stat;
@@ -359,6 +360,7 @@ K2STAT KernDlxSupp_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UI
 
 K2STAT 
 KernDlxSupp_Prepare(
+    void *                  apAcqContext,
     K2DLXSUPP_HOST_FILE     aHostFile, 
     DLX_INFO *              apInfo, 
     UINT32                  aInfoSize, 
@@ -434,24 +436,78 @@ KernDlxSupp_Prepare(
     return K2STAT_NO_ERROR;
 }
 
-BOOL KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
+BOOL KernDlxSupp_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx)
 {
+    K2OSKERN_OBJ_DLX * pDlxObj;
+    
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    if (aIsLoad)
+    {
+        pDlxObj->mState = KernDlxState_AtLoadCallback;
+        pDlxObj->mpDlx = apDlx;
+    }
+    else
+    {
+        pDlxObj->mState = KernDlxState_AtUnloadCallback;
+    }
+
     return TRUE;
 }
 
-K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
+K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx)
 {
+    K2OSKERN_OBJ_DLX *          pDlxObj;
+    K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    if (pDlxObj->mState == KernDlxState_AtLoadCallback)
+    {
+        pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apAcqContext;
+        K2_ASSERT(pLoadContext != NULL);
+
+        pDlxObj->mState = KernDlxState_AfterLoadCallback;
+
+        if (!K2STAT_IS_ERROR(aUserStatus))
+        {
+            pDlxObj->mState = KernDlxState_Loaded;
+
+            K2_ASSERT(pLoadContext->mDepth > 0);
+            if (0 == --pLoadContext->mDepth)
+            {
+                //
+                // this is the top-level load
+                // so we need to return it to the osapi_dlx load function
+                //
+                pLoadContext->mpResult = pDlxObj;
+            }
+        }
+        else
+        {
+            pDlxObj->mpDlx = NULL;
+        }
+    }
+    else
+    {
+        pDlxObj->mState = KernDlxState_AfterUnloadCallback;
+    }
+
     return aUserStatus;
 }
 
-K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * apUpdateAlloc)
+K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * apUpdateAlloc)
 {
-    K2STAT                  stat;
-    UINT32                  segIx;
-    K2OSKERN_OBJ_DLX *      pDlxObj;
-    K2OSKERN_OBJ_SEGMENT *  pSeg;
+    K2STAT                      stat;
+    UINT32                      segIx;
+    K2OSKERN_OBJ_DLX *          pDlxObj;
+    K2OSKERN_OBJ_SEGMENT *      pSeg;
+    K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apAcqContext;
+    K2_ASSERT(pLoadContext != NULL);
 
     for (segIx = pDlxObj->mFirstTempSegIx; segIx < DlxSeg_Count; segIx++)
     {
@@ -475,11 +531,11 @@ K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * 
     }
 
     //
-    // DLX is loaded. 
+    // DLX is loaded up to the point of callbacks
     //
-    pDlxObj->mState = KernDlxState_Loaded;
+    pDlxObj->mState = KernDlxState_Finalized;
 
-    return(KernObj_Add(&pDlxObj->Hdr, NULL));
+    return KernObj_Add(&pDlxObj->Hdr, NULL);
 }
 
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)

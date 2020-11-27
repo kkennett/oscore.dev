@@ -87,7 +87,7 @@ iK2DLXSUPP_ReleaseModule(
 
     if (apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED)
     {
-        iK2DLXSUPP_DoCallback(apDlx, FALSE);
+        iK2DLXSUPP_DoCallback(NULL, apDlx, FALSE);
         K2LIST_Remove(&gpK2DLXSUPP_Vars->LoadedList, &apDlx->ListLink);
     }
     else

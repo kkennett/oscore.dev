@@ -424,7 +424,7 @@ void sysDLX_Done(void)
     gData.mLoaderImageHandle = NULL;
 }
 
-K2STAT sysDLX_Open(char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, void *apContext, K2DLXSUPP_OPENRESULT *apRetResult)
+K2STAT sysDLX_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult)
 {
     EFIFILE *               pFile;
     EFIFILE *               pCheckFile;
@@ -580,7 +580,7 @@ K2STAT sysDLX_Open(char const * apFileSpec, char const *apNamePart, UINT32 aName
     return status;
 }
 
-K2STAT sysDLX_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINTN aSectorCount)
+K2STAT sysDLX_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINTN aSectorCount)
 {
     K2STAT      status;
     EFIFILE *   pFile;
@@ -621,7 +621,7 @@ K2STAT sysDLX_ReadSectors(K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINTN a
     return status;
 }
 
-K2STAT sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aInfoSize, BOOL aKeepSym, K2DLXSUPP_SEGALLOC *apRetAlloc)
+K2STAT sysDLX_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aInfoSize, BOOL aKeepSym, K2DLXSUPP_SEGALLOC *apRetAlloc)
 {
     K2STAT                  status;
     EFIFILE *               pFile;
@@ -632,7 +632,7 @@ K2STAT sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aIn
     UINTN                   memType;
     EFI_PHYSICAL_ADDRESS    physAddr;
 
-    FUNCINFO((L"+sysDLX_Prepare(0x%08X, 0x%08X, %d, %s, %08X)\n", aHostFile, apInfo, aInfoSize, aKeepSym?L"TRUE":L"FALSE", apRetAlloc));
+    FUNCINFO((L"+sysDLX_Prepare(%08X, 0x%08X, 0x%08X, %d, %s, %08X)\n", apAcqContext, aHostFile, apInfo, aInfoSize, aKeepSym?L"TRUE":L"FALSE", apRetAlloc));
     status = K2STAT_ERROR_UNKNOWN;
     do
     {
@@ -750,7 +750,7 @@ K2STAT sysDLX_Prepare(K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINTN aIn
     return status;
 }
 
-BOOL sysDLX_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
+BOOL sysDLX_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx)
 {
     EFIFILE *   pFile;
     pFile = sFindFile(aHostFile);
@@ -759,14 +759,14 @@ BOOL sysDLX_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
     return FALSE;
 }
 
-K2STAT sysDLX_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
+K2STAT sysDLX_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx)
 {
     // should never be called
     K2_ASSERT(0);
     return K2STAT_ERROR_UNKNOWN;
 }
 
-K2STAT sysDLX_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
+K2STAT sysDLX_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
 {
     UINTN                   segIx;
     EFIFILE *               pFile;

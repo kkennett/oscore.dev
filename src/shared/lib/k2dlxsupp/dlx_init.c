@@ -115,9 +115,9 @@ sDumpOneDlx(DLX *apDlx)
     printf("  SECTORCOUNT %d\n", apDlx->mSectorCount);
     printf("  RELSECS     %d\n", apDlx->mRelocSectionCount);
     printf("  HDRBYTES    %d\n", apDlx->mHdrBytes);
-    printf("  EXPCODELOAD 0x%08X\n", (UINT32)apDlx->mpExpCode);
-    printf("  EXPREADLOAD 0x%08X\n", (UINT32)apDlx->mpExpRead);
-    printf("  EXPDATALOAD 0x%08X\n", (UINT32)apDlx->mpExpData);
+    printf("  EXPCODELOAD 0x%08X\n", (UINT32)apDlx->mpExpCodeDataAddr);
+    printf("  EXPREADLOAD 0x%08X\n", (UINT32)apDlx->mpExpReadDataAddr);
+    printf("  EXPDATALOAD 0x%08X\n", (UINT32)apDlx->mpExpDataDataAddr);
     printf("  SEGMENTS:\n");
     for (ix = 0; ix < DlxSeg_Count; ix++)
     {

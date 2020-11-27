@@ -133,12 +133,14 @@ iK2DLXSUPP_ReleaseModule(
 
 K2STAT
 iK2DLXSUPP_DoCallback(
+    void *  apAcqContext,
     DLX *   apDlx,
     BOOL    aIsLoad
     );
 
 K2STAT
 iK2DLXSUPP_LoadSegments(
+    void *  apAcqContext,
     DLX *   apDlx
     );
 

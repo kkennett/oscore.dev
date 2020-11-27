@@ -34,21 +34,21 @@
 static
 K2STAT
 sAcquire(
+    void *              apAcqContext,
     char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
-    void *              apContext,
     DLX **              appRetDlx
     );
 
 static
 K2STAT
 sPrepModule(
+    void *              apAcqContext,
     DLX *               apDlx,
     K2_GUID128 const *  apMatchId,
-    UINT32              aFileOffset,
-    void *              apContext
+    UINT32              aFileOffset
     )
 {
     DLX_INFO *      pInfo;
@@ -89,6 +89,7 @@ sPrepModule(
     if (gpK2DLXSUPP_Vars->Host.Prepare == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
     status = gpK2DLXSUPP_Vars->Host.Prepare(
+        apAcqContext,
         apDlx->mHostFile, 
         pInfo, left, 
         (apDlx->mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS) ? TRUE : FALSE,
@@ -130,11 +131,11 @@ sPrepModule(
             return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
 
         status = sAcquire(
+            apAcqContext,
             pImport->mFileName,
             pImport->mFileName,
             K2ASC_Len(pImport->mFileName),
             &pImport->ID,
-            apContext,
             &pSubModule);
 
         if (K2STAT_IS_ERROR(status))
@@ -158,11 +159,11 @@ sPrepModule(
 static
 K2STAT
 sPrep(
+    void *              apAcqContext,
     char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
-    void *              apContext,
     DLX **              appRetDlx
     )
 {
@@ -182,7 +183,7 @@ sPrep(
 
     if (gpK2DLXSUPP_Vars->Host.Open == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
-    status = gpK2DLXSUPP_Vars->Host.Open(apSpec, apName, aNameLen, apContext, &openResult);
+    status = gpK2DLXSUPP_Vars->Host.Open(apAcqContext, apSpec, apName, aNameLen, &openResult);
     if (K2STAT_IS_ERROR(status))
         return K2DLXSUPP_ERRORPOINT(status);
 
@@ -210,7 +211,7 @@ sPrep(
             status = K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
             break;
         }
-        status = gpK2DLXSUPP_Vars->Host.ReadSectors(pDlx->mHostFile, pPage->mHdrSectorsBuffer, 1);
+        status = gpK2DLXSUPP_Vars->Host.ReadSectors(apAcqContext, pDlx->mHostFile, pPage->mHdrSectorsBuffer, 1);
         if (K2STAT_IS_ERROR(status))
         {
             status = K2DLXSUPP_ERRORPOINT(status);
@@ -294,6 +295,7 @@ sPrep(
                 break;
             }
             status = gpK2DLXSUPP_Vars->Host.ReadSectors(
+                apAcqContext,
                 pDlx->mHostFile,
                 &pPage->mHdrSectorsBuffer[fileOffset],
                 (dlxInfoEnd - fileOffset) / DLX_SECTOR_BYTES);
@@ -424,7 +426,7 @@ sPrep(
 
         // all dlx info should be available now to let us get resources
         // and load dependencies
-        status = sPrepModule(pDlx, apMatchId, fileOffset, apContext);
+        status = sPrepModule(apAcqContext, pDlx, apMatchId, fileOffset);
         if (!K2STAT_IS_ERROR(status))
             K2LIST_AddAtTail(&gpK2DLXSUPP_Vars->AcqList, &pDlx->ListLink);
 
@@ -478,7 +480,8 @@ sFindModuleOnList(
 static
 K2STAT
 sLoadModule(
-    DLX * apDlx
+    void *  apAcqContext,
+    DLX *   apDlx
     )
 {
     DLX_INFO *      pInfo;
@@ -502,7 +505,7 @@ sLoadModule(
             pSubModule = (DLX *)pImport->mReserved;
             if (!(pSubModule->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED))
             {
-                status = sLoadModule(pSubModule);
+                status = sLoadModule(apAcqContext, pSubModule);
                 if (K2STAT_IS_ERROR(status))
                     return status;
             }
@@ -510,7 +513,7 @@ sLoadModule(
         }
     }
 
-    status = iK2DLXSUPP_LoadSegments(apDlx);
+    status = iK2DLXSUPP_LoadSegments(apAcqContext, apDlx);
     if (K2STAT_IS_ERROR(status))
         return status;
 
@@ -520,13 +523,13 @@ sLoadModule(
 
     if (gpK2DLXSUPP_Vars->Host.Finalize == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_NOT_IMPL);
-    status = gpK2DLXSUPP_Vars->Host.Finalize(apDlx->mHostFile, &apDlx->SegAlloc);
+    status = gpK2DLXSUPP_Vars->Host.Finalize(apAcqContext, apDlx->mHostFile, &apDlx->SegAlloc);
     if (K2STAT_IS_ERROR(status))
         return K2DLXSUPP_ERRORPOINT(status);
 
     iK2DLXSUPP_Cleanup(apDlx);
 
-    status = iK2DLXSUPP_DoCallback(apDlx, TRUE);
+    status = iK2DLXSUPP_DoCallback(apAcqContext, apDlx, TRUE);
     if (!K2STAT_IS_ERROR(status))
     {
         K2LIST_Remove(&gpK2DLXSUPP_Vars->AcqList, &apDlx->ListLink);
@@ -540,13 +543,13 @@ sLoadModule(
 static
 K2STAT
 sExecLoads(
-    void
+    void *apAcqContext
     )
 {
     K2STAT status;
     do
     {
-        status = sLoadModule(K2_GET_CONTAINER(DLX, gpK2DLXSUPP_Vars->AcqList.mpHead, ListLink));
+        status = sLoadModule(apAcqContext, K2_GET_CONTAINER(DLX, gpK2DLXSUPP_Vars->AcqList.mpHead, ListLink));
         if (K2STAT_IS_ERROR(status))
             break;
     } while (gpK2DLXSUPP_Vars->AcqList.mpHead != NULL);
@@ -556,11 +559,11 @@ sExecLoads(
 static
 K2STAT
 sAcquire(
+    void *              apAcqContext,
     char const *        apSpec,
     char const *        apName,
     UINT32              aNameLen,
     K2_GUID128 const *  apMatchId,
-    void *              apContext,
     DLX **              appRetDlx
     )
 {
@@ -584,7 +587,7 @@ sAcquire(
         return K2STAT_OK;
     }
 
-    status = sPrep(apSpec, apName, aNameLen, apMatchId, apContext, appRetDlx);
+    status = sPrep(apAcqContext, apSpec, apName, aNameLen, apMatchId, appRetDlx);
     if (K2STAT_IS_ERROR(status))
     {
         *appRetDlx = NULL;
@@ -593,7 +596,7 @@ sAcquire(
 
     if (apMatchId == NULL)
     {
-        status = sExecLoads();
+        status = sExecLoads(apAcqContext);
 
         // if we failed we only need to release the instigating node
         // and it will transitively release all the other ones that
@@ -672,7 +675,7 @@ DLX_Acquire(
 
     K2LIST_Init(&gpK2DLXSUPP_Vars->AcqList);
 
-    status = sAcquire(apFileSpec, pScan, nameLen, NULL, apContext, &pDlx);
+    status = sAcquire(apContext, apFileSpec, pScan, nameLen, NULL, &pDlx);
 
     if (gpK2DLXSUPP_Vars->Host.CritSec != NULL)
         gpK2DLXSUPP_Vars->Host.CritSec(FALSE);
