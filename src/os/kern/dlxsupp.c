@@ -60,7 +60,7 @@ sInitBuiltInDlx(
     apDlxObj->mpDlx = apDlx;
     *apInOutHostFile = (K2DLXSUPP_HOST_FILE)apDlxObj;
 
-    stat = K2DLXSUPP_GetInfo(apDlx, NULL, NULL, segInfo, &pageAddr);
+    stat = K2DLXSUPP_GetInfo(apDlx, NULL, NULL, segInfo, &pageAddr, &apDlxObj->mpFileName);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     K2_ASSERT(aModulePageLinkAddr == pageAddr);
     for (ix = 0; ix < DlxSeg_Reloc; ix++)
@@ -200,10 +200,22 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
         case K2OSKERN_SEG_ATTR_TYPE_DLX_PART:
             pDlxObj = pSeg->Info.DlxPart.mpDlxObj;
             K2_ASSERT(pDlxObj != NULL);
-            stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
-            K2_ASSERT(!K2STAT_IS_ERROR(stat));
-            K2_ASSERT(&pDlxObj->SegObj[pSeg->Info.DlxPart.mSegmentIndex] == pSeg);
-            DLX_AddrToName(pDlxObj->mpDlx, aAddr, pSeg->Info.DlxPart.mSegmentIndex, apRetSymName, aRetSymNameBufLen);
+            if (pDlxObj->mState < KernDlxState_Loaded)
+            {
+                K2ASC_PrintfLen(
+                    apRetSymName,
+                    aRetSymNameBufLen,
+                    "(@%d):SegIx %d:Offset %08X",
+                    pDlxObj->mState, pSeg->Info.DlxPart.mSegmentIndex,
+                    aAddr - pSeg->ProcSegTreeNode.mUserVal);
+            }
+            else
+            {
+                stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
+                K2_ASSERT(!K2STAT_IS_ERROR(stat));
+                K2_ASSERT(&pDlxObj->SegObj[pSeg->Info.DlxPart.mSegmentIndex] == pSeg);
+                DLX_AddrToName(pDlxObj->mpDlx, aAddr, pSeg->Info.DlxPart.mSegmentIndex, apRetSymName, aRetSymNameBufLen);
+            }
             break;
         case K2OSKERN_SEG_ATTR_TYPE_PROCESS:
             pStockStr = "PROCESS_AREA";
@@ -355,7 +367,12 @@ KernDlxSupp_Prepare(
     K2DLXSUPP_SEGALLOC *    apRetAlloc
 )
 {
-    K2OSKERN_OBJ_DLX *  pDlxObj;
+    K2STAT                  stat;
+    K2STAT                  stat2;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
+    UINT32                  segIx;
+    UINT32                  allocSize;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
 
@@ -365,60 +382,186 @@ KernDlxSupp_Prepare(
             return K2STAT_ERROR_NOT_FOUND;
     }
 
+    pDlxObj->mState = KernDlxState_InPrepare;
+
     K2MEM_Zero(apRetAlloc, sizeof(K2DLXSUPP_SEGALLOC));
 
-    //
-    // allocate segments to hold content
-    //
+    pDlxObj->mpFileName = apInfo->mFileName;
+    pDlxObj->mFirstTempSegIx = aKeepSymbols ? DlxSeg_Reloc : DlxSeg_Sym;
 
+    // first segment is text and that is runtime code
+    for (segIx = DlxSeg_Text; segIx < DlxSeg_Count; segIx++)
+    {
+        allocSize = K2_ROUNDUP(apInfo->SegInfo[segIx].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+        if (allocSize > 0)
+        {
+            pSeg = &pDlxObj->SegObj[segIx];
 
-    return K2STAT_ERROR_NOT_IMPL;
+            pSeg->Hdr.mObjType = K2OS_Obj_Segment;
+            pSeg->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_EMBEDDED;
+            pSeg->Hdr.mRefCount = 1;
+            pSeg->Hdr.Dispose = KernMem_SegDispose;
+            pSeg->mPagesBytes = allocSize;
+            pSeg->mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_DLX_PART;
+            pSeg->Info.DlxPart.mpDlxObj = pDlxObj;
+            pSeg->Info.DlxPart.mSegmentIndex = segIx;
+            K2MEM_Copy(&pSeg->Info.DlxPart.DlxSegmentInfo, &apInfo->SegInfo[segIx], sizeof(DLX_SEGMENT_INFO));
+
+            stat = KernMem_AllocMapAndCreateSegment(pSeg);
+            if (K2STAT_IS_ERROR(stat))
+                break;
+            K2_ASSERT(K2OS_KVA_KERN_BASE < pSeg->ProcSegTreeNode.mUserVal);
+
+            apRetAlloc->Segment[segIx].mDataAddr =
+                apRetAlloc->Segment[segIx].mLinkAddr =
+                pSeg->ProcSegTreeNode.mUserVal;
+        }
+    }
+
+    if ((segIx < DlxSeg_Count) && (segIx > DlxSeg_Text))
+    {
+        K2_ASSERT(K2STAT_IS_ERROR(stat));
+        do
+        {
+            segIx--;
+            stat2 = K2OSKERN_ReleaseObject(&pDlxObj->SegObj[segIx].Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+        } while (segIx > DlxSeg_Text);
+        return stat;
+    }
+
+    pDlxObj->mState = KernDlxState_SegsAllocated;
+
+    return K2STAT_NO_ERROR;
 }
 
 BOOL KernDlxSupp_PreCallback(K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad)
 {
-    K2OSKERN_Debug("%08X PRE  %s\n", aHostFile, aIsLoad ? "LOAD" : "UNLOAD");
     return TRUE;
 }
 
 K2STAT KernDlxSupp_PostCallback(K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus)
 {
-    K2OSKERN_Debug("%08X POST, status %08X\n", aHostFile, aUserStatus);
     return aUserStatus;
 }
 
 K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * apUpdateAlloc)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2STAT                  stat;
+    UINT32                  segIx;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    for (segIx = pDlxObj->mFirstTempSegIx; segIx < DlxSeg_Count; segIx++)
+    {
+        if (pDlxObj->SegObj[segIx].mPagesBytes > 0)
+        {
+            //
+            // purge this segment
+            //
+            pSeg = &pDlxObj->SegObj[segIx];
+
+            K2MEM_Zero((void *)pSeg->ProcSegTreeNode.mUserVal, pSeg->mPagesBytes);
+
+            stat = K2OSKERN_ReleaseObject(&pSeg->Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+            K2MEM_Zero((void *)pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
+
+            if (apUpdateAlloc != NULL)
+                apUpdateAlloc->Segment[segIx].mDataAddr = 0;
+        }
+    }
+
+    //
+    // DLX is loaded
+    //
+    pDlxObj->mState = KernDlxState_Loaded;
+
+    return(KernObj_Add(&pDlxObj->Hdr, NULL));
 }
 
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    K2OSKERN_OBJ_DLX *  pDlxObj;
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    switch (pDlxObj->mState)
+    {
+    case KernDlxState_Open:
+        // pageseg is allocateed
+        K2_ASSERT(0);
+        break;
+
+    case KernDlxState_InPrepare:
+    case KernDlxState_SegsAllocated:
+        // pageseg is allocated
+        // some segments may be allocated
+        K2_ASSERT(0);
+        break;
+
+    default:
+        K2_ASSERT(0);
+        break;
+    }
+
+    return K2STAT_NO_ERROR;
 }
 
-void KernInit_Dlx(void)
+static void sAddOneBuiltinDlx(K2OSKERN_OBJ_DLX *apDlxObj)
+{
+    K2STAT stat;
+    apDlxObj->Hdr.mObjType = K2OS_Obj_DLX;
+    apDlxObj->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
+    apDlxObj->Hdr.mRefCount = 0x7FFFFFFF;
+    apDlxObj->Hdr.Dispose = KernDlx_Dispose;
+    K2LIST_Init(&apDlxObj->Hdr.WaitEntryPrioList);
+    apDlxObj->mFirstTempSegIx = DlxSeg_Reloc;
+
+    stat = KernObj_Add(&apDlxObj->Hdr, NULL);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+}
+
+static void sSetupThreaded(void)
 {
     BOOL    ok;
     K2STAT  stat;
 
+    ok = K2OS_CritSecInit(&sgDlx_Sec);
+    K2_ASSERT(ok);
+
+    gData.DlxHost.AtReInit = NULL;
+    gData.DlxHost.CritSec = KernDlxSupp_CritSec;
+    gData.DlxHost.Open = KernDlxSupp_Open;
+    gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
+    gData.DlxHost.Prepare = KernDlxSupp_Prepare;
+    gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
+    gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
+    gData.DlxHost.Finalize = KernDlxSupp_Finalize;
+    gData.DlxHost.Purge = KernDlxSupp_Purge;
+
+    stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    //
+    // dlx objects themselves needs to be added
+    // their pages and segments already have been
+    //
+    sAddOneBuiltinDlx(&gData.DlxObjCrt);
+    sAddOneBuiltinDlx(&gpProc0->PrimaryModule);
+    sAddOneBuiltinDlx(&gData.DlxObjHal);
+    sAddOneBuiltinDlx(&gData.DlxObjAcpi);
+    sAddOneBuiltinDlx(&gData.DlxObjExec);
+}
+
+void KernInit_Dlx(void)
+{
     if (gData.mKernInitStage == KernInitStage_Threaded)
     {
-        ok = K2OS_CritSecInit(&sgDlx_Sec);
-        K2_ASSERT(ok);
-
-        gData.DlxHost.AtReInit = NULL;
-        gData.DlxHost.CritSec = KernDlxSupp_CritSec;
-        gData.DlxHost.Open = KernDlxSupp_Open;
-        gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
-        gData.DlxHost.Prepare = KernDlxSupp_Prepare;
-        gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
-        gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
-        gData.DlxHost.Finalize = KernDlxSupp_Finalize;
-        gData.DlxHost.Purge = KernDlxSupp_Purge;
-
-        stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
-        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        sSetupThreaded();
     }
 }
 

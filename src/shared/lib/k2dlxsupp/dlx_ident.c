@@ -42,7 +42,7 @@ DLX_GetIdent(
     if (apDlx == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_BAD_ARGUMENT);
 
-    if (apRetID)
+    if (apRetID != NULL)
     {
         K2MEM_Zero(apRetID, sizeof(K2_GUID128));
     }

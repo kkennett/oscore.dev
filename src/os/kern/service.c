@@ -1189,6 +1189,7 @@ K2OSKERN_NotifyCreate(
             break;
 
         pNotifyObj->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+        pNotifyObj->AvailEvent.mEmbedType = KernEventEmbed_Notify;
 
         stat = KernObj_Add(&pNotifyObj->Hdr, NULL);
         if (K2STAT_IS_ERROR(stat))

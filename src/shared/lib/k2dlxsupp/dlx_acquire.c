@@ -98,18 +98,18 @@ sPrepModule(
 
     // update exports DATA addresses now (not loaded yet but who cares)
     // the ones in the DLX info will be updated to their LINK addresses by the relocation code
-    if (apDlx->mpExpCode != ((DLX_EXPORTS_SECTION *)-1))
-        apDlx->mpExpCode = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpCode) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
+    if (apDlx->mpExpCodeDataAddr != ((DLX_EXPORTS_SECTION *)-1))
+        apDlx->mpExpCodeDataAddr = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpCodeDataAddr) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
     else
-        apDlx->mpExpCode = NULL;
-    if (apDlx->mpExpRead != ((DLX_EXPORTS_SECTION *)-1))
-        apDlx->mpExpRead = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpRead) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
+        apDlx->mpExpCodeDataAddr = NULL;
+    if (apDlx->mpExpReadDataAddr != ((DLX_EXPORTS_SECTION *)-1))
+        apDlx->mpExpReadDataAddr = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpReadDataAddr) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
     else
-        apDlx->mpExpRead = NULL;
-    if (apDlx->mpExpData != ((DLX_EXPORTS_SECTION *)-1))
-        apDlx->mpExpData = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpData) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
+        apDlx->mpExpReadDataAddr = NULL;
+    if (apDlx->mpExpDataDataAddr != ((DLX_EXPORTS_SECTION *)-1))
+        apDlx->mpExpDataDataAddr = (DLX_EXPORTS_SECTION *)(((UINT8 *)apDlx->mpExpDataDataAddr) + apDlx->SegAlloc.Segment[DlxSeg_Read].mDataAddr);
     else
-        apDlx->mpExpData = NULL;
+        apDlx->mpExpDataDataAddr = NULL;
 
     // move on to imports
     pWork += sizeof(DLX_INFO) - sizeof(UINT32);
@@ -371,12 +371,12 @@ sPrep(
             }
             if ((chkAddr < readSegStart) || (chkAddr >= readSegEnd))
                 return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
-            pDlx->mpExpCode = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
+            pDlx->mpExpCodeDataAddr = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
             hasExports = TRUE;
             secIx--;
         }
         else
-            pDlx->mpExpCode = (DLX_EXPORTS_SECTION *)-1;
+            pDlx->mpExpCodeDataAddr = (DLX_EXPORTS_SECTION *)-1;
         chkAddr = (UINT32)pInfo->mpExpRead;
         if (chkAddr != 0)
         {
@@ -388,12 +388,12 @@ sPrep(
             }
             if ((chkAddr < readSegStart) || (chkAddr >= readSegEnd))
                 return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
-            pDlx->mpExpRead = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
+            pDlx->mpExpReadDataAddr = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
             hasExports = TRUE;
             secIx--;
         }
         else
-            pDlx->mpExpRead = (DLX_EXPORTS_SECTION *)-1;
+            pDlx->mpExpReadDataAddr = (DLX_EXPORTS_SECTION *)-1;
         chkAddr = (UINT32)pInfo->mpExpData;
         if (chkAddr != 0)
         {
@@ -405,12 +405,12 @@ sPrep(
             }
             if ((chkAddr < readSegStart) || (chkAddr >= readSegEnd))
                 return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
-            pDlx->mpExpData = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
+            pDlx->mpExpDataDataAddr = (DLX_EXPORTS_SECTION *)(chkAddr - readSegStart);
             hasExports = TRUE;
             secIx--;
         }
         else
-            pDlx->mpExpData = (DLX_EXPORTS_SECTION *)-1;
+            pDlx->mpExpDataDataAddr = (DLX_EXPORTS_SECTION *)-1;
 
         if (hasExports)
         {
@@ -573,7 +573,9 @@ sAcquire(
     pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->LoadedList, apName, aNameLen, apMatchId);
 
     if ((pDlx == NULL) && (apMatchId != NULL))
+    {
         pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->AcqList, apName, aNameLen, apMatchId);
+    }
 
     if (pDlx != NULL)
     {
@@ -602,7 +604,7 @@ sAcquire(
             *appRetDlx = NULL;
         }
     }
-    
+
     return status;
 }
 

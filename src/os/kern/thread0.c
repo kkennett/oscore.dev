@@ -38,6 +38,8 @@
 
 #define DESC_BUFFER_BYTES   (((sizeof(K2EFI_MEMORY_DESCRIPTOR) * 2) + 4) & ~3)
 
+#define DO_DUMP 0
+
 K2_STATIC
 K2ROFS const *
 sMapBuiltIn(void)
@@ -85,6 +87,7 @@ void KernAcpi_Init(void)
         NULL,
         &acpiEntryPoint,
         NULL,
+        NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
@@ -124,6 +127,7 @@ sExec_Init(
         gData.mpDlxExec,
         NULL,
         &execEntryPoint,
+        NULL,
         NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
@@ -180,6 +184,188 @@ sExec_Init(
     return fExec_Run;
 }
 
+#if DO_DUMP
+
+void sDumpSegment(K2OSKERN_OBJ_SEGMENT *apSeg)
+{
+    UINT32 segType = ((K2OSKERN_OBJ_SEGMENT *)apSeg)->mSegAndMemPageAttr & K2OSKERN_SEG_ATTR_TYPE_MASK;
+
+    K2OSKERN_Debug("%08X K2OS_Obj_Segment (%08X)\n", apSeg, segType);
+
+    if (segType == K2OSKERN_SEG_ATTR_TYPE_PROCESS)
+    {
+        K2OSKERN_Debug("         %08X Process\n", apSeg->Info.Process.mpProc);
+    }
+    else if (segType == K2OSKERN_SEG_ATTR_TYPE_THREAD)
+    {
+        K2OSKERN_Debug("         %08X Thread\n", apSeg->Info.Thread.mpThread);
+    }
+    else if (segType == K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE)
+    {
+        K2OSKERN_Debug("         %08X DLX %s\n", apSeg->Info.DlxPage.mpDlxObj, apSeg->Info.DlxPage.mpDlxObj->mpFileName);
+    }
+    else if (segType == K2OSKERN_SEG_ATTR_TYPE_DLX_PART)
+    {
+        K2OSKERN_Debug("         %08X %d of %s\n", 
+            apSeg->Info.DlxPart.mpDlxObj,
+            apSeg->Info.DlxPart.mSegmentIndex,
+            apSeg->Info.DlxPart.mpDlxObj->mpFileName
+        );
+    }
+}
+
+static void sDumpEvent(K2OSKERN_OBJ_EVENT *apEvent)
+{
+    void *pOwner;
+
+    K2OSKERN_Debug("%08X K2OS_Obj_Event\n", apEvent);
+    if (apEvent->mEmbedType != 0)
+    {
+        K2OSKERN_Debug("         EMBED in %d\n           ", apEvent->mEmbedType);
+        switch (apEvent->mEmbedType)
+        {
+        case KernEventEmbed_Mailbox:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_OBJ_MAILBOX, apEvent, AvailEvent);
+            K2OSKERN_Debug("%08X Mailbox\n", pOwner);
+            break;
+        case KernEventEmbed_Msg:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_OBJ_MSG, apEvent, CompletionEvent);
+            K2OSKERN_Debug("%08X Msg\n", pOwner);
+            break;
+        case KernEventEmbed_Name:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_OBJ_NAME, apEvent, Event_IsOwned);
+            K2OSKERN_Debug("%08X Name\n", pOwner);
+            break;
+        case KernEventEmbed_CritSec:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_CRITSEC, apEvent, Event);
+            K2OSKERN_Debug("%08X CritSec\n", pOwner);
+            break;
+        case KernEventEmbed_Notify:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_OBJ_NOTIFY, apEvent, AvailEvent);
+            K2OSKERN_Debug("%08X Notify\n", pOwner);
+            break;
+        default:
+            K2OSKERN_Debug("UNKNOWN (%d)\n", apEvent->mEmbedType);
+            break;
+        }
+    }
+}
+
+static void sDumpMsg(K2OSKERN_OBJ_MSG *apMsg)
+{
+    void *pOwner;
+
+    K2OSKERN_Debug("%08X K2OS_Obj_Msg\n", apMsg);
+    if (apMsg->mEmbedType != 0)
+    {
+        K2OSKERN_Debug("         EMBED in %d\n         ", apMsg->mEmbedType);
+        switch (apMsg->mEmbedType)
+        {
+        case KernMsgEmbed_Thread:
+            pOwner = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apMsg, MsgSvc);
+            K2OSKERN_Debug("%08X Thread\n", pOwner);
+            break;
+        default:
+            K2OSKERN_Debug("UNKNOWN (%d)\n", apMsg->mEmbedType);
+            break;
+        }
+    }
+}
+
+void sDumpObject(K2OSKERN_OBJ_HEADER *apObj)
+{
+    switch (apObj->mObjType)
+    {
+    case K2OS_Obj_None:
+        K2OSKERN_Debug("%08X K2OS_Obj_None\n", apObj);
+        break;
+    case K2OS_Obj_Segment:
+        sDumpSegment((K2OSKERN_OBJ_SEGMENT *)apObj);
+        break;
+    case K2OS_Obj_DLX:
+        K2OSKERN_Debug("%08X K2OS_Obj_DLX\n", apObj);
+        K2OSKERN_Debug("         %s\n", ((K2OSKERN_OBJ_DLX *)apObj)->mpFileName);
+        break;
+    case K2OS_Obj_Name:
+        K2OSKERN_Debug("%08X K2OS_Obj_Name\n", apObj);
+        break;
+    case K2OS_Obj_Process:
+        K2OSKERN_Debug("%08X K2OS_Obj_Process\n", apObj);
+        break;
+    case K2OS_Obj_Thread:
+        K2OSKERN_Debug("%08X K2OS_Obj_Thread\n", apObj);
+        break;
+    case K2OS_Obj_Event:
+        sDumpEvent((K2OSKERN_OBJ_EVENT *)apObj);
+        break;
+    case K2OS_Obj_Alarm:
+        K2OSKERN_Debug("%08X K2OS_Obj_Alarm\n", apObj);
+        break;
+    case K2OS_Obj_Semaphore:
+        K2OSKERN_Debug("%08X K2OS_Obj_Semaphore\n", apObj);
+        break;
+    case K2OS_Obj_Mailbox:
+        K2OSKERN_Debug("%08X K2OS_Obj_Mailbox\n", apObj);
+        break;
+    case K2OS_Obj_Msg:
+        sDumpMsg((K2OSKERN_OBJ_MSG *)apObj);
+        break;
+    case K2OS_Obj_Interrupt:
+        K2OSKERN_Debug("%08X K2OS_Obj_Interrupt\n", apObj);
+        break;
+    case K2OS_Obj_Service:
+        K2OSKERN_Debug("%08X K2OS_Obj_Service\n", apObj);
+        break;
+    case K2OS_Obj_Publish:
+        K2OSKERN_Debug("%08X K2OS_Obj_Publish\n", apObj);
+        break;
+    case K2OS_Obj_Notify:
+        K2OSKERN_Debug("%08X K2OS_Obj_Notify\n", apObj);
+        break;
+    case K2OS_Obj_Subscrip:
+        K2OSKERN_Debug("%08X K2OS_Obj_Subscrip\n", apObj);
+        break;
+    case K2OS_Obj_FileSystem:
+        K2OSKERN_Debug("%08X K2OS_Obj_FileSystem\n", apObj);
+        break;
+    case K2OS_Obj_Dir:
+        K2OSKERN_Debug("%08X K2OS_Obj_Dir\n", apObj);
+        break;
+    case K2OS_Obj_File:
+        K2OSKERN_Debug("%08X K2OS_Obj_File\n", apObj);
+        break;
+    case K2OS_Obj_Path:
+        K2OSKERN_Debug("%08X K2OS_Obj_Path\n", apObj);
+        break;
+    default:
+        K2OSKERN_Debug("UNKNOWN! (%d) %08X\n", apObj->mObjType, apObj);
+        break;
+    }
+}
+
+void sDumpObjTree(void)
+{
+    K2TREE_NODE *           pTreeNode;
+    K2OSKERN_OBJ_HEADER *   pObj;
+
+    pTreeNode = K2TREE_FirstNode(&gData.ObjTree);
+    if (pTreeNode != NULL)
+    {
+        K2OSKERN_Debug("\n-----------------------------------\nOBJECT TREE\n-----------------------------------\n");
+        do {
+            pObj = K2_GET_CONTAINER(K2OSKERN_OBJ_HEADER, pTreeNode, ObjTreeNode);
+            sDumpObject(pObj);
+            pTreeNode = K2TREE_NextNode(&gData.ObjTree, pTreeNode);
+        } while (pTreeNode != NULL);
+    }
+    else
+    {
+        K2OSKERN_Debug("Object tree empty!\n");
+    }
+}
+
+#endif
+
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
     KernInitStage               initStage;
@@ -202,6 +388,13 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     // "load" ACPI
     //
     KernAcpi_Init();
+
+    //
+    // dump the object tree
+    //
+#if DO_DUMP
+    sDumpObjTree();
+#endif
 
     //
     // load the exec and run it

@@ -57,6 +57,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_CritSecInit(K2OS_CRITSEC *apSec)
         return FALSE;
 
     pSec->Event.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    pSec->Event.mEmbedType = KernEventEmbed_CritSec;
 
     return TRUE;
 }

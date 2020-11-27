@@ -310,19 +310,22 @@ sLocateImports(
             {
                 if (pImportInfo->mpExpCode == NULL)
                     return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_CODE_IMPORTS_NOT_FOUND);
-                pExpCheck = pImportFrom->mpExpCode;
+                pExpCheck = pImportFrom->mpExpCodeDataAddr;
+                K2_ASSERT(pExpCheck != NULL);
             }
             else if (pSecHdr->sh_flags & SHF_WRITE)
             {
                 if (pImportInfo->mpExpData == NULL)
                     return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_DATA_IMPORTS_NOT_FOUND);
-                pExpCheck = pImportFrom->mpExpData;
+                pExpCheck = pImportFrom->mpExpDataDataAddr;
+                K2_ASSERT(pExpCheck != NULL);
             }
             else
             {
-                if (pImportInfo->mpExpCode == NULL)
+                if (pImportInfo->mpExpRead == NULL)
                     return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_READ_IMPORTS_NOT_FOUND);
-                pExpCheck = pImportFrom->mpExpRead;
+                pExpCheck = pImportFrom->mpExpReadDataAddr;
+                K2_ASSERT(pExpCheck != NULL);
             }
             pSecHdr->sh_link = (Elf32_Word)pExpCheck;
 

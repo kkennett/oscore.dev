@@ -63,6 +63,7 @@ K2STAT KernMailbox_Create(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OSKERN_OBJ_NAME *ap
         return stat;
 
     apMailbox->AvailEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    apMailbox->AvailEvent.mEmbedType = KernEventEmbed_Mailbox;
 
     stat = KernObj_Add(&apMailbox->Hdr, apName);
     if (K2STAT_IS_ERROR(stat))

@@ -332,7 +332,7 @@ K2OsLoaderEntryPoint (
                                         k2Stat = K2DLXSUPP_GetInfo(
                                             pDlxKern, NULL, 
                                             (DLX_pf_ENTRYPOINT *)&gData.LoadInfo.mKernDlxEntry, 
-                                            NULL, NULL);
+                                            NULL, NULL, NULL);
                                         if (K2STAT_IS_ERROR(k2Stat))
                                             break;
 

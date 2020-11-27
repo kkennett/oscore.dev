@@ -59,6 +59,7 @@ sEmitSymbolName(
     char *                  pBuffer
 )
 {
+    K2OSKERN_Debug("\nsEmitSymbolName(%08X, %08X, %08X\n", apProc, aAddr, pBuffer);
     KernDlx_FindClosestSymbol(apProc, aAddr, pBuffer, SYM_NAME_MAX_LEN);
     if (*pBuffer == 0)
     {

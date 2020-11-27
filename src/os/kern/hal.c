@@ -63,6 +63,7 @@ static void sAtHalEntry(void)
         NULL,
         &halEntryPoint,
         NULL,
+        NULL,
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 

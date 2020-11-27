@@ -37,7 +37,8 @@ K2DLXSUPP_GetInfo(
     UINT32 *            apRetFlags,
     DLX_pf_ENTRYPOINT * apRetEntrypoint,
     DLX_SEGMENT_INFO *  apRetSegInfo,
-    UINT32 *            apRetPageAddr
+    UINT32 *            apRetPageAddr,
+    char const **       appRetFileName
     )
 {
     if (apRetFlags != NULL)
@@ -70,6 +71,9 @@ K2DLXSUPP_GetInfo(
     
     if (apRetEntrypoint != NULL)
         *apRetEntrypoint = (DLX_pf_ENTRYPOINT)apDlx->mEntrypoint;
+
+    if (appRetFileName != NULL)
+        *appRetFileName = apDlx->mpInfo->mFileName;
 
     if (!gpK2DLXSUPP_Vars->mHandedOff)
     {

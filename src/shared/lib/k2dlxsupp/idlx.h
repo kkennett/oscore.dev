@@ -75,9 +75,9 @@ struct _DLX
 
     DLX_INFO *                  mpInfo;         // the mpExpXXX inside this gets updated during link
 
-    DLX_EXPORTS_SECTION *       mpExpCode;      // data addr of exports (Not link addr)
-    DLX_EXPORTS_SECTION *       mpExpRead;
-    DLX_EXPORTS_SECTION *       mpExpData;
+    DLX_EXPORTS_SECTION *       mpExpCodeDataAddr;      // data addr of exports (Not link addr)
+    DLX_EXPORTS_SECTION *       mpExpReadDataAddr;
+    DLX_EXPORTS_SECTION *       mpExpDataDataAddr;
 
     K2TREE_ANCHOR               SymTree[3];
 };

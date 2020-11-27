@@ -92,7 +92,7 @@ DLX_FindExport(
         //
         // try data address first, then link address
         //
-        ppExp = (DLX_EXPORTS_SECTION const **)&apDlx->mpExpCode;
+        ppExp = (DLX_EXPORTS_SECTION const **)&apDlx->mpExpCodeDataAddr;
         ppExp += (aDlxSegment - DlxSeg_Text);
         if (*ppExp == NULL)
         {

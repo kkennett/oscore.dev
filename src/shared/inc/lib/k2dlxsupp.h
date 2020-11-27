@@ -133,7 +133,8 @@ K2DLXSUPP_GetInfo(
     UINT32 *            apRetFlags,
     DLX_pf_ENTRYPOINT * apRetEntrypoint,
     DLX_SEGMENT_INFO *  apRetSegInfo,
-    UINT32 *            apRetPageAddr
+    UINT32 *            apRetPageAddr,
+    char const **       appRetFileName
     );
 
 #ifdef __cplusplus

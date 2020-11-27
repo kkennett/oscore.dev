@@ -88,6 +88,8 @@ static void sInit_BeforeVirt(void)
     stat = KernMsg_Create(&pThread->MsgSvc);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pThread->MsgSvc.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    pThread->MsgSvc.mEmbedType = KernMsgEmbed_Thread;
+
 
     stat = KernObj_Add(&pThread->Hdr, NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
@@ -187,6 +189,7 @@ K2STAT KernThread_Instantiate(K2OSKERN_OBJ_THREAD *apThisThread, K2OSKERN_OBJ_PR
     if (K2STAT_IS_ERROR(stat))
         return stat;
     pNewThread->MsgSvc.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    pNewThread->MsgSvc.mEmbedType = KernMsgEmbed_Thread;
 
     disp = K2OSKERN_SeqIntrLock(&gData.ProcListSeqLock);
     K2OSKERN_SeqIntrLock(&apProc->ThreadListSeqLock);

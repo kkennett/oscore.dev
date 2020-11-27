@@ -114,9 +114,22 @@ sHandoffOneDlxSector(
         apSector->Module.mCurSector = 0;
         apSector->Module.mSectorCount = 0;
         apSector->Module.mRelocSectionCount = 0;
-        apSector->Module.mpExpCode = NULL;
-        apSector->Module.mpExpRead = NULL;
-        apSector->Module.mpExpData = NULL;
+
+        if (apSector->Module.mpExpCodeDataAddr != NULL)
+        {
+            if (!ConvertLoadPtr((UINT32 *)&apSector->Module.mpExpCodeDataAddr))
+                break;
+        }
+        if (apSector->Module.mpExpReadDataAddr != NULL)
+        {
+            if (!ConvertLoadPtr((UINT32 *)&apSector->Module.mpExpReadDataAddr))
+                break;
+        }
+        if (apSector->Module.mpExpDataDataAddr != NULL)
+        {
+            if (!ConvertLoadPtr((UINT32 *)&apSector->Module.mpExpDataDataAddr))
+                break;
+        }
 
         status = K2STAT_OK;
 

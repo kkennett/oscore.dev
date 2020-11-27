@@ -55,6 +55,7 @@ K2STAT KernName_Define(K2OSKERN_OBJ_NAME *apName, char const *apString, K2OSKERN
     }
 
     apName->Event_IsOwned.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    apName->Event_IsOwned.mEmbedType = KernEventEmbed_Name;
 
     apName->Hdr.mObjType = K2OS_Obj_Name;
     apName->Hdr.mObjFlags = 0;

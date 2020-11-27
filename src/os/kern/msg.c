@@ -54,6 +54,7 @@ K2STAT KernMsg_Create(K2OSKERN_OBJ_MSG *apMsg)
         return stat;
 
     apMsg->CompletionEvent.Hdr.mObjFlags |= K2OSKERN_OBJ_FLAG_EMBEDDED;
+    apMsg->CompletionEvent.mEmbedType = KernEventEmbed_Msg;
 
     stat = KernObj_Add(&apMsg->Hdr, NULL);
     if (K2STAT_IS_ERROR(stat))

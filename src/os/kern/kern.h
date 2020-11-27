@@ -555,9 +555,23 @@ struct _K2OSKERN_SCHED
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernEventEmbedType KernEventEmbedType;
+enum _KernEventEmbedType
+{
+    KernEventEmbed_None = 0,
+    KernEventEmbed_Mailbox,
+    KernEventEmbed_Msg,
+    KernEventEmbed_Name,
+    KernEventEmbed_CritSec,
+    KernEventEmbed_Notify,
+
+    KernEventEmbed_Count
+};
+
 struct _K2OSKERN_OBJ_EVENT
 {
     K2OSKERN_OBJ_HEADER     Hdr;
+    KernEventEmbedType      mEmbedType;
     BOOL                    mIsAutoReset;
     BOOL                    mIsSignalled;
 };
@@ -685,6 +699,8 @@ enum _KernDlxState
     KernDlxState_BeforeOpen,
     KernDlxState_PageSegAlloc,
     KernDlxState_Open,
+    KernDlxState_InPrepare,
+    KernDlxState_SegsAllocated,
 
     KernDlxState_Loaded,
     KernDlxState_Count
@@ -695,9 +711,11 @@ struct _K2OSKERN_OBJ_DLX
     K2OSKERN_OBJ_HEADER     Hdr;
 
     KernDlxState            mState;
+    char const *            mpFileName;
 
     K2_GUID128 const *      mpLoadMatchId;
     DLX *                   mpDlx;
+    DlxSegmentIndex         mFirstTempSegIx;
 
     K2OS_FILE_TOKEN         mTokFile;
     UINT32                  mCurSector;
@@ -828,11 +846,22 @@ enum _KernMsgState
     KernMsgState_Completed
 };
 
+typedef enum _KernMsgEmbedType KernMsgEmbedType;
+enum _KernMsgEmbedType
+{
+    KernMsgEmbed_None = 0,
+    KernMsgEmbed_Thread,
+
+    KernMsgEmbed_Count
+};
+
+
 struct _K2OSKERN_OBJ_MSG
 {
     K2OSKERN_OBJ_HEADER     Hdr;
 
     KernMsgState            mState;
+    KernMsgEmbedType        mEmbedType;
 
     K2OSKERN_OBJ_MAILBOX *  mpMailbox;
     K2LIST_LINK             MailboxListLink;
