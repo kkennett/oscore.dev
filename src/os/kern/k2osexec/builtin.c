@@ -152,11 +152,16 @@ Builtin_Run(
                     {
                         K2OSKERN_Debug("  *** FAILED TO LOAD BUILTIN DLX \"%s\". Error %08X\n", pDlxName, K2OS_ThreadGetStatus());
                     }
+                    else
+                    {
+                        K2OSKERN_Debug("Loaded %s token %08X\n", pDlxName, tokDlx);
+                    }
                     break;
                 }
             }
         } while (ch != 0);
     }
+    K2OSKERN_Debug("FINISHED BUILTIN DRIVERS\n");
 }
 
 void Builtin_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)

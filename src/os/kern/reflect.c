@@ -65,20 +65,25 @@ K2OSKERN_ReflectSysMsg(
     UINT32 const *  apParam
 )
 {
+    K2OSKERN_Debug("K2OSKERN_ReflectSysMsg(%d, %08X)\n", aOpCode, apParam);
+
     if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
         return;
 
     switch (aOpCode)
     {
     case SYSMSG_OPCODE_THREAD_EXIT:
+        K2OSKERN_Debug("Thread exited\n");
         sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0]);
         break;
 
     case SYSMSG_OPCODE_THREAD_STOP:
+        K2OSKERN_Debug("Thread stopped\n");
         sThreadStopped((K2OSKERN_OBJ_THREAD *)apParam[0]);
         break;
 
     default:
+        K2OSKERN_Debug("Unknown reflected message %08X\n", aOpCode);
         break;
     }
 }

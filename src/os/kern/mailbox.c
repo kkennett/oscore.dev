@@ -100,10 +100,15 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
 
     K2OSKERN_OBJ_MSG *      pMsg;
 
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
+
     if (apMailbox->PendingMsgList.mNodeCount == 0)
     {
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
         return K2STAT_ERROR_EMPTY;
     }
+
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
 
     *apRetRequestId = 0;
 
@@ -116,7 +121,9 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
     pThisThread->Sched.Item.Args.MboxRecv.mOut_RequestId = 0;
     pThisThread->Sched.Item.Args.MboxRecv.mpOut_MsgToRelease = NULL;
     pThisThread->Sched.Item.Args.MboxRecv.mpOut_MailboxToRelease = NULL;
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
     KernArch_ThreadCallSched();
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
     stat = pThisThread->Sched.Item.mSchedCallResult;
 
     if (!K2STAT_IS_ERROR(stat))
@@ -124,24 +131,37 @@ K2STAT KernMailbox_Recv(K2OSKERN_OBJ_MAILBOX *apMailbox, K2OS_MSGIO * apRetMsgIo
         *apRetRequestId = pThisThread->Sched.Item.Args.MboxRecv.mOut_RequestId;
     }
 
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
+
     pMsg = pThisThread->Sched.Item.Args.MboxRecv.mpOut_MsgToRelease;
     apMailbox = pThisThread->Sched.Item.Args.MboxRecv.mpOut_MailboxToRelease;
     if (pMsg != NULL)
     {
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
         K2_ASSERT(apMailbox != NULL);
 
         K2_ASSERT(0 == pThisThread->Sched.Item.Args.MboxRecv.mOut_RequestId);
 
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
+
         stat2 = K2OSKERN_ReleaseObject(&pMsg->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
 
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
+
         stat2 = K2OSKERN_ReleaseObject(&apMailbox->Hdr);
         K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
+
     }
     else
     {
+        K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
         K2_ASSERT(apMailbox == NULL);
     }
+
+    K2OSKERN_Debug("Mailbox_Recv %d\n", __LINE__);
 
     return stat;
 }

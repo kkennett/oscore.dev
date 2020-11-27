@@ -184,6 +184,16 @@ sOnException(
             // this should never return
             K2OSKERN_Panic("sPopTrap returned\n");
         }
+        else if (0 == (apContext->KernelMode.EFLAGS & X32_EFLAGS_INTENABLE))
+        {
+            K2OSKERN_Debug("***Untrapped Exception in kernel with ints off\n");
+            sAbort(apThisCore, apContext);
+        }
+        else if (pCurThread->Sched.OwnedCritSecList.mNodeCount > 0)
+        {
+            K2OSKERN_Debug("***Untrapped Exception in kernel while holding CS\n");
+            sAbort(apThisCore, apContext);
+        }
     }
     else
     {

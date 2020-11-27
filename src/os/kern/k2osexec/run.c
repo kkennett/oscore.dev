@@ -69,6 +69,7 @@ sHalThread(
     //
     // continue on to HAL thread
     //
+    K2OSKERN_Debug("Enter HAL OnSystemReady\n");
     return fReady();
 }
 

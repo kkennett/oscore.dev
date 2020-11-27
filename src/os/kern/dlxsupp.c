@@ -211,8 +211,7 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
             }
             else
             {
-                stat = DLX_GetIdent(pDlxObj->mpDlx, dlxName, MAX_DLX_NAME_LEN, NULL);
-                K2_ASSERT(!K2STAT_IS_ERROR(stat));
+                K2ASC_CopyLen(dlxName, pDlxObj->mpFileName, MAX_DLX_NAME_LEN);
                 K2_ASSERT(&pDlxObj->SegObj[pSeg->Info.DlxPart.mSegmentIndex] == pSeg);
                 DLX_AddrToName(pDlxObj->mpDlx, aAddr, pSeg->Info.DlxPart.mSegmentIndex, apRetSymName, aRetSymNameBufLen);
             }
@@ -476,7 +475,7 @@ K2STAT KernDlxSupp_Finalize(K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC * 
     }
 
     //
-    // DLX is loaded
+    // DLX is loaded. 
     //
     pDlxObj->mState = KernDlxState_Loaded;
 
