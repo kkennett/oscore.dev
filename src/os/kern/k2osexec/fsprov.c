@@ -109,11 +109,46 @@ sOpenDlx(
     FSPROV_OPAQUE       opaque;
     K2STAT              stat;
     FSPROV_OBJ_FILE *   pFileObj;
+    char const *        pEnd;
+    UINT32              specLen;
+    char *              pTempName;
+
+    if ((apRelSpec == NULL) || (*apRelSpec == 0))
+        return K2STAT_ERROR_BAD_ARGUMENT;
 
     if (apPathObj != NULL)
         return K2STAT_ERROR_NOT_IMPL;
 
-    stat = gFsProv_Builtin_Direct.Open(apRelSpec, &opaque, apRetTotalSectors);
+    //
+    // if apRelSpec does not end in an extension we add .dlx
+    //
+    pEnd = apRelSpec;
+    while (*pEnd)
+        pEnd++;
+    specLen = (UINT32)(pEnd - apRelSpec);
+    do {
+        pEnd--;
+        if ((*pEnd == '.') || (*pEnd == '/') || (*pEnd == '\\'))
+            break;
+    } while (pEnd != apRelSpec);
+    if (*pEnd != '.')
+    {
+        //
+        // no extension found
+        //
+        pTempName = K2OS_HeapAlloc(((specLen + 4) + 4) & ~3);
+        if (pTempName == NULL)
+            return K2STAT_ERROR_OUT_OF_MEMORY;
+        K2ASC_Copy(pTempName, apRelSpec);
+        K2ASC_Copy(pTempName + specLen, ".dlx");
+    }
+    else
+        pTempName = NULL;
+
+    stat = gFsProv_Builtin_Direct.Open((pTempName != NULL) ? pTempName : apRelSpec, &opaque, apRetTotalSectors);
+
+    if (pTempName != NULL)
+        K2OS_HeapFree(pTempName);
 
     if (K2STAT_IS_ERROR(stat))
         return stat;

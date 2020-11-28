@@ -34,5 +34,7 @@
 ID {E93BC94B-02AD-4FB0-A032-7B78455972F0}
 
 [Code]
+K2OS_Driver_Identify
+PCIBUS_Attach
 
 [Data]

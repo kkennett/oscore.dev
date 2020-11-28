@@ -30,14 +30,9 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/os/build/k2ospre.make
+[DLX]
+ID {888EB615-0872-4D3B-8A22-B263EC3E6403}
 
-TARGET_TYPE = IMAGE
+[Code]
 
-IMAGE_HAL_DLX = @os/hal/x32pc/k2oshal
-
-BUILTIN_KERNEL_DRIVERS += @os/driver/pcibus
-BUILTIN_KERNEL_DRIVERS += @os/driver/vga
-
-include $(K2_ROOT)/src/shared/build/post.make
-
+[Data]

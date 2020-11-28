@@ -32,12 +32,14 @@
 
 include $(K2_ROOT)/src/os/build/k2ospre.make
 
-TARGET_TYPE = IMAGE
+TARGET_TYPE = DLX
+K2_KERNEL := TRUE
 
-IMAGE_HAL_DLX = @os/hal/x32pc/k2oshal
+DLX_INF := vga.inf
 
-BUILTIN_KERNEL_DRIVERS += @os/driver/pcibus
-BUILTIN_KERNEL_DRIVERS += @os/driver/vga
+SOURCES += dlx_entry.c 
+
+IMPORT_KERNEL_LIBS += @os/driver/pcibus
 
 include $(K2_ROOT)/src/shared/build/post.make
 

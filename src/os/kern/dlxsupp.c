@@ -474,7 +474,8 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
             pDlxObj->mState = KernDlxState_Loaded;
 
             K2_ASSERT(pLoadContext->mDepth > 0);
-            if (0 == --pLoadContext->mDepth)
+            --pLoadContext->mDepth;
+            if (0 == pLoadContext->mDepth)
             {
                 //
                 // this is the top-level load
@@ -502,12 +503,8 @@ K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K
     UINT32                      segIx;
     K2OSKERN_OBJ_DLX *          pDlxObj;
     K2OSKERN_OBJ_SEGMENT *      pSeg;
-    K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
-
-    pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apAcqContext;
-    K2_ASSERT(pLoadContext != NULL);
 
     for (segIx = pDlxObj->mFirstTempSegIx; segIx < DlxSeg_Count; segIx++)
     {
