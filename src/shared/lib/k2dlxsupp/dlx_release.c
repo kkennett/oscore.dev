@@ -46,6 +46,7 @@ iK2DLXSUPP_ReleaseImports(
     UINT8 *         pStartImports;
     UINT32          relIx;
     DLX_IMPORT *    pImport;
+    DLX *           pImportDlx;
 
     if (aAcqCount == 0)
         return;
@@ -67,7 +68,12 @@ iK2DLXSUPP_ReleaseImports(
             pImport = (DLX_IMPORT *)pWork;
         }
 
-        iK2DLXSUPP_ReleaseModule((DLX *)pImport->mReserved);
+        pImportDlx = (DLX *)pImport->mReserved;
+
+        if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
+            gpK2DLXSUPP_Vars->Host.ImportRef(pImportDlx->mHostFile, pImportDlx, -1);
+
+        iK2DLXSUPP_ReleaseModule(pImportDlx);
 
         pImport->mReserved = 0;
 

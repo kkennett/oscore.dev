@@ -57,17 +57,12 @@ BOOL KernSched_Exec_MboxRecv(void)
     K2OSKERN_OBJ_MAILBOX *  pMailbox;
     BOOL                    changedSomething;
 
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
-
     K2_ASSERT(gData.Sched.mpActiveItem->mSchedItemType == KernSchedItem_MboxRecv);
 
     pMailbox = gData.Sched.mpActiveItem->Args.MboxRecv.mpIn_Mailbox;
 
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
-
     if (pMailbox->PendingMsgList.mNodeCount == 0)
     {
-        K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
         gData.Sched.mpActiveItem->Args.MboxRecv.mOut_RequestId = 0;
         gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MsgToRelease = NULL;
         gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MailboxToRelease = NULL;
@@ -75,25 +70,18 @@ BOOL KernSched_Exec_MboxRecv(void)
         return FALSE;
     }
 
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
-
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
 
     changedSomething = FALSE;
-
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
 
     pMsg = K2_GET_CONTAINER(K2OSKERN_OBJ_MSG, pMailbox->PendingMsgList.mpHead, MailboxListLink);
     K2_ASSERT(pMsg->mState == KernMsgState_Pending);
     K2LIST_Remove(&pMailbox->PendingMsgList, &pMsg->MailboxListLink);
     if (pMailbox->PendingMsgList.mNodeCount == 0)
     {
-        K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
         if (KernSchedEx_EventChange(&pMailbox->AvailEvent, FALSE))
             changedSomething = TRUE;
     }
-
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
 
     K2MEM_Copy(
         gData.Sched.mpActiveItem->Args.MboxRecv.mpIn_MsgIoOutBuf, 
@@ -101,11 +89,8 @@ BOOL KernSched_Exec_MboxRecv(void)
         sizeof(K2OS_MSGIO)
     );
 
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
-
     if (0 == (pMsg->Io.mOpCode & K2OS_MSGOPCODE_HAS_RESPONSE))
     {
-        K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
         K2_ASSERT(pMsg->mRequestId == 0);
         pMsg->mState = KernMsgState_Completed;
         pMsg->mpMailbox = NULL;
@@ -115,24 +100,17 @@ BOOL KernSched_Exec_MboxRecv(void)
         gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
         if (KernSchedEx_EventChange(&pMsg->CompletionEvent, TRUE))
             changedSomething = TRUE;
-        K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
         return changedSomething;
     }
-
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
 
     K2_ASSERT(pMsg->mRequestId != 0);
     pMsg->mState = KernMsgState_InSvc;
     K2LIST_AddAtTail(&pMailbox->InSvcMsgList, &pMsg->MailboxListLink);
 
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
-
     gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MsgToRelease = NULL;
     gData.Sched.mpActiveItem->Args.MboxRecv.mpOut_MailboxToRelease = NULL;
     gData.Sched.mpActiveItem->Args.MboxRecv.mOut_RequestId = pMsg->mRequestId;
     gData.Sched.mpActiveItem->mSchedCallResult = K2STAT_NO_ERROR;
-
-    K2OSKERN_Debug("Sched-MboxRecv %d\n", __LINE__);
 
     return changedSomething;
 }

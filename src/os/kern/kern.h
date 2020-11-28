@@ -721,6 +721,7 @@ struct _K2OSKERN_OBJ_DLX
     K2_GUID128 const *      mpLoadMatchId;
     DLX *                   mpDlx;
     DlxSegmentIndex         mFirstTempSegIx;
+    INT32                   mImportRef;
 
     K2OS_FILE_TOKEN         mTokFile;
     UINT32                  mCurSector;
@@ -1454,12 +1455,14 @@ void   KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 K2STAT KernDlxSupp_CritSec(BOOL aEnter);
+K2STAT KernDlxSupp_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile);
 K2STAT KernDlxSupp_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
 K2STAT KernDlxSupp_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
 K2STAT KernDlxSupp_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
 BOOL   KernDlxSupp_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
 K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
 K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
+K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange);
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile);
 
 /* --------------------------------------------------------------------------------- */

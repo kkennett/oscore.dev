@@ -159,9 +159,7 @@ BOOL K2_CALLCONV_CALLERCLEANS K2OS_MailboxRecv(K2OS_TOKEN aTokMailbox, K2OS_MSGI
     K2MEM_Zero(&actMsgIo, sizeof(actMsgIo));
     actReqId = 0;
 
-    K2OSKERN_Debug("Os-MboxRecv %d\n", __LINE__);
     stat = K2OSKERN_TranslateTokensToAddRefObjs(1, &aTokMailbox, (K2OSKERN_OBJ_HEADER **)&pMailboxObj);
-    K2OSKERN_Debug("Os-MboxRecv %d\n", __LINE__);
 
     if (!K2STAT_IS_ERROR(stat))
     {

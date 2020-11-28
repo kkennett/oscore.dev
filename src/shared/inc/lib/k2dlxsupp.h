@@ -73,18 +73,21 @@ typedef K2STAT (*pfK2DLXSUPP_CritSec)(BOOL aEnter);
 
 typedef void   (*pfK2DLXSUPP_AtReInit)(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
 
+typedef K2STAT (*pfK2DLXSUPP_AcqAlreadyLoaded)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile);
 typedef K2STAT (*pfK2DLXSUPP_Open)(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
 typedef K2STAT (*pfK2DLXSUPP_ReadSectors)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
 typedef K2STAT (*pfK2DLXSUPP_Prepare)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
 typedef BOOL   (*pfK2DLXSUPP_PreCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
 typedef K2STAT (*pfK2DLXSUPP_PostCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
 typedef K2STAT (*pfK2DLXSUPP_Finalize)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
+typedef K2STAT (*pfK2DLXSUPP_ImportRef)(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange);
 typedef K2STAT (*pfK2DLXSUPP_Purge)(K2DLXSUPP_HOST_FILE aHostFile);
 
 typedef struct _K2DLXSUPP_HOST K2DLXSUPP_HOST;
 struct _K2DLXSUPP_HOST
 {
     pfK2DLXSUPP_CritSec           CritSec;
+    pfK2DLXSUPP_AcqAlreadyLoaded  AcqAlreadyLoaded;
     pfK2DLXSUPP_Open              Open;
     pfK2DLXSUPP_AtReInit          AtReInit;
     pfK2DLXSUPP_ReadSectors       ReadSectors;
@@ -92,6 +95,7 @@ struct _K2DLXSUPP_HOST
     pfK2DLXSUPP_PreCallback       PreCallback;
     pfK2DLXSUPP_PostCallback      PostCallback;
     pfK2DLXSUPP_Finalize          Finalize;
+    pfK2DLXSUPP_ImportRef         ImportRef;
     pfK2DLXSUPP_Purge             Purge;
 };
 

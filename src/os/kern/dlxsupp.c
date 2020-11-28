@@ -276,6 +276,28 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
     return K2STAT_OK;
 }
 
+K2STAT KernDlxSupp_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile)
+{
+    K2STAT                      stat;
+    K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
+    K2OSKERN_OBJ_DLX *          pDlxObj;
+
+    pLoadContext = (K2OSKERN_DLXLOADCONTEXT *)apAcqContext;
+    K2_ASSERT(pLoadContext != NULL);
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    K2OSKERN_Debug("AcqAlreadyLoaded %s\n", pDlxObj->mpFileName);
+
+    stat = K2OSKERN_AddRefObject(&pDlxObj->Hdr);
+    if (K2STAT_IS_ERROR(stat))
+        return stat;
+
+    pLoadContext->mpResult = pDlxObj;
+
+    return K2STAT_NO_ERROR;
+}
+
 K2STAT KernDlxSupp_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT * apRetResult)
 {
     K2STAT                      stat;
@@ -472,6 +494,7 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
         if (!K2STAT_IS_ERROR(aUserStatus))
         {
             pDlxObj->mState = KernDlxState_Loaded;
+            K2OSKERN_Debug("  Loaded DLX %s\n", pDlxObj->mpFileName);
 
             K2_ASSERT(pLoadContext->mDepth > 0);
             --pLoadContext->mDepth;
@@ -535,6 +558,51 @@ K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K
     return KernObj_Add(&pDlxObj->Hdr, NULL);
 }
 
+K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange)
+{
+    K2STAT              stat;
+    K2OSKERN_OBJ_DLX *  pDlxObj;
+
+    pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
+
+    stat = K2STAT_NO_ERROR;
+
+    K2OSKERN_Debug("ImportRef %s %d\n", pDlxObj->mpFileName, aRefChange);
+
+    if (pDlxObj->mState == KernDlxState_Loaded)
+    {
+        //
+        // applicable to a loaded module
+        //
+        K2_ASSERT(pDlxObj->mpDlx == apDlx);
+
+        if (aRefChange < 0)
+        {
+            //
+            // module being dereferenced
+            //
+
+
+        }
+        else
+        {
+            //
+            // module is being referenced
+            //
+
+        }
+    }
+    else
+    {
+        //
+        // applicable to a module not yet loaded
+        //
+        pDlxObj->mImportRef += aRefChange;
+    }
+
+    return stat;
+}
+
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 {
     K2OSKERN_OBJ_DLX *  pDlxObj;
@@ -587,12 +655,14 @@ static void sSetupThreaded(void)
 
     gData.DlxHost.AtReInit = NULL;
     gData.DlxHost.CritSec = KernDlxSupp_CritSec;
+    gData.DlxHost.AcqAlreadyLoaded = KernDlxSupp_AcqAlreadyLoaded;
     gData.DlxHost.Open = KernDlxSupp_Open;
     gData.DlxHost.ReadSectors = KernDlxSupp_ReadSectors;
     gData.DlxHost.Prepare = KernDlxSupp_Prepare;
     gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
     gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
     gData.DlxHost.Finalize = KernDlxSupp_Finalize;
+    gData.DlxHost.ImportRef = KernDlxSupp_ImportRef;
     gData.DlxHost.Purge = KernDlxSupp_Purge;
 
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);

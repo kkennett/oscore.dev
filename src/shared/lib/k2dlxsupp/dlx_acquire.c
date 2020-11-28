@@ -574,17 +574,64 @@ sAcquire(
     // apMatchId will only be NULL for top-level load
     // 
     pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->LoadedList, apName, aNameLen, apMatchId);
-
-    if ((pDlx == NULL) && (apMatchId != NULL))
-    {
-        pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->AcqList, apName, aNameLen, apMatchId);
-    }
-
     if (pDlx != NULL)
     {
+        //
+        // already fully loaded dlx
+        //
+        if (apMatchId == NULL)
+        {
+            //
+            // top level load of module already loaded
+            //
+            if (gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded != NULL)
+            {
+                status = gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded(apAcqContext, pDlx->mHostFile);
+                if (K2STAT_IS_ERROR(status))
+                    return status;
+            }
+        }
+        else
+        {
+            //
+            // not a top level load, but module already loaded.  just increase its import reference
+            //
+            if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
+            {
+                status = gpK2DLXSUPP_Vars->Host.ImportRef(pDlx->mHostFile, pDlx, 1);
+                if (K2STAT_IS_ERROR(status))
+                    return status;
+            }
+        }
         pDlx->mRefs++;
         *appRetDlx = pDlx;
         return K2STAT_OK;
+    }
+
+    if (apMatchId != NULL)
+    {
+        //
+        // check for partially loaded dlx
+        //
+        pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->AcqList, apName, aNameLen, apMatchId);
+        if (pDlx != NULL)
+        {
+            //
+            // reference to partially loaded dlx
+            //
+            if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
+            {
+                //
+                // this reference will get cached until the module is completely loaded
+                //
+                status = gpK2DLXSUPP_Vars->Host.ImportRef(pDlx->mHostFile, pDlx, 1);
+                if (K2STAT_IS_ERROR(status))
+                    return status;
+            }
+            pDlx->mRefs++;
+            *appRetDlx = pDlx;
+            return K2STAT_OK;
+        }
     }
 
     status = sPrep(apAcqContext, apSpec, apName, aNameLen, apMatchId, appRetDlx);

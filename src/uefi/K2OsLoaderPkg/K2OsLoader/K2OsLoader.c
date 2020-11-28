@@ -120,6 +120,7 @@ sVerifyHAL(
 static K2DLXSUPP_HOST sgDlxHost =
 {
     sysDLX_CritSec,
+    NULL,
     sysDLX_Open,
     NULL,
     sysDLX_ReadSectors,
@@ -127,6 +128,7 @@ static K2DLXSUPP_HOST sgDlxHost =
     sysDLX_PreCallback,
     sysDLX_PostCallback,
     sysDLX_Finalize,
+    NULL,
     sysDLX_Purge,
 };
 
