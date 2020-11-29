@@ -176,6 +176,7 @@ dlx_entry(
     // second init is with support functions. reinit will get called, and all dlx
     // have been acquired
     //
+    gData.DlxHost.mHostSizeBytes = sizeof(gData.DlxHost);
     gData.DlxHost.AtReInit = KernDlxSupp_AtReInit;
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
     while (K2STAT_IS_ERROR(stat));

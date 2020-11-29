@@ -62,5 +62,8 @@
     <ClInclude Include="..\..\..\shared\inc\lib\k2dlxsupp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\shared\inc\spec\dlx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

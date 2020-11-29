@@ -706,6 +706,7 @@ enum _KernDlxState
     KernDlxState_AfterLoadCallback,
     KernDlxState_Loaded,
 
+    KernDlxState_PrePurge,
     KernDlxState_AtUnloadCallback,
     KernDlxState_AfterUnloadCallback,
     KernDlxState_Count
@@ -717,11 +718,11 @@ struct _K2OSKERN_OBJ_DLX
 
     KernDlxState            mState;
     char const *            mpFileName;
+    INT32                   mInternalRef;
 
     K2_GUID128 const *      mpLoadMatchId;
     DLX *                   mpDlx;
     DlxSegmentIndex         mFirstTempSegIx;
-    INT32                   mImportRef;
 
     K2OS_FILE_TOKEN         mTokFile;
     UINT32                  mCurSector;
@@ -1462,8 +1463,9 @@ K2STAT KernDlxSupp_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DL
 BOOL   KernDlxSupp_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
 K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
 K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
-K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange);
+K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange);
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile);
+K2STAT KernDlxSupp_ErrorPoint(char const *apFile, int aLine, K2STAT aStatus);
 
 /* --------------------------------------------------------------------------------- */
 

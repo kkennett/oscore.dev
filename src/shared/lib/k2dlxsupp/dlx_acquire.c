@@ -596,9 +596,9 @@ sAcquire(
             //
             // not a top level load, but module already loaded.  just increase its import reference
             //
-            if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
+            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
             {
-                status = gpK2DLXSUPP_Vars->Host.ImportRef(pDlx->mHostFile, pDlx, 1);
+                status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
                 if (K2STAT_IS_ERROR(status))
                     return status;
             }
@@ -619,12 +619,12 @@ sAcquire(
             //
             // reference to partially loaded dlx
             //
-            if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
+            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
             {
                 //
                 // this reference will get cached until the module is completely loaded
                 //
-                status = gpK2DLXSUPP_Vars->Host.ImportRef(pDlx->mHostFile, pDlx, 1);
+                status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
                 if (K2STAT_IS_ERROR(status))
                     return status;
             }

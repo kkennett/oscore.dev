@@ -119,6 +119,8 @@ sVerifyHAL(
 
 static K2DLXSUPP_HOST sgDlxHost =
 {
+    sizeof(K2DLXSUPP_HOST),
+
     sysDLX_CritSec,
     NULL,
     sysDLX_Open,
@@ -130,6 +132,7 @@ static K2DLXSUPP_HOST sgDlxHost =
     sysDLX_Finalize,
     NULL,
     sysDLX_Purge,
+    NULL
 };
 
 static

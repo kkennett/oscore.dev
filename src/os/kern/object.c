@@ -240,12 +240,14 @@ K2STAT K2OSKERN_ReleaseObject(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2TREE_NODE *       pTreeNode;
     BOOL                refDecToZero;
     BOOL                nameRelease;
+    K2OSKERN_OBJ_DLX *  pDecDlxToOne;
     K2OSKERN_OBJ_NAME * pName;
 
     K2_ASSERT(apObjHdr != NULL);
 
     nameRelease = FALSE;
     refDecToZero = FALSE;
+    pDecDlxToOne = NULL;
 
     disp = K2OSKERN_SeqIntrLock(&gData.ObjTreeSeqLock);
 
@@ -280,7 +282,12 @@ K2STAT K2OSKERN_ReleaseObject(K2OSKERN_OBJ_HEADER *apObjHdr)
             }
             else
             {
-                apObjHdr->mRefCount--;
+                --apObjHdr->mRefCount;
+                if ((apObjHdr->mObjType == K2OS_Obj_DLX) && 
+                    (apObjHdr->mRefCount == 1))
+                {
+                    pDecDlxToOne = (K2OSKERN_OBJ_DLX *)apObjHdr;
+                }
                 K2_CpuWriteBarrier();
                 apObjHdr = NULL;
             }
@@ -309,6 +316,17 @@ K2STAT K2OSKERN_ReleaseObject(K2OSKERN_OBJ_HEADER *apObjHdr)
         //
         // object was found but this WAS NOT the last release, or object is permanent
         //
+        if (pDecDlxToOne != NULL)
+        {
+            //
+            // release our external reference to the dlx, so that 
+            // only the dlx internal reference(s) exist now.  This may call
+            // back through a purge to remove the last reference and dispose
+            // of the object.  we are outside of object tree locks here
+            // and should be able to do that.
+            //
+            DLX_Release(pDecDlxToOne->mpDlx);
+        }
         return K2STAT_NO_ERROR;
     }
 

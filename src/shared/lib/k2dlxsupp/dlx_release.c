@@ -70,8 +70,8 @@ iK2DLXSUPP_ReleaseImports(
 
         pImportDlx = (DLX *)pImport->mReserved;
 
-        if (gpK2DLXSUPP_Vars->Host.ImportRef != NULL)
-            gpK2DLXSUPP_Vars->Host.ImportRef(pImportDlx->mHostFile, pImportDlx, -1);
+        if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+            gpK2DLXSUPP_Vars->Host.RefChange(pImportDlx->mHostFile, pImportDlx, -1);
 
         iK2DLXSUPP_ReleaseModule(pImportDlx);
 

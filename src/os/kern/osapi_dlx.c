@@ -74,12 +74,28 @@ K2OS_TOKEN K2_CALLCONV_CALLERCLEANS K2OS_DlxLoad(K2OS_PATH_TOKEN aTokPath, char 
         stat = DLX_Acquire(apRelFilePath, &loadContext, &pDlx);
         if (!K2STAT_IS_ERROR(stat))
         {
+            //
+            // internal reference will already have been done through 
+            // open or through acqAlreadyLoaded.
+            // new reference is for return token to user
+            //
             K2_ASSERT(loadContext.mpResult != NULL);
             K2_ASSERT(loadContext.mpResult->mpDlx == pDlx);
             pObjHdr = &loadContext.mpResult->Hdr;
-            stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
+            stat = K2OSKERN_AddRefObject(pObjHdr);
+            if (!K2STAT_IS_ERROR(stat))
+            {
+                stat = K2OSKERN_CreateTokenNoAddRef(1, &pObjHdr, &tokDlx);
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    // for addref we just successfully did
+                    stat2 = K2OSKERN_ReleaseObject(&loadContext.mpResult->Hdr);
+                    K2_ASSERT(!K2STAT_IS_ERROR(stat2));
+                }
+            }
             if (K2STAT_IS_ERROR(stat))
             {
+                // for the acquire
                 stat2 = K2OSKERN_ReleaseObject(&loadContext.mpResult->Hdr);
                 K2_ASSERT(!K2STAT_IS_ERROR(stat2));
             }

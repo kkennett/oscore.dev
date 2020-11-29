@@ -278,7 +278,6 @@ K2STAT KernDlxSupp_CritSec(BOOL aEnter)
 
 K2STAT KernDlxSupp_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile)
 {
-    K2STAT                      stat;
     K2OSKERN_DLXLOADCONTEXT *   pLoadContext;
     K2OSKERN_OBJ_DLX *          pDlxObj;
 
@@ -289,9 +288,7 @@ K2STAT KernDlxSupp_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHos
 
     K2OSKERN_Debug("AcqAlreadyLoaded %s\n", pDlxObj->mpFileName);
 
-    stat = K2OSKERN_AddRefObject(&pDlxObj->Hdr);
-    if (K2STAT_IS_ERROR(stat))
-        return stat;
+    ++pDlxObj->mInternalRef;
 
     pLoadContext->mpResult = pDlxObj;
 
@@ -331,6 +328,7 @@ K2STAT KernDlxSupp_Open(void *apAcqContext, char const * apFileSpec, char const 
         pDlxObj->PageSeg.mSegAndMemPageAttr = K2OS_MAPTYPE_KERN_DATA | K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE;
         pDlxObj->PageSeg.Info.DlxPage.mpDlxObj = pDlxObj;
         pDlxObj->mState = KernDlxState_BeforeOpen;
+        pDlxObj->mInternalRef = 1;
 
         stat = KernMem_AllocMapAndCreateSegment(&pDlxObj->PageSeg);
         if (K2STAT_IS_ERROR(stat))
@@ -466,11 +464,13 @@ BOOL KernDlxSupp_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, 
 
     if (aIsLoad)
     {
+        K2_ASSERT(pDlxObj->mState == KernDlxState_Finalized);
         pDlxObj->mState = KernDlxState_AtLoadCallback;
         pDlxObj->mpDlx = apDlx;
     }
     else
     {
+        K2_ASSERT(pDlxObj->mState == KernDlxState_PrePurge);
         pDlxObj->mState = KernDlxState_AtUnloadCallback;
     }
 
@@ -515,6 +515,7 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
     else
     {
         pDlxObj->mState = KernDlxState_AfterUnloadCallback;
+        K2OSKERN_Debug("  Unloaded DLX %s\n", pDlxObj->mpFileName);
     }
 
     return aUserStatus;
@@ -553,12 +554,16 @@ K2STAT KernDlxSupp_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K
     //
     // DLX is loaded up to the point of callbacks
     //
-    pDlxObj->mState = KernDlxState_Finalized;
+    stat = KernObj_Add(&pDlxObj->Hdr, NULL);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        pDlxObj->mState = KernDlxState_Finalized;
+    }
 
-    return KernObj_Add(&pDlxObj->Hdr, NULL);
+    return stat;
 }
 
-K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange)
+K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange)
 {
     K2STAT              stat;
     K2OSKERN_OBJ_DLX *  pDlxObj;
@@ -567,9 +572,11 @@ K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
 
     stat = K2STAT_NO_ERROR;
 
-    K2OSKERN_Debug("ImportRef %s %d\n", pDlxObj->mpFileName, aRefChange);
+    K2OSKERN_Debug("RefChange %s %d\n", pDlxObj->mpFileName, aRefChange);
 
-    if (pDlxObj->mState == KernDlxState_Loaded)
+    pDlxObj->mInternalRef += aRefChange;
+
+    if (pDlxObj->mState >= KernDlxState_Loaded)
     {
         //
         // applicable to a loaded module
@@ -581,23 +588,28 @@ K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
             //
             // module being dereferenced
             //
-
-
+            if (pDlxObj->mInternalRef == 0)
+            {
+                //
+                // module is about to be purged. internal reference must
+                // have been the only reference left
+                //
+                K2_ASSERT(pDlxObj->Hdr.mRefCount == 1);
+                pDlxObj->mState = KernDlxState_PrePurge;
+            }
         }
         else
         {
             //
-            // module is being referenced
+            // loaded module is gaining an internal reference (probably an import)
             //
-
         }
     }
     else
     {
         //
-        // applicable to a module not yet loaded
+        // applicable to a module not yet loaded. 
         //
-        pDlxObj->mImportRef += aRefChange;
     }
 
     return stat;
@@ -605,31 +617,56 @@ K2STAT KernDlxSupp_ImportRef(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
 
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 {
+    K2STAT              stat;
     K2OSKERN_OBJ_DLX *  pDlxObj;
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
 
-    switch (pDlxObj->mState)
+    K2_ASSERT(pDlxObj->Hdr.mRefCount == 1);
+    K2_ASSERT(pDlxObj->mInternalRef == 0);
+
+    pDlxObj->mpDlx = NULL;
+
+    if (pDlxObj->mState >= KernDlxState_Finalized)
     {
-    case KernDlxState_Open:
-        // pageseg is allocateed
-        K2_ASSERT(0);
-        break;
+        //
+        // object is in the object tree and must be disposed of
+        //
+        K2_ASSERT(pDlxObj->mState == KernDlxState_PrePurge);
 
-    case KernDlxState_InPrepare:
-    case KernDlxState_SegsAllocated:
-        // pageseg is allocated
-        // some segments may be allocated
-        K2_ASSERT(0);
-        break;
+        stat = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        return stat;
+    }
 
-    default:
+    //
+    // dlx is partially loaded and is not in the object tree
+    //
+    if (pDlxObj->mState >= KernDlxState_Open)
+    {
+        if (pDlxObj->mState >= KernDlxState_InPrepare)
+        {
+            //
+            // release loaded segments if there are any
+            //
+            K2_ASSERT(0);
+        }
+        //
+        // release page segment
+        //
         K2_ASSERT(0);
-        break;
     }
 
     return K2STAT_NO_ERROR;
 }
+
+K2STAT KernDlxSupp_ErrorPoint(char const *apFile, int aLine, K2STAT aStatus)
+{
+    K2OSKERN_Debug("DLX_ERRORPOINT(%s %d - %08X\n", apFile, aLine, aStatus);
+    K2_ASSERT(0 == aStatus);
+    return aStatus;
+}
+
 
 static void sAddOneBuiltinDlx(K2OSKERN_OBJ_DLX *apDlxObj)
 {
@@ -662,8 +699,9 @@ static void sSetupThreaded(void)
     gData.DlxHost.PreCallback = KernDlxSupp_PreCallback;
     gData.DlxHost.PostCallback = KernDlxSupp_PostCallback;
     gData.DlxHost.Finalize = KernDlxSupp_Finalize;
-    gData.DlxHost.ImportRef = KernDlxSupp_ImportRef;
+    gData.DlxHost.RefChange = KernDlxSupp_RefChange;
     gData.DlxHost.Purge = KernDlxSupp_Purge;
+    gData.DlxHost.ErrorPoint = KernDlxSupp_ErrorPoint;
 
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
@@ -689,5 +727,20 @@ void KernInit_Dlx(void)
 
 void KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
+    K2OSKERN_OBJ_DLX *  pDlxObj;
+
+    //
+    // this can only come as a callback from inside the kernel object release
+    // that comes from inside the dlxsupp purge routine
+    // that comes from inside the DLX_Release function
+    //
+    
+    pDlxObj = (K2OSKERN_OBJ_DLX *)apObjHdr;
+
+    K2_ASSERT(pDlxObj->mInternalRef == 0);
+    K2_ASSERT(pDlxObj->mpDlx == NULL);
+
+
+
     K2_ASSERT(0);
 }

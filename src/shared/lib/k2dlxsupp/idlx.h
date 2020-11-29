@@ -175,7 +175,7 @@ iK2DLXSUPP_CompareUINT32(
 #if K2_FLAG_NODEBUG
 #define K2DLXSUPP_ERRORPOINT(x)   x
 #else
-#define K2DLXSUPP_ERRORPOINT(x)   (K2_Assert(__FILE__, __LINE__, "DLXSUPP_ERRORPOINT - " # x ),(x))
+#define K2DLXSUPP_ERRORPOINT(x)   ((gpK2DLXSUPP_Vars->Host.ErrorPoint != NULL) ? gpK2DLXSUPP_Vars->Host.ErrorPoint(__FILE__, __LINE__,x) : (x))
 #endif
 
 extern K2DLXSUPP_VARS * gpK2DLXSUPP_Vars;

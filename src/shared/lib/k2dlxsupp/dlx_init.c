@@ -240,9 +240,15 @@ K2DLXSUPP_Init(
         K2MEM_Zero(apMemoryPage, K2_VA32_MEMPAGE_BYTES);
 
     if (apSupp != NULL)
+    {
+        K2_ASSERT(apSupp->mHostSizeBytes == sizeof(K2DLXSUPP_HOST));
         K2MEM_Copy(&gpK2DLXSUPP_Vars->Host, apSupp, sizeof(K2DLXSUPP_HOST));
+    }
     else
+    {
         K2MEM_Zero(&gpK2DLXSUPP_Vars->Host, sizeof(K2DLXSUPP_HOST));
+        gpK2DLXSUPP_Vars->Host.mHostSizeBytes = sizeof(K2DLXSUPP_HOST);
+    }
 
     gpK2DLXSUPP_Vars->mAcqDisabled = FALSE;
 
