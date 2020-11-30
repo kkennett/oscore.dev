@@ -32,9 +32,12 @@
 
 #include "kern.h"
 
+#define K2_STATIC
+//#define K2_STATIC   static
+
 static K2OS_CRITSEC sgDlx_Sec;
 
-static UINT32 sSegToAttr(UINT32 aIndex)
+K2_STATIC UINT32 sSegToAttr(UINT32 aIndex)
 {
     if (aIndex == DlxSeg_Text)
         return K2OS_MAPTYPE_KERN_TEXT;
@@ -43,7 +46,7 @@ static UINT32 sSegToAttr(UINT32 aIndex)
     return K2OS_MAPTYPE_KERN_DATA;
 }
 
-static 
+K2_STATIC 
 void
 sInitBuiltInDlx(
     K2OSKERN_OBJ_DLX *      apDlxObj,
@@ -286,8 +289,6 @@ K2STAT KernDlxSupp_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHos
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
 
-    K2OSKERN_Debug("AcqAlreadyLoaded %s\n", pDlxObj->mpFileName);
-
     ++pDlxObj->mInternalRef;
 
     pLoadContext->mpResult = pDlxObj;
@@ -430,7 +431,10 @@ KernDlxSupp_Prepare(
 
             stat = KernMem_AllocMapAndCreateSegment(pSeg);
             if (K2STAT_IS_ERROR(stat))
+            {
+                K2MEM_Zero(pSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
                 break;
+            }
             K2_ASSERT(K2OS_KVA_KERN_BASE < pSeg->ProcSegTreeNode.mUserVal);
 
             apRetAlloc->Segment[segIx].mDataAddr =
@@ -509,7 +513,10 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
         }
         else
         {
-            pDlxObj->mpDlx = NULL;
+            //
+            // load failed
+            //
+            pDlxObj->mState = KernDlxState_PrePurge;
         }
     }
     else
@@ -588,6 +595,8 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
             //
             // module being dereferenced
             //
+            K2OSKERN_Debug("InternalRef %s %d\n", pDlxObj->mpFileName, pDlxObj->mInternalRef);
+            K2OSKERN_Debug("hdr.refcount %s %d\n", pDlxObj->mpFileName, pDlxObj->Hdr.mRefCount);
             if (pDlxObj->mInternalRef == 0)
             {
                 //
@@ -615,13 +624,39 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
     return stat;
 }
 
+K2_STATIC void sFreeSegments(K2OSKERN_OBJ_DLX *apDlxObj)
+{
+    K2STAT                  stat;
+    UINT32                  segIx;
+    K2OSKERN_OBJ_SEGMENT *  pSeg;
+
+    for (segIx = DlxSeg_Text; segIx < DlxSeg_Count; segIx++)
+    {
+        pSeg = &apDlxObj->SegObj[segIx];
+
+        if ((pSeg->Hdr.mObjType == K2OS_Obj_Segment) &&
+            (pSeg->mPagesBytes > 0))
+        {
+            stat = K2OSKERN_ReleaseObject(&pSeg->Hdr);
+            K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        }
+    }
+
+    stat = K2OSKERN_ReleaseObject(&apDlxObj->PageSeg.Hdr);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+}
+
 K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
 {
     K2STAT              stat;
+    BOOL                ok;
     K2OSKERN_OBJ_DLX *  pDlxObj;
 
     pDlxObj = (K2OSKERN_OBJ_DLX *)aHostFile;
 
+    //
+    // both container and internal ref should be 1 at purge
+    //
     K2_ASSERT(pDlxObj->Hdr.mRefCount == 1);
     K2_ASSERT(pDlxObj->mInternalRef == 0);
 
@@ -632,6 +667,7 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
         //
         // object is in the object tree and must be disposed of
         //
+        K2OSKERN_Debug("purge in-tree %s state %d\n", pDlxObj->mpFileName, pDlxObj->mState);
         K2_ASSERT(pDlxObj->mState == KernDlxState_PrePurge);
 
         stat = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
@@ -642,19 +678,14 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
     //
     // dlx is partially loaded and is not in the object tree
     //
+    K2OSKERN_Debug("purge not-in-tree %s state %d\n", pDlxObj->mpFileName, pDlxObj->mState);
     if (pDlxObj->mState >= KernDlxState_Open)
     {
-        if (pDlxObj->mState >= KernDlxState_InPrepare)
-        {
-            //
-            // release loaded segments if there are any
-            //
-            K2_ASSERT(0);
-        }
-        //
-        // release page segment
-        //
-        K2_ASSERT(0);
+        sFreeSegments(pDlxObj);
+
+        K2MEM_Zero(pDlxObj, sizeof(K2OSKERN_OBJ_DLX));
+        ok = K2OS_HeapFree(pDlxObj);
+        K2_ASSERT(ok);
     }
 
     return K2STAT_NO_ERROR;
@@ -667,8 +698,7 @@ K2STAT KernDlxSupp_ErrorPoint(char const *apFile, int aLine, K2STAT aStatus)
     return aStatus;
 }
 
-
-static void sAddOneBuiltinDlx(K2OSKERN_OBJ_DLX *apDlxObj)
+K2_STATIC void sAddOneBuiltinDlx(K2OSKERN_OBJ_DLX *apDlxObj)
 {
     K2STAT stat;
     apDlxObj->Hdr.mObjType = K2OS_Obj_DLX;
@@ -682,7 +712,7 @@ static void sAddOneBuiltinDlx(K2OSKERN_OBJ_DLX *apDlxObj)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 }
 
-static void sSetupThreaded(void)
+K2_STATIC void sSetupThreaded(void)
 {
     BOOL    ok;
     K2STAT  stat;
@@ -727,7 +757,8 @@ void KernInit_Dlx(void)
 
 void KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 {
-    K2OSKERN_OBJ_DLX *  pDlxObj;
+    BOOL                    ok;
+    K2OSKERN_OBJ_DLX *      pDlxObj;
 
     //
     // this can only come as a callback from inside the kernel object release
@@ -740,7 +771,9 @@ void KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     K2_ASSERT(pDlxObj->mInternalRef == 0);
     K2_ASSERT(pDlxObj->mpDlx == NULL);
 
+    sFreeSegments(pDlxObj);
 
-
-    K2_ASSERT(0);
+    K2MEM_Zero(pDlxObj, sizeof(K2OSKERN_OBJ_DLX));
+    ok = K2OS_HeapFree(pDlxObj);
+    K2_ASSERT(ok);
 }

@@ -2112,12 +2112,16 @@ void KernMem_SegDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
 
     KernMem_VirtFreeFromThread(pCurThread);
 
-    if (0 != (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
+    if (0 == (apSeg->Hdr.mObjFlags & K2OSKERN_OBJ_FLAG_EMBEDDED))
     {
+        //
+        // not an embedded segment
+        //
         KernMem_SegFreeFromThread(pCurThread);
     }
     else
     {
+        K2MEM_Zero(apSeg, sizeof(K2OSKERN_OBJ_SEGMENT));
         disp = K2OSKERN_SetIntr(FALSE);
         pCurThread->mpWorkSeg = NULL;
         K2OSKERN_SetIntr(disp);

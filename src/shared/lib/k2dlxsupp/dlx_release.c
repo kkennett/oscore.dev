@@ -70,9 +70,11 @@ iK2DLXSUPP_ReleaseImports(
 
         pImportDlx = (DLX *)pImport->mReserved;
 
-        if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
-            gpK2DLXSUPP_Vars->Host.RefChange(pImportDlx->mHostFile, pImportDlx, -1);
-
+        if (0 == (pImportDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
+        {
+            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+                gpK2DLXSUPP_Vars->Host.RefChange(pImportDlx->mHostFile, pImportDlx, -1);
+        }
         iK2DLXSUPP_ReleaseModule(pImportDlx);
 
         pImport->mReserved = 0;
@@ -129,7 +131,14 @@ DLX_Release(
         pLink = pLink->mpNext;
     }
     if (pLink != NULL)
-        iK2DLXSUPP_ReleaseModule(K2_GET_CONTAINER(DLX, pLink, ListLink));
+    {
+        if (0 == (apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
+        {
+            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+                gpK2DLXSUPP_Vars->Host.RefChange(apDlx->mHostFile, apDlx, -1);
+        }
+        iK2DLXSUPP_ReleaseModule(apDlx);
+    }
 
     if (gpK2DLXSUPP_Vars->Host.CritSec != NULL)
         gpK2DLXSUPP_Vars->Host.CritSec(FALSE);

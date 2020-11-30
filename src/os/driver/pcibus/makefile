@@ -39,5 +39,7 @@ DLX_INF := pcibus.inf
 
 SOURCES += dlx_entry.c 
 
+IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
+
 include $(K2_ROOT)/src/shared/build/post.make
 

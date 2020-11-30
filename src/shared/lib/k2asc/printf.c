@@ -309,8 +309,11 @@ K2ASC_Emitf(
                 if (((i<0) || (c_blank) || (c_plus)) && ((c_type!='x') && (c_type!='X')))
                 {
                     /* output sign character or blank */
-                    if (i<0)
-                        afEmitter(apContext,'-');
+                    if (i < 0)
+                    {
+                        afEmitter(apContext, '-');
+                        ui = (UINT32)(-i);
+                    }
                     else if (c_plus)
                         afEmitter(apContext,'+');
                     else

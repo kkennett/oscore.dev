@@ -579,28 +579,31 @@ sAcquire(
         //
         // already fully loaded dlx
         //
-        if (apMatchId == NULL)
+        if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
         {
-            //
-            // top level load of module already loaded
-            //
-            if (gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded != NULL)
+            if (apMatchId == NULL)
             {
-                status = gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded(apAcqContext, pDlx->mHostFile);
-                if (K2STAT_IS_ERROR(status))
-                    return status;
+                //
+                // top level load of module already loaded
+                //
+                if (gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded != NULL)
+                {
+                    status = gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded(apAcqContext, pDlx->mHostFile);
+                    if (K2STAT_IS_ERROR(status))
+                        return status;
+                }
             }
-        }
-        else
-        {
-            //
-            // not a top level load, but module already loaded.  just increase its import reference
-            //
-            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+            else
             {
-                status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
-                if (K2STAT_IS_ERROR(status))
-                    return status;
+                //
+                // not a top level load, but module already loaded.  just increase its import reference
+                //
+                if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+                {
+                    status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
+                    if (K2STAT_IS_ERROR(status))
+                        return status;
+                }
             }
         }
         pDlx->mRefs++;
@@ -643,6 +646,9 @@ sAcquire(
 
     if (apMatchId == NULL)
     {
+        //
+        // top level load
+        //
         status = sExecLoads(apAcqContext);
 
         // if we failed we only need to release the instigating node
@@ -650,7 +656,13 @@ sAcquire(
         // have been acquired or are pending load
         if (K2STAT_IS_ERROR(status))
         {
-            iK2DLXSUPP_ReleaseModule(*appRetDlx);
+            pDlx = *appRetDlx;
+            if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
+            {
+                if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+                    gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, -1);
+            }
+            iK2DLXSUPP_ReleaseModule(pDlx);
             *appRetDlx = NULL;
         }
     }

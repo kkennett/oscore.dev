@@ -51,6 +51,7 @@ dlx_entry(
     UINT32  aReason
 )
 {
-    return K2STAT_NO_ERROR;
+    K2OSKERN_Debug("pcibus DLX_ENTRY\n");
+    return K2STAT_ERROR_UNKNOWN; //  K2STAT_NO_ERROR;
 }
 
