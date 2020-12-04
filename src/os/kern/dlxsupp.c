@@ -32,8 +32,8 @@
 
 #include "kern.h"
 
-#define K2_STATIC
-//#define K2_STATIC   static
+//#define K2_STATIC
+#define K2_STATIC   static
 
 static K2OS_CRITSEC sgDlx_Sec;
 
@@ -92,6 +92,7 @@ sInitBuiltInDlx(
     apDlxObj->PageSeg.Info.DlxPage.mpDlxObj = apDlxObj;
 
     apDlxObj->mState = KernDlxState_Loaded;
+    K2LIST_AddAtTail(&gData.DlxKernLoadedList, &apDlxObj->KernLoadedListLink);
 }
 
 void KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile)
@@ -498,6 +499,7 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
         if (!K2STAT_IS_ERROR(aUserStatus))
         {
             pDlxObj->mState = KernDlxState_Loaded;
+            K2LIST_AddAtTail(&gData.DlxKernLoadedList, &pDlxObj->KernLoadedListLink);
             K2OSKERN_Debug("  Loaded DLX %s\n", pDlxObj->mpFileName);
 
             K2_ASSERT(pLoadContext->mDepth > 0);
@@ -516,13 +518,15 @@ K2STAT KernDlxSupp_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFil
             //
             // load failed
             //
+            K2OSKERN_Debug("  Aborted DLX %s (result code 0x%08X)\n", pDlxObj->mpFileName, aUserStatus);
             pDlxObj->mState = KernDlxState_PrePurge;
         }
     }
     else
     {
-        pDlxObj->mState = KernDlxState_AfterUnloadCallback;
+        pDlxObj->mState = KernDlxState_PrePurge;
         K2OSKERN_Debug("  Unloaded DLX %s\n", pDlxObj->mpFileName);
+        K2LIST_Remove(&gData.DlxKernLoadedList, &pDlxObj->KernLoadedListLink);
     }
 
     return aUserStatus;
@@ -579,7 +583,7 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
 
     stat = K2STAT_NO_ERROR;
 
-    K2OSKERN_Debug("RefChange %s %d\n", pDlxObj->mpFileName, aRefChange);
+//    K2OSKERN_Debug("RefChange %s %d\n", pDlxObj->mpFileName, aRefChange);
 
     pDlxObj->mInternalRef += aRefChange;
 
@@ -595,8 +599,8 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
             //
             // module being dereferenced
             //
-            K2OSKERN_Debug("InternalRef %s %d\n", pDlxObj->mpFileName, pDlxObj->mInternalRef);
-            K2OSKERN_Debug("hdr.refcount %s %d\n", pDlxObj->mpFileName, pDlxObj->Hdr.mRefCount);
+//            K2OSKERN_Debug("InternalRef %s %d\n", pDlxObj->mpFileName, pDlxObj->mInternalRef);
+  //          K2OSKERN_Debug("hdr.refcount %s %d\n", pDlxObj->mpFileName, pDlxObj->Hdr.mRefCount);
             if (pDlxObj->mInternalRef == 0)
             {
                 //
@@ -667,7 +671,6 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
         //
         // object is in the object tree and must be disposed of
         //
-        K2OSKERN_Debug("purge in-tree %s state %d\n", pDlxObj->mpFileName, pDlxObj->mState);
         K2_ASSERT(pDlxObj->mState == KernDlxState_PrePurge);
 
         stat = K2OSKERN_ReleaseObject(&pDlxObj->Hdr);
@@ -678,7 +681,6 @@ K2STAT KernDlxSupp_Purge(K2DLXSUPP_HOST_FILE aHostFile)
     //
     // dlx is partially loaded and is not in the object tree
     //
-    K2OSKERN_Debug("purge not-in-tree %s state %d\n", pDlxObj->mpFileName, pDlxObj->mState);
     if (pDlxObj->mState >= KernDlxState_Open)
     {
         sFreeSegments(pDlxObj);
@@ -753,6 +755,43 @@ void KernInit_Dlx(void)
     {
         sSetupThreaded();
     }
+}
+
+K2_STATIC void sDumpOneDlx(K2OSKERN_OBJ_DLX * apDlxObj)
+{
+    UINT32 segIx;
+
+    K2OSKERN_Debug("%s\n", apDlxObj->mpFileName);
+    K2OSKERN_Debug("  OBJ REF %d\n", apDlxObj->Hdr.mRefCount);
+    K2OSKERN_Debug("  INT REF %d\n", apDlxObj->mInternalRef);
+    K2OSKERN_Debug("  STATE   %d\n", apDlxObj->mState);
+    K2OSKERN_Debug("  PAGESEG %08X\n", &apDlxObj->PageSeg);
+    for (segIx = 0; segIx < DlxSeg_Count; segIx++)
+    {
+        if (apDlxObj->SegObj[segIx].mPagesBytes > 0)
+            K2OSKERN_Debug("  SEG[%d]  %08X\n", segIx, &apDlxObj->SegObj[segIx]);
+    }
+}
+
+void KernDlx_Dump(void)
+{
+    K2LIST_LINK *       pListLink;
+    K2OSKERN_OBJ_DLX *  pDlxObj;
+
+    K2OS_CritSecEnter(&sgDlx_Sec);
+    K2OSKERN_Debug("-----------DLX IN KERNEL-----------\n");
+
+    pListLink = gData.DlxKernLoadedList.mpHead;
+    K2_ASSERT(NULL != pListLink);
+    do {
+        pDlxObj = K2_GET_CONTAINER(K2OSKERN_OBJ_DLX, pListLink, KernLoadedListLink);
+        pListLink = pListLink->mpNext;
+        sDumpOneDlx(pDlxObj);
+    } while (pListLink != NULL);
+
+    K2OSKERN_Debug("-----------------------------------\n\n");
+
+    K2OS_CritSecLeave(&sgDlx_Sec);
 }
 
 void KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr)

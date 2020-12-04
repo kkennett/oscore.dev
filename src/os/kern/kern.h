@@ -706,9 +706,8 @@ enum _KernDlxState
     KernDlxState_AfterLoadCallback,
     KernDlxState_Loaded,
 
-    KernDlxState_PrePurge,
     KernDlxState_AtUnloadCallback,
-    KernDlxState_AfterUnloadCallback,
+    KernDlxState_PrePurge,
     KernDlxState_Count
 };
 
@@ -730,6 +729,8 @@ struct _K2OSKERN_OBJ_DLX
 
     K2OSKERN_OBJ_SEGMENT    PageSeg;
     K2OSKERN_OBJ_SEGMENT    SegObj[DlxSeg_Count];
+
+    K2LIST_LINK             KernLoadedListLink;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -1370,6 +1371,7 @@ struct _KERN_DATA
 
     // dlxsupp.c - 
     K2DLXSUPP_HOST                      DlxHost;
+    K2LIST_ANCHOR                       DlxKernLoadedList;
     K2OSKERN_OBJ_DLX                    DlxObjCrt;
     // crt dlx is in gpShared->LoadInfo
     // kernel OBJ_DLX is in gpProc0 process object
@@ -1452,6 +1454,7 @@ struct _K2OSKERN_DLXLOADCONTEXT
 };
 
 UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
+void   KernDlx_Dump(void);
 void   KernDlx_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);

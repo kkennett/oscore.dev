@@ -42,6 +42,6 @@ dlx_entry(
 )
 {
     PCIBUS_Attach();
-    return K2STAT_NO_ERROR;
+    return K2STAT_ERROR_UNKNOWN; //  K2STAT_NO_ERROR;
 }
 

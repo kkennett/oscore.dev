@@ -160,6 +160,8 @@ dlx_entry(
     //
     // first init is with no support functions.  reinit will not get called
     //
+    K2LIST_Init(&gData.DlxKernLoadedList);
+
     stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
     while(K2STAT_IS_ERROR(stat));
 
