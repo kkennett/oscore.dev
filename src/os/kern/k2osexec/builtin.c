@@ -195,9 +195,11 @@ Builtin_Run(
     {
         if (sgBuiltinDlx[ix].mfRegister != NULL)
         {
+            K2OSKERN_Debug("  Register %s...\n", sgBuiltinDlx[ix].mpDlxName);
             stat = K2_EXTRAP(&trap, sgBuiltinDlx[ix].mfRegister());
             if (K2STAT_IS_ERROR(stat))
             {
+                K2OSKERN_Debug("    *** Register failed %08X\n", stat);
                 sgBuiltinDlx[ix].mfRegister = NULL;
             }
         }

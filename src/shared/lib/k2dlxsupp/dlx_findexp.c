@@ -109,7 +109,7 @@ DLX_FindExport(
 
     } while (0);
 
-    DLX_Release(apDlx);
+    iK2DLXSUPP_ReleaseModule(apDlx);
 
     if (K2STAT_IS_ERROR(status))
     {
