@@ -125,6 +125,9 @@ struct _K2OSEXEC_DRVSTORE_DIRECT
     K2OSEXEC_pf_DriverStore_PurgeDriverInstance     PurgeDriverInstance;
 };
 
+#define K2OS_DRIVER_REGISTER_FN_NAME    "K2OS_Driver_Register"
+typedef K2STAT (*K2OS_pf_Driver_Register)(void);
+
 //
 //------------------------------------------------------------------------
 //

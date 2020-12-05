@@ -32,12 +32,8 @@
 
 #include "k2oskern.h"
 
-void PCIBUS_Attach(void)
-{
-}
-
 K2STAT
-K2OS_Driver_Identify(
+K2OS_Driver_Register(
     void
     )
 {

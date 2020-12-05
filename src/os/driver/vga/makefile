@@ -39,7 +39,8 @@ DLX_INF := vga.inf
 
 SOURCES += dlx_entry.c 
 
-IMPORT_KERNEL_LIBS += @os/driver/pcibus
+IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
+IMPORT_KERNEL_LIBS += @os/kern/k2osexec 
 
 include $(K2_ROOT)/src/shared/build/post.make
 

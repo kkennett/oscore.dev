@@ -70,11 +70,6 @@ iK2DLXSUPP_ReleaseImports(
 
         pImportDlx = (DLX *)pImport->mReserved;
 
-        if (0 == (pImportDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
-        {
-            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
-                gpK2DLXSUPP_Vars->Host.RefChange(pImportDlx->mHostFile, pImportDlx, -1);
-        }
         iK2DLXSUPP_ReleaseModule(pImportDlx);
 
         pImport->mReserved = 0;
@@ -87,10 +82,16 @@ iK2DLXSUPP_ReleaseModule(
     DLX *apDlx
     )
 {
+    K2STAT status;
+
     if (apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT)
         return;
 
-    if (--apDlx->mRefs > 0)
+    if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+        gpK2DLXSUPP_Vars->Host.RefChange(apDlx->mHostFile, apDlx, -1);
+    --apDlx->mRefs;
+
+    if (apDlx->mRefs > 0)
         return;
 
     if (apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED)
@@ -132,11 +133,6 @@ DLX_Release(
     }
     if (pLink != NULL)
     {
-        if (0 == (apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
-        {
-            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
-                gpK2DLXSUPP_Vars->Host.RefChange(apDlx->mHostFile, apDlx, -1);
-        }
         iK2DLXSUPP_ReleaseModule(apDlx);
     }
 

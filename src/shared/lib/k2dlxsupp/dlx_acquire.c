@@ -587,11 +587,7 @@ sAcquire(
                 // top level load of module already loaded
                 //
                 if (gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded != NULL)
-                {
-                    status = gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded(apAcqContext, pDlx->mHostFile);
-                    if (K2STAT_IS_ERROR(status))
-                        return status;
-                }
+                    gpK2DLXSUPP_Vars->Host.AcqAlreadyLoaded(apAcqContext, pDlx->mHostFile);
             }
             else
             {
@@ -599,11 +595,7 @@ sAcquire(
                 // not a top level load, but module already loaded.  just increase its import reference
                 //
                 if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
-                {
-                    status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
-                    if (K2STAT_IS_ERROR(status))
-                        return status;
-                }
+                    gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
             }
         }
         pDlx->mRefs++;
@@ -619,19 +611,12 @@ sAcquire(
         pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->AcqList, apName, aNameLen, apMatchId);
         if (pDlx != NULL)
         {
-            //
-            // reference to partially loaded dlx
-            //
-            if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+            if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
             {
-                //
-                // this reference will get cached until the module is completely loaded
-                //
-                status = gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
-                if (K2STAT_IS_ERROR(status))
-                    return status;
+                if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
+                    gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
+                pDlx->mRefs++;
             }
-            pDlx->mRefs++;
             *appRetDlx = pDlx;
             return K2STAT_OK;
         }
@@ -657,11 +642,6 @@ sAcquire(
         if (K2STAT_IS_ERROR(status))
         {
             pDlx = *appRetDlx;
-            if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
-            {
-                if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
-                    gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, -1);
-            }
             iK2DLXSUPP_ReleaseModule(pDlx);
             *appRetDlx = NULL;
         }

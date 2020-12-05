@@ -583,9 +583,9 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
 
     stat = K2STAT_NO_ERROR;
 
-//    K2OSKERN_Debug("RefChange %s %d\n", pDlxObj->mpFileName, aRefChange);
-
     pDlxObj->mInternalRef += aRefChange;
+
+//    K2OSKERN_Debug("RefChange %s %d -> %d\n", pDlxObj->mpFileName, aRefChange, pDlxObj->mInternalRef);
 
     if (pDlxObj->mState >= KernDlxState_Loaded)
     {
@@ -600,7 +600,7 @@ K2STAT KernDlxSupp_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aR
             // module being dereferenced
             //
 //            K2OSKERN_Debug("InternalRef %s %d\n", pDlxObj->mpFileName, pDlxObj->mInternalRef);
-  //          K2OSKERN_Debug("hdr.refcount %s %d\n", pDlxObj->mpFileName, pDlxObj->Hdr.mRefCount);
+//            K2OSKERN_Debug("hdr.refcount %s %d\n", pDlxObj->mpFileName, pDlxObj->Hdr.mRefCount);
             if (pDlxObj->mInternalRef == 0)
             {
                 //

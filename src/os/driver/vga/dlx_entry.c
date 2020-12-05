@@ -32,7 +32,13 @@
 
 #include "k2oskern.h"
 
-void PCIBUS_Attach(void);
+K2STAT
+K2OS_Driver_Register(
+    void
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
 
 K2STAT
 K2_CALLCONV_REGS
@@ -41,7 +47,6 @@ dlx_entry(
     UINT32  aReason
 )
 {
-    PCIBUS_Attach();
-    return K2STAT_ERROR_UNKNOWN; //  K2STAT_NO_ERROR;
+    return K2STAT_NO_ERROR;
 }
 
