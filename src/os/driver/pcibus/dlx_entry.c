@@ -30,11 +30,55 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "k2oskern.h"
+#include "k2osexec.h"
+
+static char const * const sgpTypeIds[1] =
+{
+    "ACPI/HID/PNP0A03"
+};
 
 K2STAT
 K2OS_Driver_Register(
-    void
+    char const **           appRetDriverFriendlyName,
+    UINT32 *                apRetNumTypeIds,
+    char const * const **   appRetTypeIds
+    )
+{
+    if (NULL != appRetDriverFriendlyName)
+        *appRetDriverFriendlyName = "PCI Bus";
+
+    if (NULL != apRetNumTypeIds)
+        *apRetNumTypeIds = sizeof(sgpTypeIds) / sizeof(char const *);
+
+    if (NULL != appRetTypeIds)
+        *appRetTypeIds = sgpTypeIds;
+
+    return K2STAT_NO_ERROR;
+}
+
+K2STAT
+K2OS_Driver_PrepareInstance(
+    char const *    apTypeId,
+    UINT32 *        apRetHandle
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT
+K2OS_Driver_ActivateInstance(
+    UINT32  aHandle,
+    UINT32  aDevInstanceId,
+    BOOL    aSetActive
+    )
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+K2STAT
+K2OS_Driver_PurgeInstance(
+    UINT32  aHandle,
+    UINT32  aDevInstanceId
     )
 {
     return K2STAT_ERROR_NOT_IMPL;
@@ -47,7 +91,6 @@ dlx_entry(
     UINT32  aReason
 )
 {
-    K2OSKERN_Debug("pcibus DLX_ENTRY\n");
     return K2STAT_NO_ERROR;
 }
 

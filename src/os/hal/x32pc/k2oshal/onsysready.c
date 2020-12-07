@@ -34,47 +34,8 @@
 
 #define K2_STATIC  static
 
-K2STAT Ide_Prepare(UINT32 *apRetStoreHandle)
-{
-    *apRetStoreHandle = 2;
-    return K2STAT_NO_ERROR;
-}
-
-K2STAT Ide_Activate(UINT32 aStoreHandle, UINT32 aDeviceInstanceId)
-{
-    K2OSEXEC_PCI_DEV_INFO const *   pInfo;
-    UINT32                          ix;
-    UINT32 const *                  pBars;
-
-    K2OSKERN_Debug("Activate IDE (%d) on device %d\n", aStoreHandle, aDeviceInstanceId);
-
-    pInfo = K2OSEXEC_DevPci_GetInfo(aDeviceInstanceId);
-    if (pInfo == NULL)
-    {
-        K2OSKERN_Debug("*** no info\n");
-        return K2STAT_ERROR_NOT_FOUND;
-    }
-
-    K2OSKERN_Debug("  PCI %d/%d\n", pInfo->Id.mDevice, pInfo->Id.mFunction);
-    K2OSKERN_Debug("  %d bars\n", pInfo->mBarsFoundCount);
-    pBars = &pInfo->Cfg.AsType0.mBar0;
-    for (ix = 0; ix < 6; ix++)
-    {
-        if (pBars[ix] != 0)
-            K2OSKERN_Debug("    [%d] = %08X, %08X\n", ix, pBars[ix], pInfo->mBarSize[ix]);
-    }
-
-    return K2STAT_NO_ERROR;
-}
-
-K2STAT Ide_Deactivate(UINT32 aStoreHandle)
-{
-    return K2STAT_NO_ERROR;
-}
-
 #define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
 #define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
-#define DRVSTORE_IFACE_CONTEXT  ((void *)0xF00DDEAD)
 
 static K2OS_FSPROVINFO const sgFsProvInfo =
 {
@@ -109,139 +70,11 @@ FsProvServiceCall(
     return K2STAT_NO_ERROR;
 }
 
-static K2OSEXEC_DRVSTORE_INFO const sgDrvStoreInfo =
-{
-    K2OSEXEC_DRVSTORE_ID_HAL,     // {AFA9A8C6-D494-4D7B-9423-169E416C2396}
-    "HAL BuiltIn",
-    0x00010000
-};
-
-static char const * const sgpRootHubId = "ACPI/HID/PNP0A03";
-static char const * const sgpIdeId = "PCI/8086/7111";
-
-K2_STATIC
-K2STAT 
-sDrvStore_FindDriver(
-    UINT32          aNumTypeIds,
-    char const **   appTypeIds,
-    UINT32 *        apRetSelect
-)
-{
-    UINT32 ix;
-
-    for (ix = 0; ix < aNumTypeIds; ix++)
-    {
-        K2OSKERN_Debug("  %s\n", appTypeIds[ix]);
-        if (0 == K2ASC_CompIns(appTypeIds[ix], sgpRootHubId))
-            break;
-        if (0 == K2ASC_CompInsLen(appTypeIds[ix], sgpIdeId, K2ASC_Len(sgpIdeId)))
-            break;
-    }
-    if (ix == aNumTypeIds)
-    {
-        return K2STAT_ERROR_NOT_FOUND;
-    }
-
-    //
-    // request for PCI root bridge driver or built-in IDE driver
-    //
-
-    *apRetSelect = ix;
-
-    return K2STAT_NO_ERROR;
-}
-
-K2STAT sDrvStore_PrepareDriverInstance(char const *apTypeId, UINT32 *apRetStoreHandle)
-{
-    if (0 == K2ASC_CompIns(apTypeId, sgpRootHubId))
-    {
-        *apRetStoreHandle = 1;
-        return K2STAT_NO_ERROR;
-    }
-
-    if (0 == K2ASC_CompInsLen(apTypeId, sgpIdeId, K2ASC_Len(sgpIdeId)))
-        return Ide_Prepare(apRetStoreHandle);
-
-    return K2STAT_ERROR_NOT_FOUND;
-}
-
-K2STAT sDrvStore_ActivateDriver(UINT32 aStoreHandle, UINT32 aDevInstanceId)
-{
-    if (aStoreHandle == 1)
-        return K2STAT_NO_ERROR;
-
-    return Ide_Activate(aStoreHandle, aDevInstanceId);
-}
-
-K2STAT sDrvStore_PurgeDriverInstance(UINT32 aStoreHandle)
-{
-    if (aStoreHandle == 1)
-        return K2STAT_NO_ERROR;
-
-    return Ide_Deactivate(aStoreHandle);
-}
-
-static K2OSEXEC_DRVSTORE_DIRECT const sgDrvStoreDirect =
-{
-    0x00010000,
-    sDrvStore_FindDriver,
-    sDrvStore_PrepareDriverInstance,
-    sDrvStore_ActivateDriver,
-    sDrvStore_PurgeDriverInstance
-};
-
-K2STAT
-DrvStoreServiceCall(
-    UINT32          aCallCmd,
-    void const *    apInBuf,
-    UINT32          aInBufBytes,
-    void *          apOutBuf,
-    UINT32          aOutBufBytes,
-    UINT32 *        apRetActualOut
-)
-{
-    if ((aCallCmd & DRVSTORE_CALL_OPCODE_HIGH_MASK) != DRVSTORE_CALL_OPCODE_HIGH)
-        return K2STAT_ERROR_UNSUPPORTED;
-
-    if (aCallCmd == DRVSTORE_CALL_OPCODE_GET_INFO)
-    {
-        if (apInBuf != NULL)
-            return K2STAT_ERROR_INBUF_NOT_NULL;
-        if (apOutBuf == NULL)
-            return K2STAT_ERROR_OUTBUF_NULL;
-        if (aOutBufBytes < sizeof(sgDrvStoreInfo))
-            return K2STAT_ERROR_OUTBUF_TOO_SMALL;
-        K2MEM_Copy(apOutBuf, &sgDrvStoreInfo, sizeof(sgDrvStoreInfo));
-        *apRetActualOut = sizeof(sgDrvStoreInfo);
-    }
-    else if (aCallCmd == DRVSTORE_CALL_OPCODE_GET_DIRECT)
-    {
-        if (apInBuf != NULL)
-            return K2STAT_ERROR_INBUF_NOT_NULL;
-        if (apOutBuf == NULL)
-            return K2STAT_ERROR_OUTBUF_NULL;
-        if (aOutBufBytes < sizeof(sgDrvStoreDirect))
-            return K2STAT_ERROR_OUTBUF_TOO_SMALL;
-        K2MEM_Copy(apOutBuf, &sgDrvStoreDirect, sizeof(sgDrvStoreDirect));
-        *apRetActualOut = sizeof(sgDrvStoreDirect);
-    }
-    else
-    {
-        return K2STAT_ERROR_NOT_IMPL;
-    }
-
-
-
-    return K2STAT_NO_ERROR;
-}
-
 K2OS_TOKEN  tokMailbox;
 K2OS_TOKEN  tokService;
 UINT32      serviceId;
 K2OS_TOKEN  tokPublishFsProv;
-K2OS_TOKEN  tokPublishDrvStore;
 UINT32      sgFsProvInterfaceId;
-UINT32      sgDrvStoreInterfaceId;
 
 UINT32
 K2_CALLCONV_CALLERCLEANS
@@ -277,18 +110,10 @@ K2OSHAL_OnSystemReady(
         K2OSKERN_Panic("HAL failed to publish filesystem interface\n");
     }
 
-    tokPublishDrvStore = K2OSKERN_ServicePublish(
-        tokService,
-        &gK2OSEXEC_DriverStoreInterfaceGuid,
-        DRVSTORE_IFACE_CONTEXT,
-        &sgDrvStoreInterfaceId);
-    if (NULL == tokPublishDrvStore)
-    {
-        K2OSKERN_Panic("HAL failed to publish driver store interface\n");
-    }
-
     do {
+        K2OSKERN_Debug("HAL START WAIT\n");
         waitResult = K2OS_ThreadWait(1, &tokMailbox, FALSE, K2OS_TIMEOUT_INFINITE);
+        K2OSKERN_Debug("HAL RECV MSG\n");
         K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
         requestId = 0;
         ok = K2OS_MailboxRecv(tokMailbox, (K2OS_MSGIO *)&msgIo, &requestId);
@@ -307,17 +132,6 @@ K2OSHAL_OnSystemReady(
                     if (msgIo.mpPublishContext == FSPROV_IFACE_CONTEXT)
                     {
                         ((K2OS_MSGIO *)&msgIo)->mStatus = FsProvServiceCall(
-                            msgIo.mCallCmd,
-                            msgIo.mpInBuf,
-                            msgIo.mInBufBytes,
-                            msgIo.mpOutBuf,
-                            msgIo.mOutBufBytes,
-                            &actualOut
-                        );
-                    }
-                    else if (msgIo.mpPublishContext == DRVSTORE_IFACE_CONTEXT)
-                    {
-                        ((K2OS_MSGIO *)&msgIo)->mStatus = DrvStoreServiceCall(
                             msgIo.mCallCmd,
                             msgIo.mpInBuf,
                             msgIo.mInBufBytes,

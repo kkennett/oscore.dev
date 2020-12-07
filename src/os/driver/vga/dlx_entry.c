@@ -34,7 +34,9 @@
 
 K2STAT
 K2OS_Driver_Register(
-    void
+    char const **           appRetDriverFriendlyName,
+    UINT32 *                apRetNumTypeIds,
+    char const * const **   appRetTypeIds
 )
 {
     return K2STAT_ERROR_NOT_IMPL;

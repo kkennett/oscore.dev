@@ -104,14 +104,14 @@ struct _K2OSEXEC_DRVSTORE_INFO
     UINT32      mStoreVersion;
 };
 
-#define K2OSEXEC_DRVSTORE_ID_HAL \
+#define K2OSEXEC_DRVSTORE_ID_BUILTIN \
     { 0xafa9a8c6, 0xd494, 0x4d7b, { 0x94, 0x23, 0x16, 0x9e, 0x41, 0x6c, 0x23, 0x96 } }
 
 #define K2OSEXEC_DRVSTORE_CURRENT_VERSION   0x00010000
 
-typedef K2STAT (*K2OSEXEC_pf_DriverStore_FindDriver)(UINT32 aNumTypeIds, char const **appTypeIds, UINT32 *apRetSelect);
-typedef K2STAT (*K2OSEXEC_pf_DriverStore_PrepareDriverInstance)(char const *apTypeId, UINT32 *apRetStoreHandle);
-typedef K2STAT (*K2OSEXEC_pf_DriverStore_ActivateDriver)(UINT32 aStoreHandle, UINT32 aDevInstanceId);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_FindDriver)(UINT32 aNumTypeIds, char const **appTypeIds, UINT32 *apRetSelect, void **appRetContext);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_PrepareDriverInstance)(void *apFindResultContext, char const *apTypeId, UINT32 *apRetStoreHandle);
+typedef K2STAT (*K2OSEXEC_pf_DriverStore_ActivateDriverInstance)(UINT32 aStoreHandle, UINT32 aDevInstanceId, BOOL aSetActive);
 typedef K2STAT (*K2OSEXEC_pf_DriverStore_PurgeDriverInstance)(UINT32 aStoreHandle);
 
 typedef struct _K2OSEXEC_DRVSTORE_DIRECT K2OSEXEC_DRVSTORE_DIRECT;
@@ -121,12 +121,42 @@ struct _K2OSEXEC_DRVSTORE_DIRECT
 
     K2OSEXEC_pf_DriverStore_FindDriver              FindDriver;
     K2OSEXEC_pf_DriverStore_PrepareDriverInstance   PrepareDriverInstance;
-    K2OSEXEC_pf_DriverStore_ActivateDriver          ActivateDriver;
+    K2OSEXEC_pf_DriverStore_ActivateDriverInstance  ActivateDriverInstance;
     K2OSEXEC_pf_DriverStore_PurgeDriverInstance     PurgeDriverInstance;
 };
 
-#define K2OS_DRIVER_REGISTER_FN_NAME    "K2OS_Driver_Register"
-typedef K2STAT (*K2OS_pf_Driver_Register)(void);
+#define K2OS_DRIVER_REGISTER_FN_NAME        "K2OS_Driver_Register"
+typedef
+K2STAT
+(*K2OS_pf_Driver_Register)(
+    char const **           appRetDriverFriendlyName,
+    UINT32 *                apRetNumTypeIds,
+    char const * const **   appRetTypeIds
+    );
+
+#define K2OS_DRIVER_PREPARE_INST_FN_NAME    "K2OS_Driver_PrepareInstance"
+typedef
+K2STAT
+(*K2OS_pf_Driver_PrepareInstance)(
+    char const *    apTypeId,
+    UINT32 *        apRetHandle
+    );
+
+#define K2OS_DRIVER_ACTIVATE_FN_NAME        "K2OS_Driver_ActivateInstance"
+typedef
+K2STAT
+(*K2OS_pf_Driver_ActivateInstance)(
+    UINT32  aHandle,
+    UINT32  aDevInstanceId,
+    BOOL    aSetActive
+    );
+
+#define K2OS_DRIVER_PURGE_FN_NAME           "K2OS_Driver_PurgeInstance"
+typedef
+K2STAT
+(*K2OS_pf_Driver_PurgeInstance)(
+    UINT32  aHandle
+    );
 
 //
 //------------------------------------------------------------------------

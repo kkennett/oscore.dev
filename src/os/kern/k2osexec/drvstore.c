@@ -73,6 +73,7 @@ K2STAT
 sLoadDriver(
     DEV_NODE *      apDevNode,
     DRVSTORE *      apStore,
+    void *          apFindResultContext,
     char const *    apMatchId
 )
 {
@@ -81,7 +82,7 @@ sLoadDriver(
     K2_EXCEPTION_TRAP   trap;
 
     storeHandle = 0;
-    stat = K2_EXTRAP(&trap, apStore->Direct.PrepareDriverInstance(apMatchId, &storeHandle));
+    stat = K2_EXTRAP(&trap, apStore->Direct.PrepareDriverInstance(apFindResultContext, apMatchId, &storeHandle));
     if (K2STAT_IS_ERROR(stat))
         return stat;
     if (0 == storeHandle)
@@ -90,7 +91,7 @@ sLoadDriver(
         return K2STAT_ERROR_UNKNOWN;
     }
 
-    stat = K2_EXTRAP(&trap, apStore->Direct.ActivateDriver(storeHandle, apDevNode->DevTreeNode.mUserVal));
+    stat = K2_EXTRAP(&trap, apStore->Direct.ActivateDriverInstance(storeHandle, apDevNode->DevTreeNode.mUserVal, TRUE));
     if (K2STAT_IS_ERROR(stat))
     {
         K2_EXTRAP(&trap, apStore->Direct.PurgeDriverInstance(storeHandle));
@@ -114,6 +115,7 @@ void sDrvStore_ScanHw(SERWORK_ITEM_HDR *apItem)
     char **             ppTypeIds;
     UINT32              numTypeIds;
     UINT32              foundIndex;
+    void *              pFindContext;
     K2STAT              stat;
 
     pScan = (SERWORK_DRV_SCANHW *)apItem;
@@ -148,11 +150,11 @@ void sDrvStore_ScanHw(SERWORK_ITEM_HDR *apItem)
             K2_ASSERT(ppTypeIds != NULL);
 
             foundIndex = (UINT32)-1;
-            stat = K2_EXTRAP(&trap, pStore->Direct.FindDriver(numTypeIds, (char const **)ppTypeIds, &foundIndex));
+            stat = K2_EXTRAP(&trap, pStore->Direct.FindDriver(numTypeIds, (char const **)ppTypeIds, &foundIndex, &pFindContext));
             if (!K2STAT_IS_ERROR(stat))
             {
                 K2_ASSERT(foundIndex < numTypeIds);
-                stat = sLoadDriver(pDevNode, pStore, ppTypeIds[foundIndex]);
+                stat = sLoadDriver(pDevNode, pStore, pFindContext, ppTypeIds[foundIndex]);
                 if (K2STAT_IS_ERROR(stat))
                 {
                     K2OSKERN_Debug("Failed to load driver for matching id \"%s\"\n", ppTypeIds[foundIndex]);

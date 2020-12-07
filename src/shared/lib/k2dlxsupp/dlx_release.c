@@ -82,8 +82,6 @@ iK2DLXSUPP_ReleaseModule(
     DLX *apDlx
     )
 {
-    K2STAT status;
-
     if (apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT)
         return;
 

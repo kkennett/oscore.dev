@@ -35,5 +35,8 @@ ID {E93BC94B-02AD-4FB0-A032-7B78455972F0}
 
 [Code]
 K2OS_Driver_Register
+K2OS_Driver_PrepareInstance
+K2OS_Driver_ActivateInstance
+K2OS_Driver_PurgeInstance
 
 [Data]
