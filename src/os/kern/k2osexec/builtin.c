@@ -51,6 +51,15 @@ struct _BUILTIN_DLX
     char const * const *            mppTypeIds;
 };
 
+typedef struct _BUILTIN_DRV_INST BUILTIN_DRV_INST;
+struct _BUILTIN_DRV_INST
+{
+    INT32           mRefCount;
+    BUILTIN_DLX *   mpDriver;
+    UINT32          mDriverHandle;
+    K2TREE_NODE     TreeNode;       // userval is pointer to instance
+};
+
 static K2ROFS const *       sgpRofs;
 static K2ROFS_DIR const *   sgpBuiltinRoot;
 static K2ROFS_DIR const *   sgpBuiltinKern;
@@ -63,6 +72,10 @@ static UINT32               sgDrvStoreInterfaceId;
 
 static BUILTIN_DLX *        sgBuiltinDlx;
 static UINT32               sgBuiltinDlxCount;
+
+static K2TREE_ANCHOR        sgDrvInstanceTree;
+static K2OSKERN_SEQLOCK     sgDrvInstanceTreeLock;
+
 
 static 
 K2STAT 
@@ -303,6 +316,9 @@ Builtin_Run(
     K2_ASSERT(NULL != sgTokPublish);
     K2_ASSERT(0 != sgDrvStoreInterfaceId);
 
+    K2TREE_Init(&sgDrvInstanceTree, NULL);
+    K2OSKERN_SeqIntrInit(&sgDrvInstanceTreeLock);
+
     K2MEM_Zero(&cret, sizeof(cret));
     cret.mStructBytes = sizeof(cret);
     cret.mEntrypoint = sBuiltinThread;
@@ -327,11 +343,11 @@ static K2STAT sDrvStore_FindDriver(UINT32 aNumTypeIds, char const ** appTypeIds,
     UINT32 ix3;
     UINT32 numIds;
 
-    K2OSKERN_Debug("Builtin:Direct:FindDriver(%d)\n", aNumTypeIds);
-    for (ix3 = 0; ix3 < aNumTypeIds; ix3++)
-    {
-        K2OSKERN_Debug("  %3d: %s\n", ix3, appTypeIds[ix3]);
-    }
+//    K2OSKERN_Debug("Builtin:Direct:FindDriver(%d)\n", aNumTypeIds);
+//    for (ix3 = 0; ix3 < aNumTypeIds; ix3++)
+//    {
+//        K2OSKERN_Debug("  %3d: %s\n", ix3, appTypeIds[ix3]);
+//    }
 
     for (ix = 0; ix < sgBuiltinDlxCount; ix++)
     {
@@ -363,36 +379,152 @@ static K2STAT sDrvStore_FindDriver(UINT32 aNumTypeIds, char const ** appTypeIds,
     return K2STAT_NO_ERROR;
 }
 
+
 static K2STAT sDrvStore_PrepareDriverInstance(void *apFindResultContext, char const *apTypeId, UINT32 *apRetStoreHandle)
 {
     UINT32              ix;
     UINT32              ix2;
     K2STAT              stat;
+    K2STAT              stat2;
     K2_EXCEPTION_TRAP   trap;
+    UINT32              driverHandle;
+    BUILTIN_DRV_INST *  pInst;
+    BOOL                disp;
 
     ix = (UINT32)apFindResultContext;
     ix2 = ix >> 16;
     ix &= 0xFFFF;
     K2_ASSERT(ix < sgBuiltinDlxCount);
     K2_ASSERT(ix2 < sgBuiltinDlx[ix].mNumTypeIds);
-    K2OSKERN_Debug("  Prepare instance for index %d in \"%s\"\n", ix2, sgBuiltinDlx[ix].mpFriendlyName);
+//    K2OSKERN_Debug("  Prepare instance for index %d in \"%s\"\n", ix2, sgBuiltinDlx[ix].mpFriendlyName);
 
-    stat = K2_EXTRAP(&trap, sgBuiltinDlx[ix].mfPrepareInstance(apTypeId, apRetStoreHandle));
+    stat = K2_EXTRAP(&trap, sgBuiltinDlx[ix].mfPrepareInstance(apTypeId, &driverHandle));
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        //
+        // build translation entry for driverHandle->storeHandle
+        //
+        pInst = (BUILTIN_DRV_INST *)K2OS_HeapAlloc(sizeof(BUILTIN_DRV_INST));
+        if (pInst == NULL)
+        {
+            stat2 = K2_EXTRAP(&trap, sgBuiltinDlx[ix].mfPurgeInstance(driverHandle));
+            if (K2STAT_IS_ERROR(stat2))
+            {
+                K2OSKERN_Debug("Failed to purge driver instance %08X\n", stat2);
+            }
+            return stat;
+        }
 
-    if (K2STAT_IS_ERROR(stat))
+        pInst->mRefCount = 1;
+        pInst->mpDriver = &sgBuiltinDlx[ix];
+        pInst->mDriverHandle = driverHandle;
+        pInst->TreeNode.mUserVal = (UINT32)pInst;
+
+        disp = K2OSKERN_SeqIntrLock(&sgDrvInstanceTreeLock);
+        K2TREE_Insert(&sgDrvInstanceTree, (UINT32)pInst, &pInst->TreeNode);
+        K2OSKERN_SeqIntrUnlock(&sgDrvInstanceTreeLock, disp);
+
+        *apRetStoreHandle = (UINT32)pInst;
+    }
+    else
+    {
         *apRetStoreHandle = 0;
+    }
 
     return stat;
 }
 
+static
+BUILTIN_DRV_INST * 
+sFindAddRef(
+    UINT32 aStoreHandle
+)
+{
+    BUILTIN_DRV_INST *  pInst;
+    BOOL                disp;
+    K2TREE_NODE *       pTreeNode;
+
+    disp = K2OSKERN_SeqIntrLock(&sgDrvInstanceTreeLock);
+
+    pTreeNode = K2TREE_Find(&sgDrvInstanceTree, aStoreHandle);
+    if (NULL != pTreeNode)
+    {
+        pInst = K2_GET_CONTAINER(BUILTIN_DRV_INST, pTreeNode, TreeNode);
+        pInst->mRefCount++;
+    }
+    else
+        pInst = NULL;
+
+    K2OSKERN_SeqIntrUnlock(&sgDrvInstanceTreeLock, disp);
+
+    return pInst;
+}
+
+static
+void
+sRelease(
+    BUILTIN_DRV_INST *  apInst
+)
+{
+    BUILTIN_DRV_INST *  pInst;
+    BOOL                disp;
+    K2TREE_NODE *       pTreeNode;
+    K2STAT              stat;
+    K2_EXCEPTION_TRAP   trap;
+
+    disp = K2OSKERN_SeqIntrLock(&sgDrvInstanceTreeLock);
+
+    pTreeNode = K2TREE_Find(&sgDrvInstanceTree, (UINT32)apInst);
+    K2_ASSERT(NULL != pTreeNode);
+
+    pInst = K2_GET_CONTAINER(BUILTIN_DRV_INST, pTreeNode, TreeNode);
+    --pInst->mRefCount;
+    if (0 == pInst->mRefCount)
+    {
+        K2TREE_Remove(&sgDrvInstanceTree, pTreeNode);
+    }
+    else
+        pInst = NULL;
+
+    K2OSKERN_SeqIntrUnlock(&sgDrvInstanceTreeLock, disp);
+
+    if (NULL != pInst)
+    {
+        stat = K2_EXTRAP(&trap, pInst->mpDriver->mfPurgeInstance(pInst->mDriverHandle));
+        K2_ASSERT(!K2STAT_IS_ERROR(stat));
+        K2OS_HeapFree(pInst);
+    }
+}
+
 static K2STAT sDrvStore_ActivateDriver(UINT32 aStoreHandle, UINT32 aDevInstanceId, BOOL aSetActive)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    BUILTIN_DRV_INST *  pInst;
+    K2_EXCEPTION_TRAP   trap;
+    K2STAT              stat;
+
+    pInst = sFindAddRef(aStoreHandle);
+    if (pInst == NULL)
+        return K2STAT_ERROR_NOT_FOUND;
+
+    stat = K2_EXTRAP(&trap, pInst->mpDriver->mfActivateInstance(pInst->mDriverHandle, aDevInstanceId, aSetActive));
+
+    sRelease(pInst);
+
+    return stat;
 }
 
 static K2STAT sDrvStore_PurgeDriverInstance(UINT32 aStoreHandle)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    BUILTIN_DRV_INST *  pInst;
+
+    pInst = sFindAddRef(aStoreHandle);
+    if (pInst == NULL)
+        return K2STAT_ERROR_NOT_FOUND;
+
+    sRelease(pInst);    // addRef
+    sRelease(pInst);    // original ref
+
+    return K2STAT_NO_ERROR;
 }
 
 static K2OSEXEC_DRVSTORE_DIRECT const sgDrvStoreDirect =

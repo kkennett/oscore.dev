@@ -84,7 +84,10 @@ sLoadDriver(
     storeHandle = 0;
     stat = K2_EXTRAP(&trap, apStore->Direct.PrepareDriverInstance(apFindResultContext, apMatchId, &storeHandle));
     if (K2STAT_IS_ERROR(stat))
+    {
+        K2OSKERN_Debug("Prepare driver instance of \"%s\" failed with error %08X\n", apMatchId, stat);
         return stat;
+    }
     if (0 == storeHandle)
     {
         K2_EXTRAP(&trap, apStore->Direct.PurgeDriverInstance(0));
@@ -94,6 +97,7 @@ sLoadDriver(
     stat = K2_EXTRAP(&trap, apStore->Direct.ActivateDriverInstance(storeHandle, apDevNode->DevTreeNode.mUserVal, TRUE));
     if (K2STAT_IS_ERROR(stat))
     {
+        K2OSKERN_Debug("Activate driver instance \"%s\"\%08X failed with error %08X\n", apMatchId, storeHandle, stat);
         K2_EXTRAP(&trap, apStore->Direct.PurgeDriverInstance(storeHandle));
         return stat;
     }
