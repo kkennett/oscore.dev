@@ -396,6 +396,7 @@ sRes_EnumCurrent(
     DEV_NODE_PCI *  pPci;
     ACPI_STATUS     acpiStatus;
 
+//    K2OSKERN_Debug("AcpiRes %08X\n", apDevNode);
     //
     // get current resources from ACPI
     //

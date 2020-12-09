@@ -212,6 +212,8 @@ K2OS_Driver_ActivateInstance(
 
     K2OS_CritSecLeave(&pBus->Sec);
 
+    sRelease(pBus);
+
     return K2STAT_NO_ERROR;
 }
 

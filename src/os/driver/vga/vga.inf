@@ -35,5 +35,8 @@ ID {888EB615-0872-4D3B-8A22-B263EC3E6403}
 
 [Code]
 K2OS_Driver_Register
+K2OS_Driver_PrepareInstance
+K2OS_Driver_ActivateInstance
+K2OS_Driver_PurgeInstance
 
 [Data]

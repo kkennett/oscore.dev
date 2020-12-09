@@ -173,11 +173,13 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
     pPci = apNode->mpPci;
     if (NULL != pPci)
     {
-        K2OSKERN_Debug("PCI(%d/%d/%d/%d) VID %04X PID %04X, Pin %d, Line %d\n",
-            pPci->Id.Segment,
-            pPci->Id.Bus,
-            pPci->Id.Device,
-            pPci->Id.Function,
+        K2OSKERN_Debug("PCI(%d/%d/%d/%d) Class %d/%d VID %04X PID %04X, Pin %d, Line %d\n",
+            pPci->Info.Id.mSegment,
+            pPci->Info.Id.mBus,
+            pPci->Info.Id.mDevice,
+            pPci->Info.Id.mFunction,
+            pPci->Info.Cfg.AsTypeX.mClassCode,
+            pPci->Info.Cfg.AsTypeX.mSubClassCode,
             pPci->Info.Cfg.AsTypeX.mVendorId,
             pPci->Info.Cfg.AsTypeX.mDeviceId,
             pPci->Info.Cfg.AsTypeX.mInterruptPin,
@@ -384,7 +386,9 @@ BOOL Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** a
 
     if (apDevNode->mpPci != NULL)
     {
-        bufSize += 17;   // PCI/VIDD/PIDD/RV + null
+        bufSize += 20;  // PCIDEV/VIDD/PIDD/RV + null
+        numIds++;
+        bufSize += 15;  // PCICLASS/CC/SC + null
         numIds++;
     }
 
@@ -446,10 +450,17 @@ BOOL Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** a
     if (apDevNode->mpPci != NULL)
     {
         ppRetIds[numIds] = pOut;
-        K2ASC_Printf(pOut, "PCI/%04X/%04X/%02X", 
+        K2ASC_Printf(pOut, "PCIDEV/%04X/%04X/%02X", 
             apDevNode->mpPci->Info.Cfg.AsTypeX.mVendorId,
             apDevNode->mpPci->Info.Cfg.AsTypeX.mDeviceId,
             apDevNode->mpPci->Info.Cfg.AsTypeX.mRevision
+            );
+        numIds++;
+
+        ppRetIds[numIds] = pOut;
+        K2ASC_Printf(pOut, "PCICLASS/%02X/%02X",
+            apDevNode->mpPci->Info.Cfg.AsTypeX.mClassCode,
+            apDevNode->mpPci->Info.Cfg.AsTypeX.mSubClassCode
             );
         numIds++;
     }

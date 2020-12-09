@@ -38,6 +38,7 @@ K2_KERNEL := TRUE
 DLX_INF := vga.inf
 
 SOURCES += dlx_entry.c 
+SOURCES += device.c
 
 IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
 IMPORT_KERNEL_LIBS += @os/kern/k2osexec 
