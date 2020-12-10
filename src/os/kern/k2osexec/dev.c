@@ -103,6 +103,68 @@ sInitialDeviceWalkCallback(
     return AE_OK;
 }
 
+void Dev_Init(void)
+{
+    K2TREE_NODE *   pTreeNode;
+    DEV_NODE *      pDevNode;
+    void *          pWalkRet;
+    WALKCTX         walkCtx;
+
+    gDev_LastInstance = 0;
+    K2TREE_Init(&gDev_Tree, NULL);
+    K2OSKERN_SeqIntrInit(&gDev_SeqLock);
+    gpDev_RootNode = NULL;
+
+    //
+    // initial device discovery
+    //
+    K2MEM_Zero(&walkCtx, sizeof(walkCtx));
+
+    gpDev_RootNode = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
+    K2_ASSERT(gpDev_RootNode != NULL);
+    K2MEM_Zero(gpDev_RootNode, sizeof(DEV_NODE));
+    K2LIST_Init(&gpDev_RootNode->ChildList);
+    K2LIST_Init(&gpDev_RootNode->PhysList);
+    K2LIST_Init(&gpDev_RootNode->IoList);
+    K2TREE_Insert(&gDev_Tree, gpDev_RootNode->DevTreeNode.mUserVal, &gpDev_RootNode->DevTreeNode);
+
+    walkCtx.Working[0] = gpDev_RootNode;
+
+    pWalkRet = NULL;
+    AcpiGetDevices(
+        NULL,
+        sInitialDeviceWalkCallback,
+        &walkCtx,
+        &pWalkRet
+    );
+
+    //
+    // iteratively discover PCI bridges
+    //
+    pTreeNode = K2TREE_FirstNode(&gDev_Tree);
+    if (pTreeNode != NULL)
+    {
+        do {
+            pDevNode = K2_GET_CONTAINER(DEV_NODE, pTreeNode, DevTreeNode);
+            if (pDevNode->mpAcpiInfo != NULL)
+            {
+                if (pDevNode->mpAcpiInfo->Valid & ACPI_VALID_HID)
+                {
+                    if ((0 == K2ASC_CompIns(pDevNode->mpAcpiInfo->HardwareId.String, PCI_ROOT_HID_STRING)) ||
+                        (0 == K2ASC_CompIns(pDevNode->mpAcpiInfo->HardwareId.String, PCI_EXPRESS_ROOT_HID_STRING)))
+                    {
+                        Pci_DiscoverBridgeFromAcpi(pDevNode);
+                    }
+                }
+            }
+            pTreeNode = K2TREE_NextNode(&gDev_Tree, pTreeNode);
+        } while (pTreeNode != NULL);
+    }
+
+    Pci_CheckManualScan();
+}
+
+
 #if DUMP_DEVICES
 
 static void sPrefix(UINT32 aCount)
@@ -121,6 +183,8 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
     ACPI_DEVICE_INFO *          pDevInfo;
     DEV_NODE_PCI *              pPci;
     K2OSACPI_DEVICE_ID const *  pDevId;
+    RES_IO_HEAPNODE *           pIo;
+    PHYS_HEAPNODE *             pPhys;
 
     sPrefix(aLevel);
     K2OSKERN_Debug("NODE(%08X)\n", apNode);
@@ -184,11 +248,61 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
             pPci->Info.Cfg.AsTypeX.mDeviceId,
             pPci->Info.Cfg.AsTypeX.mInterruptPin,
             pPci->Info.Cfg.AsTypeX.mInterruptLine
-            );
+        );
     }
     else
     {
         K2OSKERN_Debug("PCI(NONE)\n");
+    }
+
+    sPrefix(aLevel + 1);
+    if (NULL != apNode->mpIntrLine)
+    {
+        K2OSKERN_Debug("INTR(%d)\n", apNode->mpIntrLine->mLineIndex);
+    }
+    else
+    {
+        K2OSKERN_Debug("INTR(NONE)\n");
+    }
+
+    sPrefix(aLevel + 1);
+    if (0 != apNode->IoList.mNodeCount)
+    {
+        K2OSKERN_Debug("IO(");
+        pListLink = apNode->IoList.mpHead;
+        do {
+            pIo = K2_GET_CONTAINER(RES_IO_HEAPNODE, pListLink, DevNodeIoListLink);
+            pListLink = pListLink->mpNext;
+            K2_ASSERT(pIo->mpDevNode == apNode);
+            K2OSKERN_Debug("%04X[%04X] ", pIo->HeapNode.AddrTreeNode.mUserVal, pIo->HeapNode.SizeTreeNode.mUserVal);
+        } while (NULL != pListLink);
+        K2OSKERN_Debug(")\n");
+    }
+    else
+    {
+        K2OSKERN_Debug("IO(NONE)\n");
+    }
+
+    sPrefix(aLevel + 1);
+    if (0 != apNode->PhysList.mNodeCount)
+    {
+        K2OSKERN_Debug("PHYS(");
+        pListLink = apNode->PhysList.mpHead;
+        do {
+            pPhys = K2_GET_CONTAINER(PHYS_HEAPNODE, pListLink, DevNodePhysListLink);
+            pListLink = pListLink->mpNext;
+            K2_ASSERT(pPhys->mpDevNode == apNode);
+            K2OSKERN_Debug("%08X[%08X](%d) ", 
+                pPhys->HeapNode.AddrTreeNode.mUserVal, 
+                pPhys->HeapNode.SizeTreeNode.mUserVal,
+                pPhys->mDisp
+            );
+        } while (NULL != pListLink);
+        K2OSKERN_Debug(")\n");
+    }
+    else
+    {
+        K2OSKERN_Debug("PHYS(NONE)\n");
     }
 
     sPrefix(aLevel + 1);
@@ -202,69 +316,10 @@ static void sDumpDevice(DEV_NODE *apNode, UINT32 aLevel)
         } while (pListLink != NULL);
     }
 }
-
 #endif
 
-void Dev_Init(void)
+void Dev_Dump(void)
 {
-    K2TREE_NODE *   pTreeNode;
-    DEV_NODE *      pDevNode;
-    void *          pWalkRet;
-    WALKCTX         walkCtx;
-
-    gDev_LastInstance = 0;
-    K2TREE_Init(&gDev_Tree, NULL);
-    K2OSKERN_SeqIntrInit(&gDev_SeqLock);
-    gpDev_RootNode = NULL;
-
-    //
-    // initial device discovery
-    //
-    K2MEM_Zero(&walkCtx, sizeof(walkCtx));
-
-    gpDev_RootNode = (DEV_NODE *)K2OS_HeapAlloc(sizeof(DEV_NODE));
-    K2_ASSERT(gpDev_RootNode != NULL);
-    K2MEM_Zero(gpDev_RootNode, sizeof(DEV_NODE));
-    K2LIST_Init(&gpDev_RootNode->ChildList);
-    K2LIST_Init(&gpDev_RootNode->PhysList);
-    K2LIST_Init(&gpDev_RootNode->IoList);
-    K2TREE_Insert(&gDev_Tree, gpDev_RootNode->DevTreeNode.mUserVal, &gpDev_RootNode->DevTreeNode);
-
-    walkCtx.Working[0] = gpDev_RootNode;
-
-    pWalkRet = NULL;
-    AcpiGetDevices(
-        NULL,
-        sInitialDeviceWalkCallback,
-        &walkCtx,
-        &pWalkRet
-    );
-
-    //
-    // iteratively discover PCI bridges
-    //
-    pTreeNode = K2TREE_FirstNode(&gDev_Tree);
-    if (pTreeNode != NULL)
-    {
-        do {
-            pDevNode = K2_GET_CONTAINER(DEV_NODE, pTreeNode, DevTreeNode);
-            if (pDevNode->mpAcpiInfo != NULL)
-            {
-                if (pDevNode->mpAcpiInfo->Valid & ACPI_VALID_HID)
-                {
-                    if ((0 == K2ASC_CompIns(pDevNode->mpAcpiInfo->HardwareId.String, PCI_ROOT_HID_STRING)) ||
-                        (0 == K2ASC_CompIns(pDevNode->mpAcpiInfo->HardwareId.String, PCI_EXPRESS_ROOT_HID_STRING)))
-                    {
-                        Pci_DiscoverBridgeFromAcpi(pDevNode);
-                    }
-                }
-            }
-            pTreeNode = K2TREE_NextNode(&gDev_Tree, pTreeNode);
-        } while (pTreeNode != NULL);
-    }
-
-    Pci_CheckManualScan();
-
 #if DUMP_DEVICES
     //
     // dump the device tree

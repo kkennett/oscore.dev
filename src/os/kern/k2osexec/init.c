@@ -77,6 +77,8 @@ K2OSEXEC_Init(
 
     Intr_Init();
 
+    Dev_Dump();
+
     Handlers_Init2();
 
     FsProv_Init(apInitInfo);

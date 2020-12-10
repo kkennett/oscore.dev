@@ -193,6 +193,7 @@ extern K2OSKERN_SEQLOCK gDev_SeqLock;
 extern DEV_NODE *       gpDev_RootNode;
 
 void        Dev_Init(void);
+void        Dev_Dump(void);
 DEV_NODE *  Dev_ScanForNeededDrivers(UINT32 aScanIter);
 BOOL        Dev_CollectTypeIds(DEV_NODE *apDevNode, UINT32 *apRetNumTypeIds, char *** apppRetTypeIds);
 
