@@ -209,11 +209,11 @@ sDumpHeapNode(
                 case K2OSKERN_SEG_ATTR_TYPE_DEVMAP:
                     pStr = "DEVMAP";
                     break;
-                case K2OSKERN_SEG_ATTR_TYPE_BUILTIN:
-                    pStr = "BUILTIN";
-                    break;
                 case K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB:
                     pStr = "SEGSLAB";
+                    break;
+                case K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS:
+                    pStr = "CONTIG_PHYS";
                     break;
                 default:
                     pStr = "UNKNOWN!";
@@ -1224,6 +1224,7 @@ static KernPhysPageList sGetSegTargetPageList(K2OSKERN_OBJ_SEGMENT *apSegSrc)
         break;
 
     case K2OSKERN_SEG_ATTR_TYPE_SPARSE:
+    case K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS:
         targetPageList = KernPhysPageList_General;
         break;
 
@@ -1262,10 +1263,6 @@ static KernPhysPageList sGetSegTargetPageList(K2OSKERN_OBJ_SEGMENT *apSegSrc)
 
     case K2OSKERN_SEG_ATTR_TYPE_DEVMAP:
         targetPageList = KernPhysPageList_Error;
-        break;
-
-    case K2OSKERN_SEG_ATTR_TYPE_BUILTIN:
-        targetPageList = KernPhysPageList_General;
         break;
 
     case K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE:
@@ -1938,14 +1935,18 @@ void KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OB
 
     K2_ASSERT(!apCurThread->mTlbFlushNeeded);
 
-    if (segType == K2OSKERN_SEG_ATTR_TYPE_DEVMAP)
+    if ((segType == K2OSKERN_SEG_ATTR_TYPE_DEVMAP) ||
+        (segType == K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS))
     {
         //
         // must be unmapping the whole shebang
         //
         K2_ASSERT(aSegOffset == 0);
         K2_ASSERT(segPageCount == aPageCount);
-        devPhysPage = apSrc->Info.DeviceMap.mPhysDeviceAddr;
+        if (segType == K2OSKERN_SEG_ATTR_TYPE_DEVMAP)
+            devPhysPage = apSrc->Info.DeviceMap.mPhysDeviceAddr;
+        else
+            devPhysPage = apSrc->Info.ContigPhys.mPhysAddr;
         pageList = KernPhysPageList_Error;
     }
     else
@@ -1981,7 +1982,8 @@ void KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OB
             K2_ASSERT(unmapPhys == 0);
             aSegOffset++;
         }
-        else if (segType == K2OSKERN_SEG_ATTR_TYPE_DEVMAP)
+        else if ((segType == K2OSKERN_SEG_ATTR_TYPE_DEVMAP) ||
+                 (segType == K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS))
         {
             unmapPhys = KernMap_BreakOnePageToThread(apCurThread, apSrc, KernPhysPageList_Error, npFlags);
             K2_ASSERT(unmapPhys == devPhysPage);
@@ -2128,11 +2130,12 @@ void KernMem_SegDispose(K2OSKERN_OBJ_HEADER *apObjHdr)
     }
 }
 
-K2STAT KernMem_MapContigPhys(
-    UINT32      aContigPhysAddr,
-    UINT32      aPageCount,
-    UINT32      aSegAndMemPageAttr,
-    UINT32 *    apRetVirtAddr
+K2STAT 
+KernMem_MapContigPhys(
+    UINT32                  aContigPhysAddr,
+    UINT32                  aPageCount,
+    UINT32                  aSegAndMemPageAttr,
+    K2OSKERN_OBJ_SEGMENT ** appRetSeg
 )
 {
     K2STAT                  stat;
@@ -2170,7 +2173,8 @@ K2STAT KernMem_MapContigPhys(
         pSeg->Hdr.mRefCount = 1;
         pSeg->Hdr.Dispose = KernMem_SegDispose;
         K2LIST_Init(&pSeg->Hdr.WaitEntryPrioList);
-        pSeg->mSegAndMemPageAttr = aSegAndMemPageAttr;
+        pSeg->mSegAndMemPageAttr = K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS | aSegAndMemPageAttr;
+        pSeg->Info.ContigPhys.mPhysAddr = aContigPhysAddr;
 
         K2_ASSERT(pCurThread->WorkPages_Dirty.mNodeCount == 0);
         K2_ASSERT(pCurThread->WorkPages_Clean.mNodeCount == 0);
@@ -2180,7 +2184,7 @@ K2STAT KernMem_MapContigPhys(
         {
             K2_ASSERT(pCurThread->mpWorkSeg == NULL);
 
-            *apRetVirtAddr = pSeg->ProcSegTreeNode.mUserVal;
+            *appRetSeg = pSeg;
             K2_ASSERT(pCurThread->mWorkVirt_Range == 0);
             K2_ASSERT(pCurThread->mWorkVirt_PageCount == 0);
 

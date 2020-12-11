@@ -94,6 +94,12 @@ struct _K2OS_CPUINFO
     UINT32  mClearValue;
 };
 
+typedef struct {
+    UINT32                                  mFrameBufferPhys;
+    UINT32                                  mFrameBufferBytes;
+    K2EFI_GRAPHICS_OUTPUT_MODE_INFORMATION  ModeInfo;
+} K2OS_BOOT_GRAPHICS;
+
 //
 // this data typically lives halfway into the
 // transition page between UEFI and the kernel
@@ -102,24 +108,36 @@ typedef struct _K2OS_UEFI_LOADINFO K2OS_UEFI_LOADINFO;
 struct _K2OS_UEFI_LOADINFO
 {
     UINT32                  mMarker;
+
     K2EFI_SYSTEM_TABLE *    mpEFIST;
+
     DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
     DLX_pf_ENTRYPOINT       mKernDlxEntry;
+
     UINT32                  mBuiltinRofsPhys;
+
     DLX *                   mpDlxCrt;
+
     UINT32                  mTransBasePhys;
+
     UINT32                  mZeroPagePhys;
     UINT32                  mTransitionPageAddr;
     UINT32                  mDebugPageVirt;
+
     UINT32                  mEfiMapSize;
     UINT32                  mEfiMemDescSize;
     UINT32                  mEfiMemDescVer;
+
     UINT32                  mCpuCoreCount;
+
     UINT32                  mFwTabPagesPhys;
     UINT32                  mFwTabPagesVirt;
     UINT32                  mFwTabPageCount;
     UINT32                  mFwFacsPhys;
     UINT32                  mFwXFacsPhys;
+
+    K2OS_BOOT_GRAPHICS      BootGraf;
+
     K2OS_CPUINFO            CpuInfo[K2OS_MAX_CPU_COUNT];
 };
 K2_STATIC_ASSERT(sizeof(K2OS_UEFI_LOADINFO) < (K2_VA32_MEMPAGE_BYTES / 2));

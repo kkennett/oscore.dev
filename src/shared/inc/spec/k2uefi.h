@@ -389,6 +389,34 @@ struct _K2EFI_SYSTEM_TABLE
 //------------------------------------------------------------------------
 //
 
+typedef struct {
+    UINT32            RedMask;
+    UINT32            GreenMask;
+    UINT32            BlueMask;
+    UINT32            ReservedMask;
+} K2EFI_PIXEL_BITMASK;
+
+#define K2Efi_PixelFormat_RGBX_8888 0
+#define K2Efi_PixelFormat_BGRX_8888 1
+#define K2Efi_PixelFormat_Mask      2
+#define K2Efi_PixelFormat_NoBuffer  3
+
+typedef struct {
+    UINT32  Version;
+    UINT32  HorizontalResolution;   // in pixels
+    UINT32  VerticalResolution;     // in pixels
+    UINT32  PixelFormatId;          // K2Efi_PixelFormat_xxxx
+    UINT32  PixelRedMask;
+    UINT32  PixelGreenMask;
+    UINT32  PixelBlueMask;
+    UINT32  PixelReservedMask;
+    UINT32  PixelsPerScanLine;
+} K2EFI_GRAPHICS_OUTPUT_MODE_INFORMATION;
+
+//
+//------------------------------------------------------------------------
+//
+
 #ifdef __cplusplus
 };  // extern "C"
 #endif

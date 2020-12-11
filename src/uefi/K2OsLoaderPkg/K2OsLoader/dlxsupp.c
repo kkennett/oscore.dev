@@ -755,7 +755,7 @@ BOOL sysDLX_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL 
     EFIFILE *   pFile;
     pFile = sFindFile(aHostFile);
     K2_ASSERT(pFile != NULL);
-    K2Printf(L"%a %s\n", pFile->mFileName, aIsLoad?L"LOADED":L"UNLOADING");
+//    K2Printf(L"%a %s\n", pFile->mFileName, aIsLoad?L"LOADED":L"UNLOADING");
     return FALSE;
 }
 

@@ -235,16 +235,15 @@ UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, 
         case K2OSKERN_SEG_ATTR_TYPE_DEVMAP:
             pStockStr = "DEVICEMAP";
             break;
-        case K2OSKERN_SEG_ATTR_TYPE_BUILTIN:
-            pStockStr = "BUILTIN";
-            break;
         case K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE:
             pStockStr = "DLX_PAGE";
             break;
         case K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB:
             pStockStr = "SEG_SLAB";
             break;
-
+        case K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS:
+            pStockStr = "CONTIG_PHYS";
+            break;
         default:
             K2_ASSERT(0);
             break;

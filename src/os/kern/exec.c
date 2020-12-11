@@ -43,6 +43,7 @@ void KernInit_Stage(KernInitStage aStage)
     KernInit_Hal();
     KernInit_CpuCore();
     KernInit_Dlx();
+    KernInit_BootGraf();
 }
 
 static void sInit(void)

@@ -67,10 +67,15 @@ sHalThread(
     Builtin_Run();
 
     //
-    // continue on to HAL thread
+    // continue on to HAL thread if HAL provided a ready function
     //
-    K2OSKERN_Debug("Enter HAL OnSystemReady\n");
-    return fReady();
+    if (NULL != fReady)
+        return fReady();
+
+    //
+    // otherwise we are done.  thread should exit and get cleaned up automagically
+    //
+    return 0;
 }
 
 void
@@ -89,6 +94,10 @@ sStartHalThread(
     tokThread = K2OS_ThreadCreate(&cret);
     K2_ASSERT(NULL != tokThread);
 
+    //
+    // executing thread will hold only reference to itself
+    // so if it exits then it will get cleaned up
+    //
     K2OS_TokenDestroy(tokThread);
 }
 
@@ -134,17 +143,10 @@ K2OSEXEC_Run(
     Msg_Init();
 
     //
-    // run the HAL, which will provide a driver store interface
-    // which we can use to find drivers for devices that need them
+    // run the HAL thread, which starts up builtin drivers before it
+    // jumps into the hal ready function
     //
-    if (NULL != afReady)
-    {
-        //
-        // afReady will have been provided by the init info
-        //
-        sStartHalThread(afReady);
-//        K2OSKERN_Debug("HAL thread started\n");
-    }
+    sStartHalThread(afReady);
 
     //
     // this is now the worker thread

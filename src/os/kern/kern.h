@@ -616,7 +616,7 @@ struct _K2OSKERN_CRITSEC
 #define K2OSKERN_SEG_ATTR_TYPE_HEAP_TRACK   0x00040000
 #define K2OSKERN_SEG_ATTR_TYPE_SPARSE       0x00050000
 #define K2OSKERN_SEG_ATTR_TYPE_DEVMAP       0x00060000
-#define K2OSKERN_SEG_ATTR_TYPE_BUILTIN      0x00070000
+#define K2OSKERN_SEG_ATTR_TYPE_CONTIG_PHYS  0x00070000
 #define K2OSKERN_SEG_ATTR_TYPE_DLX_PAGE     0x00080000
 #define K2OSKERN_SEG_ATTR_TYPE_SEG_SLAB     0x00090000
 #define K2OSKERN_SEG_ATTR_TYPE_COUNT        0x000A0000
@@ -648,8 +648,8 @@ struct _K2OSKERN_SEGMENT_INFO_DEVICEMAP
     UINT32                  mPhysDeviceAddr;
 };
 
-typedef struct _K2OSKERN_SEGMENT_INFO_PHYSBUF K2OSKERN_SEGMENT_INFO_PHYSBUF;
-struct _K2OSKERN_SEGMENT_INFO_PHYSBUF
+typedef struct _K2OSKERN_SEGMENT_INFO_CONTIG_PHYS K2OSKERN_SEGMENT_INFO_CONTIG_PHYS;
+struct _K2OSKERN_SEGMENT_INFO_CONTIG_PHYS
 {
     UINT32                  mPhysAddr;
 };
@@ -674,7 +674,7 @@ union _K2OSKERN_SEGMENT_INFO
     K2OSKERN_SEGMENT_INFO_PROCESS       Process;
     K2OSKERN_SEGMENT_INFO_THREAD        Thread;
     K2OSKERN_SEGMENT_INFO_DEVICEMAP     DeviceMap;
-    K2OSKERN_SEGMENT_INFO_PHYSBUF       PhysBuf;
+    K2OSKERN_SEGMENT_INFO_CONTIG_PHYS   ContigPhys;
     K2OSKERN_SEGMENT_INFO_USER          User;
 };
 
@@ -1320,6 +1320,7 @@ enum _KernInitStage
     KernInitStage_Threaded,
     KernInitStage_MemReady,
     KernInitStage_MultiThreaded,
+    KernInitStage_AtRunExec,
     // should be last entry
     KernInitStage_Count
 };
@@ -1403,6 +1404,7 @@ struct _KERN_DATA
     K2OSEXEC_pf_OpenDlx                 mfExecOpenDlx;
     K2OSEXEC_pf_ReadDlx                 mfExecReadDlx;
     K2OSEXEC_pf_DoneDlx                 mfExecDoneDlx;
+    K2OSKERN_OBJ_SEGMENT *              mpSeg_Builtin_K2ROFS;
 
     // service
     UINT32                              mLastServInstId;
@@ -1493,7 +1495,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, UINT32 aPageAttrFlags);
 void   KernMem_UnmapSegPagesToThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_OBJ_SEGMENT *apSrc, UINT32 aSegOffset, UINT32 aPageCount, BOOL aClearNp);
 
-K2STAT KernMem_MapContigPhys(UINT32 aContigPhysAddr, UINT32 aPageCount, UINT32 aSegAndMemPageAttr, UINT32 * apRetVirtAddr);
+K2STAT KernMem_MapContigPhys(UINT32 aContigPhysAddr, UINT32 aPageCount, UINT32 aSegAndMemPageAttr, K2OSKERN_OBJ_SEGMENT ** appRetSeg);
 
 K2STAT KernMem_AllocMapAndCreateSegment(K2OSKERN_OBJ_SEGMENT *apSeg);
 
@@ -1644,6 +1646,7 @@ void KernInit_Sched(void);
 void KernInit_Hal(void);
 void KernInit_CpuCore(void);
 void KernInit_Dlx(void);
+void KernInit_BootGraf(void);
 
 /* --------------------------------------------------------------------------------- */
 

@@ -49,6 +49,7 @@
 #include <Protocol/SimpleFileSystem.h>
 #include <Protocol/LoadedImage.h>
 #include <Protocol/AcpiSystemDescriptionTable.h>
+#include <Protocol/GraphicsOutput.h>
 
 #include <lib/k2dlxsupp.h>
 

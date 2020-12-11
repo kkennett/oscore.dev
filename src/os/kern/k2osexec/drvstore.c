@@ -300,6 +300,11 @@ void DrvStore_OnNotify(void)
                 K2_ASSERT(0 == K2MEM_Compare(&interfaceId, &gK2OSEXEC_DriverStoreInterfaceGuid, sizeof(K2_GUID128)));
                 Run_AddSerializedWork(&pNotify->Hdr, sDrvStore_NotifyWork);
             }
+            else
+            {
+                K2OS_HeapFree(pNotify);
+            }
+            break;
         }
         else
         {

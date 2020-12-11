@@ -76,9 +76,9 @@ sFindSmbiosAndAcpi(
         return EFI_NOT_FOUND;
     }
 
-    K2Printf(L"ACPI OEM ID:  %c%c%c%c%c%c\n",
-        gData.mpAcpi->OemId[0], gData.mpAcpi->OemId[1], gData.mpAcpi->OemId[2],
-        gData.mpAcpi->OemId[3], gData.mpAcpi->OemId[4], gData.mpAcpi->OemId[5]);
+//    K2Printf(L"ACPI OEM ID:  %c%c%c%c%c%c\n",
+//        gData.mpAcpi->OemId[0], gData.mpAcpi->OemId[1], gData.mpAcpi->OemId[2],
+//        gData.mpAcpi->OemId[3], gData.mpAcpi->OemId[4], gData.mpAcpi->OemId[5]);
 
     return EFI_SUCCESS;
 }
@@ -148,6 +148,42 @@ sAddressChangeEvent(
     ASSERT_EFI_ERROR(Status);
 }
 
+void
+sSetupGraphics(void)
+{
+    EFI_STATUS                          status;
+    EFI_GRAPHICS_OUTPUT_PROTOCOL *      pGop;
+    EFI_GRAPHICS_OUTPUT_BLT_PIXEL_UNION pixel;
+
+    status = gBS->LocateProtocol(&gEfiGraphicsOutputProtocolGuid, NULL, (VOID **)&pGop);
+    if (!EFI_ERROR(status))
+    {
+        if ((NULL != pGop->Mode) && (NULL != pGop->Mode->Info))
+        {
+            gData.LoadInfo.BootGraf.mFrameBufferPhys = (UINT32)pGop->Mode->FrameBufferBase;
+            gData.LoadInfo.BootGraf.mFrameBufferBytes = (UINT32)pGop->Mode->FrameBufferSize;
+            K2MEM_Copy(&gData.LoadInfo.BootGraf.ModeInfo, &pGop->Mode->Info, sizeof(K2EFI_GRAPHICS_OUTPUT_MODE_INFORMATION));
+
+            //
+            // clear to dim blue
+            //
+            pixel.Raw = 0;
+            pixel.Pixel.Blue = 32;
+            pGop->Blt(
+                pGop,
+                &pixel.Pixel,
+                EfiBltVideoFill,
+                0,
+                0,
+                0,
+                0,
+                pGop->Mode->Info->HorizontalResolution,
+                pGop->Mode->Info->VerticalResolution,
+                0);
+        }
+    }
+}
+
 EFI_STATUS
 EFIAPI
 K2OsLoaderEntryPoint (
@@ -164,7 +200,7 @@ K2OsLoaderEntryPoint (
     EFI_EVENT               efiEvent;
     EFI_PHYSICAL_ADDRESS    physAddr;
 
-    K2Printf(L"\n\n\nK2Loader\n----------------\n");
+//    K2Printf(L"\n\n\nK2Loader\n----------------\n");
 
     efiStatus = Loader_InitArch();
     if (EFI_ERROR(efiStatus))
@@ -175,7 +211,9 @@ K2OsLoaderEntryPoint (
     gData.mKernArenaHigh = K2OS_KVA_FREE_TOP;
     gData.LoadInfo.mpEFIST = (K2EFI_SYSTEM_TABLE *)gST;
 
-    K2Printf(L"Scanning for SMBIOS and ACPI...\n");
+    sSetupGraphics();
+
+//    K2Printf(L"Scanning for SMBIOS and ACPI...\n");
 
     efiStatus = sFindSmbiosAndAcpi();
     if (EFI_ERROR(efiStatus))
@@ -195,7 +233,7 @@ K2OsLoaderEntryPoint (
 
     ASSERT(gData.LoadInfo.mCpuCoreCount > 0);
 
-    K2Printf(L"CpuInfo says there are %d CPUs\n", gData.LoadInfo.mCpuCoreCount);
+//    K2Printf(L"CpuInfo says there are %d CPUs\n", gData.LoadInfo.mCpuCoreCount);
 
     efiStatus = gBS->CreateEventEx (
         EVT_NOTIFY_SIGNAL,
@@ -252,14 +290,14 @@ K2OsLoaderEntryPoint (
                         break;
                     }
 
-                    K2Printf(L"Loading k2oshal.dlx...\n");
+//                    K2Printf(L"Loading k2oshal.dlx...\n");
                     k2Stat = DLX_Acquire("k2oshal.dlx", NULL, &pDlxHal);
                     if (K2STAT_IS_ERROR(k2Stat))
                         break;
 
                     do
                     {
-                        K2Printf(L"Verifying k2oshal.dlx...\n");
+//                        K2Printf(L"Verifying k2oshal.dlx...\n");
                         if (!sVerifyHAL(pDlxHal))
                             break;
 
@@ -312,7 +350,7 @@ K2OsLoaderEntryPoint (
                                         gData.LoadInfo.mDebugPageVirt = 0;
 #endif
 
-                                        K2Printf(L"\n----------------\nTransition...\n");
+//                                        K2Printf(L"\n----------------\nTransition...\n");
 
                                         k2Stat = Loader_TrackEfiMap();
                                         if (K2STAT_IS_ERROR(k2Stat))

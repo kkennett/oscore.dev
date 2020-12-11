@@ -50,7 +50,6 @@ sMapBuiltIn(void)
     K2EFI_MEMORY_DESCRIPTOR *   pDesc = (K2EFI_MEMORY_DESCRIPTOR *)descBuffer;
     UINT8 *                     pScan;
     UINT32                      ix;
-    UINT32                      virtAddr;
 
     //
     // find the builtin region in the efi memory map
@@ -70,11 +69,11 @@ sMapBuiltIn(void)
     stat = KernMem_MapContigPhys(
         (UINT32)pDesc->PhysicalStart,
         (UINT32)pDesc->NumberOfPages,
-        K2OSKERN_SEG_ATTR_TYPE_BUILTIN | K2OS_MAPTYPE_KERN_READ,
-        &virtAddr);
+        K2OS_MAPTYPE_KERN_READ,
+        &gData.mpSeg_Builtin_K2ROFS);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    return (K2ROFS const *)virtAddr;
+    return (K2ROFS const *)gData.mpSeg_Builtin_K2ROFS->ProcSegTreeNode.mUserVal;
 }
 
 void KernAcpi_Init(void)
@@ -180,6 +179,8 @@ sExec_Init(
 #endif
 
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
+
+    KernInit_Stage(KernInitStage_AtRunExec);
 
     return fExec_Run;
 }
