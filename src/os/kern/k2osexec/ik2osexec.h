@@ -275,7 +275,7 @@ void Run_AddSerializedWork(SERWORK_ITEM_HDR * apItem, SERWORKITEM_pf_Exec afExec
 extern K2ROFS_DIR const * gpBuiltinRoot;
 
 void Builtin_Init(K2OSEXEC_INIT_INFO * apInitInfo);
-void Builtin_Run(void);
+void Builtin_Start(void);
 void Builtin_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* ----------------------------------------------------------------------------- */

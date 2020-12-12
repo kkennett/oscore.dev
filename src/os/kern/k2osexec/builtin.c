@@ -167,7 +167,7 @@ sBuiltinThread(
 );
 
 void
-Builtin_Run(
+Builtin_Start(
     void
 )
 {
@@ -308,6 +308,13 @@ Builtin_Run(
     K2_ASSERT(NULL != sgTokService);
     K2_ASSERT(0 != sgServiceId);
 
+    //
+    // devices code is waiting for driver stores to show up.
+    // so publishing this interface will make devices code
+    // see it and start doing system calls to it (sending messages to sgTokMailbox)
+    // but they won't get serviced until the sBuiltinThread picks up the message
+    // so we are 'at drivers start' when that thread starts to run
+    //
     sgTokPublish = K2OSKERN_ServicePublish(
         sgTokService,
         &gK2OSEXEC_DriverStoreInterfaceGuid,
@@ -593,6 +600,14 @@ sBuiltinThread(
     UINT32              requestId;
     BOOL                ok;
     UINT32              actualOut;
+
+    //
+    // this thread services all calls the the driver store
+    // so once it is running drivers can load, etc.
+    // so we are 'at drivers start' as soon as this thread
+    // starts to run
+    //
+    K2OSKERN_SysMsg(SYSMSG_OPCODE_AT_DRIVERS_START, NULL);
 
     do {
         waitResult = K2OS_ThreadWait(1, &sgTokMailbox, FALSE, K2OS_TIMEOUT_INFINITE);

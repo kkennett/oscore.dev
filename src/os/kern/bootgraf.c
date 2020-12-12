@@ -81,7 +81,7 @@ static void sInit_MemReady(void)
     sDrawBootGraphics(sgpSeg_BootGraf->ProcSegTreeNode.mUserVal);
 }
 
-static void sInit_AtRunExec(void)
+void KernBootGraf_End(void)
 {
     if (NULL == sgpSeg_BootGraf)
         return;
@@ -95,17 +95,8 @@ static void sInit_AtRunExec(void)
 
 void KernInit_BootGraf(void)
 {
-    switch (gData.mKernInitStage)
-    {
-    case KernInitStage_MemReady:
+    if (gData.mKernInitStage == KernInitStage_MemReady)
         sInit_MemReady();
-        break;
-    case KernInitStage_AtRunExec:
-        sInit_AtRunExec();
-        break;
-    default:
-        break;
-    }
 }
 
 

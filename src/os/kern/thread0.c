@@ -180,8 +180,6 @@ sExec_Init(
 
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
 
-    KernInit_Stage(KernInitStage_AtRunExec);
-
     return fExec_Run;
 }
 

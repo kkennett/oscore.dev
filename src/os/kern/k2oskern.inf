@@ -55,7 +55,7 @@ K2OSKERN_UnmapDevice
 K2OSKERN_InstallIntrHandler
 K2OSKERN_Esc
 K2OSKERN_ReleaseObject
-K2OSKERN_ReflectSysMsg
+K2OSKERN_SysMsg
 K2OSKERN_ServiceCreate
 K2OSKERN_ServiceGetInstanceId
 K2OSKERN_ServicePublish

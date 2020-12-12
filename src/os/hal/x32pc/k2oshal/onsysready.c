@@ -32,137 +32,13 @@
 
 #include "..\x32pc.h"
 
-#define K2_STATIC  static
-
-#define HAL_SERVICE_CONTEXT     ((void *)0xDEADF00D)
-#define FSPROV_IFACE_CONTEXT    ((void *)0xFEEDF00D)
-
-static K2OS_FSPROVINFO const sgFsProvInfo =
-{
-    K2OS_FSPROV_ID_HAL,     // {138DE9B5-2549-4376-BDE7-2C3AF41B2180}
-    "HAL BuiltIn",
-    0x00010000
-};
-
-K2STAT 
-FsProvServiceCall(
-    UINT32          aCallCmd,
-    void const *    apInBuf,
-    UINT32          aInBufBytes,
-    void *          apOutBuf,
-    UINT32          aOutBufBytes,
-    UINT32 *        apRetActualOut
-)
-{
-    if (((aCallCmd & FSPROV_CALL_OPCODE_HIGH_MASK) != FSPROV_CALL_OPCODE_HIGH) ||
-        (aCallCmd != FSPROV_CALL_OPCODE_GET_INFO))
-        return K2STAT_ERROR_UNSUPPORTED;
-    if (apInBuf != NULL)
-        return K2STAT_ERROR_INBUF_NOT_NULL;
-    if (apOutBuf == NULL)
-        return K2STAT_ERROR_OUTBUF_NULL;
-    if (aOutBufBytes < sizeof(sgFsProvInfo))
-        return K2STAT_ERROR_OUTBUF_TOO_SMALL;
-
-    K2MEM_Copy(apOutBuf, &sgFsProvInfo, sizeof(sgFsProvInfo));
-    *apRetActualOut = sizeof(sgFsProvInfo);
-
-    return K2STAT_NO_ERROR;
-}
-
-K2OS_TOKEN  tokMailbox;
-K2OS_TOKEN  tokService;
-UINT32      serviceId;
-K2OS_TOKEN  tokPublishFsProv;
-UINT32      sgFsProvInterfaceId;
-
 UINT32
 K2_CALLCONV_CALLERCLEANS
 K2OSHAL_OnSystemReady(
     void
 )
 {
-    K2OSKERN_SVC_MSGIO  msgIo;
-    UINT32              waitResult;
-    UINT32              requestId;
-    BOOL                ok;
-    UINT32              actualOut;
-
-    tokMailbox = K2OS_MailboxCreate(NULL, FALSE);
-    if (NULL == tokMailbox)
-    {
-        K2OSKERN_Panic("HAL failed mailbox create\n");
-    }
-
-    tokService = K2OSKERN_ServiceCreate(tokMailbox, HAL_SERVICE_CONTEXT, &serviceId);
-    if (NULL == tokService)
-    {
-        K2OSKERN_Panic("HAL failed to create service\n");
-    }
-
-    tokPublishFsProv = K2OSKERN_ServicePublish(
-        tokService,
-        &gK2OSEXEC_FsProvInterfaceGuid,
-        FSPROV_IFACE_CONTEXT,
-        &sgFsProvInterfaceId);
-    if (NULL == tokPublishFsProv)
-    {
-        K2OSKERN_Panic("HAL failed to publish filesystem interface\n");
-    }
-
-    do {
-        K2OSKERN_Debug("HAL START WAIT\n");
-        waitResult = K2OS_ThreadWait(1, &tokMailbox, FALSE, K2OS_TIMEOUT_INFINITE);
-        K2OSKERN_Debug("HAL RECV MSG\n");
-        K2_ASSERT(waitResult == K2OS_WAIT_SIGNALLED_0);
-        requestId = 0;
-        ok = K2OS_MailboxRecv(tokMailbox, (K2OS_MSGIO *)&msgIo, &requestId);
-        K2_ASSERT(ok);
-        if (requestId != 0)
-        {
-            if (msgIo.mSvcOpCode == SYSMSG_OPCODE_SVC_CALL)
-            {
-                actualOut = 0;
-                if (msgIo.mInBufBytes == 0)
-                    msgIo.mpInBuf = NULL;
-                if (msgIo.mOutBufBytes == 0)
-                    msgIo.mpOutBuf = NULL;
-                if (msgIo.mpServiceContext == HAL_SERVICE_CONTEXT)
-                {
-                    if (msgIo.mpPublishContext == FSPROV_IFACE_CONTEXT)
-                    {
-                        ((K2OS_MSGIO *)&msgIo)->mStatus = FsProvServiceCall(
-                            msgIo.mCallCmd,
-                            msgIo.mpInBuf,
-                            msgIo.mInBufBytes,
-                            msgIo.mpOutBuf,
-                            msgIo.mOutBufBytes,
-                            &actualOut
-                        );
-                    }
-                    else
-                    {
-                        ((K2OS_MSGIO *)&msgIo)->mStatus = K2STAT_ERROR_NO_INTERFACE;
-                    }
-                }
-                else
-                {
-                    ((K2OS_MSGIO *)&msgIo)->mStatus = K2STAT_ERROR_UNSUPPORTED;
-                }
-                K2_ASSERT(actualOut <= msgIo.mOutBufBytes);
-                ((K2OS_MSGIO *)&msgIo)->mPayload[0] = actualOut;
-            }
-            else
-            {
-                K2OSKERN_Debug("***HAL service mailbox received bad msg\n");
-                ((K2OS_MSGIO *)&msgIo)->mStatus = K2STAT_ERROR_NOT_IMPL;
-                ((K2OS_MSGIO *)&msgIo)->mPayload[0] = 0;
-            }
-            ok = K2OS_MailboxRespond(tokMailbox, requestId, (K2OS_MSGIO *)&msgIo);
-            K2_ASSERT(ok);
-        }
-    } while (1);
-
+    K2OSKERN_Debug("HAL:OnSystemReady() invoked.\n");
     return 0;
 }
 

@@ -1309,18 +1309,15 @@ typedef enum _KernInitStage KernInitStage;
 enum _KernInitStage
 {
     KernInitStage_dlx_entry = 0,
-/*temp to get debug */  KernInitStage_At_Hal_Entry,
     KernInitStage_Before_Virt,
     KernInitStage_After_Virt,
     KernInitStage_Before_Hal,
-//    KernInitStage_At_Hal_Entry,
+    KernInitStage_At_Hal_Entry,
     KernInitStage_After_Hal,
     KernInitStage_Before_Launch_Cores,
-
     KernInitStage_Threaded,
     KernInitStage_MemReady,
     KernInitStage_MultiThreaded,
-    KernInitStage_AtRunExec,
     // should be last entry
     KernInitStage_Count
 };
@@ -1701,6 +1698,11 @@ void   KernService_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 void   KernPublish_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 void   KernNotify_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
 void   KernSubscrip_Dispose(K2OSKERN_OBJ_HEADER *apObjHdr);
+
+
+/* --------------------------------------------------------------------------------- */
+
+void    KernBootGraf_End(void);
 
 /* --------------------------------------------------------------------------------- */
 

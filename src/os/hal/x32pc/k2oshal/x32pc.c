@@ -61,7 +61,6 @@ dlx_entry(
 )
 {
     X32PC_DBGSER_Init();
-    K2OS_DebugPrint("k2oshal init\n");
     return 0;
 }
 

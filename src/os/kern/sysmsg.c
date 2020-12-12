@@ -32,6 +32,7 @@
 
 #include "kern.h"
 
+static
 void
 sThreadExited(
     K2OSKERN_OBJ_THREAD * apExitedThread
@@ -43,6 +44,7 @@ sThreadExited(
     K2OSKERN_ReleaseObject(&apExitedThread->Hdr);
 }
 
+static
 void
 sThreadStopped(
     K2OSKERN_OBJ_THREAD * apStoppedThread
@@ -60,12 +62,12 @@ sThreadStopped(
 }
 
 void
-K2OSKERN_ReflectSysMsg(
+K2OSKERN_SysMsg(
     UINT32          aOpCode,
     UINT32 const *  apParam
 )
 {
-    K2OSKERN_Debug("K2OSKERN_ReflectSysMsg(%d, %08X)\n", aOpCode, apParam);
+//    K2OSKERN_Debug("K2OSKERN_SysMsg(%d, %08X)\n", aOpCode, apParam);
 
     if ((aOpCode & SYSMSG_OPCODE_HIGH_MASK) != SYSMSG_OPCODE_HIGH)
         return;
@@ -73,13 +75,15 @@ K2OSKERN_ReflectSysMsg(
     switch (aOpCode)
     {
     case SYSMSG_OPCODE_THREAD_EXIT:
-        K2OSKERN_Debug("Thread exited\n");
         sThreadExited((K2OSKERN_OBJ_THREAD *)apParam[0]);
         break;
 
     case SYSMSG_OPCODE_THREAD_STOP:
-        K2OSKERN_Debug("Thread stopped\n");
         sThreadStopped((K2OSKERN_OBJ_THREAD *)apParam[0]);
+        break;
+
+    case SYSMSG_OPCODE_AT_DRIVERS_START:
+        KernBootGraf_End();
         break;
 
     default:

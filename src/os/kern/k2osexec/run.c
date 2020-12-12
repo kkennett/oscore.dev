@@ -64,7 +64,7 @@ sHalThread(
     //
     // run builtin driver loads here
     //
-    Builtin_Run();
+    Builtin_Start();
 
     //
     // continue on to HAL thread if HAL provided a ready function
