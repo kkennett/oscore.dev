@@ -41,11 +41,14 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
 
     K2_ASSERT(apThread != NULL);
     K2_ASSERT(apThread->Info.CreateInfo.mEntrypoint != NULL);
-    K2_ASSERT(apThread->Sched.mState == K2OS_THREAD_STATE_INIT);
+    K2_ASSERT(apThread->Sched.State.mLifeStage == KernThreadLifeStage_Instantiated);
 
     pThreadPage = K2_GET_CONTAINER(K2OSKERN_THREAD_PAGE, apThread, Thread);
 
     stackPtr = (UINT32)(&pThreadPage->mKernStack[K2OSKERN_THREAD_KERNSTACK_BYTECOUNT - sizeof(UINT32)]);
+    *((UINT32 *)stackPtr) = 0;
+    stackPtr -= sizeof(UINT32);
+    *((UINT32 *)stackPtr) = 0;
 
     if (apThread->mIsKernelThread == FALSE)
     {
@@ -64,15 +67,18 @@ void KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread)
     apThread->mIsInKernelMode = TRUE;
 
     apThread->mStackPtr_Kernel = stackPtr;
+
+    apThread->Sched.State.mLifeStage = KernThreadLifeStage_Run;
+    apThread->Sched.State.mRunState = KernThreadRunState_Transition;
 }
 
 void A32Kern_ThreadCallSched(UINT32 aStackPtr)
 {
-    K2OSKERN_CPUCORE *      pThisCore;
-    K2OSKERN_OBJ_THREAD *   pActiveThread;
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    K2OSKERN_OBJ_THREAD *       pActiveThread;
 
-    K2OSKERN_COREPAGE *     pCorePage;
-    A32_EXCEPTION_CONTEXT * pEx;
+    K2OSKERN_COREPAGE *         pCorePage;
+    A32_EXCEPTION_CONTEXT *     pEx;
 
     pEx = (A32_EXCEPTION_CONTEXT *)aStackPtr;
     pEx->R[14] = pEx->R[15];
@@ -95,10 +101,19 @@ void A32Kern_ThreadCallSched(UINT32 aStackPtr)
 
     KernIntr_QueueCpuCoreEvent(pThisCore, &pActiveThread->Sched.Item.CpuCoreEvent);
 
+    //
+    // interrupts are off here, so we can do this
+    //
+
     pThisCore->mIsInMonitor = TRUE;
     pCorePage = K2_GET_CONTAINER(K2OSKERN_COREPAGE, pThisCore, CpuCore);
     A32Kern_ResumeInMonitor((UINT32)&pCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4]);
 
     /* should never return */
     K2_ASSERT(0);
+}
+
+void KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread)
+{
+
 }

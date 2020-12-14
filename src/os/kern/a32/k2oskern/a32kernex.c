@@ -34,7 +34,7 @@
 
 BOOL
 K2_CALLCONV_REGS
-KernEx_TrapMount(
+KernArch_ExTrapMount(
     K2_EXCEPTION_TRAP *apTrap
 )
 {
@@ -43,7 +43,7 @@ KernEx_TrapMount(
 
 void
 K2_CALLCONV_REGS
-KernEx_RaiseException(
+KernArch_RaiseException(
     K2STAT aExceptionCode
 )
 {

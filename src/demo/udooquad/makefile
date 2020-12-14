@@ -32,48 +32,12 @@
 
 include $(K2_ROOT)/src/os/build/k2ospre.make
 
-TARGET_TYPE = DLX
-K2_KERNEL := TRUE
+TARGET_TYPE = IMAGE
 
-IMPORT_KERNEL_LIBS += @os/kern/$(K2_ARCH)/k2oskern 
-IMPORT_KERNEL_LIBS += @os/kern/k2osacpi
+IMAGE_HAL_DLX = @os/hal/udooquad/k2oshal
 
-DLX_INF := k2osexec.inf
-
-GCCOPT += -I $(K2_ROOT)/src/os/kern/k2osacpi/acpica/source/include
-GCCOPT += -I $(K2_ROOT)/src/os/kern/k2osacpi/acpica/source/include/platform
-GCCOPT += -DACPI_USE_NATIVE_DIVIDE
-
-#
-# Executive
-#
-SOURCES += dlx_entry.c 
-SOURCES += run.c
-SOURCES += init.c 
-SOURCES += handlers.c 
-SOURCES += pci.c 
-SOURCES += phys.c
-SOURCES += dev.c
-SOURCES += res.c
-SOURCES += intr.c
-SOURCES += msg.c
-SOURCES += fsprov.c
-SOURCES += drvstore.c
-SOURCES += builtin.c
-
-STATIC_LIBS += @shared/lib/k2heap
-STATIC_LIBS += @shared/lib/k2rofshelp
-
-ifeq ($(K2_ARCH),X32)
-SOURCES += x32pitasm.s
-SOURCES += x32time.c
-STATIC_LIBS += @shared/lib/k2archx32
-endif
-
-ifeq ($(K2_ARCH),A32)
-SOURCES += a32time.c
-STATIC_LIBS += @shared/lib/k2archa32
-endif
+BUILTIN_KERNEL_DRIVERS += @os/driver/pcibus
+BUILTIN_KERNEL_DRIVERS += @os/driver/vga
 
 include $(K2_ROOT)/src/shared/build/post.make
 

@@ -55,6 +55,7 @@ SOURCES += a32monitor.c
 SOURCES += a32monitorasm.s
 SOURCES += a32auxcoreasm.s
 SOURCES += a32time.c
+SOURCES += a32intrhand.c
 
 STATIC_LIBS += @shared/lib/k2archa32
 STATIC_LIBS += @shared/lib/k2heap

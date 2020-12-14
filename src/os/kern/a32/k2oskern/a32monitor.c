@@ -32,7 +32,32 @@
 
 #include "a32kern.h"
 
-void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore)
+void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore)
+{
+    K2OSKERN_OBJ_THREAD *   pThread;
+    K2OSKERN_OBJ_PROCESS *  pOldProc;
+
+    pThread = apThisCore->mpActiveThread;
+    if (pThread != NULL)
+    {
+        K2_ASSERT(pThread->mpProc == gpProc0);
+    }
+
+    pOldProc = apThisCore->mpActiveProc;
+    if (gpProc0 != pOldProc)
+    {
+        if (pOldProc != NULL)
+            A32_TLBInvalidateASID_UP(pOldProc->mId);
+
+        A32_WriteTTBR0(gpProc0->mTransTableRegVal);
+        A32_WriteCONTEXT(gpProc0->mId);
+		
+        apThisCore->mpActiveProc = gpProc0;
+        K2_CpuWriteBarrier();
+    }
+}
+
+void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
 {
     K2OSKERN_COREPAGE *     pCorePage;
     K2OSKERN_OBJ_THREAD *   pThread;
@@ -48,7 +73,7 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE *apThisCore)
 
     pThread = apThisCore->mpActiveThread;
     K2_ASSERT(pThread != NULL);
-    K2_ASSERT(pThread->Sched.mState == K2OS_Thread_Running);
+    K2_ASSERT(pThread->Sched.State.mRunState == KernThreadRunState_Running);
 
     pProc = pThread->mpProc;
     pOldProc = apThisCore->mpActiveProc;

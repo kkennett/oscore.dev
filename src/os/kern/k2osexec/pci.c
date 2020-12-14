@@ -628,7 +628,9 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
     UINT32          busIx;
     UINT32          segIx;
 
+#if !K2_TARGET_ARCH_IS_ARM
     sgDiscoveredSomethingViaAcpi = TRUE;
+#endif
 
     //
     // device is a PCI or PCI EXPRESS bridge
@@ -718,12 +720,10 @@ void Pci_CheckManualScan(void)
 {
 #if !K2_TARGET_ARCH_IS_ARM
     DEV_NODE *      pTryNode;
-#endif
 
     if (sgDiscoveredSomethingViaAcpi)
         return;
 
-#if !K2_TARGET_ARCH_IS_ARM
     //
     // no PCI buses were discovered via ACPI PNP id for bridges
     //

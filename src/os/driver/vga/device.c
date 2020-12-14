@@ -34,10 +34,10 @@
 
 K2STAT VGA_LockedActivateInstance(VGADISP * apDisp, UINT32 aDevInstanceId)
 {
-    UINT32      ix;
-    UINT32      barsDone;
-    UINT32      barCount;
-    UINT32 *    pBars;
+    UINT32          ix;
+    UINT32          barsDone;
+    UINT32          barCount;
+    UINT32 const *  pBars;
 
     K2OSKERN_Debug("Activate VGA device instance %d\n", aDevInstanceId);
 

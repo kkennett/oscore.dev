@@ -32,52 +32,23 @@
 
 #include "a32kern.h"
 
-void 
-A32Kern_InitStall(
-    void
-)
-{
-    UINT32 pfr1;
-
-    if (gpA32Kern_MADT_GICD != NULL)
-    {
-        K2OSKERN_Debug("Multicore, Global timer should be at 0x%08X\n", A32KERN_MP_GLOBAL_TIMER_VIRT);
-
-
-
-
-
-    }
-    else
-    {
-        pfr1 = A32_ReadIDPFR1();
-        if (!(pfr1 & A32_IDPFR1_TIMER_MASK))
-        {
-            K2OSKERN_Debug("IDPFR1 = 0x%08X\n", pfr1);
-            K2OSKERN_Panic("No MPCore and Generic timer is not implemented\n");
-        }
-
-        //
-        // Generic timer support not implemented yet
-        //
-        K2_ASSERT(0);
-    }
-}
-
-void
-K2_CALLCONV_REGS
-K2OSKERN_MicroStall(
-    UINT32      aMicroseconds
-)
+void KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 {
 
 }
 
-void A32Kern_StartTime(void)
+void KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask)
 {
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-
 
 }
+
+void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
+{
+
+}
+
+void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)
+{
+    while (1);
+}
+

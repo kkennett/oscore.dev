@@ -96,3 +96,4 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
 
     K2OSKERN_Panic("Switch to Thread returned!\n");
 }
+
