@@ -70,14 +70,6 @@ K2OSKERN_MicroStall(
     UINT32      aMicroseconds
 )
 {
-
+    K2_ASSERT(0);
 }
 
-void A32Kern_StartTime(void)
-{
-    //
-    // called on core 0 right before core enters monitor for the first time 
-    //
-
-
-}

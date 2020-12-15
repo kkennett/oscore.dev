@@ -56,7 +56,6 @@ void A32Kern_LaunchEntryPoint(UINT32 aCoreIx);
 void A32Kern_ResumeInMonitor(UINT32 aStackPtr);
 void A32Kern_ResumeThread(UINT32 aKernModeStackPtr, UINT32 aSvcScratch);
 void A32Kern_InitStall(void);
-void A32Kern_StartTime(void);
 
 void    A32Kern_IntrInitGicDist(void);
 void    A32Kern_IntrInitGicPerCore(void);

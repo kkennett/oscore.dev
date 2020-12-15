@@ -34,17 +34,17 @@
 
 void KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 {
-
+    K2_ASSERT(0);
 }
 
 void KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask)
 {
-
+    K2_ASSERT(0);
 }
 
 void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
 {
-
+    K2_ASSERT(0);
 }
 
 void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)

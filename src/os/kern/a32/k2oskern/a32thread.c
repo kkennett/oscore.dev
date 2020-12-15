@@ -115,5 +115,5 @@ void A32Kern_ThreadCallSched(UINT32 aStackPtr)
 
 void KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread)
 {
-
+    K2_ASSERT(0);
 }

@@ -115,7 +115,6 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     if (aCpuIx == 0)
     {
-        A32Kern_StartTime();
         A32Kern_EnterMonitorCore0OneTime(v);
     }
     else
