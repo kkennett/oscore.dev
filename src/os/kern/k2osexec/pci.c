@@ -706,7 +706,7 @@ void Pci_DiscoverBridgeFromAcpi(DEV_NODE *apDevNode)
         &apDevNode->Res.Bus.IntRoutingTable);
     if (ACPI_FAILURE(acpiStatus))
     {
-        K2OSKERN_Debug("Failed to get _PRT from PCI bridge\n");
+        K2OSKERN_Debug("***Failed to get _PRT from PCI bridge\n");
         return;
     }
 

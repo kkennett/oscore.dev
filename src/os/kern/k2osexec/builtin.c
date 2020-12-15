@@ -182,8 +182,6 @@ Builtin_Start(
     K2OS_TOKEN          tokThread;
     K2OS_THREADCREATE   cret;
 
-    K2OSKERN_Debug("\n\nLOADING BUILTIN DLX\n");
-
     sgBuiltinDlx = (BUILTIN_DLX *)K2OS_HeapAlloc(sizeof(BUILTIN_DLX) * sgpBuiltinKern->mFileCount);
     if (sgBuiltinDlx == NULL)
     {
@@ -227,9 +225,6 @@ Builtin_Start(
         } while (ch != 0);
     }
 
-    K2OSKERN_Debug("FINISHED BUILTIN DLX\n");
-
-    K2OSKERN_Debug("Registering Drivers...\n");
     for (ix = 0; ix < sgBuiltinDlxCount; ix++)
     {
         if (sgBuiltinDlx[ix].mfRegister != NULL)
@@ -273,21 +268,21 @@ Builtin_Start(
                             }
                             else
                             {
-                                K2OSKERN_Debug("Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_PURGE_FN_NAME);
+                                K2OSKERN_Debug("*** Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_PURGE_FN_NAME);
                             }
                         }
                         else
                         {
-                            K2OSKERN_Debug("Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_ACTIVATE_FN_NAME);
+                            K2OSKERN_Debug("*** Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_ACTIVATE_FN_NAME);
                         }
                     }
                     else
                     {
-                        K2OSKERN_Debug("Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_PREPARE_INST_FN_NAME);
+                        K2OSKERN_Debug("*** Driver \"%s\" did not export %s\n", sgBuiltinDlx[ix].mpFriendlyName, K2OS_DRIVER_PREPARE_INST_FN_NAME);
                     }
                     if (0 == ch)
                     {
-                        K2OSKERN_Debug("Driver \"%s\" not usable - did not provide at least one requred export\n", sgBuiltinDlx[ix].mpFriendlyName);
+                        K2OSKERN_Debug("*** Driver \"%s\" not usable - did not provide at least one requred export\n", sgBuiltinDlx[ix].mpFriendlyName);
                         sgBuiltinDlx[ix].mfPrepareInstance = NULL;
                         sgBuiltinDlx[ix].mfActivateInstance = NULL;
                         sgBuiltinDlx[ix].mNumTypeIds = 0;
@@ -296,7 +291,6 @@ Builtin_Start(
             }
         }
     }
-    K2OSKERN_Debug("Finished Registering Drivers.\n");
 
     sgTokMailbox = K2OS_MailboxCreate(NULL, FALSE);
     K2_ASSERT(NULL != sgTokMailbox);

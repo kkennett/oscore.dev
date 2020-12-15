@@ -123,12 +123,20 @@ K2OSEXEC_Run(
     K2OSHAL_pf_OnSystemReady afReady
 )
 {
+    static BOOL sRun = FALSE;
     SERWORK_ITEM_HDR *  pFix;
     SERWORK_ITEM_HDR *  pHold;
     SERWORK_ITEM_HDR *  pWorkList;
     UINT32              waitResult;
     K2STAT              stat;
     K2_EXCEPTION_TRAP   trap;
+
+    //
+    // exported function - guard against re-entry
+    //
+    if (FALSE != sRun)
+        return;
+    sRun = TRUE;
 
     //
     // set up worker thread queue

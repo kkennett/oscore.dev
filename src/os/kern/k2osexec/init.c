@@ -39,8 +39,16 @@ K2OSEXEC_Init(
     K2OSEXEC_INIT_INFO * apInitInfo
 )
 {
+    static BOOL sInitialized = FALSE;
     ACPI_TABLE_HEADER * pAcpiHdr;
     ACPI_STATUS         acpiStatus;
+
+    //
+    // exported function - guard against re-entry
+    //
+    if (FALSE != sInitialized)
+        return;
+    sInitialized = TRUE;
 
     gpMADT = NULL;
 
