@@ -32,57 +32,6 @@
 
 #include "a32kern.h"
 
-BOOL 
-A32Kern_CheckSvcInterrupt(
-    UINT32 aStackPtr
-    )
-{
-    //
-    // TBD
-    //
-
-    /* interrupts off. In SVC mode.  r0-r3,r13(usr/sys),r15 in exception context. r12 saved in r14 spot in exception context. */
-    K2_ASSERT(0);
-
-    /* return nonzero for slow call (via A32Kern_InterruptHandler) */
-    return 1;   
-}
-
-BOOL 
-A32Kern_CheckIrqInterrupt(
-    UINT32 aStackPtr
-    )
-{
-    //
-    // TBD
-    //
-
-    /* interrupts off. In IRQ mode.  r0-r3,r13(usr/sys),r15 in exception context. r12 saved in r14 spot in exception context. */
-    K2_ASSERT(0);
-
-    /* MUST return 0 if was in sys mode */
-    return 0;
-}
-
-UINT32 
-A32Kern_InterruptHandler(
-    UINT32 aReason, 
-    UINT32 aStackPtr, 
-    UINT32 aCPSR
-    )
-{
-    //
-    // TBD
-    //
-
-    K2_ASSERT(0);
-
-    //
-    // returns stack pointer to use when jumping into monitor
-    //
-    return 0;
-}
-
 void 
 KernArch_SendIci(
     UINT32  aCurCoreIx, 

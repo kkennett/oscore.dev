@@ -32,21 +32,23 @@
 
 #include "a32kern.h"
 
-BOOL
-K2_CALLCONV_REGS
-KernArch_ExTrapMount(
-    K2_EXCEPTION_TRAP *apTrap
-)
+void A32Kern_MountExceptionTrap(K2_EXCEPTION_TRAP *apTrap)
 {
-    return FALSE;
+    BOOL                    disp;
+    K2OSKERN_OBJ_THREAD *   pThisThread;
+
+    // fix this up
+    apTrap->SavedContext.R[0] -= 8;
+
+    // set trap result and push the trap
+    apTrap->mTrapResult = K2STAT_ERROR_UNKNOWN;
+
+    // push this trap onto the trap stack
+    disp = K2OSKERN_SetIntr(FALSE);
+    pThisThread = K2OSKERN_CURRENT_THREAD;
+    apTrap->mpNextTrap = pThisThread->mpKernExTrapStack;
+    pThisThread->mpKernExTrapStack = apTrap;
+    K2OSKERN_SetIntr(disp);
 }
 
-void
-K2_CALLCONV_REGS
-KernArch_RaiseException(
-    K2STAT aExceptionCode
-)
-{
-    K2_ASSERT(0);
-}
 
