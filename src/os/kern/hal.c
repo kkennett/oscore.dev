@@ -47,16 +47,14 @@ static void sAtHalEntry(void)
         DlxSeg_Text,
         "K2OSHAL_DebugOut",
         (UINT32 *)&gData.mpShared->FuncTab.DebugOut);
-    if (K2STAT_IS_ERROR(stat))
-        K2OSKERN_Panic("*** Required HAL export \"K2OSHAL_DebugOut\" missing\n");
+    while (K2STAT_IS_ERROR(stat));
 
     stat = DLX_FindExport(
         gData.mpDlxHal,
         DlxSeg_Text,
         "K2OSHAL_DebugIn",
         (UINT32 *)&gData.mpShared->FuncTab.DebugIn);
-    if (K2STAT_IS_ERROR(stat))
-        K2OSKERN_Panic("*** Required HAL export \"K2OSHAL_DebugIn\" missing\n");
+    while (K2STAT_IS_ERROR(stat));
 
     stat = K2DLXSUPP_GetInfo(
         gData.mpDlxHal,
@@ -75,6 +73,7 @@ void KernInit_Hal(void)
 {
     switch (gData.mKernInitStage)
     {
+//    case KernInitStage_Before_Virt: if debugging initmem
     case KernInitStage_At_Hal_Entry:
         sAtHalEntry();
         break;

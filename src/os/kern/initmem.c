@@ -1233,7 +1233,7 @@ static void sInit_BeforeVirt(void)
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
     pNode->NonSeg.mType = K2OSKERN_VMNODE_TYPE_RESERVED;
     pNode->NonSeg.mNodeInfo = K2OSKERN_VMNODE_RESERVED_TRANSTAB;
-    sCheckPteRange(K2OS_KVA_TRANSTAB_BASE, K2_VA32_TRANSTAB_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_DATA, KernPhysPageList_Paging);
+    sCheckPteRange(K2OS_KVA_TRANSTAB_BASE, K2_VA32_TRANSTAB_SIZE / K2_VA32_MEMPAGE_BYTES, K2OS_MAPTYPE_KERN_PAGETABLE, KernPhysPageList_Paging);
     // IA32 one page, must be mapped to transtab base
     // A32 four pages, first must be mapped to transtab base
     // all pages must be on KernPhysPageList_Paging

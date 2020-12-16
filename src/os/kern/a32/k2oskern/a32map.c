@@ -220,24 +220,58 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL
 
 BOOL KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)
 {
-    BOOL flag;
+    UINT32 chk;
 
-    aPTE &= A32_MMU_PTE_PERMIT_MASK;
+    if (aPTE & A32_PTE_EXEC_NEVER)
+    {
+        if (aMemPageAttr & K2OS_MEMPAGE_ATTR_EXEC)
+            return FALSE;
+    }
 
-    K2_ASSERT(0);  // verify deviceio, kernel, writeable, write-through, etc.
-
-    flag = ((aPTE == A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE) ||
-        (aPTE == A32_MMU_PTE_PERMIT_KERN_RW_USER_RO) ||
-        (aPTE == A32_MMU_PTE_PERMIT_KERN_RW_USER_RW));
+    chk = aPTE & A32_MMU_PTE_PERMIT_MASK;
 
     if (aMemPageAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
     {
-        // pte must be writeable
-        return flag;
+        if ((chk != A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE) &&
+            (chk != A32_MMU_PTE_PERMIT_KERN_RW_USER_RO) &&
+            (chk != A32_MMU_PTE_PERMIT_KERN_RW_USER_RW))
+            return FALSE;
+    }
+    else
+    {
+        if ((chk == A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE) ||
+            (chk == A32_MMU_PTE_PERMIT_KERN_RW_USER_RO) ||
+            (chk == A32_MMU_PTE_PERMIT_KERN_RW_USER_RW))
+            return FALSE;
     }
 
-    // must not be writeable
-    return !flag;
+    chk = aPTE & (A32_PTE_TEX_MASK | A32_PTE_C | A32_PTE_B);
+
+    if (aMemPageAttr & K2OS_MEMPAGE_ATTR_DEVICEIO)
+    {
+        if ((chk != A32_MMU_PTE_REGIONTYPE_STRONG) &&
+            (chk != A32_MMU_PTE_REGIONTYPE_SHAREABLE_DEVICE) &&
+            (chk != A32_MMU_PTE_REGIONTYPE_NONSHAREABLE_DEVICE))
+            return FALSE;
+    }
+    else if (aMemPageAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
+    {
+        if (chk != A32_MMU_PTE_REGIONTYPE_UNCACHED)
+            return FALSE;
+    }
+    else if (aMemPageAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+    {
+        if (chk != A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU)
+            return FALSE;
+
+    }
+    else
+    {
+        if (chk != A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK)
+            return FALSE;
+    }
+
+    return TRUE;
 }
 
 void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT)

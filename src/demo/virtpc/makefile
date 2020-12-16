@@ -32,6 +32,8 @@
 
 include $(K2_ROOT)/src/os/build/k2ospre.make
 
+TARGET_SPECIFIC_ARCH = X32
+
 TARGET_TYPE = IMAGE
 
 IMAGE_HAL_DLX = @os/hal/x32pc/k2oshal

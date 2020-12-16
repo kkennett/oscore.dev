@@ -36,11 +36,11 @@ void KernInit_Stage(KernInitStage aStage)
 {
     gData.mKernInitStage = aStage;
     KernInit_Arch();
+    KernInit_Hal();
     KernInit_Mem();
     KernInit_Process();
     KernInit_Thread();
     KernInit_Sched();
-    KernInit_Hal();
     KernInit_CpuCore();
     KernInit_Dlx();
     KernInit_BootGraf();
