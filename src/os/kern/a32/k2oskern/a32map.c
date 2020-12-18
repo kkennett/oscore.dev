@@ -53,14 +53,14 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     //
     // set EXEC_NEVER if appropriate and possible
     //
-    if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC))
+    if (0 ==(aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC))
     {
         // appropriate
-        if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_XP_CAP)
-        {
+//        if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_XP_CAP)
+//        {
             // possible
             pte |= A32_PTE_EXEC_NEVER;
-        }
+//        }
     }
 
     if (aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO)
@@ -81,7 +81,6 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     }
     else if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
     {
-        K2_ASSERT(onList == KernPhysPageList_DeviceC);
         K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP);
         pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
     }
@@ -222,10 +221,12 @@ BOOL KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMemPageAttr)
 {
     UINT32 chk;
 
-    if (aPTE & A32_PTE_EXEC_NEVER)
+    if (aMemPageAttr & K2OS_MEMPAGE_ATTR_EXEC)
     {
-        if (aMemPageAttr & K2OS_MEMPAGE_ATTR_EXEC)
+        if (aPTE & A32_PTE_EXEC_NEVER)
+        {
             return FALSE;
+        }
     }
 
     chk = aPTE & A32_MMU_PTE_PERMIT_MASK;
@@ -308,9 +309,15 @@ void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRet
 void KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr)
 {
     if (gA32Kern_IsMulticoreCapable)
+    {
+        K2OSKERN_Debug("Multicore InvTlb %08X\n", aVirtAddr);
         A32_TLBInvalidateMVA_MP_AllASID(aVirtAddr);
+    }
     else
+    {
+        K2OSKERN_Debug("Unicore InvTlb %08X\n", aVirtAddr);
         A32_TLBInvalidateMVA_UP_AllASID(aVirtAddr);
+    }
     A32_ISB();
 }
 

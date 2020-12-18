@@ -54,7 +54,7 @@ KernArch_SendIci(
 
     writeVal = (writeVal << 16) | aCurCoreIx;
     
-    MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, aCurCoreIx);
+    MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, writeVal);
 }
 
 void 

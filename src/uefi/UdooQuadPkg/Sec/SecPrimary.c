@@ -501,7 +501,7 @@ UdooQuadPrimaryCoreSecStart(
         ArmEnableVFP();
 
     //
-    // Secure Init of L2 Cache
+    // Secure Init of L2 Cache, but leave it disabled (FALSE)
     //
     L2x0CacheInit(PcdGet32(PcdL2x0ControllerBase),
         PL310_TAG_LATENCIES(L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES),

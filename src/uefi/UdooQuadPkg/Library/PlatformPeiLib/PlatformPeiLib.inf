@@ -56,10 +56,14 @@
     ArmPlatformLib
     PcdLib
     IoLib
+    BaseMemoryLib
 
 [Ppis]
     gEfiPeiMasterBootModePpiGuid                  # PPI ALWAYS_PRODUCED
     gEfiPeiBootInRecoveryModePpiGuid              # PPI SOMETIMES_PRODUCED
+
+[Guids]
+    gEfiHobMemoryAllocStackGuid
 
 [FixedPcd]
     gArmTokenSpaceGuid.PcdFdBaseAddress

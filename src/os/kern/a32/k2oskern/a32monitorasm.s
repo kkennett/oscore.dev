@@ -35,8 +35,6 @@
 .extern KernMonitor_Run
 
 //void A32Kern_MonitorMainLoop(void)
-BEGIN_A32_PROC(A32Kern_MonitorOneTimeInit)
-    bl KernMonitor_OneTimeInit
 BEGIN_A32_PROC(A32Kern_MonitorMainLoop)
     bl KernMonitor_Run
     // if we return interrupts are off and we are WFI on this core
@@ -45,10 +43,10 @@ BEGIN_A32_PROC(A32Kern_MonitorMainLoop)
     mcr p15, 0, r0, c7, c5, 0   // ICIALLU
     isb
     wfi
-    // re-enter at top with interrupts enabled
-    mrs r12, cpsr
-    bic r12, r12, #A32_PSR_I_BIT
-    msr cpsr, r12
+        // re-enter at top with interrupts enabled
+        // mrs r12, cpsr
+        // bic r12, r12, #A32_PSR_I_BIT
+        //msr cpsr, r12
     b  A32Kern_MonitorMainLoop
 END_A32_PROC(A32Kern_MonitorMainLoop)
 
@@ -60,28 +58,12 @@ BEGIN_A32_PROC(A32Kern_ResumeInMonitor)
     msr cpsr, r12
     // set stack ptr  
     mov r13, r0
-    // interrupts on
-    bic r12, r12, #A32_PSR_I_BIT
-    msr cpsr, r12 
+            // interrupts on
+            //bic r12, r12, #A32_PSR_I_BIT
+            //msr cpsr, r12 
     // off to svc loop
     b   A32Kern_MonitorMainLoop
 END_A32_PROC(A32Kern_ResumeInMonitor)
-
-//void A32Kern_EnterMonitorCore0OneTime(UINT32 aStackPtr);
-BEGIN_A32_PROC(A32Kern_EnterMonitorCore0OneTime)
-    // go to sys mode
-    mrs r12, cpsr
-    bic r12, r12, #A32_PSR_MODE_MASK
-    orr r12, r12, #A32_PSR_MODE_SYS
-    msr cpsr, r12
-    // set stack ptr  
-    mov r13, r0
-    // interrupts on
-    bic r12, r12, #A32_PSR_I_BIT
-    msr cpsr, r12 
-    // off to svc loop
-    b   A32Kern_MonitorOneTimeInit
-END_A32_PROC(A32Kern_EnterMonitorCore0OneTime)
 
     .end
 

@@ -36,7 +36,7 @@ TARGET_SPECIFIC_ARCH = X32
 
 TARGET_TYPE = IMAGE
 
-IMAGE_HAL_DLX = @os/hal/x32pc/k2oshal
+IMAGE_HAL_DLX = @demo/virtpc/hal/k2oshal
 
 BUILTIN_KERNEL_DRIVERS += @os/driver/pcibus
 BUILTIN_KERNEL_DRIVERS += @os/driver/vga

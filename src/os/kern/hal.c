@@ -73,8 +73,8 @@ void KernInit_Hal(void)
 {
     switch (gData.mKernInitStage)
     {
-//    case KernInitStage_Before_Virt: if debugging initmem
-    case KernInitStage_At_Hal_Entry:
+    case KernInitStage_Before_Virt: // if debugging initmem
+//    case KernInitStage_At_Hal_Entry:
         sAtHalEntry();
         break;
 

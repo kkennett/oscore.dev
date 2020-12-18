@@ -32,14 +32,6 @@
 
 #include "kern.h"
 
-void KernMonitor_OneTimeInit(void)
-{
-    // 
-    // any other initialization before core 0 
-    // enters the monitor loop for the first
-    // time
-}
-
 void KernMonitor_Run(void)
 {
     K2OSKERN_CPUCORE volatile * pThisCore;

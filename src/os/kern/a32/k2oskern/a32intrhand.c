@@ -52,9 +52,8 @@ A32Kern_CheckSvcInterrupt(
     UINT32 aStackPtr
 )
 {
-    //
-    // TBD
-    //
+    K2OSKERN_Debug("A32Kern_CheckSvcInterrupt()\n");
+    while (1);
 
     /* interrupts off. In SVC mode.  r0-r3,r13(usr/sys),r15 in exception context. r12 saved in r14 spot in exception context. */
     K2_ASSERT(0);
@@ -68,9 +67,8 @@ A32Kern_CheckIrqInterrupt(
     UINT32 aStackPtr
 )
 {
-    //
-    // TBD
-    //
+    K2OSKERN_Debug("A32Kern_CheckIrqInterrupt()\n");
+    while (1);
 
     /* interrupts off. In IRQ mode.  r0-r3,r13(usr/sys),r15 in exception context. r12 saved in r14 spot in exception context. */
     K2_ASSERT(0);
@@ -86,6 +84,8 @@ A32Kern_InterruptHandler(
     UINT32 aCPSR
 )
 {
+    K2OSKERN_Debug("A32Kern_InterruptHandler()\n");
+    while (1);
     //
     // TBD
     //
@@ -100,6 +100,7 @@ A32Kern_InterruptHandler(
 
 void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)
 {
+    K2OSKERN_Debug("KernArch_Panic\n");
     while (1);
 }
 

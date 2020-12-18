@@ -216,6 +216,8 @@
 
 #define K2OS_KVA_COREPAGES_SIZE                     0x00008000
 #define K2OS_KVA_COREPAGES_BASE                     0xFFFE8000
+#define K2OS_KVA_COREPAGES_BASE_HIGH                0xFFFE
+#define K2OS_KVA_COREPAGES_BASE_LOW                 0x8000
 
 #define K2OS_KVA_CORECLEARPAGES_SIZE                0x00008000
 #define K2OS_KVA_CORECLEARPAGES_BASE                0xFFFE0000

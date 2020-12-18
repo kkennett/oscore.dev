@@ -214,7 +214,7 @@ void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *a
         //
         K2_ASSERT(((*((UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtPT))) & K2OSKERN_PTE_PRESENT_BIT) == 0);
         physPageAddr = K2OS_PHYSTRACK_TO_PHYS32(((UINT32)apCurThread->mpWorkPtPage));
-//        K2OSKERN_Debug("MAKE PT %08X -> %08X\n", virtPT, physPageAddr);
+        K2OSKERN_Debug("MAKE PT %08X -> %08X\n", virtPT, physPageAddr);
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, virtPT, physPageAddr, K2OS_MAPTYPE_KERN_PAGETABLE);
 
 #if K2_TARGET_ARCH_IS_ARM
@@ -259,12 +259,12 @@ void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *a
     if (apCurThread->mpWorkPage != NULL)
     {
         physPageAddr = K2OS_PHYSTRACK_TO_PHYS32(((UINT32)apCurThread->mpWorkPage));
-//        K2OSKERN_Debug("MAKE PG %08X -> %08X\n", virtAddr, physPageAddr);
+        K2OSKERN_Debug("MAKE PG %08X -> %08X\n", virtAddr, physPageAddr);
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, physPageAddr, apCurThread->mWorkMapAttr);
     }
     else
     {
-//        K2OSKERN_Debug("MAKE Px %08X (attr %08X)\n", virtAddr, apCurThread->mWorkMapAttr);
+        K2OSKERN_Debug("MAKE Px %08X (attr %08X)\n", virtAddr, apCurThread->mWorkMapAttr);
         KernMap_MakeOneNotPresentPage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, apCurThread->mWorkMapAttr, 0);
     }
 
@@ -381,7 +381,7 @@ UINT32 KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *
         if (aMatchList != KernPhysPageList_Error)
         {
             pPhysPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(physPageAddr);
-//            K2OSKERN_Debug("BRAK PG %08X (was -> %08X)\n", virtAddr, physPageAddr);
+            K2OSKERN_Debug("BRAK PG %08X (was -> %08X)\n", virtAddr, physPageAddr);
             K2_ASSERT(pPhysPage->mpOwnerObject == apMatchPhysPageOwner);
             K2_ASSERT(((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) == aMatchList);
 
@@ -426,7 +426,7 @@ UINT32 KernMap_BreakOneKernPageToThread(K2OSKERN_OBJ_THREAD *apCurThread, void *
         apCurThread->Sched.Item.Args.PurgePt.mPtIndex = ptIndex;
         KernArch_ThreadCallSched();
         apCurThread->mpWorkPtPage = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(apCurThread->Sched.Item.Args.PurgePt.mPtPhysOut);
-//        K2OSKERN_Debug("BRAK PT %08X (was -> %08X)\n", virtPt, physPageAddr);
+        K2OSKERN_Debug("BRAK PT %08X (was -> %08X)\n", virtPt, physPageAddr);
         apCurThread->mTlbFlushNeeded = FALSE;
         apCurThread->mTlbFlushBase = 0;
         apCurThread->mTlbFlushPages = 0;

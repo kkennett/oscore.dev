@@ -31,6 +31,7 @@
 //
 
 #include <PiPei.h>
+#include <Library/BaseMemoryLib.h>
 #include <Library/ArmPlatformLib.h>
 #include <Library/HobLib.h>
 #include <Library/PcdLib.h>
@@ -52,6 +53,33 @@ PlatformPeim(
     VOID
 )
 {
+    EFI_PEI_HOB_POINTERS    Hob;
+
+    //
+    // find stack HOB. change its memory allocation type to EfiReservedMemoryType
+    // so that it will not be reclaimed by OS.  Secondary core stacks must survive
+    // to secondary core statup code in OS, or they will/can crash coming out of
+    // their WFI loop, as they use regular function calls when they come out of the
+    // loop
+    //
+    Hob.Raw = GetHobList();
+    while ((Hob.Raw = GetNextHob(EFI_HOB_TYPE_MEMORY_ALLOCATION, Hob.Raw)) != NULL) 
+    {
+        if (CompareGuid(&gEfiHobMemoryAllocStackGuid, &(Hob.MemoryAllocationStack->AllocDescriptor.Name))) 
+        {
+            if (EfiBootServicesData == Hob.MemoryAllocationStack->AllocDescriptor.MemoryType)
+            {
+                Hob.MemoryAllocationStack->AllocDescriptor.MemoryType = EfiReservedMemoryType;
+            }
+            break;
+        }
+        Hob.Raw = GET_NEXT_HOB(Hob);
+    }
+    if (NULL == Hob.Raw)
+    {
+        DebugPrint(0xFFFFFFFF, "!!!Could not find Stack hob\n");
+    }
+
     //
     // add PEI FV
     //
