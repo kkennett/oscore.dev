@@ -31,7 +31,6 @@
 //
 
 #include "a32kernasm.inc"
-.extern KernMonitor_OneTimeInit
 .extern KernMonitor_Run
 
 //void A32Kern_MonitorMainLoop(void)

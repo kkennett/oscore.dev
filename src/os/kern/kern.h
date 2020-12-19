@@ -1623,7 +1623,6 @@ void KernCpuCore_SendIciToAllOtherCores(K2OSKERN_CPUCORE volatile *apThisCore, K
 
 /* --------------------------------------------------------------------------------- */
 
-void KernMontior_OneTimeInit(void);
 void KernMonitor_Run(void);
 
 /* --------------------------------------------------------------------------------- */

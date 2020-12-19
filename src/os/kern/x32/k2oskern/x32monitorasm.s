@@ -32,11 +32,8 @@
 
 #include "x32kernasm.inc"
 
-.extern KernMonitor_OneTimeInit
 .extern KernMonitor_Run
 
-BEGIN_X32_PROC(X32Kern_MonitorOneTimeInit)
-    call KernMonitor_OneTimeInit
 BEGIN_X32_PROC(X32Kern_MonitorMainLoop)
     call KernMonitor_Run
     // if we return we are WFI on this core
@@ -51,7 +48,6 @@ END_X32_PROC(X32Kern_MonitorMainLoop)
 BEGIN_X32_PROC(X32Kern_EnterMonitor)
     mov %esp, %ecx
     mov %ebp, 0
-//    sti
     jmp X32Kern_MonitorMainLoop
 END_X32_PROC(X32Kern_EnterMonitor)
   

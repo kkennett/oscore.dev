@@ -141,7 +141,6 @@ void X32Kern_IoApicInit(UINT32 aIoApicIx);
 
 void K2_CALLCONV_REGS X32Kern_EnterMonitor(UINT32 aESP);
 void K2_CALLCONV_REGS X32Kern_MonitorMainLoop(void);
-void K2_CALLCONV_REGS X32Kern_MonitorOneTimeInit(void);
 
 void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aESP, UINT32 aFSSel);
 

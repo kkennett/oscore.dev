@@ -43,7 +43,7 @@ DLX_INF := ../../../../os/hal/k2oshal.inf
 SOURCES += x32pc.c
 SOURCES += onsysready.c
 
-STATIC_LIBS += @os/hal/x32pc/dbgser
+STATIC_LIBS += @demo/virtpc/hal/dbgser
 STATIC_LIBS += @shared/lib/k2archx32
 
 #

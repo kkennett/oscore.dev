@@ -181,11 +181,7 @@ void K2_CALLCONV_REGS X32Kern_CpuLaunch(UINT32 aCpuCoreIndex)
 //    pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO;
     pInitCtx->KernelMode.EFLAGS = X32_EFLAGS_SBO;
     pInitCtx->KernelMode.CS = X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL;
-
-    if (aCpuCoreIndex == 0)
-        pInitCtx->KernelMode.EIP = (UINT32)X32Kern_MonitorOneTimeInit;
-    else
-        pInitCtx->KernelMode.EIP = (UINT32)X32Kern_MonitorMainLoop;
+    pInitCtx->KernelMode.EIP = (UINT32)X32Kern_MonitorMainLoop;
 
     pCorePage->CpuCore.mIsExecuting = TRUE;
     K2_CpuWriteBarrier();
