@@ -53,7 +53,7 @@ void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore)
         A32_WriteCONTEXT(gpProc0->mId);
 		
         apThisCore->mpActiveProc = gpProc0;
-        K2_CpuWriteBarrier();
+        K2_CpuFullBarrier();
     }
 }
 
@@ -85,7 +85,7 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
         A32_WriteTTBR0(pProc->mTransTableRegVal);
         A32_WriteCONTEXT(pProc->mId);
         apThisCore->mpActiveProc = pProc;
-        K2_CpuWriteBarrier();
+        K2_CpuFullBarrier();
     }
 
     A32_WriteTPIDRPRW((UINT32)pThread);
