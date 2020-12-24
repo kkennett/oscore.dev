@@ -1176,7 +1176,7 @@ void KernMem_PhysFreeFromThread(K2OSKERN_OBJ_THREAD *apCurThread)
     K2OSKERN_SeqIntrUnlock(&gData.PhysMemSeqLock, disp);
 }
 
-static void sCleanPage(UINT32 aPhysPage)
+static void sClaenPageOnThisCore(UINT32 aPhysPage)
 {
     BOOL                        disp;
     K2OSKERN_CPUCORE volatile * pThisCore;
@@ -1363,7 +1363,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
             pPhysPage = K2_GET_CONTAINER(K2OSKERN_PHYSTRACK_PAGE, apCurThread->WorkPtPages_Dirty.mpHead, ListLink);
             K2_ASSERT((pPhysPage->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG) == 0);
 
-            sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
+            sClaenPageOnThisCore(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
 
             disp = K2OSKERN_SetIntr(FALSE);
 
@@ -1450,7 +1450,7 @@ K2STAT KernMem_CreateSegmentFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKER
 
                     if (!cleanAfter)
                     {
-                        sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
+                        sClaenPageOnThisCore(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
                     }
 
                     disp = K2OSKERN_SetIntr(FALSE);
@@ -1884,7 +1884,7 @@ K2STAT KernMem_MapSegPagesFromThread(K2OSKERN_OBJ_THREAD *apCurThread, K2OSKERN_
 
             if (!cleanAfter)
             {
-                sCleanPage(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
+                sClaenPageOnThisCore(K2OS_PHYSTRACK_TO_PHYS32((UINT32)pPhysPage));
             }
 
             disp = K2OSKERN_SetIntr(FALSE);

@@ -290,16 +290,23 @@ void KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRet
 
 void KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr)
 {
+    K2OSKERN_CPUCORE volatile * pThisCore;
+    BOOL intState;
+
+    intState = K2OSKERN_SetIntr(FALSE);
+    pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
+    K2OSKERN_Debug("A32::INT(%d)::CORE(%d)::TlbInvalidate(0x%08X)\n", intState, pThisCore->mCoreIx, aVirtAddr);
+
     if (gA32Kern_IsMulticoreCapable)
     {
-        K2OSKERN_Debug("Multicore InvTlb %08X\n", aVirtAddr);
         A32_TLBInvalidateMVA_MP_AllASID(aVirtAddr);
     }
     else
     {
-        K2OSKERN_Debug("Unicore InvTlb %08X\n", aVirtAddr);
         A32_TLBInvalidateMVA_UP_AllASID(aVirtAddr);
     }
     A32_ISB();
+
+    K2OSKERN_SetIntr(intState);
 }
 
