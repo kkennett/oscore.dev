@@ -266,12 +266,31 @@ static void sInit_BeforeHal(void)
 
 static void sInit_AfterHal(void)
 {
-    K2OSKERN_Debug("\n\nK2OS Kernel(A32) " __DATE__ " " __TIME__ "\n");
+    K2OSKERN_Debug("\n--------------------\nK2OS Kernel(A32) " __DATE__ " " __TIME__ "\n");
 
     // 
-    // confirm any other architectual support here
+    // confirm/dump any other architectual support here
     //
 
+    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
+    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
+    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
+    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
+    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+    K2OSKERN_Debug("--------------------\n");
+
+#if 0
+--------------------
+K2OS Kernel(A32) Dec 23 2020 14:46 : 02
+SCTLR = 00C5187D
+ACTLR = 00000041
+DACR  = 00000001
+TTBCR = 00000001
+TTBR0 = 4D3EC04A
+TTBR1 = 4D3EC04A
+--------------------
+#endif
 }
 
 static void sInit_BeforeLaunchCores(void)

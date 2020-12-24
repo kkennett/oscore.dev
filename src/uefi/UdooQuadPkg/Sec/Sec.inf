@@ -59,7 +59,6 @@
     ArmGicArchLib
     ArmGicLib
 	ArmPlatformLib
-    L2X0CacheLib
     SerialPortLib
     BaseMemoryLib
     SynchronizationLib

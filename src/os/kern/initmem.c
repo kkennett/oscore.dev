@@ -1071,13 +1071,13 @@ static void sA32Init_BeforeVirt(void)
         gData.mA32StartAreaPhys = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
 
         //
-        // put all the pages on the overhead list
+        // put all the pages on the paging list
         //
         count = K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT;
         do {
-            pTrackPage->mFlags = (KernPhysPageList_KOver << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) | (userVal & K2OSKERN_PHYSTRACK_PROP_MASK);
+            pTrackPage->mFlags = (KernPhysPageList_Paging << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) | (userVal & K2OSKERN_PHYSTRACK_PROP_MASK);
             pTrackPage->mpOwnerObject = NULL;
-            K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_KOver], &pTrackPage->ListLink);
+            K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_Paging], &pTrackPage->ListLink);
             pTrackPage++;
         } while (--count > 0);
     }

@@ -50,4 +50,6 @@
 
 #define SLOW_SECONDARY_CORE_STARTUP 0
 
+#define A9_SCU_POWER_STATUS_OFFSET  0x8
+
 #endif // __SEC_H

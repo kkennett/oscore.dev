@@ -71,7 +71,7 @@
 
 #define K2OS_MAPTYPE_KERN_TRANSITION                (K2OS_MAPTYPE_KERN_WRITETHRU_CACHED | K2OS_MEMPAGE_ATTR_EXEC | K2OS_MEMPAGE_ATTR_TRANSITION)
                                                   
-#define K2OS_MAPTYPE_KERN_PAGETABLE                 (K2OS_MAPTYPE_KERN_WRITETHRU_CACHED | K2OS_MEMPAGE_ATTR_PAGING)
+#define K2OS_MAPTYPE_KERN_PAGETABLE                 (K2OS_MAPTYPE_KERN_DATA | K2OS_MEMPAGE_ATTR_PAGING)
 #define K2OS_MAPTYPE_KERN_PAGEDIR                   K2OS_MAPTYPE_KERN_PAGETABLE
 
 /* --------------------------------------------------------------------------------- */

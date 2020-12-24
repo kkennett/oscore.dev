@@ -91,8 +91,6 @@ UdooQuadSecondaryCoreSecStart(
     // Allow NS access to Private Peripherals
     //
     BaseAddress = ArmGetScuBaseAddress();
-    MmioWrite32(BaseAddress + A9_SCU_INVALL_OFFSET, 0xffffffff);
-    MmioWrite32(BaseAddress + A9_SCU_CONTROL_OFFSET, 0x1);
     MmioOr32(BaseAddress + A9_SCU_SACR_OFFSET, 0xf);
     MmioOr32(BaseAddress + A9_SCU_SSACR_OFFSET, 0xfff);
 

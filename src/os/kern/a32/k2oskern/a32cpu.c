@@ -60,16 +60,21 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     K2_ASSERT(pThisCorePage->CpuCore.mCoreIx == aCpuIx);
 
     //
-    // clean caches and set up SCTRL
+    // set up SCTRL
     //
-    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
+//    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
     sctrl.mAsUINT32 = A32_ReadSCTRL();
     sctrl.Bits.mAFE = 0;    // afe off 
     sctrl.Bits.mTRE = 0;    // tex remap off
     sctrl.Bits.mC = 1;      // dcache enable
     sctrl.Bits.mI = 1;      // icache enable
     sctrl.Bits.mZ = 1;      // branch predict enable
+    sctrl.Bits.mV = 1;      // high vectors
     A32_WriteSCTRL(sctrl.mAsUINT32);
+
+    //
+    // caches and BP are ON now for this core
+    //
     A32_ICacheInvalidateAll_UP();
     A32_BPInvalidateAll_UP();
     A32_DSB();
@@ -82,14 +87,14 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     v = gData.mpShared->LoadInfo.mTransBasePhys;
     if (gA32Kern_IsMulticoreCapable)
     {
-        v |= 0x01; // IRGN bits = 01 inner write-through cacheable (counter intuitive bit 0 is bit 1 of IRGN, bit 6 is bit 0)
+        v |= 0x40; // IRGN bits = 01 inner write-back write-allocate cacheable (counter intuitive bit 0 is bit 1 of IRGN, bit 6 is bit 0)
         v |= 0x02; // S bit (shareable)
     }
     else
     {
         v |= 0x01; // C bit (inner cacheable)
     }
-    v |= 0x10; // RGN bits  (set outer write-through cacheable)
+    v |= 0x08; // RGN bits  (set 01b = outer write-back write-allocate cacheable)
     A32_WriteTTBR0(v);
     A32_WriteTTBR1(v);
 
@@ -108,10 +113,20 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     pThisCorePage->CpuCore.mIsExecuting = TRUE;
     pThisCorePage->CpuCore.mIsInMonitor = TRUE;
 
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)&pThisCorePage->CpuCore, sizeof(K2OSKERN_CPUCORE));
     K2_CpuWriteBarrier();
 
     A32Kern_IntrInitGicPerCore();
+
+    K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
+    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
+    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
+    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
+    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
+    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
+    K2OSKERN_Debug("--------------------\n");
 
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     A32Kern_ResumeInMonitor(v);
@@ -136,8 +151,6 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     UINT32                  physAddr;
     UINT32                  virtAddr;
 
-    K2OSKERN_Debug("sStartAuxCpu(%d)\n", aCpuIx);
-
     physAddr = gData.mpShared->LoadInfo.CpuInfo[aCpuIx].mAddrSet;
     
     virtAddr = A32KERN_APSTART_CPUINFO_PAGE_VIRT | (physAddr & K2_VA32_MEMPAGE_OFFSET_MASK);
@@ -150,14 +163,14 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     //
     // tell CPU aCpuIx to jump to transit page + sizeof(A32AUXCPU_STARTDATA)
     //
-    K2OSKERN_Debug("Launch by setting addr and firing ICI %08X\n", (1 << (aCpuIx + 16)));
     *((UINT32 *)virtAddr) = transitPhys + sizeof(A32AUXCPU_STARTDATA);
-
-//    MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, (1 << (aCpuIx + 16)));
-
-    K2OSKERN_Debug("Break map and invalidate tlb\n");
     KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT, 0);
     KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_CPUINFO_PAGE_VIRT);
+
+    //
+    // this fires the SGI that wakes up the aux core 
+    //
+    MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, (1 << (aCpuIx + 16)));
 }
 
 void KernArch_LaunchCores(void)
@@ -173,7 +186,7 @@ void KernArch_LaunchCores(void)
     K2OSKERN_COREPAGE *     pCorePage;
     A32AUXCPU_STARTDATA *   pStartData;
 
-    if (gData.mCpuCount > 8)
+    if (gData.mCpuCount > 1)
     {
         //
         // vector page has been installed already
@@ -222,13 +235,19 @@ void KernArch_LaunchCores(void)
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, ttbPhys + 0x3000, K2OS_MAPTYPE_KERN_PAGEDIR);
         pTTB = (A32_TRANSTBL *)A32KERN_APSTART_TTB_VIRT;
         K2MEM_Zero(pTTB, sizeof(A32_TRANSTBL));
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pTTB, sizeof(A32_TRANSTBL));
+        K2_CpuFullBarrier();
 
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_PAGETABLE_VIRT, ptPhys, K2OS_MAPTYPE_KERN_PAGETABLE);
         pPageTable = (A32_PAGETABLE *)A32KERN_APSTART_PAGETABLE_VIRT;
         K2MEM_Zero(pPageTable, sizeof(A32_PAGETABLE));
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pPageTable, sizeof(A32_PAGETABLE));
+        K2_CpuFullBarrier();
 
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT, transitPhys, K2OS_MAPTYPE_KERN_DATA);
         K2MEM_Zero((void *)A32KERN_APSTART_TRANSIT_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)A32KERN_APSTART_TRANSIT_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
+        K2_CpuFullBarrier();
 
         // 
         // put the pagetable for the transition page into the TTB
@@ -240,6 +259,8 @@ void KernArch_LaunchCores(void)
         pQuad->Quad[1].mAsUINT32 = workVal + 0x400;
         pQuad->Quad[2].mAsUINT32 = workVal + 0x800;
         pQuad->Quad[3].mAsUINT32 = workVal + 0xC00;
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pQuad, sizeof(A32_TTBEQUAD));
+        K2_CpuFullBarrier();
 
         //
         // put the transition page into the pagetable
@@ -248,6 +269,8 @@ void KernArch_LaunchCores(void)
         pPageTable->Entry[workVal].mAsUINT32 =
             transitPhys | 
             A32_PTE_PRESENT | A32_MMU_PTE_REGIONTYPE_UNCACHED | A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE;
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, &pPageTable->Entry[workVal], sizeof(UINT32));
+        K2_CpuFullBarrier();
 
         //
         // put all pagetables for kernel into the TTB as well
@@ -257,9 +280,13 @@ void KernArch_LaunchCores(void)
             (void *)(K2OS_KVA_TRANSTAB_BASE + 0x2000),
             0x2000
         );
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, &pTTB->QuadEntry[K2_VA32_PAGETABLES_FOR_4G / 2], 0x2000);
+        K2_CpuFullBarrier();
 
         workVal = ((UINT32)A32Kern_AuxCpuStart_END) - ((UINT32)A32Kern_AuxCpuStart) + 4;
         K2MEM_Copy((void *)A32KERN_APSTART_TRANSIT_PAGE_VIRT, (void *)A32Kern_AuxCpuStart, workVal);
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)A32KERN_APSTART_TRANSIT_PAGE_VIRT, workVal);
+        K2_CpuFullBarrier();
 
         //
         // copy start code to transition page
@@ -270,8 +297,7 @@ void KernArch_LaunchCores(void)
         pStartData->mReg_COPROC = A32_ReadCPACR();
         pStartData->mReg_CONTROL = A32_ReadSCTRL();
         pStartData->mVirtContinue = (UINT32)A32Kern_LaunchEntryPoint;
-
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pStartData, sizeof(A32AUXCPU_STARTDATA));
         K2_CpuFullBarrier();
 
         //
@@ -301,16 +327,20 @@ void KernArch_LaunchCores(void)
 
             K2_ASSERT(pCorePage->CpuCore.mIsExecuting == FALSE);
 
+            K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, (void*)&pCorePage->CpuCore, sizeof(K2OSKERN_CPUCORE));
+            K2_CpuWriteBarrier();
+
             sStartAuxCpu(workVal, transitPhys);
 
-            while (pCorePage->CpuCore.mIsExecuting == FALSE);
+            while (pCorePage->CpuCore.mIsExecuting == FALSE)
+            {
+                for (done = 0; done < 10000000; done++);
+                K2OSKERN_Debug("red %d\n", pCorePage->CpuCore.mIsExecuting);
+                K2_CpuReadBarrier();
+            }
         }
     }
-
-    
-    K2OSKERN_Debug("Core intr mask = %08X\n", A32_GetCoreInterruptMask());
-
-    K2OSKERN_Debug("Launch Core 0\n");
+   
     /* go to entry point for core 0 */
     A32Kern_LaunchEntryPoint(0);
 

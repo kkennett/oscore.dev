@@ -363,16 +363,6 @@ UdooQuadPrimaryCoreSecStart(
     sSecInitArch();
 
     //
-    // stop all other cores
-    //
-    Reg32 = MmioRead32(IMX6_PHYSADDR_SRC_SCR);
-    Reg32 &= ~(
-        IMX6_SRC_SCR_CORE1_RST | IMX6_SRC_SCR_CORE1_ENABLE
-        | IMX6_SRC_SCR_CORE2_RST | IMX6_SRC_SCR_CORE2_ENABLE
-        | IMX6_SRC_SCR_CORE3_RST | IMX6_SRC_SCR_CORE3_ENABLE);
-    MmioWrite32(IMX6_PHYSADDR_SRC_SCR, Reg32);
-
-    //
     // init required peripherals
     //
     sInitGPT();
@@ -484,13 +474,11 @@ UdooQuadPrimaryCoreSecStart(
     ArmEnableSWPInstruction();
 
     //
-    // Get Snoop Control Unit base address and enable it
+    // Get Snoop Control Unit base address
     // Allow NS access to SCU register
     // Allow NS access to Private Peripherals
     //
     BaseAddress = ArmGetScuBaseAddress();
-    MmioWrite32(BaseAddress + A9_SCU_INVALL_OFFSET, 0xffffffff);
-    MmioWrite32(BaseAddress + A9_SCU_CONTROL_OFFSET, 0x1);
     MmioOr32(BaseAddress + A9_SCU_SACR_OFFSET, 0xf);
     MmioOr32(BaseAddress + A9_SCU_SSACR_OFFSET, 0xfff);
 
@@ -499,15 +487,6 @@ UdooQuadPrimaryCoreSecStart(
     //
     if (FixedPcdGet32(PcdVFPEnabled))
         ArmEnableVFP();
-
-    //
-    // Secure Init of L2 Cache, but leave it disabled (FALSE)
-    //
-    L2x0CacheInit(PcdGet32(PcdL2x0ControllerBase),
-        PL310_TAG_LATENCIES(L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES),
-        PL310_DATA_LATENCIES(L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES, L2x0_LATENCY_8_CYCLES),
-        0, ~0, // Use default setting for the Auxiliary Control Register
-        FALSE);
 
     //
     // Enable interrupt distributor and this cpu's interface
@@ -544,6 +523,15 @@ UdooQuadPrimaryCoreSecStart(
     MmioWrite32(IMX6_PHYSADDR_SRC_SCR, Reg32);
     Reg32 = MmioRead32(IMX6_PHYSADDR_GPT_CNT) + SECONDARY_START_US_DELAY;
     while (MmioRead32(IMX6_PHYSADDR_GPT_CNT) < Reg32);
+
+    //
+    // wait for all cores to be powered on and participating in SMP
+    //
+    BaseAddress = ArmGetScuBaseAddress();
+    if (0x000000F3 != (0x000000F3 & MmioRead32(BaseAddress + A9_SCU_CONFIG_OFFSET)))
+    {
+        while (0x000000F3 != (0x000000F3 & MmioRead32(BaseAddress + A9_SCU_CONFIG_OFFSET)));
+    }
 
     // Enter Trusted Monitor for setup there
     return (UINT32)PrimaryTrustedMonitorInit;

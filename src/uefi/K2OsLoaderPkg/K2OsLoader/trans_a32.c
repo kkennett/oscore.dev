@@ -53,13 +53,14 @@ static UINT32 const sTransitionCode[] =
     0xe3520102,    //    cmp r2, #0x80000000
 
     // set Multicore TTB memory configuration
-    0x03855001,    //    orreq r5, r5, #0x01   // IRGN bits (set 10b Inner write-through cacheable)
-    0x03855010,    //    orreq r5, r5, #0x10   // RGN bits  (set 10b Outer write-through cacheable)
-    0x03855022,    //    orreq r5, r5, #0x22   // S bit     (set Shareable, inner)
+    0x03855040,    //    orreq r5, r5, #0x40   // IRGN bits (set 01b Inner write-back write-allocate cacheable)
+    0x03855002,    //    orreq r5, r5, #0x02   // S bit     (set Shareable)
 
     // set Single-core TTB memory configuration
     0x13855001,    //    orrne r5, r5, #0x01   // C bit     (set Inner Cacheable)
-    0x13855008,    //    orrne r5, r5, #0x08   // RGN bits  (set 10b Outer write-through cacheable)
+
+    // set RGN bits (outer write-through cacheable)
+    0xe3855008,    //    orr   r5, r5, #0x08   // RGN bits  (set 01b Outer write-back write-allocate cacheable)
 
     // set TTBR and CR
     0xf57ff04f,    //    dsb

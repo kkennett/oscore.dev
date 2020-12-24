@@ -86,36 +86,18 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     }
     else
     {
-        if (aPageMapAttr & K2OS_MEMPAGE_ATTR_KERNEL)
+        K2_ASSERT(0 != (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WB_CAP));
+        pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
+        if ((K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING) == (aPageMapAttr & (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING)))
         {
-            if (aPageMapAttr & K2OS_MEMPAGE_ATTR_PAGING)
+            if (aPageMapAttr & K2OS_MEMPAGE_ATTR_TRANSITION)
             {
-                if (aPageMapAttr & K2OS_MEMPAGE_ATTR_TRANSITION)
-                {
-                    K2_ASSERT(onList == KernPhysPageList_Trans);
-                }
-                else
-                {
-                    K2_ASSERT(onList == KernPhysPageList_Paging);
-                }
-                if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP)
-                    pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
-                else
-                {
-                    K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_UC_CAP);
-                    pte |= A32_MMU_PTE_REGIONTYPE_UNCACHED;
-                }
+                K2_ASSERT(onList == KernPhysPageList_Trans);
             }
             else
             {
-                K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WB_CAP);
-                pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
+                K2_ASSERT(onList == KernPhysPageList_Paging);
             }
-        }
-        else
-        {
-            K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WB_CAP);
-            pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
         }
     }
 

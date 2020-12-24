@@ -46,6 +46,8 @@ GCC_ASM_IMPORT(UdooQuadSecondaryCoreSecStart)
 GCC_ASM_IMPORT(NonSecureSMC)
 GCC_ASM_EXPORT(ArmGetScuBaseAddress)
 
+#define A9_SCU_INVALL_OFFSET        0xC
+
 #define A32_ACTRL_MAINT_BCAST               0x001
 #define A32_ACTLR_L1_PREFETCH_ENABLE        0x004
 #define A32_ACTLR_WRITE_ZEROS_MODE          0x008
@@ -72,18 +74,21 @@ GCC_ASM_EXPORT(ArmGetScuBaseAddress)
 
 ASM_PFX(_ModuleEntryPoint):
     // disable interrupts and set SVC mode
+    // do not r/w memory
     mrs r12, cpsr
     bic r12, r12, #A32_PSR_MODE_MASK
     orr r12, r12, #(A32_PSR_F_BIT | A32_PSR_I_BIT)
     orr r12, r12, #A32_PSR_MODE_SVC
     msr cpsr, r12      
 
-    // now in SVC mode in secure state. clear link register and backup our cpsr
+    // now in SVC mode in secure state. clear link register and backup our cpsr to spsr
+    // do not r/w memory
     mov lr, #0
     mrs r12, cpsr
     msr spsr_cxsf, r12
 
     // set CP15 known state with MMU off, alignment check off, low vectors, caches off
+    // do not r/w memory
     mrc p15, 0, r12, c1, c0, 0   
     bic r12, r12, #A32_SCTRL_M_MMUENABLE
     bic r12, r12, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
@@ -95,51 +100,81 @@ ASM_PFX(_ModuleEntryPoint):
     mcr p15, 0, r12, c1, c0, 0   
     isb
 
-    // Auxiliary Control Register - enable SMP and cache/tlb maintenance broadcasts
-    mrc	p15, 0, r12, c1, c0, 1 
-    orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
-    mcr p15, 0, r12, c1, c0, 1 
-    isb
-
-    // setup argument value for MCRs
-    mov r12, #0                          
-    // invalidate TLB's
-    mcr p15, 0, r12, c8, c7, 0           
-    // invalidate I cache
-    mcr p15, 0, r12, c7, c5, 0           
-    // invalidate BP array
-    mcr p15, 0, r12, c7, c5, 6           
+    // invalidate stuff
+    // do not r/w memory
+    mov r12, #0      
+    mcr p15, 0, r12, c8, c7, 0           // invalidate TLBs
+    mcr p15, 0, r12, c7, c5, 0           // invalidate I cache   
+    mcr p15, 0, r12, c7, c5, 6           // invalidate BP array
 
     // ARM ERRATA 743622
+    // do not r/w memory
 	mrc	p15, 0, r12, c15, c0, 1
 	orr	r12, r0, #0x40
 	mcr	p15, 0, r12, c15, c0, 1
 
     // set manager access for all domains
+    // do not r/w memory
     mvn r12, #0                  
     mcr p15, 0, r12, c3, c0, 0 
 
-    // set monitor vector table base address (MVBAR)
-    adr r12, _MonitorResetEntry
-    mcr p15, 0, r12, c12, c0, 1
-    isb
-
-    // set interrupt priority mask to maximum to allow all priorities through
-    ldr   r0, =FixedPcdGet32(PcdGicInterruptInterfaceBase)
-    mov   r12, #0xFF
-    str   r12, [r0, #ARM_GIC_OFFSET_ICCPMR]
-
     // determine if we are the primary core and if so jump to primary-only init
+    // do not r/w memory
     mrc   p15, 0, r12, c0, c0, 5
     ands  r12, r12, #3
     mov   r7, r12
-    beq   _PrimaryInit
+    bne   _SecondaryInit
 
-    // for each core the L1 comes out of reset in an undefined state, so
-    // a clean causes a bunch of cache lines with uninitialized data and 
-    // uninitialized tags to get written out to memory, which does really 
-    // unpleasant things to the main processor.  So we invalidate the 
-    // whole L1 for a secondary core here when it comes out of reset
+    // Primary Core Only -------------------------------------------------
+
+    // turn off all other cores (via IMX6_PHYSADDR_SRC_SCR)
+    // do not r/w memory
+    mov  r0, #0x8000
+    movt r0, #0x020D
+    ldr r12, [r0]
+    bic r12, r12, #IMX6_SRC_SCR_CORE1_RST
+    bic r12, r12, #IMX6_SRC_SCR_CORE1_ENABLE
+    bic r12, r12, #IMX6_SRC_SCR_CORE2_RST
+    bic r12, r12, #IMX6_SRC_SCR_CORE2_ENABLE
+    bic r12, r12, #IMX6_SRC_SCR_CORE3_RST
+    bic r12, r12, #IMX6_SRC_SCR_CORE3_ENABLE
+    str r12, [r0]
+
+    // get SCU base address to r0
+    // do not r/w memory
+    mrc   p15, 4, r0, c15, c0, 0
+    
+    // disable the SCU, and then invalidate SCU duplicate tags for all processors.
+    // do not r/w memory
+    mov r12, #1
+    str r12, [r0]
+    add r0, r0, #A9_SCU_INVALL_OFFSET
+    mvn r12, #0                  
+    str r12, [r0]
+    
+    // Make sure L2 Cache is disabled
+    // do not r/w memory
+    mov r0,  #0x2100
+    movt r0, #0x00A0    // 0x00A02100 is PL310 control register
+    ldr r1, [r0]
+    bic r1, r1, #1
+    str r1, [r0]
+    dsb
+    isb
+
+    // invalidate the entire L2 (as per app note in manual)
+    // do not r/w memory
+    mov r0,  #0x277C
+    movt r0, #0x00A0    // 0x00A0277C is invalidate by way/index 
+    mov r1, #0xFFFF
+    str r1, [r0]
+_Wait_Invalidate_Completed:
+    ldr r2, [r0]
+    ands r3, r2, r1
+    bne _Wait_Invalidate_Completed
+
+    // Cache is off, but we still invalidate the entire L1 (after we did the L2)
+    // do not r/w memory
     mov     r0, #0
     mcr     p15, 2, r0, c0, c0, 0
     mrc     p15, 1, r0, c0, c0, 0
@@ -167,35 +202,29 @@ ASM_PFX(_ModuleEntryPoint):
     dsb
     isb
 
-    // set secondary core stack location - 1KB each stack in SEC
-    ldr r0, =(UDOOQUAD_OCRAM_SEC_STACKS_MEM + UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE - 4)
-    ldr r1, =UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE
-    mul r2, r1, r7
-    add sp, r0, r2
+    // all caches should be clean and off at this point
 
-    // put core index in first arg, stack pointer in second arg
-    mov r0, r7
-    mov r1, sp
-    blx ASM_PFX(UdooQuadSecondaryCoreSecStart)
 
-    b _Do_Monitor_Init
+    // enable the SCU
+    mrc p15, 4, r0, c15, c0, 0
+    mov r12, #0
+    str r12, [r0]
 
-_PrimaryInit:
-    // Primary Core Only - Make sure L2 Cache is disabled
-    ldr r0, =0x00A02100
-    ldr r1, [r0]
-    bic r1, r1, #1
-    str r1, [r0]
-    dsb
+    // set SMP mode
+    mrc	p15, 0, r12, c1, c0, 1 
+    orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
+    mcr p15, 0, r12, c1, c0, 1 
     isb
-    // invalidate the entire L2 (as per app note in manual)
-    ldr r0, =0x00A0277C
-    ldr r1, =0xFFFF 
-    str r1, [r0]
-_Wait_Invalidate_Completed:
-    ldr r2, [r0]
-    ands r3, r2, r1
-    bne _Wait_Invalidate_Completed
+
+    // set monitor vector table base address (MVBAR)
+    adr r12, _MonitorResetEntry
+    mcr p15, 0, r12, c12, c0, 1
+    isb
+
+    // set interrupt priority mask to maximum to allow all priorities through
+    ldr   r0, =FixedPcdGet32(PcdGicInterruptInterfaceBase)
+    mov   r12, #0xFF
+    str   r12, [r0, #ARM_GIC_OFFSET_ICCPMR]
 
     // set Primary core SVC stack location - 1KB stack at beginning of free OCRAM
     ldr sp, =(UDOOQUAD_OCRAM_SEC_STACKS_MEM + UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE - 4)
@@ -243,6 +272,70 @@ _Monitor_Return:
     bx r4
 _Hang:
     b   _Hang
+
+
+_SecondaryInit:
+    // Invalidate entire L1
+    mov     r0, #0
+    mcr     p15, 2, r0, c0, c0, 0
+    mrc     p15, 1, r0, c0, c0, 0
+    mov     r1, #0x8000
+    sub     r1, r1, #1
+    and     r2, r1, r0, lsr #13
+    mov     r1, #0x400
+    sub     r1, r1, #1
+    and     r3, r1, r0, lsr #3
+    add     r2, r2, #1
+    and     r0, r0, #0x7
+    add     r0, r0, #4
+    clz     r1, r3    
+    add     r4, r3, #1
+1:  sub     r2, r2, #1
+    mov     r3, r4    
+2:  subs    r3, r3, #1
+    mov     r5, r3, lsl r1
+    mov     r6, r2, lsl r0
+    orr     r5, r5, r6
+    mcr     p15, 0, r5, c7, c6, 2
+    bgt     2b
+    cmp     r2, #0
+    bgt     1b
+    dsb
+    isb
+
+    // enable the SCU
+    mrc p15, 4, r0, c15, c0, 0
+    mov r12, #0
+    str r12, [r0]
+
+    // set SMP mode
+    mrc	p15, 0, r12, c1, c0, 1 
+    orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
+    mcr p15, 0, r12, c1, c0, 1 
+    isb
+
+    // set monitor vector table base address (MVBAR)
+    adr r12, _MonitorResetEntry
+    mcr p15, 0, r12, c12, c0, 1
+    isb
+
+    // set interrupt priority mask to maximum to allow all priorities through
+    ldr   r0, =FixedPcdGet32(PcdGicInterruptInterfaceBase)
+    mov   r12, #0xFF
+    str   r12, [r0, #ARM_GIC_OFFSET_ICCPMR]
+
+    // set secondary core stack location - 1KB each stack in SEC
+    ldr r0, =(UDOOQUAD_OCRAM_SEC_STACKS_MEM + UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE - 4)
+    ldr r1, =UDOOQUAD_OCRAM_SEC_STACKS_SIZE_PERCORE
+    mul r2, r1, r7
+    add sp, r0, r2
+
+    // put core index in first arg, stack pointer in second arg
+    mov r0, r7
+    mov r1, sp
+    blx ASM_PFX(UdooQuadSecondaryCoreSecStart)
+
+    b _Do_Monitor_Init
 
     // monitor vector table
 .align 5

@@ -58,7 +58,7 @@
     *_GCC48_ARM_DLINK_FLAGS = -z common-page-size=0x1000
 
 [BuildOptions.common]
-    *_GCC48_*_ASL_PATH = C:\repo\k2osdev\src\uefi\BaseTools\Bin\asl\iasl.exe
+    *_GCC48_*_ASL_PATH = C:\repo\oscore.dev\src\uefi\BaseTools\Bin\asl\iasl.exe
 
 [LibraryClasses.common]
     BaseLib                     |MdePkg/Library/BaseLib/BaseLib.inf
@@ -193,7 +193,6 @@
         <LibraryClasses>
         ArmGicLib                   |UdooQuadPkg/Drivers/ArmPkg/ArmGic/ArmGicSecLib.inf
         ArmGicArchLib               |ArmPkg/Library/ArmGicArchSecLib/ArmGicArchSecLib.inf
-        L2X0CacheLib                |UdooQuadPkg/Library/ArmPlatformPkg/PL310L2Cache/PL310L2CacheSec.inf
         SynchronizationLib          |MdePkg/Library/BaseSynchronizationLib/BaseSynchronizationLib.inf
     }
 
