@@ -5,7 +5,7 @@
 *.opendb
 k2tools32/*
 bld/*
-img/*
+img/* 
 *.ipch
 vhd/*
 src/uefi/build/*
