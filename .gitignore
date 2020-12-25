@@ -10,3 +10,4 @@ img/*
 vhd/*
 src/uefi/build/*
 src/uefi/conf/*
+doc/.vs/*
