@@ -65,7 +65,7 @@ void KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aP
     pte = *pPTE;
     K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) == 0);
 
-    *pPTE = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
+    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, KernArch_MakePTE(aPhysAddr, aPageMapAttr));
 
     if (0 == (pte & K2OSKERN_PTE_NP_BIT))
     {
@@ -101,7 +101,7 @@ void KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32
     pte = *pPTE;
     K2_ASSERT((pte & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) == 0);
 
-    *pPTE = aNpFlags | aContent;
+    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, aNpFlags | aContent);
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
@@ -132,11 +132,12 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFla
     if (aNpFlags & K2OSKERN_PTE_NP_BIT)
     {
         K2_ASSERT(0 == (aNpFlags & K2OSKERN_PTE_PRESENT_BIT));
-        *pPTE = aNpFlags;
+        
+        KernArch_WritePTE(FALSE, aVirtAddr, pPTE, aNpFlags);
     }
     else
     {
-        *pPTE = 0;
+        KernArch_WritePTE(FALSE, aVirtAddr, pPTE, 0);
 
         if (aVirtAddr >= K2OS_KVA_KERN_BASE)
         {

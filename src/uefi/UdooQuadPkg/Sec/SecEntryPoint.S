@@ -89,7 +89,7 @@ ASM_PFX(_ModuleEntryPoint):
 
     // set CP15 known state with MMU off, alignment check off, low vectors, caches off
     // do not r/w memory
-    mrc p15, 0, r12, c1, c0, 0   
+    mrc p15, 0, r12, c1, c0, 0   // read SCTRL
     bic r12, r12, #A32_SCTRL_M_MMUENABLE
     bic r12, r12, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
     bic r12, r12, #A32_SCTRL_V_HIGHVECTORS
@@ -97,30 +97,30 @@ ASM_PFX(_ModuleEntryPoint):
     bic r12, r12, #A32_SCTRL_C_DCACHEENABLE
     bic r12, r12, #A32_SCTRL_Z_BRANCHPREDICTENABLE
     bic r12, r12, #A32_SCTRL_EE_EXCEPTIONENDIAN
-    mcr p15, 0, r12, c1, c0, 0   
+    mcr p15, 0, r12, c1, c0, 0   // write SCTRL
     isb
 
     // invalidate stuff
     // do not r/w memory
     mov r12, #0      
-    mcr p15, 0, r12, c8, c7, 0           // invalidate TLBs
-    mcr p15, 0, r12, c7, c5, 0           // invalidate I cache   
-    mcr p15, 0, r12, c7, c5, 6           // invalidate BP array
+    mcr p15, 0, r12, c8, c7, 0           // invalidate TLBs - TLBIALL
+    mcr p15, 0, r12, c7, c5, 0           // invalidate I cache - ICIALLU  
+    mcr p15, 0, r12, c7, c5, 6           // invalidate BP array - BPIALL
 
     // ARM ERRATA 743622
     // do not r/w memory
-	mrc	p15, 0, r12, c15, c0, 1
+	mrc	p15, 0, r12, c15, c0, 1     // imp defined read
 	orr	r12, r0, #0x40
-	mcr	p15, 0, r12, c15, c0, 1
+	mcr	p15, 0, r12, c15, c0, 1     // imp defined write
 
     // set manager access for all domains
     // do not r/w memory
     mvn r12, #0                  
-    mcr p15, 0, r12, c3, c0, 0 
+    mcr p15, 0, r12, c3, c0, 0      // write DACR
 
     // determine if we are the primary core and if so jump to primary-only init
     // do not r/w memory
-    mrc   p15, 0, r12, c0, c0, 5
+    mrc   p15, 0, r12, c0, c0, 5    // read MPIDR
     ands  r12, r12, #3
     mov   r7, r12
     bne   _SecondaryInit
@@ -129,7 +129,7 @@ ASM_PFX(_ModuleEntryPoint):
 
     // turn off all other cores (via IMX6_PHYSADDR_SRC_SCR)
     // do not r/w memory
-    mov  r0, #0x8000
+    movw r0, #0x8000
     movt r0, #0x020D
     ldr r12, [r0]
     bic r12, r12, #IMX6_SRC_SCR_CORE1_RST
@@ -142,11 +142,11 @@ ASM_PFX(_ModuleEntryPoint):
 
     // get SCU base address to r0
     // do not r/w memory
-    mrc   p15, 4, r0, c15, c0, 0
-    
+    mrc   p15, 4, r0, c15, c0, 0    // read CBAR (PERIPHBASE)
+
     // disable the SCU, and then invalidate SCU duplicate tags for all processors.
     // do not r/w memory
-    mov r12, #1
+    mov r12, #1             // scu DISABLE is bit 0, set to a one not to a zero
     str r12, [r0]
     add r0, r0, #A9_SCU_INVALL_OFFSET
     mvn r12, #0                  
@@ -154,71 +154,71 @@ ASM_PFX(_ModuleEntryPoint):
     
     // Make sure L2 Cache is disabled
     // do not r/w memory
-    mov r0,  #0x2100
+    movw r0, #0x2100
     movt r0, #0x00A0    // 0x00A02100 is PL310 control register
     ldr r1, [r0]
-    bic r1, r1, #1
+    bic r1, r1, #1  // clear the enable bit
     str r1, [r0]
     dsb
     isb
 
     // invalidate the entire L2 (as per app note in manual)
     // do not r/w memory
-    mov r0,  #0x277C
+    movw r0,  #0x277C
     movt r0, #0x00A0    // 0x00A0277C is invalidate by way/index 
-    mov r1, #0xFFFF
+    movw r1, #0xFFFF
+    movt r1, #0
     str r1, [r0]
 _Wait_Invalidate_Completed:
     ldr r2, [r0]
     ands r3, r2, r1
     bne _Wait_Invalidate_Completed
 
-    // Cache is off, but we still invalidate the entire L1 (after we did the L2)
+    // Cache is off, but we still invalidate the entire L1 (after we did the L2).  B4-1737
     // do not r/w memory
-    mov     r0, #0
-    mcr     p15, 2, r0, c0, c0, 0
-    mrc     p15, 1, r0, c0, c0, 0
-    mov     r1, #0x8000
+    mov     r0, #0                      // select L1 data cache
+    mcr     p15, 2, r0, c0, c0, 0       // write CSSELR
+    mrc     p15, 1, r0, c0, c0, 0       // read current CCSIDR 
+    mov     r1, #0x8000             // make mask 0x7FFF 
+    sub     r1, r1, #1              
+    and     r2, r1, r0, lsr #13     // r2 = extract # of sets (15 bits)
+    mov     r1, #0x400              // make mask 0x3FF
     sub     r1, r1, #1
-    and     r2, r1, r0, lsr #13
-    mov     r1, #0x400
-    sub     r1, r1, #1
-    and     r3, r1, r0, lsr #3
-    add     r2, r2, #1
-    and     r0, r0, #0x7
+    and     r3, r1, r0, lsr #3      // r3 = extract # of associativity (10 bits)
+    add     r2, r2, #1              // number of sets is -1 in register, so add back one
+    and     r0, r0, #0x7            // r0 = extract line size (power of two words in cache - 2)
     add     r0, r0, #4
-    clz     r1, r3    
-    add     r4, r3, #1
-1:  sub     r2, r2, #1
-    mov     r3, r4    
-2:  subs    r3, r3, #1
-    mov     r5, r3, lsl r1
-    mov     r6, r2, lsl r0
-    orr     r5, r5, r6
-    mcr     p15, 0, r5, c7, c6, 2
-    bgt     2b
-    cmp     r2, #0
-    bgt     1b
+    clz     r1, r3                  // r1 = cound leading zeros of associativity 
+    add     r4, r3, #1              // associativity is -1 in register, so add backk now
+1:  sub     r2, r2, #1              // dec set
+    mov     r3, r4                  // init r3 to associatvity
+2:  subs    r3, r3, #1              // dec associativity
+    mov     r5, r3, lsl r1          // r5 = associativity * in right pos for mcr
+    mov     r6, r2, lsl r0          // r6 = set * in right pos for mcr
+    orr     r5, r5, r6              // combine r5 and r6
+    mcr     p15, 0, r5, c7, c6, 2       // invalidate data cache by set/way
+    bgt     2b                      // if more associativity, go back
+    cmp     r2, #0                  // check if there are sets left
+    bgt     1b                      // if more sets left go do next set
     dsb
     isb
 
-    // all caches should be clean and off at this point
-
+    // L1 cache should be completely invalid now
 
     // enable the SCU
-    mrc p15, 4, r0, c15, c0, 0
+    mrc p15, 4, r0, c15, c0, 0      // read CBAR 
     mov r12, #0
     str r12, [r0]
 
     // set SMP mode
-    mrc	p15, 0, r12, c1, c0, 1 
+    mrc	p15, 0, r12, c1, c0, 1      // read ACTLR
     orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
-    mcr p15, 0, r12, c1, c0, 1 
+    mcr p15, 0, r12, c1, c0, 1      // write ACTLR
     isb
 
     // set monitor vector table base address (MVBAR)
     adr r12, _MonitorResetEntry
-    mcr p15, 0, r12, c12, c0, 1
+    mcr p15, 0, r12, c12, c0, 1     // write MVBAR
     isb
 
     // set interrupt priority mask to maximum to allow all priorities through
@@ -258,11 +258,11 @@ _Do_Monitor_Init:
 
     // set NSACR to allow CP10 and CP11 in NS mode
     mov r12, #0xC00
-    mcr p15, 0, r12, c1, c1, 2
+    mcr p15, 0, r12, c1, c1, 2  // write NSACR
 
     // set SCR to be in NS mode
     mov r12, #0x31
-    mcr p15, 0, r12, c1, c1, 0
+    mcr p15, 0, r12, c1, c1, 0  //  write SCR
     isb
 
     // now return from exception back to svc (again)
@@ -303,20 +303,22 @@ _SecondaryInit:
     dsb
     isb
 
+    // L1 cache should be completely invalid now
+
     // enable the SCU
-    mrc p15, 4, r0, c15, c0, 0
+    mrc p15, 4, r0, c15, c0, 0  // read CBAR
     mov r12, #0
     str r12, [r0]
 
     // set SMP mode
-    mrc	p15, 0, r12, c1, c0, 1 
+    mrc	p15, 0, r12, c1, c0, 1  // read ACTLR
     orr r12, r12, #(A32_ACTLR_SMP_MODE | A32_ACTRL_MAINT_BCAST)
-    mcr p15, 0, r12, c1, c0, 1 
+    mcr p15, 0, r12, c1, c0, 1  // write ACTLR
     isb
 
     // set monitor vector table base address (MVBAR)
     adr r12, _MonitorResetEntry
-    mcr p15, 0, r12, c12, c0, 1
+    mcr p15, 0, r12, c12, c0, 1 // write MVBAR
     isb
 
     // set interrupt priority mask to maximum to allow all priorities through

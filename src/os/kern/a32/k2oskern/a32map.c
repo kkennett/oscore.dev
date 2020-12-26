@@ -126,6 +126,27 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     return pte;
 }
 
+void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE)
+{
+    *pPTE = aPTE;
+    if (!aIsMake)
+    {
+        if (gA32Kern_IsMulticoreCapable)
+        {
+            A32_TLBInvalidateMVA_MP_AllASID(aVirtAddr);
+            A32_BPInvalidateAll_MP();
+        }
+        else
+        {
+            A32_TLBInvalidateMVA_UP_AllASID(aVirtAddr);
+            A32_BPInvalidateAll_UP();
+        }
+    }
+    A32_DSB();
+    if (!aIsMake)
+        A32_ISB();
+}
+
 UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32          transBase;

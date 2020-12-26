@@ -56,15 +56,16 @@
 //
 // vector page is at 0xFFFF0000
 //
-#define A32KERN_APSTART_PAGETABLE_VIRT                      0xFFFF1000
-#define A32KERN_APSTART_TRANSIT_PAGE_VIRT                   0xFFFF2000
-#define A32KERN_APSTART_CPUINFO_PAGE_VIRT                   0xFFFF3000
-#define A32KERN_APSTART_TTB_VIRT                            0xFFFF4000
+#define A32KERN_APSTART_PAGETABLE_VIRT                      K2OS_KVA_A32_AP_PAGETABLE
+#define A32KERN_APSTART_TRANSIT_PAGE_VIRT                   K2OS_KVA_A32_AP_TRANSIT
+#define A32KERN_APSTART_CPUINFO_PAGE_VIRT                   K2OS_KVA_A32_AP_CPUINFO
+#define A32KERN_APSTART_TTB_VIRT                            K2OS_KVA_A32_AP_TTB
+#define A32KERN_APSTART_UNCACHED_PAGE_VIRT                  K2OS_KVA_A32_UNCACHED_SYNC
 
-#define A32KERN_UP_GICD_PAGE_VIRT                           0xFFFFD000
-#define A32KERN_UP_GICC_PAGE_VIRT                           0xFFFFE000
+#define A32KERN_UP_GICD_PAGE_VIRT                           K2OS_KVA_A32_GICD
+#define A32KERN_UP_GICC_PAGE_VIRT                           K2OS_KVA_A32_GICC
 
-#define A32KERN_MP_CONFIGBASE_MAP_VIRT                      0xFFFFD000
+#define A32KERN_MP_CONFIGBASE_MAP_VIRT                      K2OS_KVA_A32_PERIPHBASE
 #define A32KERN_MP_SCU_VIRT                                 (A32KERN_MP_CONFIGBASE_MAP_VIRT + A32_PERIPH_OFFSET_SCU)
 #define A32KERN_MP_GICC_VIRT                                (A32KERN_MP_CONFIGBASE_MAP_VIRT + A32_PERIPH_OFFSET_GICC)
 #define A32KERN_MP_GLOBAL_TIMER_VIRT                        (A32KERN_MP_CONFIGBASE_MAP_VIRT + A32_PERIPH_OFFSET_GLOBAL_TIMER)

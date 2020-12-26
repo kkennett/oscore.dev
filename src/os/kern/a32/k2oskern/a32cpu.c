@@ -113,7 +113,6 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     pThisCorePage->CpuCore.mIsExecuting = TRUE;
     pThisCorePage->CpuCore.mIsInMonitor = TRUE;
 
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)&pThisCorePage->CpuCore, sizeof(K2OSKERN_CPUCORE));
     K2_CpuWriteBarrier();
 
     A32Kern_IntrInitGicPerCore();
@@ -181,9 +180,9 @@ void KernArch_LaunchCores(void)
     UINT32                  ttbPhys;
     UINT32                  ptPhys;
     UINT32                  transitPhys;
-    UINT32                  done;
+    UINT32                  doneFlags;
+    UINT32                  uncachedPhys;
     A32_TTBEQUAD *          pQuad;
-    K2OSKERN_COREPAGE *     pCorePage;
     A32AUXCPU_STARTDATA *   pStartData;
 
     if (gData.mCpuCount > 1)
@@ -195,32 +194,39 @@ void KernArch_LaunchCores(void)
         //
         // figure out the physical addresses from the block of physical space we got
         //
-        workVal = gData.mA32StartAreaPhys;
-        done = 0;
-        for (done=0;done!=7;)
+        workVal = gData.mA32StartAreaPhys;      // here, for K2OS_A32_APSTART_PHYS_PAGECOUNT
+        doneFlags = 0;
+        for (doneFlags=0;doneFlags!=0xF;)
         {
-            if ((done & 1) == 0)
+            if ((doneFlags & 1) == 0)
             {
                 if ((workVal & 0x3FFF) == 0)
                 {
-                    ttbPhys = workVal;
+                    ttbPhys = workVal;      // 4 pages 16kb-aligned
                     workVal += 0x4000;
-                    done |= 1;
+                    doneFlags |= 1;
                     continue;
                 }
             }
-            if ((done & 2) == 0)
+            if ((doneFlags & 2) == 0)
             {
-                ptPhys = workVal;
+                ptPhys = workVal;           // 1 page
                 workVal += 0x1000;
-                done |= 2;
+                doneFlags |= 2;
                 continue;
             }
-            if ((done & 4) == 0)
+            if ((doneFlags & 4) == 0)
             {
-                transitPhys = workVal;
+                transitPhys = workVal;      // 1 page
                 workVal += 0x1000;
-                done |= 4;
+                doneFlags |= 4;
+                continue;
+            }
+            if ((doneFlags & 8) == 0)
+            {
+                uncachedPhys = workVal;     // 1 page
+                workVal += 0x1000;
+                doneFlags |= 8;
                 continue;
             }
             workVal += 0x1000;
@@ -235,19 +241,16 @@ void KernArch_LaunchCores(void)
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, ttbPhys + 0x3000, K2OS_MAPTYPE_KERN_PAGEDIR);
         pTTB = (A32_TRANSTBL *)A32KERN_APSTART_TTB_VIRT;
         K2MEM_Zero(pTTB, sizeof(A32_TRANSTBL));
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pTTB, sizeof(A32_TRANSTBL));
-        K2_CpuFullBarrier();
 
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_PAGETABLE_VIRT, ptPhys, K2OS_MAPTYPE_KERN_PAGETABLE);
         pPageTable = (A32_PAGETABLE *)A32KERN_APSTART_PAGETABLE_VIRT;
         K2MEM_Zero(pPageTable, sizeof(A32_PAGETABLE));
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pPageTable, sizeof(A32_PAGETABLE));
-        K2_CpuFullBarrier();
 
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT, transitPhys, K2OS_MAPTYPE_KERN_DATA);
         K2MEM_Zero((void *)A32KERN_APSTART_TRANSIT_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)A32KERN_APSTART_TRANSIT_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
-        K2_CpuFullBarrier();
+
+        KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_UNCACHED_PAGE_VIRT, uncachedPhys, K2OS_MAPTYPE_KERN_UNCACHED);
+        K2MEM_Zero((void *)A32KERN_APSTART_UNCACHED_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
 
         // 
         // put the pagetable for the transition page into the TTB
@@ -259,8 +262,6 @@ void KernArch_LaunchCores(void)
         pQuad->Quad[1].mAsUINT32 = workVal + 0x400;
         pQuad->Quad[2].mAsUINT32 = workVal + 0x800;
         pQuad->Quad[3].mAsUINT32 = workVal + 0xC00;
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pQuad, sizeof(A32_TTBEQUAD));
-        K2_CpuFullBarrier();
 
         //
         // put the transition page into the pagetable
@@ -269,8 +270,6 @@ void KernArch_LaunchCores(void)
         pPageTable->Entry[workVal].mAsUINT32 =
             transitPhys | 
             A32_PTE_PRESENT | A32_MMU_PTE_REGIONTYPE_UNCACHED | A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE;
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, &pPageTable->Entry[workVal], sizeof(UINT32));
-        K2_CpuFullBarrier();
 
         //
         // put all pagetables for kernel into the TTB as well
@@ -280,13 +279,9 @@ void KernArch_LaunchCores(void)
             (void *)(K2OS_KVA_TRANSTAB_BASE + 0x2000),
             0x2000
         );
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, &pTTB->QuadEntry[K2_VA32_PAGETABLES_FOR_4G / 2], 0x2000);
-        K2_CpuFullBarrier();
 
         workVal = ((UINT32)A32Kern_AuxCpuStart_END) - ((UINT32)A32Kern_AuxCpuStart) + 4;
         K2MEM_Copy((void *)A32KERN_APSTART_TRANSIT_PAGE_VIRT, (void *)A32Kern_AuxCpuStart, workVal);
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)A32KERN_APSTART_TRANSIT_PAGE_VIRT, workVal);
-        K2_CpuFullBarrier();
 
         //
         // copy start code to transition page
@@ -297,11 +292,9 @@ void KernArch_LaunchCores(void)
         pStartData->mReg_COPROC = A32_ReadCPACR();
         pStartData->mReg_CONTROL = A32_ReadSCTRL();
         pStartData->mVirtContinue = (UINT32)A32Kern_LaunchEntryPoint;
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushData, pStartData, sizeof(A32AUXCPU_STARTDATA));
-        K2_CpuFullBarrier();
 
         //
-        // unmap all the pages since we are done using them
+        // unmap all the pages except the uncached page since we are done using them
         //
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT, 0);
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TRANSIT_PAGE_VIRT);
@@ -319,25 +312,19 @@ void KernArch_LaunchCores(void)
         KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x3000);
 
         //
-        // go tell the CPUs to start up
+        // go tell the CPUs to start up.  use the uncached page as a flag so that
+        // there is no confusing in reading/writing the L1 before the aux core can enable
+        // its cache
         //
         for (workVal = 1; workVal < gData.mCpuCount; workVal++)
         {
-            pCorePage = K2OSKERN_COREIX_TO_COREPAGE(workVal);
-
-            K2_ASSERT(pCorePage->CpuCore.mIsExecuting == FALSE);
-
-            K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, (void*)&pCorePage->CpuCore, sizeof(K2OSKERN_CPUCORE));
-            K2_CpuWriteBarrier();
+            *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 0;
 
             sStartAuxCpu(workVal, transitPhys);
 
-            while (pCorePage->CpuCore.mIsExecuting == FALSE)
-            {
-                for (done = 0; done < 10000000; done++);
-                K2OSKERN_Debug("red %d\n", pCorePage->CpuCore.mIsExecuting);
+            do {
                 K2_CpuReadBarrier();
-            }
+            } while (0 == *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT));
         }
     }
    
