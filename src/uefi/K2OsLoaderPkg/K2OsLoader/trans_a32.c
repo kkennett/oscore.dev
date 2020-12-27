@@ -89,7 +89,7 @@ static UINT32 const sTransitionCode[] =
     0xe5901008,    //    ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
     0xe28f4094,    //    adr r4, _JUMP_TO_KERNEL
 
-    // disable branch predictor and ensure caches off
+    // caches and branch predictor should already be off - make sure 
     0xee113f10,    //    mrc p15, 0, r3, c1, c0, 0   
     0xe3c33a01,    //    bic r3, r3, #A32_SCTRL_I_ICACHEENABLE
     0xe3c33004,    //    bic r3, r3, #A32_SCTRL_C_DCACHEENABLE
@@ -176,9 +176,12 @@ void Loader_Arch_Transition(void)
     //
     ArmCleanDataCache ();
     ArmDisableDataCache ();
-    ArmInvalidateDataCache ();
+    ArmCleanInvalidateDataCache();
+
+    ArmInvalidateInstructionCache();
     ArmDisableInstructionCache ();
     ArmInvalidateInstructionCache ();
+
     ArmDisableMmu ();
 
     //

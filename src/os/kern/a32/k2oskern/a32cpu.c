@@ -59,18 +59,18 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
         
     K2_ASSERT(pThisCorePage->CpuCore.mCoreIx == aCpuIx);
 
+    K2OSKERN_Debug("CpuLaunch2\n");
+
     //
     // set up SCTRL
     //
-//    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
     sctrl.mAsUINT32 = A32_ReadSCTRL();
     sctrl.Bits.mAFE = 0;    // afe off 
     sctrl.Bits.mTRE = 0;    // tex remap off
-    sctrl.Bits.mC = 1;      // dcache enable
-    sctrl.Bits.mI = 1;      // icache enable
-    sctrl.Bits.mZ = 1;      // branch predict enable
     sctrl.Bits.mV = 1;      // high vectors
     A32_WriteSCTRL(sctrl.mAsUINT32);
+
+    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
 
     //
     // caches and BP are ON now for this core
@@ -151,7 +151,8 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     UINT32                  virtAddr;
 
     physAddr = gData.mpShared->LoadInfo.CpuInfo[aCpuIx].mAddrSet;
-    
+    K2OSKERN_Debug("Start(%d, %08X)\n", aCpuIx, physAddr);
+
     virtAddr = A32KERN_APSTART_CPUINFO_PAGE_VIRT | (physAddr & K2_VA32_MEMPAGE_OFFSET_MASK);
 
     //
@@ -163,8 +164,8 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     // tell CPU aCpuIx to jump to transit page + sizeof(A32AUXCPU_STARTDATA)
     //
     *((UINT32 *)virtAddr) = transitPhys + sizeof(A32AUXCPU_STARTDATA);
+    K2_CpuWriteBarrier();
     KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT, 0);
-    KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_CPUINFO_PAGE_VIRT);
 
     //
     // this fires the SGI that wakes up the aux core 
@@ -297,19 +298,11 @@ void KernArch_LaunchCores(void)
         // unmap all the pages except the uncached page since we are done using them
         //
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TRANSIT_PAGE_VIRT, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TRANSIT_PAGE_VIRT);
-
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_PAGETABLE_VIRT, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_PAGETABLE_VIRT);
-
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT);
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x1000, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x1000);
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x2000, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x2000);
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, 0);
-        KernArch_InvalidateTlbPageOnThisCore(A32KERN_APSTART_TTB_VIRT + 0x3000);
 
         //
         // go tell the CPUs to start up.  use the uncached page as a flag so that
@@ -318,10 +311,13 @@ void KernArch_LaunchCores(void)
         //
         for (workVal = 1; workVal < gData.mCpuCount; workVal++)
         {
+            K2OSKERN_Debug("Write cached virt page 0\n");
             *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 0;
+            K2OSKERN_Debug("StartAuxCpu()\n");
 
             sStartAuxCpu(workVal, transitPhys);
 
+            K2OSKERN_Debug("Wait read uncached virt page\n");
             do {
                 K2_CpuReadBarrier();
             } while (0 == *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT));

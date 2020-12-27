@@ -1198,8 +1198,6 @@ static void sClaenPageOnThisCore(UINT32 aPhysPage)
 
     KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, virtAddr, 0);
 
-    KernArch_InvalidateTlbPageOnThisCore(virtAddr);
-
     K2OSKERN_SetIntr(disp);
 }
 

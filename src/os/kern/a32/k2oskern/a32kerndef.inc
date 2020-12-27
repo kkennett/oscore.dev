@@ -54,7 +54,18 @@
 //
 // TTB must be 16KB aligned physically. best to do it virtually too
 //
-// vector page is at 0xFFFF0000
+// 0xFFFF0000 Vector Page
+//       1000 PeriphBase (SCU+)
+//       2000 GICD
+//       3000 GICC
+//       4000 TTB page 0
+//       5000 TTB page 1
+//       6000 TTB page 2
+//       7000 TTB page 3
+//       8000 AP Start pagetable
+//       9000 AP start Transition page
+//       A000 AP start CPUINFO page
+//       B000 AP start Uncached sync page
 //
 #define A32KERN_APSTART_PAGETABLE_VIRT                      K2OS_KVA_A32_AP_PAGETABLE
 #define A32KERN_APSTART_TRANSIT_PAGE_VIRT                   K2OS_KVA_A32_AP_TRANSIT

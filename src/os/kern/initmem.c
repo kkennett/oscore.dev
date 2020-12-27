@@ -209,8 +209,7 @@ static void sRemoveTransitionPage(void)
     pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(transPageAddr);
     K2_ASSERT(((*pPTE) & K2_VA32_PAGEFRAME_MASK) == transPageAddr);
 
-    *pPTE = 0;
-    KernArch_InvalidateTlbPageOnThisCore(transPageAddr);
+    KernArch_WritePTE(FALSE, transPageAddr, pPTE, 0);
 
     //
     // see if we need to unmap the pagetable that held the transition page

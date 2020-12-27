@@ -146,7 +146,7 @@ ASM_PFX(_ModuleEntryPoint):
 
     // disable the SCU, and then invalidate SCU duplicate tags for all processors.
     // do not r/w memory
-    mov r12, #1             // scu DISABLE is bit 0, set to a one not to a zero
+    mov r12, #0
     str r12, [r0]
     add r0, r0, #A9_SCU_INVALL_OFFSET
     mvn r12, #0                  
@@ -207,7 +207,7 @@ _Wait_Invalidate_Completed:
 
     // enable the SCU
     mrc p15, 4, r0, c15, c0, 0      // read CBAR 
-    mov r12, #0
+    mov r12, #1
     str r12, [r0]
 
     // set SMP mode
@@ -307,7 +307,7 @@ _SecondaryInit:
 
     // enable the SCU
     mrc p15, 4, r0, c15, c0, 0  // read CBAR
-    mov r12, #0
+    mov r12, #1
     str r12, [r0]
 
     // set SMP mode

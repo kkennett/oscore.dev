@@ -329,12 +329,9 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
 
     sgCacheInit = 1;
 
-    /* invalidate and enable cache */
+    /* invalidate and enable cache on primary core */
     sctrl.mAsUINT32 = A32_ReadSCTRL();
-    if (!sctrl.Bits.mC)
-        A32_DCacheInvalidateAll();  
-    else
-        A32_DCacheFlushInvalidateAll();  
+    K2_ASSERT(0 == sctrl.Bits.mC);
     sctrl.Bits.mC = 1;    // dcache enable
     sctrl.Bits.mI = 1;    // icache enable
     sctrl.Bits.mZ = 1;    // branch predict enable
@@ -359,12 +356,23 @@ K2OS_CacheOperation(
 
     if (aCacheOp == K2OS_CACHEOP_Init)
     {
-        sctrl.mAsUINT32 = A32_ReadSCTRL();
-        if (sctrl.Bits.mC)
-            A32_DCacheFlushInvalidateAll();
-        else
-            A32_DCacheInvalidateAll();
-        A32_ICacheInvalidateAll();
+        //
+        // primary core will have had caches enabled
+        // at k2oscrt entry when InitCacheConfig was run
+        //
+        if (0 != (A32_ReadMPIDR() & 0xF))
+        {
+            //
+            // not primary core - ensure caches off at init
+            // and then turn them on
+            //
+            sctrl.mAsUINT32 = A32_ReadSCTRL();
+            K2_ASSERT(0 == sctrl.Bits.mC);
+            sctrl.Bits.mC = 1;      // dcache enable
+            sctrl.Bits.mI = 1;      // icache enable
+            sctrl.Bits.mZ = 1;      // branch predict enable
+            A32_WriteSCTRL(sctrl.mAsUINT32);
+        }
         return;
     }
 
