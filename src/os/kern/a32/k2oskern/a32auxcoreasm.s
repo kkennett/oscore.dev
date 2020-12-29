@@ -107,12 +107,17 @@ A32AUXCPU_CONTINUE:
 
     add r0, pc, #A32AUXCPU_CONTROL-(.+8)
     ldr r1, [r0]
+    bic r1, r1, #A32_SCTRL_I_ICACHEENABLE
+    bic r1, r1, #A32_SCTRL_C_DCACHEENABLE
+    bic r1, r1, #A32_SCTRL_Z_BRANCHPREDICTENABLE
 
     add r2, pc, #A32AUXCPU_CONTINUE-(.+8)
     ldr r3, [r2]
 
     // enable MMU and jump to continuation point
     mcr p15, 0, r1, c1, c0, 0
+    dsb
+    isb
     b 100f
     nop
     nop

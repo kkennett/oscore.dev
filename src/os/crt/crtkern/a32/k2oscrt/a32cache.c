@@ -47,7 +47,7 @@ void A32_DCacheFlushAll(void)
 
     for(level=0;level<sgCacheInfo.mNumCacheLevels;level++)
     {
-        if (!sgCacheInfo.mCacheConfig[level].mDSizeBytes)
+        if (0 == sgCacheInfo.mCacheConfig[level].mDSizeBytes)
             break;
         nset = sgCacheInfo.mCacheConfig[level].mDNumSets;
         nway = sgCacheInfo.mCacheConfig[level].mDNumWays;
@@ -83,7 +83,7 @@ void A32_DCacheInvalidateAll(void)
 
     for(level=0;level<sgCacheInfo.mNumCacheLevels;level++)
     {
-        if (!sgCacheInfo.mCacheConfig[level].mDSizeBytes)
+        if (0 == sgCacheInfo.mCacheConfig[level].mDSizeBytes)
             break;
         nset = sgCacheInfo.mCacheConfig[level].mDNumSets;
         nway = sgCacheInfo.mCacheConfig[level].mDNumWays;
@@ -114,7 +114,7 @@ void A32_DCacheFlushInvalidateAll(void)
 
     for(level=0;level<sgCacheInfo.mNumCacheLevels;level++)
     {
-        if (!sgCacheInfo.mCacheConfig[level].mDSizeBytes)
+        if (0 == sgCacheInfo.mCacheConfig[level].mDSizeBytes)
             break;
         nset = sgCacheInfo.mCacheConfig[level].mDNumSets;
         nway = sgCacheInfo.mCacheConfig[level].mDNumWays;
@@ -288,7 +288,7 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
     {
         ctype[ix] = (clidr & 0x7);
         clidr >>= 3;
-        if (!ctype[ix])
+        if (0 == ctype[ix])
             break;
     }
     sgCacheInfo.mNumCacheLevels = ix;
@@ -336,7 +336,6 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
     sctrl.Bits.mI = 1;    // icache enable
     sctrl.Bits.mZ = 1;    // branch predict enable
     A32_WriteSCTRL(sctrl.mAsUINT32);
-
     A32_ICacheInvalidateAll_UP();
     A32_BPInvalidateAll_UP();
     A32_DSB();
@@ -372,6 +371,10 @@ K2OS_CacheOperation(
             sctrl.Bits.mI = 1;      // icache enable
             sctrl.Bits.mZ = 1;      // branch predict enable
             A32_WriteSCTRL(sctrl.mAsUINT32);
+            A32_ICacheInvalidateAll_UP();
+            A32_BPInvalidateAll_UP();
+            A32_DSB();
+            A32_ISB();
         }
         return;
     }

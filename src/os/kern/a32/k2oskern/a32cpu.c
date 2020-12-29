@@ -59,8 +59,6 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
         
     K2_ASSERT(pThisCorePage->CpuCore.mCoreIx == aCpuIx);
 
-    K2OSKERN_Debug("CpuLaunch2\n");
-
     //
     // set up SCTRL
     //
@@ -117,15 +115,18 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 
     A32Kern_IntrInitGicPerCore();
 
-    K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
-    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
-    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
-    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
-    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
-    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
-    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
-    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
-    K2OSKERN_Debug("--------------------\n");
+//   K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
+//    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
+//    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
+//    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
+//    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+//    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
+//    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+//    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
+//    K2OSKERN_Debug("--------------------\n");
+
+    K2OSKERN_Debug("CPU %d Started\n", pThisCorePage->CpuCore.mCoreIx);
+    *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 1;
 
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     A32Kern_ResumeInMonitor(v);
@@ -151,7 +152,6 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     UINT32                  virtAddr;
 
     physAddr = gData.mpShared->LoadInfo.CpuInfo[aCpuIx].mAddrSet;
-    K2OSKERN_Debug("Start(%d, %08X)\n", aCpuIx, physAddr);
 
     virtAddr = A32KERN_APSTART_CPUINFO_PAGE_VIRT | (physAddr & K2_VA32_MEMPAGE_OFFSET_MASK);
 
@@ -305,19 +305,21 @@ void KernArch_LaunchCores(void)
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, 0);
 
         //
+        // flush and invalidate the entire cache from main core's perspective
+        //
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, NULL, 0);
+
+        //
         // go tell the CPUs to start up.  use the uncached page as a flag so that
         // there is no confusing in reading/writing the L1 before the aux core can enable
         // its cache
         //
         for (workVal = 1; workVal < gData.mCpuCount; workVal++)
         {
-            K2OSKERN_Debug("Write cached virt page 0\n");
             *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 0;
-            K2OSKERN_Debug("StartAuxCpu()\n");
 
             sStartAuxCpu(workVal, transitPhys);
 
-            K2OSKERN_Debug("Wait read uncached virt page\n");
             do {
                 K2_CpuReadBarrier();
             } while (0 == *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT));
