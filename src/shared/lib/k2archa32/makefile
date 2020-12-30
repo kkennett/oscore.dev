@@ -65,6 +65,9 @@ SOURCES += trans.s
 SOURCES += reg_cpsr.s
 SOURCES += reg_cbar.s
 
+# for creation of transition code
+SOURCES += transit.s
+
 include $(K2_ROOT)/src/shared/build/post.make
 
 
