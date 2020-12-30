@@ -241,31 +241,36 @@ _Do_Monitor_Init:
     isb 
     smc #0
 
-    // should be back from secure monitor SPSR init here, into SVC mode again
-    mov r0, sp
+    // should be back from secure monitor SPSR init here, in SVC-SECURE
+    mov r0, sp      // save sp
+
+    // switch to MONITOR-SECURE
     mrs r1, cpsr
     bic r12, r1, #A32_PSR_MODE_MASK
     orr r12, r12, #A32_PSR_MODE_MONITOR
     msr cpsr, r12      
     isb
+
+    // call UINT32 xxxMonitorInit(UINT32 StackPointer, UINT32 SVC_SPSR, UINT32 MON_SPSR, UINT32 MON_CPSR);
     mrs r2, spsr
     mrs r3, cpsr
     mov sp, r0
     blx r4
-    mov r4, r0
 
+    mov r4, r0
     // r4 is return address in nonsecure mode
 
     // set NSACR to allow CP10 and CP11 in NS mode
     mov r12, #0xC00
     mcr p15, 0, r12, c1, c1, 2  // write NSACR
+    isb
 
     // set SCR to be in NS mode
     mov r12, #0x31
     mcr p15, 0, r12, c1, c1, 0  //  write SCR
     isb
 
-    // now return from exception back to svc (again)
+    // now return from exception to NonSecure-SVC
     adr lr, _Monitor_Return
     movs pc, lr
 _Monitor_Return:
@@ -359,8 +364,8 @@ _MonitorFiqEntry:
     b   _MonitorFiqEntry
 
 _MonitorCall:
-    mrc p15, 0, r12, c1, c1, 0
-    tst r12, #1
+    mrc p15, 0, r12, c1, c1, 0      // Read SCR
+    tst r12, #1                     // Test NS bit - 0 means secure 
     bne _CallNotFromSecure
     // only call from secure is to initialize spsr to return to svc (above)
     msr spsr_cxsf, r0 

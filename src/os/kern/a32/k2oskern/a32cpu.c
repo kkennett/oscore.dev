@@ -49,6 +49,8 @@ typedef struct _A32AUXCPU_STARTDATA A32AUXCPU_STARTDATA;
 void A32Kern_AuxCpuStart(void);
 void A32Kern_AuxCpuStart_END(void);
 
+static volatile INT32 sgCpuCoresExecuting = 0;
+
 void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 {
     A32_REG_SCTRL       sctrl;
@@ -67,16 +69,15 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     sctrl.Bits.mTRE = 0;    // tex remap off
     sctrl.Bits.mV = 1;      // high vectors
     A32_WriteSCTRL(sctrl.mAsUINT32);
-
-    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
-
-    //
-    // caches and BP are ON now for this core
-    //
-    A32_ICacheInvalidateAll_UP();
-    A32_BPInvalidateAll_UP();
     A32_DSB();
     A32_ISB();
+
+#if 0
+    //
+    // enable caches now
+    //
+    K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
+
 
     // domain 0 client access
     A32_WriteDACR(1);
@@ -98,6 +99,9 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 
     A32_WriteTTBCR(1);  // use 0x80000000 sized TTBR0
 
+    A32_DSB();
+    A32_ISB();
+#endif
     A32_ICacheInvalidateAll_UP();
     A32_BPInvalidateAll_UP();
     A32_TLBInvalidateAll_UP();
@@ -125,10 +129,10 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 //    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
 //    K2OSKERN_Debug("--------------------\n");
 
-    K2OSKERN_Debug("CPU %d Started\n", pThisCorePage->CpuCore.mCoreIx);
-    *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 1;
-
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
+    K2OSKERN_Debug("CPU %d Started. EntryStack @ %08X\n", pThisCorePage->CpuCore.mCoreIx, v);
+
+    K2ATOMIC_Inc(&sgCpuCoresExecuting);
     A32Kern_ResumeInMonitor(v);
 
     //
@@ -175,18 +179,19 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
 
 void KernArch_LaunchCores(void)
 {
-    A32_TRANSTBL *          pTTB;
-    A32_PAGETABLE *         pPageTable;
-    UINT32                  workVal;
-    UINT32                  ttbPhys;
-    UINT32                  ptPhys;
-    UINT32                  transitPhys;
-    UINT32                  doneFlags;
-    UINT32                  uncachedPhys;
-    A32_TTBEQUAD *          pQuad;
-    A32AUXCPU_STARTDATA *   pStartData;
+    A32_TRANSTBL *              pTTB;
+    A32_PAGETABLE *             pPageTable;
+    UINT32                      workVal;
+    UINT32                      ttbPhys;
+    UINT32                      ptPhys;
+    UINT32                      transitPhys;
+    UINT32                      doneFlags;
+    UINT32                      uncachedPhys;
+    A32_TTBEQUAD *              pQuad;
+    A32AUXCPU_STARTDATA *       pStartData;
+    UINT32                      waitForCore;
 
-    if (gData.mCpuCount > 1)
+    if (gData.mCpuCount > 1000)
     {
         //
         // vector page has been installed already
@@ -310,22 +315,18 @@ void KernArch_LaunchCores(void)
         K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, NULL, 0);
 
         //
-        // go tell the CPUs to start up.  use the uncached page as a flag so that
-        // there is no confusing in reading/writing the L1 before the aux core can enable
-        // its cache
+        // go tell the CPUs to start up.  
         //
         for (workVal = 1; workVal < gData.mCpuCount; workVal++)
         {
-            *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT) = 0;
-
+            waitForCore = sgCpuCoresExecuting;
+            K2_CpuReadBarrier();
             sStartAuxCpu(workVal, transitPhys);
-
-            do {
+            while (sgCpuCoresExecuting == waitForCore)
                 K2_CpuReadBarrier();
-            } while (0 == *((UINT32*)A32KERN_APSTART_UNCACHED_PAGE_VIRT));
         }
     }
-   
+
     /* go to entry point for core 0 */
     A32Kern_LaunchEntryPoint(0);
 

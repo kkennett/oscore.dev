@@ -32,6 +32,8 @@
 
 #include "kern.h"
 
+#define DIAG_MAPPING    1
+
 UINT32 * sGetPTE(UINT32 aVirtMapBase, UINT32 aVirtAddr)
 {
     UINT32* pPTE;
@@ -56,7 +58,9 @@ void KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aP
     UINT32 *    pPageCount;
     UINT32      pte;
 
-//    K2OSKERN_Debug("MAKE_P %08X->%08X, ATTR %08X\n", aVirtAddr, aPhysAddr, aPageMapAttr);
+#if DIAG_MAPPING
+    K2OSKERN_Debug("MAKE_P %08X->%08X, ATTR %08X\n", aVirtAddr, aPhysAddr, aPageMapAttr);
+#endif
 
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
@@ -90,7 +94,9 @@ void KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32
     UINT32 *    pPageCount;
     UINT32      pte;
 
-//    K2OSKERN_Debug("MAKENP %08X, NPFLAGS %08X CONTENT %08X\n", aVirtAddr, aNpFlags, aContent);
+#if DIAG_MAPPING
+    K2OSKERN_Debug("MAKENP %08X, NPFLAGS %08X CONTENT %08X\n", aVirtAddr, aNpFlags, aContent);
+#endif
 
     K2_ASSERT((aNpFlags & K2OSKERN_PTE_NP_CONTENT_MASK) == 0);
     K2_ASSERT((aContent & ~K2OSKERN_PTE_NP_CONTENT_MASK) == 0);
@@ -123,7 +129,9 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFla
     UINT32 *    pPageCount;
     UINT32      result;
 
-//    K2OSKERN_Debug("BRAK   %08X, NPFLAGS %08X\n", aVirtAddr, aNpFlags);
+#if DIAG_MAPPING
+    K2OSKERN_Debug("BRAK   %08X, NPFLAGS %08X\n", aVirtAddr, aNpFlags);
+#endif
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
 
@@ -222,6 +230,10 @@ void KernMap_MakeOneKernPageFromThread(K2OSKERN_OBJ_THREAD *apCurThread, void *a
         K2_ASSERT(((*((UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtPT))) & K2OSKERN_PTE_PRESENT_BIT) == 0);
         physPageAddr = K2OS_PHYSTRACK_TO_PHYS32(((UINT32)apCurThread->mpWorkPtPage));
         KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, virtPT, physPageAddr, K2OS_MAPTYPE_KERN_PAGETABLE);
+
+#if DIAG_MAPPING
+        K2OSKERN_Debug("MAKEPT for %08X PT at %08X->%08X\n", virtAddr, virtPT, physPageAddr);
+#endif
 
 #if K2_TARGET_ARCH_IS_ARM
         //

@@ -147,13 +147,15 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
         A32_ISB();
 }
 
-UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
+UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32          transBase;
     A32_TRANSTBL *  pTrans;
     A32_TTBEQUAD *  pQuad;
     UINT32 *        pPTE;
     UINT32          pte;
+    UINT32          memProp;
+    A32_TTBE        chk;
 
     K2_ASSERT(apProc != NULL);
 
@@ -170,11 +172,16 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL
 
     pQuad = &pTrans->QuadEntry[aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES];
 
-    if (pQuad->Quad[0].PTBits.mPresent == 0)
+    chk = pQuad->Quad[0];
+    *apRetPDE = chk.mAsUINT32;
+    if (chk.PTBits.mPresent == 0)
     {
         *apRetPtPresent = FALSE;
         return NULL;
     }
+    K2_ASSERT((chk.mAsUINT32 + 0x400) == pQuad->Quad[1].mAsUINT32);
+    K2_ASSERT((chk.mAsUINT32 + 0x800) == pQuad->Quad[2].mAsUINT32);
+    K2_ASSERT((chk.mAsUINT32 + 0xC00) == pQuad->Quad[3].mAsUINT32);
 
     *apRetPtPresent = TRUE;
     *apRetMemPageAttr = 0;
@@ -199,16 +206,30 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL
 
     *apRetPte = pte = *pPTE;
 
-    pte &= A32_MMU_PTE_PERMIT_MASK;
+    memProp = (A32_MMU_PTE_TEX_111 | A32_PTE_B | A32_PTE_C) & pte;
 
-    if (pte != A32_MMU_PTE_PERMIT_NONE)
+    if ((memProp == A32_MMU_PTE_REGIONTYPE_SHAREABLE_DEVICE) ||
+        (memProp == A32_MMU_PTE_REGIONTYPE_NONSHAREABLE_DEVICE))
+        *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_DEVICEIO;
+    else
+    {
+        if (memProp == A32_MMU_PTE_REGIONTYPE_UNCACHED)
+            *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_UNCACHED;
+        else if (memProp == A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU)
+            *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_WRITE_THRU;
+        // else write back
+    }
+
+    if ((pte & A32_MMU_PTE_PERMIT_MASK) != A32_MMU_PTE_PERMIT_NONE)
     {
         *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_READABLE;
 
-        if (!(pte & A32_PTE_EXEC_NEVER))
+        if (0 == (pte & A32_PTE_EXEC_NEVER))
         {
             *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_EXEC;
         }
+
+        pte &= A32_MMU_PTE_PERMIT_MASK;
 
         if ((pte != A32_MMU_PTE_PERMIT_KERN_RO_USER_NONE) &&
             (pte != A32_MMU_PTE_PERMIT_KERN_RO_USER_RO))

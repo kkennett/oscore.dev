@@ -59,7 +59,7 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     return pte;
 }
 
-UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
+UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32* apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
 {
     UINT32      transBase;
     UINT32 *    pPDE;

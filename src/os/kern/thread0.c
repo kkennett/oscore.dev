@@ -106,6 +106,7 @@ sExec_Init(
     K2OSEXEC_pf_Init    fExec_Init;
     K2OSEXEC_pf_Run     fExec_Run;
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxExec,
         DlxSeg_Text,
@@ -114,6 +115,7 @@ sExec_Init(
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxExec,
         DlxSeg_Text,
@@ -122,6 +124,7 @@ sExec_Init(
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Run\" missing\n");
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = K2DLXSUPP_GetInfo(
         gData.mpDlxExec,
         NULL,
@@ -131,9 +134,11 @@ sExec_Init(
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = execEntryPoint(gData.mpDlxExec, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     K2MEM_Zero(&initInfo,sizeof(initInfo));
     initInfo.mEfiMapSize = gData.mpShared->LoadInfo.mEfiMapSize;
     initInfo.mEfiMemDescSize = gData.mpShared->LoadInfo.mEfiMemDescSize;
@@ -142,11 +147,13 @@ sExec_Init(
     //
     // map in the built in file system
     //
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     initInfo.mpBuiltinRofs = sMapBuiltIn();
 
     //
     // off you go
     //
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     fExec_Init(&initInfo);
 
     //
@@ -166,6 +173,7 @@ sExec_Init(
     // get hal export for system ready callback
     //
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxHal,
         DlxSeg_Text,
@@ -178,6 +186,7 @@ sExec_Init(
     gData.mTraceStarted = TRUE;
 #endif
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     KernSched_StartSysTick(&initInfo.SysTickDevIrqConfig);
 
     return fExec_Run;

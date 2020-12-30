@@ -1518,7 +1518,7 @@ void    KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 a
 void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 BOOL    KernArch_VerifyPteKernHasAccessAttr(UINT32 aPTE, UINT32 aMustHaveAttr);
-UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr);
+UINT32 *KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32* apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetAccessAttr);
 void    KernArch_PrepareThread(K2OSKERN_OBJ_THREAD *apThread);
 void    KernArch_LaunchCores(void);
 void    KernArch_ThreadCallSched(void);

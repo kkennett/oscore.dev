@@ -90,6 +90,7 @@ void KernMonitor_Run(void)
 
                 if (pThread == NULL)
                 {
+                    K2OSKERN_Debug("CPU %d IDLE\n", pThisCore->mCoreIx);
                     pThisCore->mIsIdle = TRUE;
                     K2Trace0(K2TRACE_MONITOR_START_IDLE);
                     //
