@@ -64,6 +64,8 @@ A32AUXCPU_CONTINUE:
     mcr p15, 0, r0, c8, c7, 0           // invalidate TLB's
     mcr p15, 0, r0, c7, c5, 0           // invalidate I cache
     mcr p15, 0, r0, c7, c5, 6           // invalidate BP array
+    dsb
+    isb 
     
     //---------------------------------------------------------------
     // Initialize CP15 control register
@@ -81,6 +83,7 @@ A32AUXCPU_CONTINUE:
     orr r0, r0, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
 
     mcr p15, 0, r0, c1, c0, 0   
+    dsb
     isb
 
     //---------------------------------------------------------------
@@ -88,31 +91,42 @@ A32AUXCPU_CONTINUE:
     //---------------------------------------------------------------
     add r0, pc, #A32AUXCPU_DACR-(.+8)
     ldr r1, [r0]
+    dsb
     mcr p15, 0, r1, c3, c0, 0
+    isb
 
+    // ttbr will already have correct RGN/IRGN/S etc. in it
     add r0, pc, #A32AUXCPU_TTBR0-(.+8)
     ldr r1, [r0]
+    dsb
     mcr p15, 0, r1, c2, c0, 0   // set TTBR 0
     mcr p15, 0, r1, c2, c0, 1   // set TTBR 1
+    isb
     mov r1, #1
     mcr p15, 0, r1, c2, c0, 2   // set TTBCR to 1
+    isb
 
     // invalidate all TLBs
     mov r1, #0
     mcr p15, 0, r1, c8, c7, 0
+    isb
 
     add r0, pc, #A32AUXCPU_COPROCACCESS-(.+8)
     ldr r1, [r0]
+    dsb
     mcr p15, 0, r1, c1, c0, 2
+    isb
 
     add r0, pc, #A32AUXCPU_CONTROL-(.+8)
     ldr r1, [r0]
+    dsb
     bic r1, r1, #A32_SCTRL_I_ICACHEENABLE
     bic r1, r1, #A32_SCTRL_C_DCACHEENABLE
     bic r1, r1, #A32_SCTRL_Z_BRANCHPREDICTENABLE
 
     add r2, pc, #A32AUXCPU_CONTINUE-(.+8)
     ldr r3, [r2]
+    dsb
 
     // enable MMU and jump to continuation point
     mcr p15, 0, r1, c1, c0, 0

@@ -35,95 +35,129 @@
 /* --------------------------------------------------------------------------------- */
 
 BEGIN_A32_PROC(A32_Transition)
-      //
-      // put address of data into r0, which is halfway into 
-      // the page this code is executing out of
-      //
-     mov r0, pc
-     bic r0, r0, #0xFF
-     bic r0, r0, #0xF00
-     add r0, r0, #0x800
+    //
+    // put address of data into r0, which is halfway into 
+    // the page this code is executing out of
+    //
+    mov r0, pc
+    bic r0, r0, #0xFF
+    bic r0, r0, #0xF00
+    add r0, r0, #0x800
 
-      // get mpidr to r2 and mask off all but MP bits
-     mrc p15, 0, r2, c0, c0, 5
-     and r2, r2, #0xC0000000
+    // get mpidr to r2 and mask off all but MP bits
+    mrc p15, 0, r2, c0, c0, 5
+    and r2, r2, #0xC0000000
 
-      // get TT base register physical address
-     ldr r5, [r0, #K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS]
+    // get TT base register physical address
+    ldr r5, [r0, #K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS]
 
-      // set TTB configuration information (Multicore or not Multicore)
-     cmp r2, #0x80000000
+    // set TTB configuration information (Multicore or not Multicore)
+    cmp r2, #0x80000000
 
-       // set Multicore TTB memory configuration
-     orreq r5, r5, #0x40   // IRGN bits (set 01b Inner write-back write-allocate cacheable)
-     orreq r5, r5, #0x02   // S bit     (set Shareable)
+    // set multi-core TTB memory configuration - S bit and inner write-back write-allocate cacheable
+    orreq r5, r5, #0x40
+    orreq r5, r5, #0x02
 
-      // set Single-core TTB memory configuration
-     orrne r5, r5, #0x01   // C bit     (set Inner Cacheable)
+    // set Single-core TTB memory configuration
+    orrne r5, r5, #0x01   // C bit     (set Inner Cacheable)
 
-      // set RGN bits (outer write-through cacheable)
-     orr   r5, r5, #0x08   // RGN bits  (set 01b Outer write-back write-allocate cacheable)
+    // set RGN bits (01 outer write-back write-allocate cacheable)
+    orr r5, r5, #0x08   // RGN bits  (set 10b Normal memory, Outer Write-Back Write-Allocate Cacheable)
 
-      // set TTBR and CR
-     dsb
-     mcr p15, 0, r5, c2, c0, 0   // set TTBR 0
-     mcr p15, 0, r5, c2, c0, 1   // set TTBR 1
-     mov r6, #1
-     dsb
-     mcr p15, 0, r6, c2, c0, 2   // set TTBCR to 1
-     isb
+    // set TTBR and CR
+    mcr p15, 0, r5, c2, c0, 0
+    mcr p15, 0, r5, c2, c0, 1
+    dsb
+    isb
+    mov r6, #1
+    mcr p15, 0, r6, c2, c0, 2
+    dsb
+    isb
 
-      // turn off access flag and TEX remap
-     mrc p15, 0, r3, c1, c0, 0   
-     bic r3, r3, #A32_SCTRL_AFE_ACCESSFLAGENABLE  // make sure turn off AFE (B3.6.1 in TRM)
-     bic r3, r3, #A32_SCTRL_TRE_TEXREMAPENABLE    // make sure turn off TEX remap
-     mcr p15, 0, r3, c1, c0, 0   
-     dsb
-     isb
+    // invalidate all TLBs
+    mov r3, #0
+    mcr p15, 0, r3, c8, c7, 0
+    isb
 
-      // invalidate all TLBs
-     mov r3, #0
-     mcr p15, 0, r3, c8, c7, 0
-     isb
+    // set domain access control register so that domain 0 has client access
+    // and all others have no access
+    mov r3, #1
+    mcr p15, 0, r3, c3, c0, 0 
+    isb
 
-      // set domain access control register so that domain 0 has client access
-      // and all others have no access
-     mov r3, #1
-     mcr p15, 0, r3, c3, c0, 0 
-     isb
+    //
+    // load virtual entrypoint to r4
+    // and system entrypoint to r1
+    //
+    ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
+    adr r4, _JUMP_TO_KERNEL
 
-      // invalidate i cache
-     mov r7, #0
-     mcr p15, 0, r7, c7, c5, 0
-     isb
+    // disable branch predictor and ensure caches off
+    mrc p15, 0, r3, c1, c0, 0   
+    bic r3, r3, #A32_SCTRL_I_ICACHEENABLE
+    bic r3, r3, #A32_SCTRL_C_DCACHEENABLE
+    bic r3, r3, #A32_SCTRL_Z_BRANCHPREDICTENABLE
+    mcr p15, 0, r3, c1, c0, 0   
+    dsb 
+    isb
 
-      // invalidate branch predictor
-     mcr p15, 0, r7, c7, c5, 6       
-     isb 
+    // invalidate i cache and branch predictor even though they should be off
+    mov r7, #0
+    mcr p15, 0, r7, c7, c5, 0
+    mcr p15, 0, r7, c7, c5, 6       
+    dsb
+    isb 
 
-      //
-      // load virtual entrypoint to r4
-      // and system entrypoint to r1
-      //
-     ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
-     adr r4, _JUMP_TO_KERNEL
+    // enable mmu
+    mrc p15, 0, r3, c1, c0, 0   
+    orr r3, r3, #A32_SCTRL_M_MMUENABLE
+    bic r3, r3, #A32_SCTRL_AFE_ACCESSFLAGENABLE  // make sure turn off AFE (B3.6.1 in TRM)
+    bic r3, r3, #A32_SCTRL_TRE_TEXREMAPENABLE    // make sure turn off TEX remap
+    mcr p15, 0, r3, c1, c0, 0   
+    dsb
+    isb
 
-      // jump over 32 bytes to flush the pipeline
-     mov pc, r4
-     nop
-     nop
-     nop
-     nop
-     nop
-     nop
-     nop
-     nop
+    // invalidate tlb
+    mov r7, #0
+    mcr p15, 0, r7, c8, c7, 0
+    dsb
+    isb
+
+    // invalidate i cache (even though it is off)
+    mcr p15, 0, r7, c7, c5, 0
+    mcr p15, 0, r7, c7, c5, 6       
+    dsb
+    isb 
+
+    //
+    // in case of fault during transition:
+    //
+    // r0   phys==virt address of loadinfo in transition page
+    // r1   virtual kernel k2oscrt.dlx entrypoint
+    // r2   MPIDR high 2 bits 
+    // r3   value that was put into SCTLR
+    // r4   address of _JUMP_TO_KERNEL below
+    // r5   value put into both TTBR0, TTBR1
+    // r6   value put into TTBCR
+    // r7   zero
+
+    // jump over 32 bytes to flush the pipeline
+    mov pc, r4
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
 
 _JUMP_TO_KERNEL:
     // never coming back from here
     mov pc, r1
-END_A32_PROC(A32_Transition)
 
+
+END_A32_PROC(A32_Transition)
 
 /* --------------------------------------------------------------------------------- */
 

@@ -72,43 +72,12 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     A32_DSB();
     A32_ISB();
 
-#if 0
     //
-    // enable caches now
+    // enable caches now (will only affect cores > ix 0) 
     //
     K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
 
-
-    // domain 0 client access
-    A32_WriteDACR(1);
-
-    /* now make sure proper TTB is being used */
-    v = gData.mpShared->LoadInfo.mTransBasePhys;
-    if (gA32Kern_IsMulticoreCapable)
-    {
-        v |= 0x40; // IRGN bits = 01 inner write-back write-allocate cacheable (counter intuitive bit 0 is bit 1 of IRGN, bit 6 is bit 0)
-        v |= 0x02; // S bit (shareable)
-    }
-    else
-    {
-        v |= 0x01; // C bit (inner cacheable)
-    }
-    v |= 0x08; // RGN bits  (set 01b = outer write-back write-allocate cacheable)
-    A32_WriteTTBR0(v);
-    A32_WriteTTBR1(v);
-
-    A32_WriteTTBCR(1);  // use 0x80000000 sized TTBR0
-
-    A32_DSB();
-    A32_ISB();
-#endif
-    A32_ICacheInvalidateAll_UP();
-    A32_BPInvalidateAll_UP();
-    A32_TLBInvalidateAll_UP();
-
     /* we should be off all CPU startup goop now */
-
-    K2_CpuFullBarrier();
 
     KernSched_AddCurrentCore();
 
