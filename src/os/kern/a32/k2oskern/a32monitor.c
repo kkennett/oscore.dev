@@ -80,7 +80,15 @@ void KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore)
     if (pProc != pOldProc)
     {
         if (pOldProc != NULL)
+        {
+            K2OSKERN_Debug("\n\nSWITCH PROCESSES (%d -> %d)\n\n", pOldProc->mId, pProc->mId);
             A32_TLBInvalidateASID_UP(pOldProc->mId);
+        }
+        else
+        {
+            K2OSKERN_Debug("\n\nSWITCH PROCESSES (%d -> %d)\n\n", A32_ReadCONTEXT(), pProc->mId);
+            A32_TLBInvalidateASID_UP(A32_ReadCONTEXT());
+        }
 
         A32_WriteTTBR0(pProc->mTransTableRegVal);
         A32_WriteCONTEXT(pProc->mId);

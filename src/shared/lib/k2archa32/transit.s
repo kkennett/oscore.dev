@@ -108,6 +108,11 @@ BEGIN_A32_PROC(A32_Transition)
     dsb
     isb 
 
+    // clear CONTEXTIDR
+    mov r7, #0
+    mcr p15, 0, r7, c13, c0, 1
+    isb
+
     // enable mmu
     mrc p15, 0, r3, c1, c0, 0   
     orr r3, r3, #A32_SCTRL_M_MMUENABLE

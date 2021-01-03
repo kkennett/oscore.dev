@@ -88,7 +88,7 @@ static UINT32 const sTransitionCode[] =
     // and system entrypoint to r1
     //
     0xe5901008,    //    ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
-    0xe28f408C,    //    adr r4, _JUMP_TO_KERNEL
+    0xe28f4098,    //    adr r4, _JUMP_TO_KERNEL
 
     // disable branch predictor and ensure caches off
     0xee113f10,    //    mrc p15, 0, r3, c1, c0, 0   
@@ -105,6 +105,11 @@ static UINT32 const sTransitionCode[] =
     0xee077fd5,    //    mcr p15, 0, r7, c7, c5, 6       
     0xf57ff04f,    //    dsb
     0xf57ff06f,    //    isb
+
+    // clear CONTEXTIDR
+    0xe3a07000,    //    mov     r7, #0
+    0xee0d7f30,    //    mcr     15, 0, r7, cr13, cr0, {1}
+    0xf57ff06f,    //    isb     sy
 
     // enable mmu
     0xee113f10,    //    mrc p15, 0, r3, c1, c0, 0   

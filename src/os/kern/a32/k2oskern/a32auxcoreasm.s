@@ -128,6 +128,10 @@ A32AUXCPU_CONTINUE:
     ldr r3, [r2]
     dsb
 
+    mov r7, #0
+    mcr 15, 0, r7, cr13, cr0, 1
+    isb
+
     // enable MMU and jump to continuation point
     mcr p15, 0, r1, c1, c0, 0
     dsb
