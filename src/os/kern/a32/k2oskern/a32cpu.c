@@ -88,15 +88,17 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 
     A32Kern_IntrInitGicPerCore();
 
-//   K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
-//    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
-//    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
-//    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
-//    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
-//    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
-//    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
-//    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
-//    K2OSKERN_Debug("--------------------\n");
+    K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
+    K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
+    K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
+    K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
+    K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+    K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
+    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+    K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
+    K2OSKERN_Debug("--------------------\n");
+
+    KernMem_DumpVM();
 
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     K2OSKERN_Debug("CPU %d Started. EntryStack @ %08X\n", pThisCorePage->CpuCore.mCoreIx, v);

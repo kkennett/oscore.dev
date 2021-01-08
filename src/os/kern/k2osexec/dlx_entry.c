@@ -39,6 +39,7 @@ dlx_entry(
     UINT32  aReason
 )
 {
+    K2OSKERN_Debug("K2OSEXEC::dlx_entry()\n");
     return K2STAT_NO_ERROR;
 }
 

@@ -101,8 +101,8 @@
     gArmTokenSpaceGuid.PcdGicInterruptInterfaceBase     | 0x00A00100          #0                  |UINT32                  
     gArmTokenSpaceGuid.PcdVFPEnabled                    | 1                   #0                  |UINT32                                  
     gArmTokenSpaceGuid.PcdL2x0ControllerBase            | 0x00A02000          #0                  |UINT32                          
-    gArmTokenSpaceGuid.PcdSystemMemoryBase              | 0x0000000010400000  #0                  |UINT64                           
-    gArmTokenSpaceGuid.PcdSystemMemorySize              | 0x000000003FC00000  #0                  |UINT64                           
+    gArmTokenSpaceGuid.PcdSystemMemoryBase              | 0x0000000010000000  #0                  |UINT64                           
+    gArmTokenSpaceGuid.PcdSystemMemorySize              | 0x0000000040000000  #0                  |UINT64                           
 
 
 ###################################################################################################

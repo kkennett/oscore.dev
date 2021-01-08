@@ -1351,7 +1351,80 @@ static void sInit_BeforeVirt(void)
     // unallocated VM must not be mapped. all VM must be accounted for
     //
 #if VIRT_AUDIT
-    K2OSKERN_Debug("VIRT_AUDIT\n");
+//    K2OSKERN_Debug("VIRT_AUDIT\n");
+    lastEnd = K2OS_KVA_KERN_BASE;
+    pHeapNode = K2HEAP_GetFirstNode(&gData.KernVirtHeap);
+    K2_ASSERT(pHeapNode != NULL);
+    do {
+        virtAddr = K2HEAP_NodeAddr(pHeapNode);
+        pageCount = K2HEAP_NodeSize(pHeapNode);
+        K2_ASSERT((pageCount & K2_VA32_MEMPAGE_OFFSET_MASK) == 0);
+        K2_ASSERT(virtAddr == lastEnd);
+        pageCount /= K2_VA32_MEMPAGE_BYTES;
+        if (K2HEAP_NodeIsFree(pHeapNode))
+        {
+//            K2OSKERN_Debug("FREE %08X %8d\n", virtAddr, pageCount * K2_VA32_MEMPAGE_BYTES);
+            // every page in this range must not be mapped
+            do {
+                KernArch_Translate(gpProc0, virtAddr, &pde, &ptIsPresent, &pte, &accessAttr);
+                if (ptIsPresent)
+                {
+                    if (pte & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT))
+                    {
+                        K2OSKERN_Debug("v %08X PDE %08X PTE %08X", virtAddr, pde, pte);
+                        K2_ASSERT(0);
+                    }
+                    virtAddr += K2_VA32_MEMPAGE_BYTES;
+                    pageCount--;
+                }
+                else
+                {
+                    //
+                    // virtAddr must be on a pagetable map bytes boundary
+                    //
+                    K2_ASSERT((virtAddr & (K2_VA32_PAGETABLE_MAP_BYTES - 1)) == 0);
+                    K2_ASSERT(pageCount >= K2_VA32_ENTRIES_PER_PAGETABLE);
+                    virtAddr += K2_VA32_PAGETABLE_MAP_BYTES;
+                    pageCount -= K2_VA32_ENTRIES_PER_PAGETABLE;
+                }
+            } while (pageCount > 0);
+        }
+        else
+        {
+//            K2OSKERN_Debug("USED %08X %8d\n", virtAddr, pageCount * K2_VA32_MEMPAGE_BYTES);
+            virtAddr += (pageCount * K2_VA32_MEMPAGE_BYTES);
+        }
+        lastEnd = virtAddr;
+        pHeapNode = K2HEAP_GetNextNode(&gData.KernVirtHeap, pHeapNode);
+    } while (pHeapNode != NULL);
+    K2_ASSERT(lastEnd == 0);
+#endif
+
+#if K2_TARGET_ARCH_IS_ARM
+    sA32Init_BeforeVirt();
+#endif
+}
+
+#if 0
+557 S  XN TEX_101, AP_001, B - CACHED_WRITEBACK KERN RW USER NONE   KERNEL DATA
+756 S  X  TEX_101, AP_101, B - CACHED WRITEBACK KERN RO USER NONE   KERNEL CODE
+757 S  XN TEX_101, AP_101, B - CACHED WRITEBACK KERN RO USER NONE   KERNEL READ ONLY
+401 S  XN TEX_000, AP 001, B - SHAREABLE DEVICE KERN RW USER NONE   KERNEL DEVICE
+#endif
+
+void KernMem_DumpVM(void)
+{
+    UINT32          virtAddr;
+    UINT32          pageCount;
+    BOOL            ptIsPresent;
+    UINT32          pde;
+    UINT32          pte;
+    UINT32          accessAttr;
+    UINT32          lastEnd;
+    K2HEAP_NODE *   pHeapNode;
+    UINT32          chug;
+
+    K2OSKERN_Debug("\n------------------VM DUMP--------------\n");
     lastEnd = K2OS_KVA_KERN_BASE;
     pHeapNode = K2HEAP_GetFirstNode(&gData.KernVirtHeap);
     K2_ASSERT(pHeapNode != NULL);
@@ -1408,32 +1481,7 @@ static void sInit_BeforeVirt(void)
         pHeapNode = K2HEAP_GetNextNode(&gData.KernVirtHeap, pHeapNode);
     } while (pHeapNode != NULL);
     K2_ASSERT(lastEnd == 0);
-#endif
-
-#if K2_TARGET_ARCH_IS_ARM
-    sA32Init_BeforeVirt();
-#endif
 }
-
-#if 0
-557 S  XN TEX_101, AP_001, B - CACHED_WRITEBACK KERN RW USER NONE   KERNEL DATA
-756 S  X  TEX_101, AP_101, B - CACHED WRITEBACK KERN RO USER NONE   KERNEL CODE
-757 S  XN TEX_101, AP_101, B - CACHED WRITEBACK KERN RO USER NONE   KERNEL READ ONLY
-401 S  XN TEX_000, AP 001, B - SHAREABLE DEVICE KERN RW USER NONE   KERNEL DEVICE
-#endif
-
-void Yuuuup(UINT32 aVirtAddr)
-{
-    BOOL                ptIsPresent;
-    UINT32              pde;
-    UINT32              pte;
-    UINT32              accessAttr;
-
-    KernArch_Translate(gpProc0, aVirtAddr, &pde, &ptIsPresent, &pte, &accessAttr);
-    K2OSKERN_Debug("    %08X PDE %08X PTE %08X (%08X)\n", aVirtAddr, pde, pte, accessAttr);
-    K2OSKERN_Debug("    %08X\n", *(UINT16*)aVirtAddr);
-}
-
 
 static void sInit_AfterHal(void)
 {
@@ -1453,13 +1501,10 @@ void KernInit_Mem(void)
         sInit_BeforeVirt();
         break;
     case KernInitStage_After_Hal:
-        Yuuuup(0x814D4000);
         sInit_AfterHal();
         break;
     case KernInitStage_Threaded:
-        Yuuuup(0x814D4000);
         sInit_Threaded();
-        Yuuuup(0x814D4000);
         break;
     default:
         break;

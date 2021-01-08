@@ -62,6 +62,7 @@ GCC_ASM_EXPORT(ArmGetScuBaseAddress)
 #define A32_SCTRL_Z_BRANCHPREDICTENABLE     0x00000800  // 11
 #define A32_SCTRL_I_ICACHEENABLE            0x00001000  // 12
 #define A32_SCTRL_V_HIGHVECTORS             0x00002000  // 13
+#define A32_SCTRL_VE_IMPVECTORSENABLE       0x01000000  // 24
 #define A32_SCTRL_EE_EXCEPTIONENDIAN        0x02000000  // 25
 
 #define A32_PSR_F_BIT                       0x00000040
@@ -96,6 +97,7 @@ ASM_PFX(_ModuleEntryPoint):
     bic r12, r12, #A32_SCTRL_I_ICACHEENABLE
     bic r12, r12, #A32_SCTRL_C_DCACHEENABLE
     bic r12, r12, #A32_SCTRL_Z_BRANCHPREDICTENABLE
+    bic r12, r12, #A32_SCTRL_VE_IMPVECTORSENABLE    // use IRQ and FIQ from the vector table
     bic r12, r12, #A32_SCTRL_EE_EXCEPTIONENDIAN
     mcr p15, 0, r12, c1, c0, 0   // write SCTRL
     isb
@@ -106,12 +108,6 @@ ASM_PFX(_ModuleEntryPoint):
     mcr p15, 0, r12, c8, c7, 0           // invalidate TLBs - TLBIALL
     mcr p15, 0, r12, c7, c5, 0           // invalidate I cache - ICIALLU  
     mcr p15, 0, r12, c7, c5, 6           // invalidate BP array - BPIALL
-
-    // ARM ERRATA 743622
-    // do not r/w memory
-	mrc	p15, 0, r12, c15, c0, 1     // imp defined read
-	orr	r12, r0, #0x40
-	mcr	p15, 0, r12, c15, c0, 1     // imp defined write
 
     // set manager access for all domains
     // do not r/w memory
@@ -164,7 +160,7 @@ ASM_PFX(_ModuleEntryPoint):
 
     // invalidate the entire L2 (as per app note in manual)
     // do not r/w memory
-    movw r0,  #0x277C
+    movw r0, #0x277C
     movt r0, #0x00A0    // 0x00A0277C is invalidate by way/index 
     movw r1, #0xFFFF
     movt r1, #0

@@ -42,13 +42,17 @@
 
 #include "resource.h"		// main symbols
 
-#define DISK_SECTOR_SIZE_POW2   9
-#define DISK_SECTOR_BYTES       (1<<DISK_SECTOR_SIZE_POW2)
+#define DISK_SECTOR_SIZE_POW2       9
+#define DISK_SECTOR_BYTES           (1<<DISK_SECTOR_SIZE_POW2)
 
-#define DISK_HEADER_SIZE        (2 * 1024 * 1024)
-#define EFI_FILE_SIZE           ((1024+512) * 1024)
-#define EFI_SPARE_SIZE          (384 * 1024)
-#define EFI_VARSTORE_SIZE       (128 * 1024)
+#define PARTITION_TABLE_START_LBA   80
+#define PARTITION_TABLE_ENTRY_COUNT 16
+#define PARTITION_TABLE_LBA_COUNT   4
+
+#define DISK_HEADER_SIZE            (2 * 1024 * 1024)
+#define EFI_FILE_SIZE               ((1024+512) * 1024)
+#define EFI_SPARE_SIZE              (384 * 1024)
+#define EFI_VARSTORE_SIZE           (128 * 1024)
 
 typedef int checkHdrSize[(DISK_HEADER_SIZE > EFI_FILE_SIZE) ? 1 : -1];
 typedef int checkAlign[((DISK_HEADER_SIZE % DISK_SECTOR_BYTES) == 0) ? 1 : -1];

@@ -1496,6 +1496,8 @@ K2STAT KernMem_MapContigPhys(UINT32 aContigPhysAddr, UINT32 aPageCount, UINT32 a
 
 K2STAT KernMem_AllocMapAndCreateSegment(K2OSKERN_OBJ_SEGMENT *apSeg);
 
+void   KernMem_DumpVM(void);
+
 /* --------------------------------------------------------------------------------- */
 
 // these return virtual address of PTE changed

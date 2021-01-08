@@ -264,7 +264,7 @@ ArmPlatformInitializeSystemMemory (
 
 //------------------------------------------------------------------------
 
-#define MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS 7
+#define MAX_VIRTUAL_MEMORY_MAP_DESCRIPTORS 6
 
 VOID
 ArmPlatformGetVirtualMemoryMap (
@@ -310,13 +310,6 @@ ArmPlatformGetVirtualMemoryMap (
     VirtualMemoryTable[Index].VirtualBase  = IMX6_PHYSADDR_OCRAM;
     VirtualMemoryTable[Index].Length       = IMX6_PHYSSIZE_OCRAM;
     VirtualMemoryTable[Index].Attributes   = ARM_MEMORY_REGION_ATTRIBUTE_NONSECURE_UNCACHED_UNBUFFERED;
-    ++Index;
-
-    // Framebuffer 4MB
-    VirtualMemoryTable[Index].PhysicalBase = UDOOQUAD_DISPBUF_PHYSICAL_BASE;
-    VirtualMemoryTable[Index].VirtualBase  = UDOOQUAD_DISPBUF_PHYSICAL_BASE;
-    VirtualMemoryTable[Index].Length       = UDOOQUAD_DISPBUF_PHYSICAL_LENGTH;
-    VirtualMemoryTable[Index].Attributes   = UDOOQUAD_DISPBUF_ATTRIBUTES;
     ++Index;
 
     // DRAM

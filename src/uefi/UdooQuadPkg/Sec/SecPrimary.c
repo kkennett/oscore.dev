@@ -309,7 +309,7 @@ static void sInitUart(void)
     //
     // 80Mhz -> /2 -> 40Mhz -> / (16 * 3125 / 144) -> 115200
     //
-    IMX6_UART_SyncInitForDebug(IMX6_PHYSADDR_UART2, IMX6_UART_UFCR_RFDIV_BY2, 143, 3124);
+    IMX6_UART_SyncInitForDebug(IMX6_PHYSADDR_UART2, IMX6_UART_UFCR_RFDIV_BY2, 0x0F, 0x15B);
 
     //
     // Any other optional inits in serial port library 

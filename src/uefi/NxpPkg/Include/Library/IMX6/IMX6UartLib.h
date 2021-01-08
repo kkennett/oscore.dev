@@ -41,7 +41,7 @@ VOID
 EFIAPI
 IMX6_UART_SyncInitForDebug(
     IN  UINT32  UartBaseAddress,
-    IN  UINT32  UartFCR,
+    IN  UINT32  UartRFDIV,
     IN  UINT32  UartBIR,
     IN  UINT32  UartBMR
 );

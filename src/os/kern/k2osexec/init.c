@@ -43,6 +43,8 @@ K2OSEXEC_Init(
     ACPI_TABLE_HEADER * pAcpiHdr;
     ACPI_STATUS         acpiStatus;
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+
     //
     // exported function - guard against re-entry
     //
@@ -54,11 +56,17 @@ K2OSEXEC_Init(
 
     Phys_Init(apInitInfo);
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+
     acpiStatus = AcpiInitializeSubsystem();
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+
     acpiStatus = AcpiInitializeTables(NULL, 16, FALSE);
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));
+
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
 
     acpiStatus = AcpiGetTable(ACPI_SIG_MADT, 0, &pAcpiHdr);
     if (ACPI_FAILURE(acpiStatus))
@@ -66,9 +74,15 @@ K2OSEXEC_Init(
     else
         gpMADT = (ACPI_TABLE_MADT *)pAcpiHdr;
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+
     Pci_Init();
 
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+
     Handlers_Init1();
+
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
 
     acpiStatus = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
     K2_ASSERT(!ACPI_FAILURE(acpiStatus));

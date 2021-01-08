@@ -36,23 +36,31 @@
 #
 ################################################################################
 [FD.UDOOQUAD]
-    BaseAddress   = 0x10400000|gArmTokenSpaceGuid.PcdFdBaseAddress
+    BaseAddress   = 0x10000000|gArmTokenSpaceGuid.PcdFdBaseAddress
     Size          = 0x00180000|gArmTokenSpaceGuid.PcdFdSize
     ErasePolarity = 1
     BlockSize     = 0x1
     NumBlocks     = 0x00180000
 
-0x00000000|0x00001000
+0x00000000|0x00000400
 FILE = UdooQuadPkg/Binary/imghdr.bin
 
-0x00001000|0x00009000
+0x00000400|0x00009C00
+FILE = UdooQuadPkg/Binary/SPL
+
+0x0000A000|0x00007400
+FILE = UdooQuadPkg/Binary/zeroes.bin
+
+0x00011400|0x00050C00
+FILE = UdooQuadPkg/Binary/u-boot.img
+
+0x00062000|0x00009000
 gArmTokenSpaceGuid.PcdSecureFvBaseAddress|gArmTokenSpaceGuid.PcdSecureFvSize
 FV = FV_SEC
 
-0x0000A000|0x00176000
+0x0006B000|0x00115000
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = FV_UNCOMPRESSED
-
 
 ################################################################################
 #

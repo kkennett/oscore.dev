@@ -37,7 +37,7 @@ VOID
 EFIAPI
 IMX6_UART_SyncInitForDebug(
     IN  UINT32  UartBaseAddress,
-    IN  UINT32  UartFCR,
+    IN  UINT32  UartRFDIV,
     IN  UINT32  UartBIR,
     IN  UINT32  UartBMR
 )
@@ -57,6 +57,7 @@ IMX6_UART_SyncInitForDebug(
         IMX6_UART_UCR3_DSR |
         IMX6_UART_UCR3_DCD |
         IMX6_UART_UCR3_RI |
+        IMX6_UART_UCR3_ADNIMP |
         IMX6_UART_UCR3_RXDMUXSEL);
 
     //
@@ -66,7 +67,7 @@ IMX6_UART_SyncInitForDebug(
     MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UESC, 0x2B);
     MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UTIM, 0);
     MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UTS, 0);
-    MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UFCR, UartFCR); 
+    MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UFCR, (MmioRead32(UartBaseAddress + IMX6_UART_OFFSET_UFCR) & ~IMX6_UART_UFCR_RFDIV_MASK) | (UartRFDIV & IMX6_UART_UFCR_RFDIV_MASK));
     MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UBIR, UartBIR);
     MmioWrite32(UartBaseAddress + IMX6_UART_OFFSET_UBMR, UartBMR);
 

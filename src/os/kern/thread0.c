@@ -374,10 +374,27 @@ void sDumpObjTree(void)
 
 #endif
 
+typedef void (*pfVoid)(void);
+
 UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
 {
     KernInitStage               initStage;
     K2OSHAL_pf_OnSystemReady    fSysReady;
+
+    K2STAT              stat;
+    K2OSEXEC_pf_Init    fExec_Init;
+
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
+    stat = DLX_FindExport(
+        gData.mpDlxExec,
+        DlxSeg_Text,
+        "K2OSEXEC_Init",
+        (UINT32*)&fExec_Init);
+    if (K2STAT_IS_ERROR(stat))
+        K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
+    K2OSKERN_Debug("Thread0 found K2OSEXEC_Init @ %08X\n", fExec_Init);
+
+    ((pfVoid)0)();
 
     //
     // run stages up to multithreaded

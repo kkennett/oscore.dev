@@ -31,29 +31,52 @@
 //
 
 #if 0
-SD card LBA map
+SD card LBA map - 512 byte sectors
 -------------------------------------------
-0x000000 0      Protective MBR -- first FD sector
+0x000000 0      Protective MBR --------------------------BEGINNING OF UEFI FD FILE
 0x000200 1      GPT Header
-0x000400 2      Reserved
-0x000600 3      Reserved
-0x000800 4      GPT Partition Table Entries 0,1,2,3
-0x000A00 5      GPT Partition Table Entries 4,5,6,7
-0x000C00 6      GPT Partition Table Entries 8,9,10,11
-0x000E00 7      GPT Partition Table Entries 12,13,14,15
-0x001000 8      EFI SEC FV sector 0
+0x000400 2      SPL Sector 0
+0x000600 3      SPL Sector 1
 ...
-0x17FE00 3071   EFI FD last sector
-0x180000 3072   EFI SPARE AREA first sector
-0x180200 3073   ...
+0x009C00 79     SPL Last Sector
+0x00A000 80     GPT Partition Table Entries 0,1,2,3
+0x00A200 81     GPT Partition Table Entries 4,5,6,7
+0x00A400 82     GPT Partition Table Entries 8,9,10,11
+0x00A600 83     GPT Partition Table Entries 12,13,14,15
+0x00A800 84     free space
 ...
-0x1DFE00 3839   EFI SPARE AREA last sector
-0x1E0000 3840   EFI VARIABLE STORE first sector
-0x1E0200 3841   ...
+0x011200 137    free space
+0x011400 138    u-boot.img area first sector
 ...
-0x1FFE00 4095   EFI VARIABLE STORE last sector (256 sectors - 85*3 + 1)
+0x05FC00 767    u - boot.img area last sector
+0x060000 768    u - boot saved environment
+0x060200 769    u - boot saved environment
+0x060400 770    u - boot saved environment
+0x060600 771    u - boot saved environment
+0x060800 772    u - boot saved environment
+0x060A00 773    u - boot saved environment
+0x060C00 774    u - boot saved environment
+0x060E00 775    u - boot saved environment
+0x061000 776    u - boot saved environment
+0x061200 777    u - boot saved environment
+0x061400 778    u - boot saved environment
+0x061600 779    u - boot saved environment
+0x061800 780    u - boot saved environment
+0x061A00 781    u - boot saved environment
+0x061C00 782    u - boot saved environment
+0x061E00 783    u - boot saved environment
+0x062000 784    UEFI first sector
+...
+0x17FE00 3071   UEFI last sector        -------------------------- END OF UEFI FD FILE
+0x180000 3072   VarStore first sector  128KB
+...
+0x1BFE00 3327   VarStore last sector 128KB
+0x1A0000 3328   VarStore 'spare' area first sector  384KB
+...
+0x1FFE00 4095   VarStore 'spare' area last sector
 0x200000 4096   GPT "First Usable LBA" (2MB)
 ...
+0x?      n-6    GPT "Last Usable LBA"
 0x?      n-5    GPT Partition Table Entries 0,1,2,3
 0x?      n-4    GPT Partition Table Entries 4,5,6,7
 0x?      n-3    GPT Partition Table Entries 8,9,10,11
@@ -546,9 +569,9 @@ bool CProgDlg::State_FindDisk(void)
 
             if (pHdr->MyLBA != 1)
                 break;
-            if (pHdr->PartitionEntryLBA != 4)
+            if (pHdr->PartitionEntryLBA != PARTITION_TABLE_START_LBA)
                 break;
-            if (pHdr->NumberOfPartitionEntries != 16)
+            if (pHdr->NumberOfPartitionEntries != PARTITION_TABLE_ENTRY_COUNT)
                 break;
             if (pHdr->FirstUsableLBA != (DISK_HEADER_SIZE / DISK_SECTOR_BYTES))
                 break;
@@ -948,7 +971,7 @@ bool CProgDlg::State_CreateDisk(void)
     theApp.mpVdsDisk = NULL;
 
     GPT_SECTOR *pGPT = (GPT_SECTOR *)(theApp.mpEFIData + DISK_SECTOR_BYTES);
-    GPT_ENTRY *pEntry = (GPT_ENTRY *)(theApp.mpEFIData + (4 * DISK_SECTOR_BYTES));
+    GPT_ENTRY *pEntry = (GPT_ENTRY *)(theApp.mpEFIData + (PARTITION_TABLE_START_LBA * DISK_SECTOR_BYTES));
 
     hDisk = CreateFile(theApp.mDiskProp.pwszDevicePath,
         GENERIC_READ | GENERIC_WRITE, 0, NULL,
@@ -979,8 +1002,8 @@ bool CProgDlg::State_CreateDisk(void)
         pGPT->Header.HeaderSize = sizeof(GPT_HEADER);
         pGPT->Header.MyLBA = 1;
         pGPT->Header.FirstUsableLBA = (DISK_HEADER_SIZE / DISK_SECTOR_BYTES);
-        pGPT->Header.PartitionEntryLBA = 4;
-        pGPT->Header.NumberOfPartitionEntries = 16; // at 128 bytes each, this is 4 512-byte sectors
+        pGPT->Header.PartitionEntryLBA = PARTITION_TABLE_START_LBA;
+        pGPT->Header.NumberOfPartitionEntries = PARTITION_TABLE_ENTRY_COUNT; // at 128 bytes each, this is  512-byte sectors
         pGPT->Header.SizeOfPartitionEntry = sizeof(GPT_ENTRY);
 
         diskEnd.QuadPart = geo.DiskSize.QuadPart / DISK_SECTOR_BYTES;
@@ -1041,7 +1064,7 @@ bool CProgDlg::State_CreateDisk(void)
         pGPT->Header.MyLBA = pGPT->Header.AlternateLBA;
         pGPT->Header.AlternateLBA = 1;
 
-        pGPT->Header.PartitionEntryLBA = diskEnd.QuadPart - 4;
+        pGPT->Header.PartitionEntryLBA = diskEnd.QuadPart - PARTITION_TABLE_LBA_COUNT;
 
         pGPT->Header.HeaderCRC32 = 0;
 
@@ -1062,7 +1085,7 @@ bool CProgDlg::State_CreateDisk(void)
             break;
         }
 
-        diskEnd.QuadPart -= (4 * DISK_SECTOR_BYTES);
+        diskEnd.QuadPart -= (PARTITION_TABLE_LBA_COUNT * DISK_SECTOR_BYTES);
 
         if (!SetFilePointerEx(hDisk, diskEnd, &diskEnd, FILE_BEGIN))
         {
@@ -1070,7 +1093,7 @@ bool CProgDlg::State_CreateDisk(void)
             break;
         }
 
-        if (!WriteFile(hDisk, pEntry, 4 * DISK_SECTOR_BYTES, &result, NULL))
+        if (!WriteFile(hDisk, pEntry, PARTITION_TABLE_LBA_COUNT * DISK_SECTOR_BYTES, &result, NULL))
         {
             AbortMessage(TEXT("Could not write alternate partition table"));
             break;
@@ -1398,6 +1421,29 @@ void CProgDlg::State_MakeAccessPath(void)
     pMF->Release();
 }
 
+#if 0
+static void sFindMe(UINT8 const* apFind, UINT32 aLeft)
+{
+    do {
+        if (*apFind != 'F')
+        {
+            apFind++;
+            aLeft--;
+        }
+        else
+        {
+            if (aLeft >= 8)
+            {
+                if (0 == strncmp((char const*)apFind, "FINDMEEE", 8))
+                    break;
+            }
+            apFind++;
+            aLeft--;
+        }
+    } while (aLeft);
+}
+#endif
+
 bool CProgDlg::State_UpdateEFI(void)
 {
     HANDLE hDisk;
@@ -1422,20 +1468,33 @@ bool CProgDlg::State_UpdateEFI(void)
         }
 
         DWORD red = 0;
+
+//        if (!ReadFile(hDisk, theApp.mpEFIData, DISK_HEADER_SIZE, &red, NULL))
         if (!ReadFile(hDisk, theApp.mpEFIData, DISK_SECTOR_BYTES * 2, &red, NULL))
         {
             AbortMessage(TEXT("Could not read target disk."));
             break;
         }
 
-        if (INVALID_SET_FILE_POINTER == SetFilePointer(hDisk, DISK_SECTOR_BYTES * 4, NULL, FILE_BEGIN))
+#if 0
+        HANDLE hOut = CreateFile(L"out.img", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hOut != INVALID_HANDLE_VALUE)
         {
-            AbortMessage(TEXT("Could not seek to sector 4 on disk."));
+            WriteFile(hOut, theApp.mpEFIData, DISK_HEADER_SIZE, &red, NULL);
+            CloseHandle(hOut);
+        }
+
+//        sFindMe(theApp.mpEFIData, DISK_HEADER_SIZE);
+#endif
+
+        if (INVALID_SET_FILE_POINTER == SetFilePointer(hDisk, DISK_SECTOR_BYTES * PARTITION_TABLE_LBA_COUNT, NULL, FILE_BEGIN))
+        {
+            AbortMessage(TEXT("Could not seek to sector for partition table on disk."));
             break;
         }
 
         red = 0;
-        if (!ReadFile(hDisk, theApp.mpEFIData + (DISK_SECTOR_BYTES * 4), (16*128), &red, NULL))
+        if (!ReadFile(hDisk, theApp.mpEFIData + (DISK_SECTOR_BYTES * PARTITION_TABLE_START_LBA), (PARTITION_TABLE_ENTRY_COUNT *128), &red, NULL))
         {
             AbortMessage(TEXT("Could not read target disk partition table."));
             break;

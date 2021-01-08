@@ -279,10 +279,18 @@ static void sInit_AfterHal(void)
 //    K2OSKERN_Debug("--------------------\n");
 }
 
+typedef void (*pfVoid)(void);
+
+typedef UINT32(*pfDebug)(char const* apFormat, ...);
+
+extern pfDebug gpfDebug;
+
 static void sInit_BeforeLaunchCores(void)
 {
     UINT32 *    pOut;
     UINT32      val32;
+
+    gpfDebug = K2OSKERN_Debug;
 
     //
     // install vector page
@@ -328,18 +336,22 @@ static void sInit_BeforeLaunchCores(void)
     //
     // flush and invalidate the vector area
     //
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (UINT32 *)K2OS_KVA_ARCHSPEC_BASE, A32_VECTORS_LENGTH_BYTES);
-    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, (UINT32 *)K2OS_KVA_ARCHSPEC_BASE, A32_VECTORS_LENGTH_BYTES);
+    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
 
     // 
     // break the mapping
     //
     KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
 
     //
     // re-make the mapping as code
     //
     KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_MAPTYPE_KERN_TEXT);
+    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
 
     //
     // turn on high vectors 
@@ -347,7 +359,14 @@ static void sInit_BeforeLaunchCores(void)
     val32 = A32_ReadSCTRL();
     val32 |= A32_SCTRL_V_HIGHVECTORS;
     A32_WriteSCTRL(val32);
+    A32_DSB();
     A32_ISB();
+
+    //
+    // fault
+    //
+    K2OSKERN_Debug("Faulting\n");
+    ((pfVoid)0)();
 }
 
 void KernInit_Arch(void)
