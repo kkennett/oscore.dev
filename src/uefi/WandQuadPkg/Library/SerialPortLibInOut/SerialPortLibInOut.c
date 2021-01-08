@@ -56,7 +56,7 @@ SerialPortWrite(
     IN  UINTN   NumberOfBytes
 )
 {
-    return IMX6_UART_SyncWrite(Buffer, NumberOfBytes, IMX6_PHYSADDR_UART2);
+    return IMX6_UART_SyncWrite(Buffer, NumberOfBytes, WANDQUAD_DEBUG_UART);
 }
 
 UINTN
@@ -66,7 +66,7 @@ SerialPortRead(
     IN  UINTN   NumberOfBytes
 )
 {
-    return IMX6_UART_SyncRead(Buffer, NumberOfBytes, IMX6_PHYSADDR_UART2);
+    return IMX6_UART_SyncRead(Buffer, NumberOfBytes, WANDQUAD_DEBUG_UART);
 }
 
 BOOLEAN
@@ -75,7 +75,7 @@ SerialPortPoll(
     VOID
 )
 {
-    return IMX6_UART_Poll(IMX6_PHYSADDR_UART2);
+    return IMX6_UART_Poll(WANDQUAD_DEBUG_UART);
 }
 
 RETURN_STATUS

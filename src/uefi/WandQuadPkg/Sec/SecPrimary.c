@@ -190,59 +190,6 @@ static void sInitGPT(void)
         );
 }
 
-static void sDisableWatchdogs(void)
-{
-    UINT32 regVal;
-    UINT32 padConfig;
-
-    padConfig =
-        IMX6_MUX_PADCTL_PUS_100KOHM_PU |
-        IMX6_MUX_PADCTL_PUE |
-        IMX6_MUX_PADCTL_PKE |
-        IMX6_MUX_PADCTL_SPEED_100MHZ |
-        IMX6_MUX_PADCTL_DSE_40_OHM |
-        IMX6_MUX_PADCTL_SRE_FAST;
-
-    // WDT_EN is GPIO5-4 on EIM_A24
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_EIM_ADDR24, 0x05);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_EIM_ADDR24, padConfig);
-
-    // WDT_TRG is GPIO3-19 on EIM_D19
-    padConfig = 
-        IMX6_MUX_PADCTL_SPEED_50MHZ |
-        IMX6_MUX_PADCTL_DSE_HIZ |
-        IMX6_MUX_PADCTL_SRE_SLOW;
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_EIM_DATA19, 0x05);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_EIM_DATA19, padConfig);
-
-    // output 0 to WDT_TRG
-    // output 1 to WDT_EN  (low enable, so set high)
-    // set WDT_TRG as an input
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO3_DR);
-    regVal &= ~(1 << 19);
-    MmioWrite32(IMX6_PHYSADDR_GPIO3_DR, regVal);
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO3_GDIR);
-    regVal |= (1 << 19);
-    MmioWrite32(IMX6_PHYSADDR_GPIO3_GDIR, regVal);
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO3_DR);
-    regVal &= ~(1 << 19);
-    MmioWrite32(IMX6_PHYSADDR_GPIO3_DR, regVal);
-
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO5_DR);
-    regVal |= (1 << 4);
-    MmioWrite32(IMX6_PHYSADDR_GPIO5_DR, regVal);
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO5_GDIR);
-    regVal |= (1 << 4);
-    MmioWrite32(IMX6_PHYSADDR_GPIO5_GDIR, regVal);
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO5_DR);
-    regVal |= (1 << 4);
-    MmioWrite32(IMX6_PHYSADDR_GPIO5_DR, regVal);
-
-    regVal = MmioRead32(IMX6_PHYSADDR_GPIO3_GDIR);
-    regVal &= ~(1 << 19);
-    MmioWrite32(IMX6_PHYSADDR_GPIO3_GDIR, regVal);
-}
-
 static void sInitUart(void)
 {
     UINT32 regVal;
@@ -280,8 +227,8 @@ static void sInitUart(void)
     regVal |= ((IMX6_RUN_AND_WAIT << IMX6_SHL_CCM_CCGR5_UART) | (IMX6_RUN_AND_WAIT << IMX6_SHL_CCM_CCGR5_UART_SERIAL));
     MmioWrite32(IMX6_PHYSADDR_CCM_CCGR5, regVal);
 
-    // EIM_D26 - UART2 TX
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_EIM_DATA26,
+    // CSI0_DAT10 - UART1 TX
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_CSI0_DATA10,
         IMX6_MUX_PADCTL_HYS |
         IMX6_MUX_PADCTL_PUS_100KOHM_PU |
         IMX6_MUX_PADCTL_PUE |
@@ -289,10 +236,10 @@ static void sInitUart(void)
         IMX6_MUX_PADCTL_SPEED_100MHZ |
         IMX6_MUX_PADCTL_DSE_40_OHM |
         IMX6_MUX_PADCTL_SRE_FAST);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_EIM_DATA26, 4);
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_CSI0_DATA10, 3);
 
-    // EIM_D27 - UART2 RX
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_EIM_DATA27,
+    // CSI0_DAT11 - UART2 RX
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_CSI0_DATA11,
         IMX6_MUX_PADCTL_HYS |
         IMX6_MUX_PADCTL_PUS_100KOHM_PU |
         IMX6_MUX_PADCTL_PUE |
@@ -300,8 +247,8 @@ static void sInitUart(void)
         IMX6_MUX_PADCTL_SPEED_100MHZ |
         IMX6_MUX_PADCTL_DSE_40_OHM |
         IMX6_MUX_PADCTL_SRE_FAST);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_UART2_UART_RX_DATA_SELECT_INPUT, 1);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_EIM_DATA27, 4);
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_UART1_UART_RX_DATA_SELECT_INPUT, 1);
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_CSI0_DATA10, 3);
 
     // Set UART2 to 115200 8N1
     // 
@@ -309,7 +256,7 @@ static void sInitUart(void)
     //
     // 80Mhz -> /2 -> 40Mhz -> / (16 * 3125 / 144) -> 115200
     //
-    IMX6_UART_SyncInitForDebug(IMX6_PHYSADDR_UART2, IMX6_UART_UFCR_RFDIV_BY2, 0x0F, 0x15B);
+    IMX6_UART_SyncInitForDebug(WANDQUAD_DEBUG_UART, IMX6_UART_UFCR_RFDIV_BY2, 0x0F, 0x15B);
 
     //
     // Any other optional inits in serial port library 
@@ -367,7 +314,6 @@ WandQuadPrimaryCoreSecStart(
     //
     sInitGPT();
     sInitUart();
-    sDisableWatchdogs();
 
     DebugPrint(0xFFFFFFFF, "\r\nWand Quad Secure Init\r\n");
     DebugPrint(0xFFFFFFFF, "Built " __DATE__ " " __TIME__ "\r\n");

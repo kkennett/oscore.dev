@@ -104,8 +104,7 @@ static void sInitSDHCHw(void)
         IMX6_MUX_PADCTL_DSE_80_OHM |
         IMX6_MUX_PADCTL_SRE_FAST;
 
-    // USDHC2 is SD controller.  CD input is on GPIO6-2 and Power output is on GPIO6-1
-    // CD and power(on) already set up in GPIO setup above
+    // USDHC3 is SD controller.  CD input is on GPIO3-9 and Power output is on GPIO6-1
     MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_SD3_CLK  , 0);
     MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_SD3_CMD  , 0);
     MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_SD3_DATA0, 0);
@@ -126,19 +125,15 @@ static void sInitSDHCHw(void)
         IMX6_MUX_PADCTL_SRE_SLOW;
 
     //
-    // CD is on SD3_DAT5 - GPIO7_IO00, input
+    // CD is on EIM_DA9 - GPIO3_IO09, input
     //
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_SD3_DATA5, 5);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_SD3_DATA5, regVal);
-    MmioClrBits32(IMX6_PHYSADDR_GPIO7_GDIR, 1 << 0);
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_EIM_AD09, 5);
+    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_EIM_AD09, regVal);
+    MmioClrBits32(IMX6_PHYSADDR_GPIO3_GDIR, 1 << 9);
 
     //
-    // PWR is on NANDF_D5 - GPIO2_IO05, output 
+    // PWR is AO on Wandboard
     //
-    MmioSetBits32(IMX6_PHYSADDR_GPIO2_DR, 1 << 5);
-    MmioSetBits32(IMX6_PHYSADDR_GPIO2_GDIR, 1 << 5);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_PAD_CTL_PAD_NAND_DATA05, regVal);
-    MmioWrite32(IMX6_PHYSADDR_IOMUXC + IMX6_IOMUXC_OFFSET_SW_MUX_CTL_PAD_NAND_DATA05, 5);
 };
 
 static

@@ -56,7 +56,7 @@ SerialPortWrite(
     IN  UINTN   NumberOfBytes
 )
 {
-    return IMX6_UART_SyncWrite(Buffer, NumberOfBytes, IMX6_PHYSADDR_UART2);
+    return IMX6_UART_SyncWrite(Buffer, NumberOfBytes, WANDQUAD_DEBUG_UART);
 }
 
 UINTN
