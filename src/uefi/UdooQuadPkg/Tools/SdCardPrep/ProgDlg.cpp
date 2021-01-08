@@ -35,37 +35,20 @@ SD card LBA map - 512 byte sectors
 -------------------------------------------
 0x000000 0      Protective MBR --------------------------BEGINNING OF UEFI FD FILE
 0x000200 1      GPT Header
-0x000400 2      SPL Sector 0
-0x000600 3      SPL Sector 1
+0x000400 2      SPL first sector
 ...
-0x009C00 79     SPL Last Sector
-0x00A000 80     GPT Partition Table Entries 0,1,2,3
-0x00A200 81     GPT Partition Table Entries 4,5,6,7
-0x00A400 82     GPT Partition Table Entries 8,9,10,11
-0x00A600 83     GPT Partition Table Entries 12,13,14,15
-0x00A800 84     free space
+0x00FE00 127    SPL last possible sector
+0x010000 128    GPT Partition Table Entries 0, 1, 2, 3
+0x010200 129    GPT Partition Table Entries 4, 5, 6, 7
+0x010400 130    GPT Partition Table Entries 8, 9, 10, 11
+0x010600 131    GPT Partition Table Entries 12, 13, 14, 15
+0x010800 132    free space
 ...
 0x011200 137    free space
-0x011400 138    u-boot.img area first sector
+0x011400 138    u-boot.img and env first sector
 ...
-0x05FC00 767    u - boot.img area last sector
-0x060000 768    u - boot saved environment
-0x060200 769    u - boot saved environment
-0x060400 770    u - boot saved environment
-0x060600 771    u - boot saved environment
-0x060800 772    u - boot saved environment
-0x060A00 773    u - boot saved environment
-0x060C00 774    u - boot saved environment
-0x060E00 775    u - boot saved environment
-0x061000 776    u - boot saved environment
-0x061200 777    u - boot saved environment
-0x061400 778    u - boot saved environment
-0x061600 779    u - boot saved environment
-0x061800 780    u - boot saved environment
-0x061A00 781    u - boot saved environment
-0x061C00 782    u - boot saved environment
-0x061E00 783    u - boot saved environment
-0x062000 784    UEFI first sector
+0x0C1E00 1551   u-boot and env last possible sector
+0x0C2000 1552    UEFI first sector
 ...
 0x17FE00 3071   UEFI last sector        -------------------------- END OF UEFI FD FILE
 0x180000 3072   VarStore first sector  128KB

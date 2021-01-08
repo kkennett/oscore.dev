@@ -48,17 +48,17 @@ FILE = UdooQuadPkg/Binary/imghdr.bin
 0x00000400|0x00009C00
 FILE = UdooQuadPkg/Binary/SPL
 
-0x0000A000|0x00007400
-FILE = UdooQuadPkg/Binary/zeroes.bin
+0x00010000|0x00000800
+FILE = UdooQuadPkg/Binary/parttab.bin
 
 0x00011400|0x00050C00
 FILE = UdooQuadPkg/Binary/u-boot.img
 
-0x00062000|0x00009000
+0x000C2000|0x00009000
 gArmTokenSpaceGuid.PcdSecureFvBaseAddress|gArmTokenSpaceGuid.PcdSecureFvSize
 FV = FV_SEC
 
-0x0006B000|0x00115000
+0x000CB000|0x000B5000
 gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
 FV = FV_UNCOMPRESSED
 
