@@ -40,7 +40,7 @@
   # which is a GUID in little endian format UINT32-UINT16-UINT16-UINT8*8
   # and does not look like this in the PCD settings
   #
-  FILE_GUID                      = 04B8CF4C-2334-4644-9853-51202A2D7C45
+  FILE_GUID                      = 7E374E25-8E01-4FEE-87F2-390C23C606CD
   MODULE_TYPE                    = USER_DEFINED
   VERSION_STRING                 = 1.0
 
