@@ -29,32 +29,53 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "K2OsLoader.h"
 
-#define PRINT_BUFFER_CHARS 1024
+#include <k2oshal.h>
+#include "..\wandquad.h"
 
-static CHAR16 sgPrintBuffer[PRINT_BUFFER_CHARS];
+static UINT32 sgDebugPageAddr = 0;
 
-UINTN
-K2Printf(
-    CHAR16 const * apFormat,
-    ...
+void
+K2_CALLCONV_REGS
+K2OSHAL_DebugOut(
+    UINT8 aByte
 )
 {
-    UINTN   ret;
-    VA_LIST Marker;
-    
-    VA_START(Marker, apFormat);
-
-    ret = UnicodeVSPrint(sgPrintBuffer, PRINT_BUFFER_CHARS - 1, apFormat, Marker);
-    sgPrintBuffer[PRINT_BUFFER_CHARS - 1] = 0;
-
-    VA_END(Marker);
-
-    if ((NULL != gST) && (NULL != gST->ConOut))
-        gST->ConOut->OutputString(gST->ConOut, sgPrintBuffer);
-    DebugPrint(0xFFFFFFFF, "%s", sgPrintBuffer);
-
-    return ret;
+    if (sgDebugPageAddr == 0)
+        return;
+    if (aByte == '\n')
+    {
+        while ((K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_UTS) & IMX6_UART_UTS_TXEMPTY) == 0);
+        K2MMIO_Write32(sgDebugPageAddr + IMX6_UART_OFFSET_UTXD, '\r');
+    }
+    while ((K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_UTS) & IMX6_UART_UTS_TXEMPTY) == 0);
+    K2MMIO_Write32(sgDebugPageAddr + IMX6_UART_OFFSET_UTXD, aByte);
 }
+
+BOOL
+K2_CALLCONV_REGS
+K2OSHAL_DebugIn(
+    UINT8 *apRetData
+)
+{
+    if (sgDebugPageAddr == 0)
+        return FALSE;
+    if (0 == (K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_USR2) & IMX6_UART_USR2_RDR))
+        return FALSE;
+    *apRetData = (UINT8)(K2MMIO_Read32(sgDebugPageAddr + IMX6_UART_OFFSET_URXD) & 0xFF);
+    return TRUE;
+}
+
+K2STAT
+K2_CALLCONV_REGS
+dlx_entry(
+    DLX *   apDlx,
+    UINT32  aReason
+)
+{
+    K2OSKERN_Esc(K2OSKERN_ESC_GET_DEBUGPAGE, (void *)&sgDebugPageAddr);
+    return 0;
+}
+
+
 

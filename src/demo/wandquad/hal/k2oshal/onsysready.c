@@ -29,32 +29,16 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "K2OsLoader.h"
 
-#define PRINT_BUFFER_CHARS 1024
+#include "..\wandquad.h"
 
-static CHAR16 sgPrintBuffer[PRINT_BUFFER_CHARS];
-
-UINTN
-K2Printf(
-    CHAR16 const * apFormat,
-    ...
+UINT32
+K2_CALLCONV_CALLERCLEANS
+K2OSHAL_OnSystemReady(
+    void
 )
 {
-    UINTN   ret;
-    VA_LIST Marker;
-    
-    VA_START(Marker, apFormat);
-
-    ret = UnicodeVSPrint(sgPrintBuffer, PRINT_BUFFER_CHARS - 1, apFormat, Marker);
-    sgPrintBuffer[PRINT_BUFFER_CHARS - 1] = 0;
-
-    VA_END(Marker);
-
-    if ((NULL != gST) && (NULL != gST->ConOut))
-        gST->ConOut->OutputString(gST->ConOut, sgPrintBuffer);
-    DebugPrint(0xFFFFFFFF, "%s", sgPrintBuffer);
-
-    return ret;
+    K2OSKERN_Debug("HAL:OnSystemReady() invoked.\n");
+    return 0;
 }
 

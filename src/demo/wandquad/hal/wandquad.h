@@ -29,32 +29,17 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "K2OsLoader.h"
 
-#define PRINT_BUFFER_CHARS 1024
+#ifndef __WANDQUAD_H
+#define __WANDQUAD_H
 
-static CHAR16 sgPrintBuffer[PRINT_BUFFER_CHARS];
+/* --------------------------------------------------------------------------------- */
 
-UINTN
-K2Printf(
-    CHAR16 const * apFormat,
-    ...
-)
-{
-    UINTN   ret;
-    VA_LIST Marker;
-    
-    VA_START(Marker, apFormat);
+#include <k2oshal.h>
+#include <k2osexec.h>
+#include "imx6def.inc"
 
-    ret = UnicodeVSPrint(sgPrintBuffer, PRINT_BUFFER_CHARS - 1, apFormat, Marker);
-    sgPrintBuffer[PRINT_BUFFER_CHARS - 1] = 0;
 
-    VA_END(Marker);
+/* --------------------------------------------------------------------------------- */
 
-    if ((NULL != gST) && (NULL != gST->ConOut))
-        gST->ConOut->OutputString(gST->ConOut, sgPrintBuffer);
-    DebugPrint(0xFFFFFFFF, "%s", sgPrintBuffer);
-
-    return ret;
-}
-
+#endif // __WANDQUAD_H
