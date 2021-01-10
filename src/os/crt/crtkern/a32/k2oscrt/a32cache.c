@@ -34,14 +34,6 @@
 static UINT32           sgCacheInit = 0;
 static A32_CACHEINFO    sgCacheInfo = { 0, };
 
-typedef UINT32(*pfDebug)(char const* apFormat, ...);
-
-static UINT32 fakeDebug(char const* apFormat, ...)
-{
-    return 0;
-}
-pfDebug gpfDebug = fakeDebug;
-
 void A32_DCacheFlushAll(void)
 {
     UINT32  level;
@@ -71,6 +63,7 @@ void A32_DCacheFlushAll(void)
             } while (++ixway < nway);
         } while (++ixset < nset);
     }
+    A32_DSB();
 }
 
 void A32_DCacheInvalidateAll(void)
@@ -107,6 +100,7 @@ void A32_DCacheInvalidateAll(void)
             } while (++ixway < nway);
         } while (++ixset < nset);
     }
+    A32_DSB();
 }
 
 void A32_DCacheFlushInvalidateAll(void)
@@ -138,6 +132,7 @@ void A32_DCacheFlushInvalidateAll(void)
             } while (++ixway < nway);
         } while (++ixset < nset);
     }
+    A32_DSB();
 }
 
 void A32_DCacheFlushRange(UINT32 aVirtAddr, UINT32 aBytes)
@@ -145,27 +140,15 @@ void A32_DCacheFlushRange(UINT32 aVirtAddr, UINT32 aBytes)
     UINT32 lineVal;
     UINT32 endAddr;
 
-    UINT32 val;
-    UINT32 clidr;
-
-    gpfDebug("FlushDCache(%08X, %d)\n", aVirtAddr, aBytes);
-    gpfDebug("CTR      = %08X\n", A32_ReadCTR());
-    gpfDebug("CLIDR    = %08X\n", A32_ReadCLIDR());
-    A32_WriteCSSELR(0);
-    gpfDebug("CCSIDR-0 = %08X\n", A32_ReadCCSIDR());
-    A32_WriteCSSELR(1);
-    gpfDebug("CCSIDR-1 = %08X\n", A32_ReadCCSIDR());
-
     lineVal = sgCacheInfo.mDMinLineBytes - 1;
     endAddr = (aVirtAddr + aBytes + lineVal) & ~lineVal;
     aVirtAddr &= ~lineVal;
     lineVal++;
     do {
-        gpfDebug("FlushCacheLine(%08X-%d)\n", aVirtAddr, lineVal);
         A32_DCacheFlushMVA_PoC(aVirtAddr);
         aVirtAddr += lineVal;
     } while (aVirtAddr != endAddr);
-    A32_ISB();
+    A32_DSB();
 }
 
 void A32_DCacheFlushRange_PoU(UINT32 aVirtAddr, UINT32 aBytes)
@@ -181,7 +164,7 @@ void A32_DCacheFlushRange_PoU(UINT32 aVirtAddr, UINT32 aBytes)
         A32_DCacheFlushMVA_PoU(aVirtAddr);
         aVirtAddr += lineVal;
     } while (aVirtAddr != endAddr);
-    A32_ISB();
+    A32_DSB();
 }
 
 void A32_DCacheInvalidateRange(UINT32 aVirtAddr, UINT32 aBytes)
@@ -213,7 +196,7 @@ void A32_DCacheFlushInvalidateRange(UINT32 aVirtAddr, UINT32 aBytes)
         A32_DCacheFlushInvalidateMVA_PoC(aVirtAddr);
         aVirtAddr += lineVal;
     } while (aVirtAddr != endAddr);
-    A32_ISB();
+    A32_DSB();
 }
 
 void A32_ICacheInvalidateAll(void)
@@ -349,7 +332,6 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
 
     sgCacheInit = 1;
 
-#if 0
     /* enable cache on primary core */
     sctrl.mAsUINT32 = A32_ReadSCTRL();
     K2_ASSERT(0 == sctrl.Bits.mC);
@@ -361,7 +343,6 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
     A32_BPInvalidateAll_UP();
     A32_DSB();
     A32_ISB();
-#endif
 
     return &sgCacheInfo;
 }
