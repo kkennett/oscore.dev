@@ -471,12 +471,12 @@
 #define A32_IDPFR1_TIMER_MASK                       0x000F0000
 
 #define A32_TTBE_PT_PRESENT                         0x00000001
-#define A32_TTBE_PT_NS                              0x00000008 
+#define A32_TTBE_PT_NS                              0x00000008  // only used in SEC mode
 #define A32_TTBE_PT_DOMAIN_MASK                     0x000001E0
 #define A32_TTBE_PT_DOMAIN_SHIFT                    5
 #define A32_TTBE_PT_PHYSADDR_MASK                   0xFFFFFC00
 
-#define A32_TTBE_PAGETABLE_PROTO                    (A32_TTBE_PT_PRESENT | A32_TTBE_PT_NS)
+#define A32_TTBE_PAGETABLE_PROTO                    A32_TTBE_PT_PRESENT
 
 #define A32_PTE_EXEC_NEVER                          0x00000001
 #define A32_PTE_PRESENT                             0x00000002

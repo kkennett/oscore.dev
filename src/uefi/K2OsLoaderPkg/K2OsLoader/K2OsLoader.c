@@ -339,8 +339,8 @@ K2OsLoaderEntryPoint (
                                         gData.LoadInfo.mDebugPageVirt = gData.mKernArenaLow;
                                         gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
 #if K2_TARGET_ARCH_IS_ARM
-                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x02020000, K2OS_MAPTYPE_KERN_DEVICEIO);   // IMX6 UART 1
-//                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);     // IMX6 UART 2
+//                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x02020000, K2OS_MAPTYPE_KERN_DEVICEIO);   // IMX6 UART 1
+                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);     // IMX6 UART 2
 #else
                                         k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_MAPTYPE_KERN_DEVICEIO);
 #endif

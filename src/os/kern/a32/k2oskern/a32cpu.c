@@ -234,7 +234,7 @@ void KernArch_LaunchCores(void)
         //
         workVal = (transitPhys >> K2_VA32_PAGETABLE_MAP_BYTES_POW2) & (K2_VA32_PAGETABLES_FOR_4G - 1);
         pQuad = &pTTB->QuadEntry[workVal];
-        workVal = A32_TTBE_PT_PRESENT | A32_TTBE_PT_NS | ptPhys;
+        workVal = A32_TTBE_PT_PRESENT | ptPhys;
         pQuad->Quad[0].mAsUINT32 = workVal;
         pQuad->Quad[1].mAsUINT32 = workVal + 0x400;
         pQuad->Quad[2].mAsUINT32 = workVal + 0x800;

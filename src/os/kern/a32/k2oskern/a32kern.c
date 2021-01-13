@@ -278,19 +278,12 @@ static void sInit_AfterHal(void)
 //    K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
 //    K2OSKERN_Debug("--------------------\n");
 }
-
 typedef void (*pfVoid)(void);
-
-typedef UINT32(*pfDebug)(char const* apFormat, ...);
-
-extern pfDebug gpfDebug;
 
 static void sInit_BeforeLaunchCores(void)
 {
     UINT32 *    pOut;
     UINT32      val32;
-
-    gpfDebug = K2OSKERN_Debug;
 
     //
     // install vector page
