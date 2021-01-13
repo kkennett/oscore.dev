@@ -1033,6 +1033,7 @@ static void sA32Init_BeforeVirt(void)
     K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_KOver], &pTrackPage->ListLink);
 
     gData.mA32VectorPagePhys = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
+    K2OSKERN_Debug("A32 Vectors Physical Page --> %08X\n", gData.mA32VectorPagePhys);
 
     if (gData.mCpuCount > 1)
     {

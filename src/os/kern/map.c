@@ -56,22 +56,25 @@ void KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aP
 {
     UINT32 *    pPTE;
     UINT32 *    pPageCount;
-    UINT32      pte;
-
-#if DIAG_MAPPING
-    K2OSKERN_Debug("MAKE_P %08X->%08X, ATTR %08X\n", aVirtAddr, aPhysAddr, aPageMapAttr);
-#endif
+    UINT32      pteOld;
+    UINT32      pteNew;
 
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pteOld = *pPTE;
 
-    pte = *pPTE;
-    K2_ASSERT((pte & K2OSKERN_PTE_PRESENT_BIT) == 0);
+    K2_ASSERT((pteOld & K2OSKERN_PTE_PRESENT_BIT) == 0);
 
-    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, KernArch_MakePTE(aPhysAddr, aPageMapAttr));
+    pteNew = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
 
-    if (0 == (pte & K2OSKERN_PTE_NP_BIT))
+#if DIAG_MAPPING
+    K2OSKERN_Debug("MAKE_P %08X->%08X, ATTR %08X (%08X->%08X)\n", aVirtAddr, aPhysAddr, aPageMapAttr, pteOld, pteNew);
+#endif
+
+    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, pteNew);
+
+    if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
     {
         if (aVirtAddr >= K2OS_KVA_KERN_BASE)
         {
@@ -92,22 +95,26 @@ void KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32
 {
     UINT32 *    pPTE;
     UINT32 *    pPageCount;
-    UINT32      pte;
+    UINT32      pteOld;
+    UINT32      pteNew;
 
-#if DIAG_MAPPING
-    K2OSKERN_Debug("MAKENP %08X, NPFLAGS %08X CONTENT %08X\n", aVirtAddr, aNpFlags, aContent);
-#endif
 
     K2_ASSERT((aNpFlags & K2OSKERN_PTE_NP_CONTENT_MASK) == 0);
     K2_ASSERT((aContent & ~K2OSKERN_PTE_NP_CONTENT_MASK) == 0);
     K2_ASSERT(aNpFlags & K2OSKERN_PTE_NP_BIT);
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pteOld = *pPTE;
 
-    pte = *pPTE;
-    K2_ASSERT((pte & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) == 0);
+    K2_ASSERT((pteOld & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) == 0);
 
-    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, aNpFlags | aContent);
+    pteNew = aNpFlags | aContent;
+
+#if DIAG_MAPPING
+    K2OSKERN_Debug("MAKENP %08X, NPFLAGS %08X CONTENT %08X (%08X)\n", aVirtAddr, aNpFlags, aContent, pteNew);
+#endif
+
+    KernArch_WritePTE(TRUE, aVirtAddr, pPTE, pteNew);
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
@@ -128,12 +135,16 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFla
     UINT32 *    pPTE;
     UINT32 *    pPageCount;
     UINT32      result;
+    UINT32      pteOld;
 
 #if DIAG_MAPPING
     K2OSKERN_Debug("BRAK   %08X, NPFLAGS %08X\n", aVirtAddr, aNpFlags);
 #endif
 
     pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pteOld = *pPTE;
+
+    K2_ASSERT((pteOld & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) != 0);
 
     result = ((*pPTE) & K2_VA32_PAGEFRAME_MASK);
 

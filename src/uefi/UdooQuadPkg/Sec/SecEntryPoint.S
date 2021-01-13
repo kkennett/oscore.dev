@@ -115,7 +115,7 @@ ASM_PFX(_ModuleEntryPoint):
     mrc p15, 0, r12, c1, c0, 0   // read SCTRL
     bic r12, r12, #A32_SCTRL_M_MMUENABLE
     bic r12, r12, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
-    bic r12, r12, #A32_SCTRL_V_HIGHVECTORS
+    orr r12, r12, #A32_SCTRL_V_HIGHVECTORS          // turn on high vectors so VBAR is always ignored
     bic r12, r12, #A32_SCTRL_VE_IMPVECTORSENABLE    // use IRQ and FIQ from the vector table
     bic r12, r12, #A32_SCTRL_EE_EXCEPTIONENDIAN
     mcr p15, 0, r12, c1, c0, 0   // write SCTRL

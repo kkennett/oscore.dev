@@ -382,6 +382,7 @@ UdooQuadPrimaryCoreSecStart(
     //
     Reg32 = ArmReadScr();
     ASSERT((Reg32 & 1) == 0);
+    DebugPrint(0xFFFFFFFF, "SCR = %08X\n", Reg32);
 
     //
     // Get Boot Mode register

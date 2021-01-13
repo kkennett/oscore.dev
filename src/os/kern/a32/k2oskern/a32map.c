@@ -45,7 +45,7 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
         onList = (KernPhysPageList)K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(pTrack->mFlags);
     }
 
-    pte = A32_PTE_PRESENT | aPhysAddr;
+    pte = A32_PTE_PRESENT | (aPhysAddr & A32_PTE_PAGEPHYS_MASK);
 
     if (gA32Kern_IsMulticoreCapable)
         pte |= A32_PTE_SHARED;
@@ -56,11 +56,11 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     if (0 ==(aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC))
     {
         // appropriate
-//        if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_XP_CAP)
-//        {
+        if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_XP_CAP)
+        {
             // possible
             pte |= A32_PTE_EXEC_NEVER;
-//        }
+        }
     }
 
     if (aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO)
@@ -128,7 +128,15 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
 
 void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE)
 {
+    BOOL    intState;
+    UINT32  transResult;
+    UINT32  chk;
+
+    intState = K2OSKERN_SetIntr(FALSE);
+
     *pPTE = aPTE;
+    A32_DMB();
+
     if (!aIsMake)
     {
         if (gA32Kern_IsMulticoreCapable)
@@ -141,10 +149,38 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
             A32_TLBInvalidateMVA_UP_AllASID(aVirtAddr);
             A32_BPInvalidateAll_UP();
         }
-    }
-    A32_DSB();
-    if (!aIsMake)
         A32_ISB();
+    }
+    else if (0 != (aPTE & A32_PTE_PRESENT))
+    {
+        //
+        // made a present page - test it
+        //
+        transResult = A32_TranslateVirtPrivRead(aVirtAddr);
+        if (transResult & 1)
+        {
+            K2OSKERN_Debug("FAIL TESTREAD(%08X)->%08X\n", aPTE, transResult);
+            //
+            // translation fault
+            //
+            K2OSKERN_Debug("External Abort: %c\n", (transResult & 0x40) ? '1' : '0');
+            K2OSKERN_Debug("Fail Code:      %02X\n", (transResult & 0x3E) >> 1);
+
+            //
+            // first level check
+            //
+            K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+            K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+
+            K2_ASSERT(0);
+        }
+        else
+        {
+            K2_ASSERT((aPTE & A32_PTE_PAGEPHYS_MASK) == (transResult & A32_PTE_PAGEPHYS_MASK));
+        }
+    }
+
+    K2OSKERN_SetIntr(intState);
 }
 
 UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)

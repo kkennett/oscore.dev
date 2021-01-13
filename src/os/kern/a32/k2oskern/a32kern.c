@@ -355,6 +355,8 @@ static void sInit_BeforeLaunchCores(void)
     A32_DSB();
     A32_ISB();
 
+    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
+
     //
     // fault
     //

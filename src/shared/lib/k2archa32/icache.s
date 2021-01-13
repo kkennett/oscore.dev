@@ -36,18 +36,24 @@
 // void A32_ICacheInvalidateAll_UP(void);
 BEGIN_A32_PROC(A32_ICacheInvalidateAll_UP)
     mcr p15, 0, r12, c7, c5, 0
+    mcr p15, 0, r12, c7, c5, 6
+    isb
     bx lr
 END_A32_PROC(A32_ICacheInvalidateAll_UP)
 
 // void A32_ICacheInvalidateAll_MP(void);
 BEGIN_A32_PROC(A32_ICacheInvalidateAll_MP)
     mcr p15, 0, r12, c7, c1, 0
+    mcr p15, 0, r12, c7, c1, 6
+    isb
     bx lr
 END_A32_PROC(A32_ICacheInvalidateAll_MP)
 
 // void A32_ICacheInvalidateMVA(UINT32 aMVA);
 BEGIN_A32_PROC(A32_ICacheInvalidateMVA)
     mcr p15, 0, r0, c7, c5, 1
+    mcr p15, 0, r0, c7, c5, 7
+    isb
     bx lr
 END_A32_PROC(A32_ICacheInvalidateMVA)
 

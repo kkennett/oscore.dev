@@ -202,9 +202,13 @@ void A32_DCacheFlushInvalidateRange(UINT32 aVirtAddr, UINT32 aBytes)
 void A32_ICacheInvalidateAll(void)
 {
     if (A32_ReadMPIDR() & 0x80000000)
+    {
         A32_ICacheInvalidateAll_MP();
+    }
     else
+    {
         A32_ICacheInvalidateAll_UP();
+    }
 }
 
 void A32_ICacheInvalidateRange(UINT32 aVirtAddr, UINT32 aBytes)
@@ -340,7 +344,6 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
     sctrl.Bits.mZ = 1;    // branch predict enable
     A32_WriteSCTRL(sctrl.mAsUINT32);
     A32_ICacheInvalidateAll_UP();
-    A32_BPInvalidateAll_UP();
     A32_DSB();
     A32_ISB();
 
