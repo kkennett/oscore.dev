@@ -311,6 +311,8 @@ _Do_Monitor_Init:
     mcr p15, 0, r12, c1, c1, 2  // write NSACR
     isb
 
+    // leaving SEC here  - caches should still be OFF and EMPTY =============================================================
+
     // set SCR to be in NS mode
     mov r12, #0x30 // #0x31
     mcr p15, 0, r12, c1, c1, 0  //  write SCR

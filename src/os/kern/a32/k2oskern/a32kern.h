@@ -65,6 +65,8 @@ void    A32Kern_IntrSetEnable(UINT32 aIntrId, BOOL aSetEnable);
 BOOL    A32Kern_IntrGetEnable(UINT32 aIntrId);
 void    A32Kern_IntrClearPending(UINT32 aIntrId, BOOL aAlsoDisable);
 
+#define SYM_NAME_MAX_LEN    80
+
 extern UINT64 *                         gpA32Kern_AcpiTablePtrs;
 extern UINT32                           gA32Kern_AcpiTableCount;
 extern ACPI_MADT *                      gpA32Kern_MADT;
