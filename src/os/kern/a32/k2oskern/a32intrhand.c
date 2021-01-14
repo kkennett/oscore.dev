@@ -84,7 +84,11 @@ A32Kern_InterruptHandler(
     UINT32 aCPSR
 )
 {
-    K2OSKERN_Debug("A32Kern_InterruptHandler()\n");
+    //
+    // We are in the mode detailed in the aCPSR. If we interrupted from user mode this will be set to SYS
+    //
+
+    K2OSKERN_Debug("A32Kern_InterruptHandler(%d, %08X, %08X)\n", aReason, aStackPtr, aCPSR);
     while (1);
     //
     // TBD

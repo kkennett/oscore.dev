@@ -283,6 +283,7 @@ typedef void (*pfVoid)(void);
 static void sInit_BeforeLaunchCores(void)
 {
     UINT32 *    pOut;
+    UINT32      offset;
     UINT32      val32;
 
     //
@@ -295,73 +296,85 @@ static void sInit_BeforeLaunchCores(void)
     val32 = K2OS_KVA_ARCHSPEC_BASE + 8;  /* actual PC at point of jump */
     pOut = (UINT32 *)K2OS_KVA_ARCHSPEC_BASE;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_ResetVector) - val32)) >> 2);
+    *pOut = 0xEAFFFFFE;
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_UndExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_UndExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_SvcExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_SvcExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_PrefetchAbortExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_PrefetchAbortExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_DataAbortExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_DataAbortExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
     *pOut = 0xEAFFFFFE;
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_IRQExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_IRQExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
     val32 += 4;
 
-    *pOut = 0xEA000000 + (0xFFFFFF & ((((UINT32)A32Kern_FIQExceptionVector) - val32)) >> 2);
+    offset = ((UINT32)A32Kern_FIQExceptionVector) - val32;
+    K2_ASSERT((((INT32)offset) >= -33554432) && (((INT32)offset) <= 33554428)); // encoding A1 - page A8-333 in ARM DDI 0406C.d
+    *pOut = 0xEA000000 + (0xFFFFFF & (offset >> 2));
+//    K2OSKERN_Debug("[%08X] = %08X\n", pOut, *pOut);
     pOut++;
 
     //
-    // flush and invalidate the vector area
+    // flush the vector table
     //
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
-    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
+    val32 = sizeof(UINT32) * ((UINT32)(pOut - ((UINT32*)K2OS_KVA_ARCHSPEC_BASE)));
+    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, (void*)K2OS_KVA_ARCHSPEC_BASE, val32);
 
     // 
     // break the mapping
     //
     KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, 0);
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
-    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
 
     //
     // re-make the mapping as code
     //
     KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_ARCHSPEC_BASE, gData.mA32VectorPagePhys, K2OS_MAPTYPE_KERN_TEXT);
-    K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
-    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
+    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, (void*)K2OS_KVA_ARCHSPEC_BASE, val32);
 
     //
-    // turn on high vectors 
+    // verify high vectors are on
     //
     val32 = A32_ReadSCTRL();
-    val32 |= A32_SCTRL_V_HIGHVECTORS;
-    A32_WriteSCTRL(val32);
-    A32_DSB();
-    A32_ISB();
-
-    K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
-
-    //
-    // fault
-    //
-    K2OSKERN_Debug("Faulting\n");
-    ((pfVoid)0)();
+    if (0 == (val32 & A32_SCTRL_V_HIGHVECTORS))
+    {
+        val32 |= A32_SCTRL_V_HIGHVECTORS;
+        A32_WriteSCTRL(val32);
+        A32_DSB();
+        A32_ISB();
+    }
 }
 
 void KernInit_Arch(void)

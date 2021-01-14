@@ -98,7 +98,7 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
     K2OSKERN_Debug("--------------------\n");
 
-    KernMem_DumpVM();
+//    KernMem_DumpVM();
 
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     K2OSKERN_Debug("CPU %d Started. EntryStack @ %08X\n", pThisCorePage->CpuCore.mCoreIx, v);

@@ -106,7 +106,6 @@ sExec_Init(
     K2OSEXEC_pf_Init    fExec_Init;
     K2OSEXEC_pf_Run     fExec_Run;
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxExec,
         DlxSeg_Text,
@@ -115,7 +114,6 @@ sExec_Init(
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxExec,
         DlxSeg_Text,
@@ -124,7 +122,6 @@ sExec_Init(
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Run\" missing\n");
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = K2DLXSUPP_GetInfo(
         gData.mpDlxExec,
         NULL,
@@ -134,11 +131,9 @@ sExec_Init(
         NULL);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = execEntryPoint(gData.mpDlxExec, DLX_ENTRY_REASON_LOAD);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     K2MEM_Zero(&initInfo,sizeof(initInfo));
     initInfo.mEfiMapSize = gData.mpShared->LoadInfo.mEfiMapSize;
     initInfo.mEfiMemDescSize = gData.mpShared->LoadInfo.mEfiMemDescSize;
@@ -147,7 +142,6 @@ sExec_Init(
     //
     // map in the built in file system
     //
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     initInfo.mpBuiltinRofs = sMapBuiltIn();
 
     //
@@ -155,6 +149,7 @@ sExec_Init(
     //
     K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     fExec_Init(&initInfo);
+    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
 
     //
     // confirm outputs from init are good
@@ -384,7 +379,6 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
     K2STAT              stat;
     K2OSEXEC_pf_Init    fExec_Init;
 
-    K2OSKERN_Debug("%s(%d)\n", __FUNCTION__, __LINE__);
     stat = DLX_FindExport(
         gData.mpDlxExec,
         DlxSeg_Text,
@@ -392,9 +386,6 @@ UINT32 K2_CALLCONV_REGS K2OSKERN_Thread0(void *apArg)
         (UINT32*)&fExec_Init);
     if (K2STAT_IS_ERROR(stat))
         K2OSKERN_Panic("*** Required K2OSEXEC export \"K2OSEXEC_Init\" missing\n");
-    K2OSKERN_Debug("Thread0 found K2OSEXEC_Init @ %08X\n", fExec_Init);
-
-    ((pfVoid)0)();
 
     //
     // run stages up to multithreaded

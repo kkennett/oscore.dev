@@ -1099,7 +1099,6 @@ static void sInit_BeforeVirt(void)
     UINT32              accessAttr;
     UINT32              lastEnd;
     K2HEAP_NODE *       pHeapNode;
-    UINT32              chug;
 #endif
 
     //
@@ -1473,7 +1472,6 @@ void KernMem_DumpVM(void)
                 {
                     KernArch_InvalidateTlbPageOnThisCore(virtAddr);
                     K2OSKERN_Debug("    %08X PDE %08X PTE %08X (%08X)\n", virtAddr, pde, pte, accessAttr);
-                    K2OSKERN_Debug("    %08X\n", *(UINT16*)virtAddr);
                 }
                 virtAddr += K2_VA32_MEMPAGE_BYTES;
             } while (--chug);

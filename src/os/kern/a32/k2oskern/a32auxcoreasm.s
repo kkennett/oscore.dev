@@ -58,7 +58,7 @@ A32AUXCPU_CONTINUE:
     msr cpsr_c, r12      
 
     //---------------------------------------------------------------
-    // Flush all caches, Invalidate TLB and I cache
+    // Flush TLB, I Cache and BP array
     //---------------------------------------------------------------
     mov r0, #0                          // setup up for MCR
     mcr p15, 0, r0, c8, c7, 0           // invalidate TLB's

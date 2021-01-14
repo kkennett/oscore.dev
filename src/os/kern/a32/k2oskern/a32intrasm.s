@@ -79,7 +79,7 @@ BEGIN_A32_PROC(A32Kern_ExceptionCommon)
     mov r2, r3      // r2 is cpsr to tell where we are
     bl A32Kern_InterruptHandler
 
-    // on return pop exception from stack and go to monitor with stack at r0
+    // on return pop exception from stack and go to OS monitor with stack at r0
 
     // context saved to kernel mode thread stack - restore r13 back to bottom of exception mode stack (whatever it is)
     add r13, r13, #64

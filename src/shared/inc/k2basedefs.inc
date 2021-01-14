@@ -442,20 +442,35 @@
 #define A32_SCTRL_M_MMUENABLE                       0x00000001  // 0
 #define A32_SCTRL_A_ALIGNFAULTCHECKENABLE           0x00000002  // 1
 #define A32_SCTRL_C_DCACHEENABLE                    0x00000004  // 2
+#define A32_SCTRL_SB1_3                             0x00000008  // 3
+#define A32_SCTRL_SB1_4                             0x00000010  // 4
+#define A32_SCTRL_CP15BEN                           0x00000020  // 5
+#define A32_SCTRL_SB1_6                             0x00000040  // 6
 #define A32_SCTRL_B_BIGENDIAN                       0x00000080  // 7
+#define A32_SCTRL_SBZ_8                             0x00000100  // 8
+#define A32_SCTRL_SBZ_9                             0x00000200  // 9
 #define A32_SCTRL_SW_SWPENABLE                      0x00000400  // 10
 #define A32_SCTRL_Z_BRANCHPREDICTENABLE             0x00000800  // 11
 #define A32_SCTRL_I_ICACHEENABLE                    0x00001000  // 12
 #define A32_SCTRL_V_HIGHVECTORS                     0x00002000  // 13
 #define A32_SCTRL_RR_CACHEPREDICTABLE               0x00004000  // 14
+#define A32_SCTRL_SBZ_15                            0x00008000  // 15
+#define A32_SCTRL_SB1_16                            0x00010000  // 16
 #define A32_SCTRL_HA_HWACCESSFLAG                   0x00020000  // 17
+#define A32_SCTRL_SB1_18                            0x00040000  // 18
+#define A32_SCTRL_UWXN_UNPROV_XN_FORCE              0x00080000  // 19
+#define A32_SCTRL_UWXN_XN_FORCE                     0x00100000  // 20
 #define A32_SCTRL_FI_FASTINTENABLE                  0x00200000  // 21
+#define A32_SCTRL_SB1_22                            0x00400000  // 22 
+#define A32_SCTRL_SB1_23                            0x00800000  // 23
 #define A32_SCTRL_VE_IMPVECTORSENABLE               0x01000000  // 24
 #define A32_SCTRL_EE_EXCEPTIONENDIAN                0x02000000  // 25
+#define A32_SCTRL_SBZ_26                            0x04000000  // 26
 #define A32_SCTRL_NMFI_NONMASKFASTINT               0x08000000  // 27
 #define A32_SCTRL_TRE_TEXREMAPENABLE                0x10000000  // 28
 #define A32_SCTRL_AFE_ACCESSFLAGENABLE              0x20000000  // 29
 #define A32_SCTRL_TE_THUMBEXCEPTIONS                0x40000000  // 30
+#define A32_SCTRL_SBZ_31                            0x80000000  // 31
 
 #define A32_SCR_nET_NOTEARLYTERM                    0x00000040
 #define A32_SCR_AW_ABITWRITEABLE                    0x00000020

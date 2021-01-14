@@ -130,7 +130,9 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
 {
     BOOL    intState;
     UINT32  transResult;
+    UINT32  transResult2;
     UINT32  chk;
+    A32_TTBEQUAD* pQuad;
 
     intState = K2OSKERN_SetIntr(FALSE);
 
@@ -139,6 +141,8 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
 
     if (!aIsMake)
     {
+        K2_ASSERT(0 == (aPTE & A32_PTE_PRESENT));
+
         if (gA32Kern_IsMulticoreCapable)
         {
             A32_TLBInvalidateMVA_MP_AllASID(aVirtAddr);
@@ -159,10 +163,8 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
         transResult = A32_TranslateVirtPrivRead(aVirtAddr);
         if (transResult & 1)
         {
-            K2OSKERN_Debug("FAIL TESTREAD(%08X)->%08X\n", aPTE, transResult);
-            //
-            // translation fault
-            //
+            K2OSKERN_Debug("FAIL TESTREAD(%08X:%08X)->%08X\n", aVirtAddr, aPTE, transResult);
+
             K2OSKERN_Debug("External Abort: %c\n", (transResult & 0x40) ? '1' : '0');
             K2OSKERN_Debug("Fail Code:      %02X\n", (transResult & 0x3E) >> 1);
 
@@ -170,7 +172,25 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE
             // first level check
             //
             K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
+            K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
             K2OSKERN_Debug("TTBR1 = %08X\n", A32_ReadTTBR1());
+
+            K2OSKERN_Debug("TTB is at virtual %08X\n", K2OS_KVA_TRANSTAB_BASE);
+            transResult2 = A32_TranslateVirtPrivRead(K2OS_KVA_TRANSTAB_BASE);
+            K2OSKERN_Debug("Trans[%08X] -> %08X - should be same page as TTBRx\n", K2OS_KVA_TRANSTAB_BASE, transResult2);
+
+            pQuad = &((A32_TRANSTBL*)K2OS_KVA_TRANSTAB_BASE)->QuadEntry[aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES];
+
+            K2OSKERN_Debug("TTB Quad @ %08X\n", pQuad);
+            K2OSKERN_Debug("Quad[0] = %08X\n", pQuad->Quad[0].mAsUINT32);
+            K2OSKERN_Debug("Quad[1] = %08X\n", pQuad->Quad[1].mAsUINT32);
+            K2OSKERN_Debug("Quad[2] = %08X\n", pQuad->Quad[2].mAsUINT32);
+            K2OSKERN_Debug("Quad[3] = %08X\n", pQuad->Quad[3].mAsUINT32);
+
+            chk = K2OS_KVA_TO_PT_ADDR(aVirtAddr);
+            K2OSKERN_Debug("PT is at virtual %08X, pPTE = %08X\n", chk, pPTE);
+            transResult2 = A32_TranslateVirtPrivRead(chk);
+            K2OSKERN_Debug("Trans[%08X] -> %08X - should be same page as Quad\n", chk, transResult2);
 
             K2_ASSERT(0);
         }

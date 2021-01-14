@@ -734,7 +734,7 @@ K2STAT sysDLX_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INF
                     // and FFFF0000 to 814xxxxx is too far.
                     //
                     gData.mKernArenaHigh -= allocSize;
-                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.mKernArenaHigh);
+//                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.mKernArenaHigh);
                     pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.mKernArenaHigh;
                 }
             }
