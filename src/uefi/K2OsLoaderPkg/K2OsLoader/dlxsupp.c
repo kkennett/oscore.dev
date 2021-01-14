@@ -728,9 +728,14 @@ K2STAT sysDLX_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INF
                 allocSize = K2_ROUNDUP(pOut->Info.SegInfo[segIx].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
                 if (allocSize > 0)
                 {
-//                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.mKernArenaLow);
-                    pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.mKernArenaLow;
-                    gData.mKernArenaLow += allocSize;
+                    //
+                    // DLX must go high as on A32, exception vectors at 0xFFFF0000 must be able
+                    // to jump into kernel text segment directly (max 26-bit signed offset)
+                    // and FFFF0000 to 814xxxxx is too far.
+                    //
+                    gData.mKernArenaHigh -= allocSize;
+                    K2Printf(L"Segment %d Link Addr 0x%08X\n", segIx, gData.mKernArenaHigh);
+                    pOut->SegAlloc.Segment[segIx].mLinkAddr = gData.mKernArenaHigh;
                 }
             }
 

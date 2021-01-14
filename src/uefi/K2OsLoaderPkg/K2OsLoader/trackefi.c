@@ -303,8 +303,12 @@ Loader_AssignRuntimeVirtual(
     // WILL CHANGE THE MEMORY MAP!!
     //
 
+    //
+    // every allocation between arenahigh and preruntimehigh must be
+    // an EFI runtime allocation.  stuff above that is other junk
+    //
     virtWork = gData.mKernArenaHigh;
-    virtEnd = K2OS_KVA_FREE_TOP;
+    virtEnd = gData.mPreRuntimeHigh;
     entCount = gData.LoadInfo.mEfiMapSize / gData.LoadInfo.mEfiMemDescSize;
 
     do
@@ -423,6 +427,11 @@ Loader_TrackEfiMap(
     gData.LoadInfo.mZeroPagePhys = (UINT32)efiPhysAddr;
     K2MEM_Zero((void *)gData.LoadInfo.mZeroPagePhys, K2_VA32_MEMPAGE_BYTES);
 //    K2Printf(L"Zero Page at Physical 0x%08X\n", gData.LoadInfo.mZeroPagePhys);
+
+    //
+    // track lowest high address prior to runtime virtual alloc, which happens last
+    //
+    gData.mPreRuntimeHigh = gData.mKernArenaHigh;
 
     //
     // first pass just discovers all present physical ranges

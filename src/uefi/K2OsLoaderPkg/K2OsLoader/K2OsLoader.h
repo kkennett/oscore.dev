@@ -101,6 +101,7 @@ struct _LOADER_DATA
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  * mpAcpi;
     UINT32                                          mKernArenaLow;
     UINT32                                          mKernArenaHigh;
+    UINT32                                          mPreRuntimeHigh;
 };
 
 extern LOADER_DATA gData;
