@@ -81,6 +81,7 @@ K2OSKERN_Panic(
         K2_VAEND(vList);
     }
 
+#if 0
     if (gData.mCpuCount > 1)
     {
         KernCpuCore_SendIciToAllOtherCores(pThisCore, KernCpuCoreEvent_Ici_Panic);
@@ -96,6 +97,7 @@ K2OSKERN_Panic(
             }
         } while (gData.mCoresInPanic < gData.mCpuCount);
     }
+#endif
 
 #if TRACING_ON
     K2OSKERN_TraceDump();

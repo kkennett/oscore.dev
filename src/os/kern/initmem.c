@@ -994,6 +994,8 @@ static void sDumpSegmentTree(void)
 
 #endif
 
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == sizeof(K2TREE_NODE));
+
 #if K2_TARGET_ARCH_IS_ARM
 static void sA32Init_BeforeVirt(void)
 {
@@ -1039,15 +1041,20 @@ static void sA32Init_BeforeVirt(void)
     {
         //
         // allocate physical pages to start secondary cores
+        // transition page must be BELOW 2GB (0x80000000)
         //
         pTreeNode = K2TREE_FirstNode(&gData.PhysFreeTree);
         K2_ASSERT(pTreeNode != NULL);
 
         do {
-            userVal = pTreeNode->mUserVal;
-            if ((userVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) >= K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT)
-                break;
-
+            pTrackPage = (K2OSKERN_PHYSTRACK_PAGE*)pTreeNode;
+            count = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
+            if (count < (0x80000000 - (K2_VA32_MEMPAGE_BYTES * K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT)))
+            {
+                userVal = pTreeNode->mUserVal;
+                if ((userVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) >= K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT)
+                    break;
+            }
             pTreeNode = K2TREE_NextNode(&gData.PhysFreeTree, pTreeNode);
 
         } while (pTreeNode != NULL);
@@ -1055,8 +1062,6 @@ static void sA32Init_BeforeVirt(void)
         K2_ASSERT(pTreeNode != NULL);
 
         K2TREE_Remove(&gData.PhysFreeTree, pTreeNode);
-
-        pTrackPage = (K2OSKERN_PHYSTRACK_PAGE*)pTreeNode;
 
         if ((userVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) > K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT)
         {
@@ -1070,6 +1075,7 @@ static void sA32Init_BeforeVirt(void)
         }
 
         gData.mA32StartAreaPhys = K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
+        K2OSKERN_Debug("A32StartAreaPhys = %08X, %d pages\n", gData.mA32StartAreaPhys, K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT);
 
         //
         // put all the pages on the paging list
@@ -1392,7 +1398,26 @@ static void sInit_BeforeVirt(void)
         else
         {
 //            K2OSKERN_Debug("USED %08X %8d\n", virtAddr, pageCount * K2_VA32_MEMPAGE_BYTES);
-            virtAddr += (pageCount * K2_VA32_MEMPAGE_BYTES);
+            // every page in this range must not be mapped
+            do {
+                KernArch_Translate(gpProc0, virtAddr, &pde, &ptIsPresent, &pte, &accessAttr);
+                if (ptIsPresent)
+                {
+                    KernArch_AuditVirt(virtAddr, pde, pte, accessAttr);
+                }
+                else
+                {
+                    //
+                    // virtAddr must be on a pagetable map bytes boundary
+                    //
+                    K2_ASSERT((virtAddr & (K2_VA32_PAGETABLE_MAP_BYTES - 1)) == 0);
+                    K2_ASSERT(pageCount >= K2_VA32_ENTRIES_PER_PAGETABLE);
+                    virtAddr += K2_VA32_PAGETABLE_MAP_BYTES;
+                    pageCount -= K2_VA32_ENTRIES_PER_PAGETABLE;
+                }
+                virtAddr += K2_VA32_MEMPAGE_BYTES;
+                pageCount--;
+            } while (pageCount > 0);
         }
         lastEnd = virtAddr;
         pHeapNode = K2HEAP_GetNextNode(&gData.KernVirtHeap, pHeapNode);

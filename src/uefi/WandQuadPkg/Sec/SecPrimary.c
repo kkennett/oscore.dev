@@ -444,7 +444,7 @@ WandQuadPrimaryCoreSecStart(
     // Enable Full Access to CoProcessors
     //
     ArmWriteCpacr(CPACR_CP_FULL_ACCESS);
-#if 0
+
     // 
     // Now start other cores.
     // the secondary cores 
@@ -478,7 +478,7 @@ WandQuadPrimaryCoreSecStart(
     {
         while (0x000000F3 != (0x000000F3 & MmioRead32(BaseAddress + A9_SCU_CONFIG_OFFSET)));
     }
-#endif
+
     // Enter Trusted Monitor for setup there
     return (UINT32)PrimaryTrustedMonitorInit;
 }

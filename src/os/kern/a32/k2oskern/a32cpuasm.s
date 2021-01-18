@@ -96,7 +96,7 @@ END_A32_PROC(A32Kern_StackBridge)
 // void A32Kern_LaunchEntryPoint(UINT32 aCoreIndex);
 BEGIN_A32_PROC(A32Kern_LaunchEntryPoint)
     // do not use memory. ldr rx,= will use memory as it will load a literal. dont do that.
-    mov  r1, #K2OS_KVA_COREPAGES_BASE_LOW
+    movw r1, #K2OS_KVA_COREPAGES_BASE_LOW
     movt r1, #K2OS_KVA_COREPAGES_BASE_HIGH 
     mov  r3, #0x1000
     mul  r3, r3, r0

@@ -45,8 +45,6 @@ SecondaryTrustedMonitorInit(
     // without having one core stomp on another's debug prints.
     // we can't use exclusives to sync because caches are off
     DebugPrint(0xFFFFFFFF, "SCTLR = 0x%08X\n", ArmReadSctlr());
-    DebugPrint(0xFFFFFFFF, "%08X = %08X\n", IMX6_PHYSADDR_PL310, MmioRead32(IMX6_PHYSADDR_PL310));
-    DebugPrint(0xFFFFFFFF, "%08X = %08X\n", IMX6_PHYSADDR_PL310 + 0x100, MmioRead32(IMX6_PHYSADDR_PL310 + 0x100));
     DebugPrint(0xFFFFFFFF, "Secondary Trusted Monitor Init:\n");
     DebugPrint(0xFFFFFFFF, "Secondary StackPointer 0x%08X\n", StackPointer);
     DebugPrint(0xFFFFFFFF, "Secondary SVC_SPSR     0x%08X\n", SVC_SPSR);

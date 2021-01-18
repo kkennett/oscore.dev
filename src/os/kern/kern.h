@@ -1527,6 +1527,7 @@ void    KernArch_ThreadCallSched(void);
 void    KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernArch_SwitchFromMonitorToThread(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
+void    KernArch_AuditVirt(UINT32 aVirtAddr, UINT32 aPDE, UINT32 aPTE, UINT32 aAccessAttr);
 
 void    KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr);
 void    KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask);

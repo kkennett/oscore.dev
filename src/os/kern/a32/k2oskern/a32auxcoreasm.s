@@ -58,7 +58,7 @@ A32AUXCPU_CONTINUE:
     msr cpsr_c, r12      
 
     //---------------------------------------------------------------
-    // Flush TLB, I Cache and BP array
+    // Invalidate TLB, I Cache and BP array
     //---------------------------------------------------------------
     mov r0, #0                          // setup up for MCR
     mcr p15, 0, r0, c8, c7, 0           // invalidate TLB's
@@ -81,10 +81,45 @@ A32AUXCPU_CONTINUE:
     
     // turn this on
     orr r0, r0, #A32_SCTRL_A_ALIGNFAULTCHECKENABLE
-
     mcr p15, 0, r0, c1, c0, 0   
     dsb
     isb
+
+    //---------------------------------------------------------------
+    // Invalidate TLB, I Cache and BP array again
+    //---------------------------------------------------------------
+    mov r0, #0                          // setup up for MCR
+    mcr p15, 0, r0, c8, c7, 0           // invalidate TLB's
+    mcr p15, 0, r0, c7, c5, 0           // invalidate I cache
+    mcr p15, 0, r0, c7, c5, 6           // invalidate BP array
+    dsb
+    isb 
+
+    //---------------------------------------------------------------
+    // Initialize stacks for transition so we can see where faults happen
+    //---------------------------------------------------------------
+    mov r0, pc
+    orr r0, r0, #0xF00
+    orr r0, r0, #0x0FF
+    bic r0, r0, #3          // set r0 to pc page at 0xFFC offset 
+    mov sp, r0              // SVC to 0x?????FFC 
+
+    mrs r12, cpsr
+    bic r12, r12, #A32_PSR_MODE_MASK
+    orr r12, r12, #A32_PSR_MODE_ABT
+    msr cpsr_c, r12      
+    sub r0, r0, #0x200
+    mov sp, r0              // ABT to 0x?????DFC
+
+    bic r12, r12, #A32_PSR_MODE_MASK
+    orr r12, r12, #A32_PSR_MODE_UNDEF
+    msr cpsr_c, r12      
+    sub r0, r0, #0x100
+    mov sp, r0              // UNDEF to 0x?????CFC
+
+    bic r12, r12, #A32_PSR_MODE_MASK
+    orr r12, r12, #A32_PSR_MODE_SVC
+    msr cpsr_c, r12      
 
     //---------------------------------------------------------------
     // Load values from passed variables
@@ -99,7 +134,7 @@ A32AUXCPU_CONTINUE:
     add r0, pc, #A32AUXCPU_TTBR0-(.+8)
     ldr r1, [r0]
     dsb
-    mcr p15, 0, r1, c2, c0, 0   // set TTBR 0
+    mcr p15, 0, r1, c2, c0, 0   // set TTBR 0       // these are the *TRANSITION* TTB address
     mcr p15, 0, r1, c2, c0, 1   // set TTBR 1
     isb
     mov r1, #1
@@ -132,10 +167,8 @@ A32AUXCPU_CONTINUE:
     mcr 15, 0, r7, cr13, cr0, 1
     isb
 
-    // enable MMU and jump to continuation point
+    // enable MMU and jump over a cache line
     mcr p15, 0, r1, c1, c0, 0
-    dsb
-    isb
     b 100f
     nop
     nop
@@ -146,6 +179,7 @@ A32AUXCPU_CONTINUE:
     nop
     nop
 100:
+    isb
     // put CPU index into r0
     mrc p15, 0, r0, c0, c0, 5
     and r0, r0, #0x3

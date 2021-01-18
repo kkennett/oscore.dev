@@ -48,6 +48,8 @@ AcpiOsInitialize(
 {
     UINT32 ix;
 
+    K2OSKERN_Debug("AcpiOsInitialize()\n");
+
     K2LIST_Init(&gK2OSACPI_IntrList);
     K2LIST_Init(&gK2OSACPI_IntrFreeList);
 

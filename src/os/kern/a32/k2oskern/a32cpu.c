@@ -53,9 +53,9 @@ static volatile INT32 sgCpuCoresExecuting = 0;
 
 void A32Kern_CpuLaunch2(UINT32 aCpuIx)
 {
-    A32_REG_SCTRL       sctrl;
-    UINT32              v;
-    K2OSKERN_COREPAGE * pThisCorePage;
+    A32_REG_SCTRL                   sctrl;
+    UINT32                          v;
+    K2OSKERN_COREPAGE volatile *    pThisCorePage;
 
     pThisCorePage = K2OSKERN_COREIX_TO_COREPAGE(aCpuIx);
         
@@ -73,24 +73,31 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     A32_ISB();
 
     //
+    // switch over to main TTB
+    //
+    v = A32_ReadTTBR1();    // everything except address of table will be correct
+    v = (v & ~A32_TTBASE_PHYS_MASK) | gData.mpShared->LoadInfo.mTransBasePhys;
+    A32_WriteTTBR0(v);
+    A32_WriteTTBR1(v);
+    A32_WriteTTBCR(1);  // use 0x80000000 sized TTBR0
+    A32_ISB();
+
+    //
     // enable caches now (will only affect cores > ix 0) 
     //
     K2OS_CacheOperation(K2OS_CACHEOP_Init, NULL, 0);
 
     /* we should be off all CPU startup goop now */
-
     KernSched_AddCurrentCore();
-
-    pThisCorePage->CpuCore.mIsExecuting = TRUE;
-    pThisCorePage->CpuCore.mIsInMonitor = TRUE;
-
-    K2_CpuWriteBarrier();
 
     A32Kern_IntrInitGicPerCore();
 
     K2OSKERN_Debug("-CPU %d-------------\n", pThisCorePage->CpuCore.mCoreIx);
+    K2OSKERN_Debug("STACK = %08X\n", A32_ReadStackPointer());
     K2OSKERN_Debug("SCTLR = %08X\n", A32_ReadSCTRL());
     K2OSKERN_Debug("ACTLR = %08X\n", A32_ReadAUXCTRL());
+    K2OSKERN_Debug("SCU   = %08X\n", *((UINT32 *)K2OS_KVA_A32_PERIPHBASE));
+    K2OSKERN_Debug("SCR   = %08X\n", A32_ReadSCR());    // will fault in NS mode
     K2OSKERN_Debug("DACR  = %08X\n", A32_ReadDACR());
     K2OSKERN_Debug("TTBCR = %08X\n", A32_ReadTTBCR());
     K2OSKERN_Debug("TTBR0 = %08X\n", A32_ReadTTBR0());
@@ -98,12 +105,13 @@ void A32Kern_CpuLaunch2(UINT32 aCpuIx)
     K2OSKERN_Debug("%08X = %d\n", &pThisCorePage->CpuCore.mIsExecuting, pThisCorePage->CpuCore.mIsExecuting);
     K2OSKERN_Debug("--------------------\n");
 
-//    KernMem_DumpVM();
-
     v = (UINT32)&pThisCorePage->mStacks[K2OSKERN_COREPAGE_STACKS_BYTES - 4];
     K2OSKERN_Debug("CPU %d Started. EntryStack @ %08X\n", pThisCorePage->CpuCore.mCoreIx, v);
 
-    K2ATOMIC_Inc(&sgCpuCoresExecuting);
+    pThisCorePage->CpuCore.mIsExecuting = TRUE;
+    pThisCorePage->CpuCore.mIsInMonitor = TRUE;
+    K2_CpuWriteBarrier();
+
     A32Kern_ResumeInMonitor(v);
 
     //
@@ -127,13 +135,12 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     UINT32                  virtAddr;
 
     physAddr = gData.mpShared->LoadInfo.CpuInfo[aCpuIx].mAddrSet;
-
     virtAddr = A32KERN_APSTART_CPUINFO_PAGE_VIRT | (physAddr & K2_VA32_MEMPAGE_OFFSET_MASK);
 
     //
     // map set address page
     //
-    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT, physAddr & K2_VA32_PAGEFRAME_MASK, K2OS_MAPTYPE_KERN_DEVICEIO);
+    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_CPUINFO_PAGE_VIRT, physAddr & K2_VA32_PAGEFRAME_MASK, K2OS_MAPTYPE_KERN_UNCACHED);
 
     //
     // tell CPU aCpuIx to jump to transit page + sizeof(A32AUXCPU_STARTDATA)
@@ -145,24 +152,25 @@ static void sStartAuxCpu(UINT32 aCpuIx, UINT32 transitPhys)
     //
     // this fires the SGI that wakes up the aux core 
     //
+    A32_ISB();
     MMREG_WRITE32(gA32Kern_GICDAddr, A32_PERIF_GICD_OFFSET_ICDSGIR, (1 << (aCpuIx + 16)));
 }
 
 void KernArch_LaunchCores(void)
 {
-    A32_TRANSTBL *              pTTB;
-    A32_PAGETABLE *             pPageTable;
-    UINT32                      workVal;
-    UINT32                      ttbPhys;
-    UINT32                      ptPhys;
-    UINT32                      transitPhys;
-    UINT32                      doneFlags;
-    UINT32                      uncachedPhys;
-    A32_TTBEQUAD *              pQuad;
-    A32AUXCPU_STARTDATA *       pStartData;
-    UINT32                      waitForCore;
+    A32_TRANSTBL *                  pTTB;
+    A32_PAGETABLE *                 pPageTable;
+    UINT32                          workVal;
+    UINT32                          ttbPhys;
+    UINT32                          ptPhys;
+    UINT32                          transitPhys;
+    UINT32                          doneFlags;
+    UINT32                          uncachedPhys;
+    A32_TTBEQUAD *                  pQuad;
+    A32AUXCPU_STARTDATA *           pStartData;
+    K2OSKERN_COREPAGE volatile *    pCorePage;
 
-    if (gData.mCpuCount > 1000)
+    if (gData.mCpuCount > 1)
     {
         //
         // vector page has been installed already
@@ -179,6 +187,7 @@ void KernArch_LaunchCores(void)
             {
                 if ((workVal & 0x3FFF) == 0)
                 {
+                    K2OSKERN_Debug("AUX TTB at physical %08X\n", workVal);
                     ttbPhys = workVal;      // 4 pages 16kb-aligned
                     workVal += 0x4000;
                     doneFlags |= 1;
@@ -187,6 +196,7 @@ void KernArch_LaunchCores(void)
             }
             if ((doneFlags & 2) == 0)
             {
+                K2OSKERN_Debug("AUX pagetable at physical %08X\n", workVal);
                 ptPhys = workVal;           // 1 page
                 workVal += 0x1000;
                 doneFlags |= 2;
@@ -194,6 +204,7 @@ void KernArch_LaunchCores(void)
             }
             if ((doneFlags & 4) == 0)
             {
+                K2OSKERN_Debug("AUX Transition page at physical %08X\n", workVal);
                 transitPhys = workVal;      // 1 page
                 workVal += 0x1000;
                 doneFlags |= 4;
@@ -201,6 +212,7 @@ void KernArch_LaunchCores(void)
             }
             if ((doneFlags & 8) == 0)
             {
+                K2OSKERN_Debug("AUX uncached at physical %08X\n", workVal);
                 uncachedPhys = workVal;     // 1 page
                 workVal += 0x1000;
                 doneFlags |= 8;
@@ -230,27 +242,35 @@ void KernArch_LaunchCores(void)
         K2MEM_Zero((void *)A32KERN_APSTART_UNCACHED_PAGE_VIRT, K2_VA32_MEMPAGE_BYTES);
 
         // 
-        // put the pagetable for the transition page into the TTB
+        // put the pagetable for the transition page into the AUX TTB
         //
         workVal = (transitPhys >> K2_VA32_PAGETABLE_MAP_BYTES_POW2) & (K2_VA32_PAGETABLES_FOR_4G - 1);
+        K2OSKERN_Debug("AUX pagetable for transition is entry %d\n", workVal);
         pQuad = &pTTB->QuadEntry[workVal];
         workVal = A32_TTBE_PT_PRESENT | ptPhys;
+        K2OSKERN_Debug("pagetable entry is %08X\n", workVal);
         pQuad->Quad[0].mAsUINT32 = workVal;
         pQuad->Quad[1].mAsUINT32 = workVal + 0x400;
         pQuad->Quad[2].mAsUINT32 = workVal + 0x800;
         pQuad->Quad[3].mAsUINT32 = workVal + 0xC00;
 
         //
-        // put the transition page into the pagetable
+        // put the transition page into the aux pagetable
         //
         workVal = (transitPhys >> K2_VA32_MEMPAGE_BYTES_POW2) & (K2_VA32_ENTRIES_PER_PAGETABLE - 1);
+        K2OSKERN_Debug("AUX pagetable entry index is %d\n", workVal);
         pPageTable->Entry[workVal].mAsUINT32 =
             transitPhys | 
             A32_PTE_PRESENT | A32_MMU_PTE_REGIONTYPE_UNCACHED | A32_MMU_PTE_PERMIT_KERN_RW_USER_NONE;
 
         //
         // put all pagetables for kernel into the TTB as well
+        // this copy is why the transition page can't be in the high 2GB
         //
+        K2OSKERN_Debug("Copy %08X <- %08X for %d\n",
+            &pTTB->QuadEntry[K2_VA32_PAGETABLES_FOR_4G / 2],
+            (void*)(K2OS_KVA_TRANSTAB_BASE + 0x2000),
+            0x2000);
         K2MEM_Copy(
             &pTTB->QuadEntry[K2_VA32_PAGETABLES_FOR_4G / 2],
             (void *)(K2OS_KVA_TRANSTAB_BASE + 0x2000),
@@ -258,6 +278,7 @@ void KernArch_LaunchCores(void)
         );
 
         workVal = ((UINT32)A32Kern_AuxCpuStart_END) - ((UINT32)A32Kern_AuxCpuStart) + 4;
+        K2OSKERN_Debug("Copy %d into transition page at %08X, and set start data values\n", workVal, (void*)A32KERN_APSTART_TRANSIT_PAGE_VIRT);
         K2MEM_Copy((void *)A32KERN_APSTART_TRANSIT_PAGE_VIRT, (void *)A32Kern_AuxCpuStart, workVal);
 
         //
@@ -265,10 +286,16 @@ void KernArch_LaunchCores(void)
         //
         pStartData = (A32AUXCPU_STARTDATA *)A32KERN_APSTART_TRANSIT_PAGE_VIRT;
         pStartData->mReg_DACR = A32_ReadDACR();
-        pStartData->mReg_TTBR = ttbPhys;
+        pStartData->mReg_TTBR = (A32_ReadTTBR1() & ~A32_TTBASE_PHYS_MASK) | ttbPhys;   // use AUX startup TTB not the master one
         pStartData->mReg_COPROC = A32_ReadCPACR();
         pStartData->mReg_CONTROL = A32_ReadSCTRL();
         pStartData->mVirtContinue = (UINT32)A32Kern_LaunchEntryPoint;
+
+        //
+        // flush and invalidate the entire cache from main core's perspective
+        //
+        K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, NULL, 0);
+        K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
 
         //
         // unmap all the pages except the uncached page since we are done using them
@@ -281,22 +308,23 @@ void KernArch_LaunchCores(void)
         KernMap_BreakOnePage(K2OS_KVA_KERNVAMAP_BASE, A32KERN_APSTART_TTB_VIRT + 0x3000, 0);
 
         //
-        // flush and invalidate the entire cache from main core's perspective
-        //
-        K2OS_CacheOperation(K2OS_CACHEOP_FlushInvalidateData, NULL, 0);
-
-        //
         // go tell the CPUs to start up.  
         //
         for (workVal = 1; workVal < gData.mCpuCount; workVal++)
         {
-            waitForCore = sgCpuCoresExecuting;
-            K2_CpuReadBarrier();
+            pCorePage = K2OSKERN_COREIX_TO_COREPAGE(workVal);
+
+            K2_ASSERT(pCorePage->CpuCore.mIsExecuting == FALSE);
+
             sStartAuxCpu(workVal, transitPhys);
-            while (sgCpuCoresExecuting == waitForCore)
+
+            while (pCorePage->CpuCore.mIsExecuting == FALSE)
+            {
                 K2_CpuReadBarrier();
+            }
         }
     }
+    while (1);
 
     /* go to entry point for core 0 */
     A32Kern_LaunchEntryPoint(0);

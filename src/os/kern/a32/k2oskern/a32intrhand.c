@@ -208,8 +208,13 @@ void A32Kern_DumpExceptionContext(K2OSKERN_CPUCORE volatile* apCore, UINT32 aRea
     K2OSKERN_Debug("  r5=%08X   sp=%08X\n", pEx->R[5], pEx->R[13]);
     K2OSKERN_Debug("  r6=%08X   lr=%08X\n", pEx->R[6], pEx->R[14]);
     K2OSKERN_Debug("  r7=%08X   pc=%08X\n", pEx->R[7], pEx->R[15]);
-}
 
+//    if (aReason == A32KERN_EXCEPTION_REASON_DATA_ABORT)
+//    {
+//        KernArch_AuditVirt(A32_ReadDFAR(), 0, 0, (A32_ReadDFSR() & 0x800) ? K2OS_MEMPAGE_ATTR_WRITEABLE : K2OS_MEMPAGE_ATTR_READABLE);
+//        KernMem_DumpVM();
+//    }
+}
 
 UINT32
 A32Kern_InterruptHandler(
