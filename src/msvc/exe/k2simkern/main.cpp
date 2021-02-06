@@ -1,16 +1,16 @@
 #include "SimKern.h"
 
 HANDLE      theWin32ExitSignal;
-SKSystem    theSystem;
+static SKSystem theSystem;
 
-void SKKernel_MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apCpuTime)
+void SKKernel_MsToCpuTime(SKSystem *apSystem, DWORD aMilliseconds, LARGE_INTEGER *apCpuTime)
 {
-    apCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * theSystem.mPerfFreq.QuadPart) / 1000ll;
+    apCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * apSystem->mPerfFreq.QuadPart) / 1000ll;
 }
 
-DWORD SKKernel_CpuTimeToMs(LARGE_INTEGER *apCpuTime)
+DWORD SKKernel_CpuTimeToMs(SKSystem *apSystem, LARGE_INTEGER *apCpuTime)
 {
-    return (DWORD)((apCpuTime->QuadPart * 1000ll) / theSystem.mPerfFreq.QuadPart);
+    return (DWORD)((apCpuTime->QuadPart * 1000ll) / apSystem->mPerfFreq.QuadPart);
 }
 
 void SKKernel_RecvIcis(SKCpu *apThisCpu)
@@ -142,7 +142,7 @@ DWORD WINAPI SKKernelThread(void *apParam)
 
             ranThread = TRUE;
             if (0 != pThisCpu->mSchedTimeout.QuadPart)
-                timeOutMs = SKKernel_CpuTimeToMs(&pThisCpu->mSchedTimeout);
+                timeOutMs = SKKernel_CpuTimeToMs(pThisCpu->mpSystem, &pThisCpu->mSchedTimeout);
             else
                 timeOutMs = INFINITE;
             lastWaitResult = WaitForMultipleObjects(3, waitHandles, FALSE, timeOutMs);
@@ -243,7 +243,7 @@ SKInitCpu(
     pCpu->mpSystem = apSystem;
     pCpu->mCpuIndex = aCpuIndex;
     pCpu->mpPendingIcis = NULL;
-    K2LIST_Init(&pCpu->ThreadList);
+    K2LIST_Init(&pCpu->RunningThreadList);
 
     pCpu->mhWin32IciEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (NULL == pCpu->mhWin32IciEvent)
@@ -291,7 +291,7 @@ SKInitCpu(
     pIdleThread->mRunTime.QuadPart = 0;
     pIdleThread->mQuantum = 0;
     pIdleThread->mpMigratedNext = NULL;
-    K2LIST_AddAtHead(&pCpu->ThreadList, &pIdleThread->CpuThreadListLink);
+    K2LIST_AddAtHead(&pCpu->RunningThreadList, &pIdleThread->CpuThreadListLink);
 
     pCpu->mhWin32KernelThread = CreateThread(
         NULL,
@@ -360,6 +360,8 @@ void Startup(void)
         printf("failed to get core perf frequency\n");
         ExitProcess(__LINE__);
     }
+
+    K2LIST_Init(&theSystem.ProcessList);
 
     for (ix = 0; ix < theSystem.mCpuCount; ix++)
     {

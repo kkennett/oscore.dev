@@ -4,13 +4,16 @@
 #include <lib/k2win32.h>
 #include <lib/k2list.h>
 
-typedef struct _SKSystem    SKSystem;
-typedef struct _SKCpu       SKCpu;
-typedef struct _SKThread    SKThread;
+typedef struct  _SKSystem       SKSystem;
+typedef struct  _SKCpu          SKCpu;
+typedef struct  _SKThread       SKThread;
+typedef struct  _SKICI          SKICI;
+typedef enum    _SKThreadState  SKThreadState;
+typedef struct  _SKPort         SKPort;
+typedef struct  _SKProcess      SKProcess;
 
 #define SKICI_CODE_MIGRATED_THREAD  0xFEED0001
 
-typedef struct _SKICI SKICI;
 struct _SKICI
 {
     SKCpu *             mpSenderCpu;
@@ -18,10 +21,40 @@ struct _SKICI
     volatile SKICI *    mpNext;
 };
 
+enum _SKThreadState
+{
+    SKThreadState_Invalid=0,
+    SKThreadState_Inception,
+    SKThreadState_Suspended,
+    SKThreadState_OnRunList,
+    SKThreadState_Migrating,
+    SKThreadState_BlockedOnPort,
+    SKThreadState_Dying,
+    SKThreadState_Dead
+};
+
+struct _SKPort
+{
+    SKProcess *     mpOwnerProcess;
+    SKThread *      mpWaitingThread;
+};
+
+struct _SKProcess
+{
+    UINT32          mId;
+    K2LIST_LINK     SystemProcessListLink;
+    K2LIST_ANCHOR   ThreadList;
+};
+
 struct _SKThread
 {
     HANDLE          mhWin32Thread;
     DWORD           mWin32ThreadId;
+
+    SKProcess *     mpOwnerProcess;
+    K2LIST_LINK     ProcessThreadListLink;
+
+    SKThreadState   mThreadState;
 
     LARGE_INTEGER   mRunTime;
 
@@ -58,7 +91,7 @@ struct _SKCpu
     volatile SKICI *    mpPendingIcis;
 
     // can only be modified by its own kernel thread
-    K2LIST_ANCHOR       ThreadList;
+    K2LIST_ANCHOR       RunningThreadList;
 
     SKThread volatile * mpMigratedList;
 };
@@ -73,25 +106,27 @@ struct _SKSystem
 {
     UINT_PTR        mCpuCount;
     SKCpu      *    mpCpus;
+
     LARGE_INTEGER   mPerfFreq;
+
+    K2LIST_ANCHOR   ProcessList;
 };
 
 extern HANDLE   theWin32ExitSignal;
-extern SKSystem theSystem;
 
-void SKSpinLock_Init(SKSpinLock *apLock);
-void SKSpinLock_Lock(SKSpinLock *apLock);
-void SKSpinLock_Unlock(SKSpinLock *apLock);
+void  SKSpinLock_Init(SKSpinLock *apLock);
+void  SKSpinLock_Lock(SKSpinLock *apLock);
+void  SKSpinLock_Unlock(SKSpinLock *apLock);
 
-void SKKernel_SendIci(SKCpu *apThisCpu, DWORD aTargetCpu, UINT_PTR aCode);
-void SKKernel_MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apCpuTime);
-DWORD SKKernel_CpuTimeToMs(LARGE_INTEGER *apCpuTime);
+void  SKKernel_SendIci(SKCpu *apThisCpu, DWORD aTargetCpu, UINT_PTR aCode);
+void  SKKernel_MsToCpuTime(SKSystem *apSystem, DWORD aMilliseconds, LARGE_INTEGER *apCpuTime);
+DWORD SKKernel_CpuTimeToMs(SKSystem *apSystem, LARGE_INTEGER *apCpuTime);
 
-void SKCpu_OnStartup(SKCpu *apThisCpu);
-void SKCpu_OnShutdown(SKCpu *apThisCpu);
-void SKCpu_OnRecvIci(SKCpu *apThisCpu, SKCpu *apSenderCpu, UINT_PTR aCode);
-void SKCpu_OnIrqInterrupt(SKCpu *apThisCpu);
-void SKCpu_OnSchedTimerExpiry(SKCpu *apThisCpu);
-void SKCpu_OnSystemCall(SKCpu *apThisCpu);
+void  SKCpu_OnStartup(SKCpu *apThisCpu);
+void  SKCpu_OnShutdown(SKCpu *apThisCpu);
+void  SKCpu_OnRecvIci(SKCpu *apThisCpu, SKCpu *apSenderCpu, UINT_PTR aCode);
+void  SKCpu_OnIrqInterrupt(SKCpu *apThisCpu);
+void  SKCpu_OnSchedTimerExpiry(SKCpu *apThisCpu);
+void  SKCpu_OnSystemCall(SKCpu *apThisCpu);
 
 #endif // __SIMKERN_H
