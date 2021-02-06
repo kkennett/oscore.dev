@@ -116,6 +116,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "k2zipper", "exe\k2zipper\k2
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "k2rofshelp", "lib\k2rofshelp\k2rofshelp.vcxproj", "{82399B7E-928B-4755-8A77-D3026F95ABED}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "k2simkern", "exe\k2simkern\k2simkern.vcxproj", "{1B847E6E-14B5-42AF-8A01-E8F1D393E7B4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{36E23D19-F314-4656-9BDC-FE11D41EF830} = {36E23D19-F314-4656-9BDC-FE11D41EF830}
+		{4064DEED-563A-4591-9F7E-2F49FF44A567} = {4064DEED-563A-4591-9F7E-2F49FF44A567}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
@@ -210,6 +216,10 @@ Global
 		{82399B7E-928B-4755-8A77-D3026F95ABED}.Debug|x86.Build.0 = Debug|Win32
 		{82399B7E-928B-4755-8A77-D3026F95ABED}.Release|x86.ActiveCfg = Release|Win32
 		{82399B7E-928B-4755-8A77-D3026F95ABED}.Release|x86.Build.0 = Release|Win32
+		{1B847E6E-14B5-42AF-8A01-E8F1D393E7B4}.Debug|x86.ActiveCfg = Debug|Win32
+		{1B847E6E-14B5-42AF-8A01-E8F1D393E7B4}.Debug|x86.Build.0 = Debug|Win32
+		{1B847E6E-14B5-42AF-8A01-E8F1D393E7B4}.Release|x86.ActiveCfg = Release|Win32
+		{1B847E6E-14B5-42AF-8A01-E8F1D393E7B4}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
