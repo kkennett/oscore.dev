@@ -37,6 +37,8 @@
 
 // void A32Kern_StackBridge(UINT32 aCpuIx, UINT32 aCoreStacksBase);
 BEGIN_A32_PROC(A32Kern_StackBridge)
+    mov r3, #0
+
     // IRQ first
     mrs r12, cpsr
     bic r12, r12, #A32_PSR_MODE_MASK
@@ -45,6 +47,10 @@ BEGIN_A32_PROC(A32Kern_StackBridge)
     add r1, r1, #A32KERN_CORE_IRQ_STACK_BYTES
     sub r1, r1, #4                          // core stacks are empty descending to start
     mov sp, r1
+    mov r11, r1
+    str r3, [r1]
+    sub r1, r1, #4
+    str r3, [r1]
 
     // now ABT
     mrs r12, cpsr
@@ -53,6 +59,10 @@ BEGIN_A32_PROC(A32Kern_StackBridge)
     msr cpsr, r12      
     add r1, r1, #A32KERN_CORE_ABT_STACK_BYTES
     mov sp, r1
+    mov r11, r1
+    str r3, [r1]
+    sub r1, r1, #4
+    str r3, [r1]
 
     // now UND
     mrs r12, cpsr
@@ -61,6 +71,10 @@ BEGIN_A32_PROC(A32Kern_StackBridge)
     msr cpsr, r12      
     add r1, r1, #A32KERN_CORE_UND_STACK_BYTES
     mov sp, r1
+    mov r11, r1
+    str r3, [r1]
+    sub r1, r1, #4
+    str r3, [r1]
 
     // now SVC
     mrs r12, cpsr
@@ -69,6 +83,10 @@ BEGIN_A32_PROC(A32Kern_StackBridge)
     msr cpsr, r12      
     add r1, r1, #A32KERN_CORE_SVC_STACK_BYTES
     mov sp, r1
+    mov r11, r1
+    str r3, [r1]
+    sub r1, r1, #4
+    str r3, [r1]
 
     // finally SYS
     mrs r12, cpsr
@@ -86,6 +104,10 @@ BEGIN_A32_PROC(A32Kern_StackBridge)
 
     // this is our sys stack pointer
     mov sp, r1
+    mov r11, r1
+    str r3, [r1]
+    sub r1, r1, #4
+    str r3, [r1]
 
     // all done - stay in SYS mode
     b A32Kern_CpuLaunch2

@@ -463,6 +463,8 @@ void KernMem_Start(void)
     // tracking list starts empty and first alloc will bump it
     //
     K2OSKERN_Debug("\n---------Mem Started---------\n\n");
+    K2OSKERN_Debug("*0x81410010 = %08X\n", *(UINT32*)0x81410010);
+
 }
 
 UINT32 KernMem_CountPT(UINT32 aVirtAddr, UINT32 aPageCount)

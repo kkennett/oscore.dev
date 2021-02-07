@@ -250,6 +250,9 @@ void sInit_BeforeHal_InitIntr(void)
         gA32Kern_GICDAddr = A32KERN_MP_GICD_VIRT;
     }
 
+    // pl310 debug
+    KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_A32_PL310, 0x00A02000, K2OS_MAPTYPE_KERN_DEVICEIO);
+
     A32Kern_IntrInitGicDist();
 }
 

@@ -199,7 +199,14 @@ loopChk:
 
     // single core, not in SMP =============================================================
 
-    // clean and invalidate the L1 by set/way
+    //
+    // PL310 manual page 3-27
+    //
+    // clean l1, dsb, clean l2, sync, invalidate l2, sync, invalidate l1, dsb
+    //
+    //
+
+    // clean the L1 by set/way
     // do not r/w memory
     mov     r0, #0                      // select L1 data cache
     mcr     p15, 2, r0, c0, c0, 0       // write CSSELR
@@ -221,43 +228,53 @@ loopChk:
     mov     r5, r3, lsl r1          // r5 = associativity * in right pos for mcr
     mov     r6, r2, lsl r0          // r6 = set * in right pos for mcr
     orr     r5, r5, r6              // combine r5 and r6
-    mcr     p15, 0, r5, c7, c14, 2   // clean and invalidate data cache by set/way
+    mcr     p15, 0, r5, c7, c10, 2  // clean data cache by set/way
     bgt     2b                      // if more associativity, go back
     cmp     r2, #0                  // check if there are sets left
     bgt     1b                      // if more sets left go do next set
+
     dsb
     isb
 
-    // clean and invalidate the entire L2 (as per app note in manual)
+    // clean entire L2 by way (as per app note in manual)
     // do not r/w memory
-    movw r0, #0x27FC    // 0x00A027FC is clean/invalidate by way
+    movw r0, #0x27BC    // 0x00A027BC is clean by way
     movt r0, #0x00A0
     movw r1, #0xFFFF
     movt r1, #0
     str r1, [r0]
-_Wait_CleanInvalidate_Completed:
+_Wait_Clean_Completed:
     ldr r2, [r0]
     ands r3, r2, r1
-    bne _Wait_CleanInvalidate_Completed
+    bne _Wait_Clean_Completed
 
-    // turn off the D cache now
-    // do not r/w memory
-    mrc p15, 0, r12, c1, c0, 0   // read SCTRL
-    bic r12, r12, #A32_SCTRL_C_DCACHEENABLE
-    mcr p15, 0, r12, c1, c0, 0   // write SCTRL
-    isb
-
-    // L2 Cache disable
-    // do not r/w memory
-    movw r0, #0x2100    // 0x00A02100 is PL310 control register
+    // sync the L2
+    movw r0, #0x2730    // 0x00A02730 is sync
     movt r0, #0x00A0
-    ldr r1, [r0]
-    bic r1, r1, #1  // clear the enable bit
+    mov r1, #0
     str r1, [r0]
-    dsb
     isb
 
-    // L1 and L2 caches are both now off. invalidate L1 in case anything was prefetched/snuck in 
+    // Invalidate L2
+    // do not r/w memory
+    movw r0, #0x277C    // 0x00A0277C is invalidate by way 
+    movt r0, #0x00A0
+    movw r1, #0xFFFF
+    movt r1, #0
+    str r1, [r0]
+_Wait_Invalidate_Completed:
+    ldr r2, [r0]
+    ands r3, r2, r1
+    bne _Wait_Invalidate_Completed
+
+    // sync the L2
+    movw r0, #0x2730    // 0x00A02730 is sync
+    movt r0, #0x00A0
+    mov r1, #0
+    str r1, [r0]
+    isb
+
+    // invalidate L1 
     // do not r/w memory
     mov     r0, #0                  // select L1 data cache
     mcr     p15, 2, r0, c0, c0, 0   // write CSSELR
@@ -286,17 +303,22 @@ _Wait_CleanInvalidate_Completed:
     dsb
     isb
 
-    // L2 shoudl be off.  invalidate the entire L2 anyway in case anything was prefetched/snuck in 
+    // L1 cache disable
     // do not r/w memory
-    movw r0, #0x277C    // 0x00A0277C is invalidate by way 
+    mrc p15, 0, r12, c1, c0, 0   // read SCTRL
+    bic r12, r12, #A32_SCTRL_C_DCACHEENABLE
+    mcr p15, 0, r12, c1, c0, 0   // write SCTRL
+    isb
+
+    // L2 Cache disable
+    // do not r/w memory
+    movw r0, #0x2100    // 0x00A02100 is PL310 control register
     movt r0, #0x00A0
-    movw r1, #0xFFFF
-    movt r1, #0
+    ldr r1, [r0]
+    bic r1, r1, #1  // clear the enable bit
     str r1, [r0]
-_Wait_Invalidate_Completed:
-    ldr r2, [r0]
-    ands r3, r2, r1
-    bne _Wait_Invalidate_Completed
+    dsb
+    isb
 
     // All caches off and clean/invalid.  MMU off and TLB invalid. ============================================
 

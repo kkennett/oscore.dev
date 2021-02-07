@@ -336,13 +336,6 @@ A32_CACHEINFO const * A32CrtKern_InitCacheConfig(void)
 
     sgCacheInit = 1;
 
-    /* enable cache on primary core */
-    sctrl.mAsUINT32 = A32_ReadSCTRL();
-    K2_ASSERT(0 == sctrl.Bits.mC);
-    sctrl.Bits.mC = 1;    // dcache enable
-    sctrl.Bits.mI = 1;    // icache enable
-    sctrl.Bits.mZ = 1;    // branch predict enable
-    A32_WriteSCTRL(sctrl.mAsUINT32);
     A32_ICacheInvalidateAll_UP();
     A32_DSB();
     A32_ISB();
@@ -367,16 +360,6 @@ K2OS_CacheOperation(
         //
         if (0 != (A32_ReadMPIDR() & 0xF))
         {
-            //
-            // not primary core - ensure caches off at init
-            // and then turn them on
-            //
-            sctrl.mAsUINT32 = A32_ReadSCTRL();
-            K2_ASSERT(0 == sctrl.Bits.mC);
-            sctrl.Bits.mC = 1;      // dcache enable
-            sctrl.Bits.mI = 1;      // icache enable
-            sctrl.Bits.mZ = 1;      // branch predict enable
-            A32_WriteSCTRL(sctrl.mAsUINT32);
             A32_ICacheInvalidateAll_UP();
             A32_BPInvalidateAll_UP();
             A32_DSB();

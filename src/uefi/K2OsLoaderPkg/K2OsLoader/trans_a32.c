@@ -88,16 +88,7 @@ static UINT32 const sTransitionCode[] =
     // and system entrypoint to r1
     //
     0xe5901008,    //    ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
-    0xe28f4098,    //    adr r4, _JUMP_TO_KERNEL
-
-    // disable branch predictor and ensure caches off
-    0xee113f10,    //    mrc p15, 0, r3, c1, c0, 0   
-    0xe3c33a01,    //    bic r3, r3, #A32_SCTRL_I_ICACHEENABLE
-    0xe3c33004,    //    bic r3, r3, #A32_SCTRL_C_DCACHEENABLE
-    0xe3c33b02,    //    bic r3, r3, #A32_SCTRL_Z_BRANCHPREDICTENABLE
-    0xee013f10,    //    mcr p15, 0, r3, c1, c0, 0   
-    0xf57ff04f,    //    dsb
-    0xf57ff06f,    //    isb
+    0xe28f4088,    //    adr r4, _JUMP_TO_KERNEL
 
     // invalidate i cache and branch predictor even though they should be off
     0xe3a07000,    //    mov r7, #0
@@ -114,6 +105,9 @@ static UINT32 const sTransitionCode[] =
     // enable mmu
     0xee113f10,    //    mrc p15, 0, r3, c1, c0, 0   
     0xe3833001,    //    orr r3, r3, #A32_SCTRL_M_MMUENABLE
+    0xe3833a01,    //    orr r3, r3, #4096; 0x1000
+    0xe3833004,    //    orr r3, r3, #4
+    0xe3833b02,    //    orr r3, r3, #2048; 0x800
     0xe3c33202,    //    bic r3, r3, #A32_SCTRL_AFE_ACCESSFLAGENABLE  // make sure turn off AFE (B3.6.1 in TRM)
     0xe3c33201,    //    bic r3, r3, #A32_SCTRL_TRE_TEXREMAPENABLE    // make sure turn off TEX remap
     0xee013f10,    //    mcr p15, 0, r3, c1, c0, 0   

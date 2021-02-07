@@ -200,7 +200,7 @@ K2OsLoaderEntryPoint (
     EFI_EVENT               efiEvent;
     EFI_PHYSICAL_ADDRESS    physAddr;
 
-//    K2Printf(L"\n\n\nK2Loader\n----------------\n");
+    K2Printf(L"\n\n\nK2Loader\n----------------\n");
 
     efiStatus = Loader_InitArch();
     if (EFI_ERROR(efiStatus))
@@ -351,7 +351,7 @@ K2OsLoaderEntryPoint (
                                         gData.LoadInfo.mDebugPageVirt = 0;
 #endif
 
-//                                        K2Printf(L"\n----------------\nTransition...\n");
+                                        K2Printf(L"\n----------------\nTransition...\n");
 
                                         k2Stat = Loader_TrackEfiMap();
                                         if (K2STAT_IS_ERROR(k2Stat))

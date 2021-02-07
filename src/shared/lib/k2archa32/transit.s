@@ -92,15 +92,6 @@ BEGIN_A32_PROC(A32_Transition)
     ldr r1, [r0, #K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY]
     adr r4, _JUMP_TO_KERNEL
 
-    // disable branch predictor and ensure caches off
-    mrc p15, 0, r3, c1, c0, 0   
-    bic r3, r3, #A32_SCTRL_I_ICACHEENABLE
-    bic r3, r3, #A32_SCTRL_C_DCACHEENABLE
-    bic r3, r3, #A32_SCTRL_Z_BRANCHPREDICTENABLE
-    mcr p15, 0, r3, c1, c0, 0   
-    dsb 
-    isb
-
     // invalidate i cache and branch predictor even though they should be off
     mov r7, #0
     mcr p15, 0, r7, c7, c5, 0
@@ -113,9 +104,12 @@ BEGIN_A32_PROC(A32_Transition)
     mcr p15, 0, r7, c13, c0, 1
     isb
 
-    // enable mmu
+    // enable mmu and caches - dont enable mmu without enabling caches
     mrc p15, 0, r3, c1, c0, 0   
     orr r3, r3, #A32_SCTRL_M_MMUENABLE
+    orr r3, r3, #A32_SCTRL_I_ICACHEENABLE
+    orr r3, r3, #A32_SCTRL_C_DCACHEENABLE
+    orr r3, r3, #A32_SCTRL_Z_BRANCHPREDICTENABLE
     bic r3, r3, #A32_SCTRL_AFE_ACCESSFLAGENABLE  // make sure turn off AFE (B3.6.1 in TRM)
     bic r3, r3, #A32_SCTRL_TRE_TEXREMAPENABLE    // make sure turn off TEX remap
     mcr p15, 0, r3, c1, c0, 0   
@@ -128,7 +122,7 @@ BEGIN_A32_PROC(A32_Transition)
     dsb
     isb
 
-    // invalidate i cache (even though it is off)
+    // invalidate i cache and branch predictor
     mcr p15, 0, r7, c7, c5, 0
     mcr p15, 0, r7, c7, c5, 6       
     dsb

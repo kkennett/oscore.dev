@@ -69,14 +69,26 @@ A32Kern_CheckIrqInterrupt(
     UINT32 aStackPtr
 )
 {
-    K2OSKERN_Debug("A32Kern_CheckIrqInterrupt()\n");
-    while (1);
+    UINT32                      ackVal;
+    K2OSKERN_CPUCORE volatile * pThisCore;
 
     /* interrupts off. In IRQ mode.  r0-r3,r13(usr/sys),r15 in exception context. r12 saved in r14 spot in exception context. */
-    K2_ASSERT(0);
+
+    ackVal = A32Kern_IntrAck(&ackVal);
+    if ((ackVal & 0x3FF) == 0x3FF)
+    {
+        K2OSKERN_Debug("Spurious\n");
+        return FALSE;
+    }
+
+    pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
+    K2OSKERN_Debug("Core %d INTRACK = %08X\n", pThisCore->mCoreIx, ackVal);
+
+    K2_ASSERT((ackVal & 0x3FF) < 16);
+//    A32Kern_IntrEoi(ackVal);
 
     /* MUST return 0 if was in sys mode */
-    return 0;
+    return FALSE;
 }
 
 static void
@@ -198,6 +210,16 @@ void A32Kern_DumpExceptionContext(K2OSKERN_CPUCORE volatile* apCore, UINT32 aRea
     K2OSKERN_Debug("DFSR      %08X\n", A32_ReadDFSR());
     K2OSKERN_Debug("IFAR      %08X\n", A32_ReadIFAR());
     K2OSKERN_Debug("IFSR      %08X\n", A32_ReadIFSR());
+    K2OSKERN_Debug("STACK     %08X\n", A32_ReadStackPointer());
+    K2OSKERN_Debug("SCTLR     %08X\n", A32_ReadSCTRL());
+    K2OSKERN_Debug("ACTLR     %08X\n", A32_ReadAUXCTRL());
+    K2OSKERN_Debug("SCU       %08X\n", *((UINT32*)K2OS_KVA_A32_PERIPHBASE));
+    K2OSKERN_Debug("SCR       %08X\n", A32_ReadSCR());    // will fault in NS mode
+    K2OSKERN_Debug("DACR      %08X\n", A32_ReadDACR());
+    K2OSKERN_Debug("TTBCR     %08X\n", A32_ReadTTBCR());
+    K2OSKERN_Debug("TTBR0     %08X\n", A32_ReadTTBR0());
+    K2OSKERN_Debug("TTBR1     %08X\n", A32_ReadTTBR1());
+    K2OSKERN_Debug("CPSR      %08X\n", A32_ReadCPSR());
     K2OSKERN_Debug("------------------\n");
     K2OSKERN_Debug("SPSR      %08X\n", pEx->SPSR);
     K2OSKERN_Debug("  r0=%08X   r8=%08X\n", pEx->R[0], pEx->R[8]);
@@ -209,11 +231,11 @@ void A32Kern_DumpExceptionContext(K2OSKERN_CPUCORE volatile* apCore, UINT32 aRea
     K2OSKERN_Debug("  r6=%08X   lr=%08X\n", pEx->R[6], pEx->R[14]);
     K2OSKERN_Debug("  r7=%08X   pc=%08X\n", pEx->R[7], pEx->R[15]);
 
-//    if (aReason == A32KERN_EXCEPTION_REASON_DATA_ABORT)
-//    {
-//        KernArch_AuditVirt(A32_ReadDFAR(), 0, 0, (A32_ReadDFSR() & 0x800) ? K2OS_MEMPAGE_ATTR_WRITEABLE : K2OS_MEMPAGE_ATTR_READABLE);
+    if (aReason == A32KERN_EXCEPTION_REASON_DATA_ABORT)
+    {
+        KernArch_AuditVirt(A32_ReadDFAR(), 0, 0, (A32_ReadDFSR() & 0x800) ? K2OS_MEMPAGE_ATTR_WRITEABLE : K2OS_MEMPAGE_ATTR_READABLE);
 //        KernMem_DumpVM();
-//    }
+    }
 }
 
 UINT32

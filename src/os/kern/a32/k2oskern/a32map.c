@@ -38,11 +38,15 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     UINT32                      pte;
     KernPhysPageList                onList = KernPhysPageList_Error;
 
-    if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO))
+    if (0 == (aPageMapAttr & K2OS_MEMPAGE_ATTR_DEVICEIO))
     {
         pTrack = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
-        K2_ASSERT(!(pTrack->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG));
+        K2_ASSERT(0 == (pTrack->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG));
         onList = (KernPhysPageList)K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(pTrack->mFlags);
+    }
+    else
+    {
+        K2_ASSERT(0 == (aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC));
     }
 
     pte = A32_PTE_PRESENT | (aPhysAddr & A32_PTE_PAGEPHYS_MASK);
@@ -53,7 +57,7 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
     //
     // set EXEC_NEVER if appropriate and possible
     //
-    if (0 ==(aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC))
+    if (0 == (aPageMapAttr & K2OS_MEMPAGE_ATTR_EXEC))
     {
         // appropriate
         if (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_XP_CAP)
@@ -74,29 +78,34 @@ UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr)
         else
             pte |= A32_MMU_PTE_REGIONTYPE_NONSHAREABLE_DEVICE;
     }
-    else if (aPageMapAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
-    {
-        K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_UC_CAP);
-        pte |= A32_MMU_PTE_REGIONTYPE_UNCACHED;
-    }
-    else if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
-    {
-        K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP);
-        pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
-    }
     else
     {
-        K2_ASSERT(0 != (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WB_CAP));
-        pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
-        if ((K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING) == (aPageMapAttr & (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING)))
+        K2_ASSERT(pTrack != NULL);
+
+        if (aPageMapAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
         {
-            if (aPageMapAttr & K2OS_MEMPAGE_ATTR_TRANSITION)
+            K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_UC_CAP);
+            pte |= A32_MMU_PTE_REGIONTYPE_UNCACHED;
+        }
+        else if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+        {
+            K2_ASSERT(pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WT_CAP);
+            pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITETHRU;
+        }
+        else
+        {
+            K2_ASSERT(0 != (pTrack->mFlags & K2OSKERN_PHYSTRACK_PROP_WB_CAP));
+            pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
+            if ((K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING) == (aPageMapAttr & (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MEMPAGE_ATTR_PAGING)))
             {
-                K2_ASSERT(onList == KernPhysPageList_Trans);
-            }
-            else
-            {
-                K2_ASSERT(onList == KernPhysPageList_Paging);
+                if (aPageMapAttr & K2OS_MEMPAGE_ATTR_TRANSITION)
+                {
+                    K2_ASSERT(onList == KernPhysPageList_Trans);
+                }
+                else
+                {
+                    K2_ASSERT(onList == KernPhysPageList_Paging);
+                }
             }
         }
     }
@@ -140,7 +149,7 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* apPTE, UINT32 aPT
     A32_DSB();
 
     K2OS_CacheOperation(K2OS_CACHEOP_FlushData, NULL, 0);
-    A32_TLBInvalidateAll_MP();
+    A32_TLBInvalidateAll_UP();
     K2OS_CacheOperation(K2OS_CACHEOP_InvalidateInstructions, NULL, 0);
     A32_ISB();
 
@@ -266,8 +275,6 @@ void KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* apPTE, UINT32 aPT
     }
 
     K2OSKERN_SetIntr(intState);
-
-    KernArch_AuditVirt(0x81410010, 0, 0, K2OS_MEMPAGE_ATTR_READABLE);
 }
 
 UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 *apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr)
@@ -481,8 +488,7 @@ void KernArch_AuditVirt(UINT32 aVirtAddr, UINT32 aPDE, UINT32 aPTE, UINT32 aAcce
         transResult = A32_TranslateVirtPrivRead(aVirtAddr);
         if (0 != (transResult & 1))
         {
-            K2OSKERN_Debug("VIRT %08X PDE %08X PTE %08X ATTR %08X\n", aVirtAddr, aPDE, aPTE, aAccessAttr);
-            K2OSKERN_Panic("Virt Audit Fail Read -- %08X\n", transResult);
+            K2OSKERN_Debug("xR VIRT %08X PDE %08X PTE %08X ATTR %08X -- result %08X\n", aVirtAddr, aPDE, aPTE, aAccessAttr, transResult);
         }
     }
     if (aAccessAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
@@ -490,8 +496,7 @@ void KernArch_AuditVirt(UINT32 aVirtAddr, UINT32 aPDE, UINT32 aPTE, UINT32 aAcce
         transResult = A32_TranslateVirtPrivWrite(aVirtAddr);
         if (0 != (transResult & 1))
         {
-            K2OSKERN_Debug("VIRT %08X PDE %08X PTE %08X ATTR %08X\n", aVirtAddr, aPDE, aPTE, aAccessAttr);
-            K2OSKERN_Panic("Virt Audit Fail Write -- %08X\n", transResult);
+            K2OSKERN_Debug("xW VIRT %08X PDE %08X PTE %08X ATTR %08X -- result %08X\n", aVirtAddr, aPDE, aPTE, aAccessAttr, transResult);
         }
     }
 }
