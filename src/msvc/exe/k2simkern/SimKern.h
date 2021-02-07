@@ -29,17 +29,6 @@ struct SKICI
     volatile SKICI *    mpNext;
 };
 
-struct SKPort
-{
-    SKPort(void)
-    {
-        mpOwnerProcess = NULL;
-        mpWaitingThread = NULL;
-    }
-    SKProcess *     mpOwnerProcess;
-    SKThread *      mpWaitingThread;
-};
-
 struct SKProcess
 {
     SKProcess(UINT32 aId) : mId(aId)
@@ -52,26 +41,28 @@ struct SKProcess
     K2LIST_ANCHOR   ThreadList;
 };
 
+typedef enum _SKThreadState SKThreadState;
+enum _SKThreadState
+{
+    SKThreadState_Invalid=0,
+    SKThreadState_Inception,
+    SKThreadState_Suspended,
+    SKThreadState_OnRunList,
+    SKThreadState_Migrating,
+    SKThreadState_SendBlocked,
+    SKThreadState_RecvBlocked,
+    SKThreadState_Dying,
+    SKThreadState_Dead
+};
+
 struct SKThread
 {
-    enum State
-    {
-        Invalid=0,
-        Inception,
-        Suspended,
-        OnRunList,
-        Migrating,
-        BlockedOnPort,
-        Dying,
-        Dead
-    };
-
     SKThread(void)
     {
         mhWin32Thread = NULL;
         mWin32ThreadId = 0;
         mpOwnerProcess = NULL;
-        mState = SKThread::State::Inception;
+        mState = SKThreadState_Inception;
         mRunTime.QuadPart = 0;
         mQuantum = 0;
         mpCurrentCpu = NULL;
@@ -86,7 +77,7 @@ struct SKThread
     SKProcess *     mpOwnerProcess;
     K2LIST_LINK     ProcessThreadListLink;
 
-    State           mState;
+    SKThreadState   mState;
 
     LARGE_INTEGER   mRunTime;
 
@@ -99,6 +90,8 @@ struct SKThread
     // Migrated threads are NOT on the Cpu's thread list (yet)
     // and will have a NULL mpCurrentCpu
     SKThread volatile * mpCpuMigratedNext;
+
+    SKPort *        mpBlockedOnPort;
 };
 
 struct SKCpu
@@ -119,6 +112,7 @@ struct SKCpu
         mpPendingIcis = NULL;
         K2LIST_Init(&RunningThreadList);
         mpMigratedListHead = NULL;
+        mSchedTimerExpired = FALSE;
     }
 
     SKSystem *          mpSystem;
@@ -179,7 +173,6 @@ struct SKSpinLock
     {
         LeaveCriticalSection(&Win32Sec);
     }
-
 };
 
 struct SKSystem
@@ -191,6 +184,13 @@ struct SKSystem
         K2LIST_Init(&ProcessList);
     }
 
+    UINT_PTR const  mCpuCount;
+    SKCpu      *    mpCpus;
+
+    LARGE_INTEGER   mPerfFreq;
+
+    K2LIST_ANCHOR   ProcessList;
+
     void MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apRetCpuTime)
     {
         apRetCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * mPerfFreq.QuadPart) / 1000ll;
@@ -200,13 +200,6 @@ struct SKSystem
     {
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
-
-    UINT_PTR const  mCpuCount;
-    SKCpu      *    mpCpus;
-
-    LARGE_INTEGER   mPerfFreq;
-
-    K2LIST_ANCHOR   ProcessList;
 };
 
 extern HANDLE   theWin32ExitSignal;
