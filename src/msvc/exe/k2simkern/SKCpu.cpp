@@ -1,6 +1,6 @@
 #include "SimKern.h"
 
-void SKCpu_OnStartup(SKCpu *apThisCpu)
+void SKCpu::OnStartup(void)
 {
     //
     // main cpu kernel thread startup - 
@@ -8,14 +8,14 @@ void SKCpu_OnStartup(SKCpu *apThisCpu)
     //
 }
 
-void SKCpu_OnShutdown(SKCpu *apThisCpu)
+void SKCpu::OnShutdown(void)
 {
     //
     // main cpu loop is exiting in kernel thread
     //
 }
 
-void SKCpu_OnIrqInterrupt(SKCpu *apThisCpu)
+void SKCpu::OnIrqInterrupt(void)
 {
     //
     // irq received by this CPU
@@ -24,7 +24,7 @@ void SKCpu_OnIrqInterrupt(SKCpu *apThisCpu)
     //
 }
 
-void SKCpu_OnSystemCall(SKCpu *apThisCpu)
+void SKCpu::OnSystemCall(void)
 {
     //
     // apThisCpu->mpCurrentThread is making a system call
@@ -33,7 +33,7 @@ void SKCpu_OnSystemCall(SKCpu *apThisCpu)
     //
 }
 
-void SKCpu_OnSchedTimerExpiry(SKCpu *apThisCpu)
+void SKCpu::OnSchedTimerExpiry(void)
 {
     //
     // this current CPU's local timer expired
@@ -42,7 +42,7 @@ void SKCpu_OnSchedTimerExpiry(SKCpu *apThisCpu)
     //
 }
 
-void SKCpu_OnRecvIci(SKCpu *apThisCpu, SKCpu *apSenderCpu, UINT_PTR aCode)
+void SKCpu::OnRecvIci(SKCpu *apSenderCpu, UINT_PTR aCode)
 {
     //
     // we received an ICI from the sender Cpu with the corresponding code

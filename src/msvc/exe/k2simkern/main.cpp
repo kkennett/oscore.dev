@@ -1,19 +1,9 @@
 #include "SimKern.h"
 
 HANDLE      theWin32ExitSignal;
-static SKSystem theSystem;
+static SKSystem * sgpSystem;
 
-void SKKernel_MsToCpuTime(SKSystem *apSystem, DWORD aMilliseconds, LARGE_INTEGER *apCpuTime)
-{
-    apCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * apSystem->mPerfFreq.QuadPart) / 1000ll;
-}
-
-DWORD SKKernel_CpuTimeToMs(SKSystem *apSystem, LARGE_INTEGER *apCpuTime)
-{
-    return (DWORD)((apCpuTime->QuadPart * 1000ll) / apSystem->mPerfFreq.QuadPart);
-}
-
-void SKKernel_RecvIcis(SKCpu *apThisCpu)
+static void SKKernel_RecvIcis(SKCpu *apThisCpu)
 {
     SKICI volatile *pIciList;
     SKICI volatile *pTemp;
@@ -46,30 +36,28 @@ void SKKernel_RecvIcis(SKCpu *apThisCpu)
             pHold = pIciList;
             pIciList = pIciList->mpNext;
 
-            SKCpu_OnRecvIci(apThisCpu, pHold->mpSenderCpu, pHold->mCode);
+            apThisCpu->OnRecvIci(pHold->mpSenderCpu, pHold->mCode);
 
-            free((void *)pHold);
+            delete pHold;
             
         } while (NULL != pIciList);
 
     } while (true);
 }
 
-void SKKernel_SendIci(SKCpu *apThisCpu, DWORD aTargetCpu, UINT_PTR aCode)
+void SKCpu::SendIci(DWORD aTargetCpu, UINT_PTR aCode)
 {
-    SKSystem *pSys = apThisCpu->mpSystem;
+    SKCpu *pTarget = &mpSystem->mpCpus[aTargetCpu];
     
-    SKCpu *pTarget = &pSys->mpCpus[aTargetCpu];
-    
-    SKICI *pIci = (SKICI *)malloc(sizeof(SKICI));
+    SKICI *pIci = new SKICI;
     if (NULL == pIci)
     {
-        printf("Memory allocation failed generating Ici on cpu %d\n", apThisCpu->mCpuIndex);
+        printf("Memory allocation failed generating Ici on cpu %d\n", mCpuIndex);
         ExitProcess(__LINE__);
     }
     
     pIci->mCode = aCode;
-    pIci->mpSenderCpu = apThisCpu;
+    pIci->mpSenderCpu = this;
 
     SKICI volatile *pLast;
     SKICI volatile *pOld;
@@ -84,12 +72,12 @@ void SKKernel_SendIci(SKCpu *apThisCpu, DWORD aTargetCpu, UINT_PTR aCode)
 
     if (((DWORD)-1) == SetEvent(pTarget->mhWin32IciEvent))
     {
-        printf("Could not fire action event for cpu %d from cpu %d\n", pTarget->mCpuIndex, apThisCpu->mCpuIndex);
+        printf("Could not fire action event for cpu %d from cpu %d\n", pTarget->mCpuIndex, mCpuIndex);
         ExitProcess(__LINE__);
     }
 }
 
-DWORD WINAPI SKKernelThread(void *apParam)
+static DWORD WINAPI SKKernelThread(void *apParam)
 {
     SKCpu *         pThisCpu = (SKCpu *)apParam;
     DWORD           lastWaitResult;
@@ -98,10 +86,9 @@ DWORD WINAPI SKKernelThread(void *apParam)
     LARGE_INTEGER   timeLast;
     LARGE_INTEGER   timeDelta;
     LARGE_INTEGER * pTimeNow;
-    BOOL            schedTimerExpired;
     BOOL            ranThread;
 
-    SKCpu_OnStartup(pThisCpu);
+    pThisCpu->OnStartup();
 
     if (FALSE == SetEvent(pThisCpu->mhWin32IciEvent))
     {
@@ -142,7 +129,7 @@ DWORD WINAPI SKKernelThread(void *apParam)
 
             ranThread = TRUE;
             if (0 != pThisCpu->mSchedTimeout.QuadPart)
-                timeOutMs = SKKernel_CpuTimeToMs(pThisCpu->mpSystem, &pThisCpu->mSchedTimeout);
+                timeOutMs = pThisCpu->mpSystem->CpuTimeToMs(&pThisCpu->mSchedTimeout);
             else
                 timeOutMs = INFINITE;
             lastWaitResult = WaitForMultipleObjects(3, waitHandles, FALSE, timeOutMs);
@@ -165,7 +152,7 @@ DWORD WINAPI SKKernelThread(void *apParam)
         {
             pThisCpu->mpCurrentThread->mRunTime.QuadPart += timeDelta.QuadPart;
         }
-        schedTimerExpired = FALSE;
+        pThisCpu->mSchedTimerExpired = FALSE;
         if (0 != pThisCpu->mSchedTimeout.QuadPart)
         {
             //
@@ -174,7 +161,7 @@ DWORD WINAPI SKKernelThread(void *apParam)
             if (timeDelta.QuadPart > pThisCpu->mSchedTimeout.QuadPart)
             {
                 pThisCpu->mSchedTimeout.QuadPart = 0;
-                schedTimerExpired = TRUE;
+                pThisCpu->mSchedTimerExpired = TRUE;
             }
             else
             {
@@ -197,7 +184,7 @@ DWORD WINAPI SKKernelThread(void *apParam)
             //
             // logical interrupt
             //
-            SKCpu_OnIrqInterrupt(pThisCpu);
+            pThisCpu->OnIrqInterrupt();
         }
         else if (lastWaitResult == WAIT_OBJECT_0 + 2)
         {
@@ -207,20 +194,23 @@ DWORD WINAPI SKKernelThread(void *apParam)
                 printf("Idle thread did system call on CPU %d\n", pThisCpu->mCpuIndex);
                 ExitProcess(__LINE__);
             }
-            SKCpu_OnSystemCall(pThisCpu);
+            pThisCpu->OnSystemCall();
         }
 
-        if (schedTimerExpired)
-            SKCpu_OnSchedTimerExpiry(pThisCpu);
+        if (pThisCpu->mSchedTimerExpired)
+        {
+            pThisCpu->mSchedTimerExpired = FALSE;
+            pThisCpu->OnSchedTimerExpiry();
+        }
 
     } while (true);
 
-    SKCpu_OnShutdown(pThisCpu);
+    pThisCpu->OnShutdown();
 
     return 0;
 }
 
-DWORD WINAPI SKIdleThread(void *apParam)
+static DWORD WINAPI SKIdleThread(void *apParam)
 {
     SKThread *pThisThread = (SKThread *)apParam;
     do
@@ -230,20 +220,14 @@ DWORD WINAPI SKIdleThread(void *apParam)
     return 0;
 }
 
-void 
-SKInitCpu(
-    SKSystem *  apSystem,
-    DWORD       aCpuIndex
-)
+static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
 {
-    SKThread *  pIdleThread;
     SKCpu *     pCpu;
+    SKThread *  pIdleThread;
     
     pCpu = &apSystem->mpCpus[aCpuIndex];
     pCpu->mpSystem = apSystem;
     pCpu->mCpuIndex = aCpuIndex;
-    pCpu->mpPendingIcis = NULL;
-    K2LIST_Init(&pCpu->RunningThreadList);
 
     pCpu->mhWin32IciEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (NULL == pCpu->mhWin32IciEvent)
@@ -264,12 +248,7 @@ SKInitCpu(
         ExitProcess(__LINE__);
     }
 
-    pCpu->mpIdleThread = pIdleThread = (SKThread *)malloc(sizeof(SKThread));
-    if (NULL == pIdleThread)
-    {
-        printf("Could not allocate idle thread for CPU %d\n", aCpuIndex);
-        ExitProcess(__LINE__);
-    }
+    pCpu->mpIdleThread = pIdleThread = new SKThread;
     pIdleThread->mhWin32Thread = CreateThread(
         NULL, 
         0, 
@@ -287,10 +266,8 @@ SKInitCpu(
         printf("Could not set affinity of idle thread for CPU %d\n", aCpuIndex);
         ExitProcess(__LINE__);
     }
-    pIdleThread->mpCurrentCpu = pCpu;
-    pIdleThread->mRunTime.QuadPart = 0;
-    pIdleThread->mQuantum = 0;
-    pIdleThread->mpMigratedNext = NULL;
+
+    pCpu->mpIdleThread->mpCurrentCpu = pCpu;
     K2LIST_AddAtHead(&pCpu->RunningThreadList, &pIdleThread->CpuThreadListLink);
 
     pCpu->mhWin32KernelThread = CreateThread(
@@ -317,8 +294,6 @@ SKInitCpu(
     }
 
     pCpu->mpCurrentThread = pCpu->mpIdleThread;
-    pCpu->mSchedTimeout.QuadPart = 0;
-    pCpu->mpPendingIcis = NULL;
     K2_CpuWriteBarrier();
 
     if (((DWORD)-1) == ResumeThread(pCpu->mhWin32KernelThread))
@@ -336,6 +311,7 @@ SKInitCpu(
 void Startup(void)
 {
     UINT_PTR ix;
+    UINT_PTR cpuCount;
 
     theWin32ExitSignal = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (NULL == theWin32ExitSignal)
@@ -344,28 +320,33 @@ void Startup(void)
         ExitProcess(__LINE__);
     }
 
-    theSystem.mCpuCount = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
-    if (theSystem.mCpuCount > 64)
-        theSystem.mCpuCount = 64;
+    cpuCount = GetMaximumProcessorCount(ALL_PROCESSOR_GROUPS);
+    if (cpuCount > 64)
+        cpuCount = 64;
 
-    theSystem.mpCpus = (SKCpu *)malloc(theSystem.mCpuCount * sizeof(SKCpu));
-    if (NULL == theSystem.mpCpus)
+    sgpSystem = new SKSystem(cpuCount);
+    if (NULL == sgpSystem)
     {
-        printf("malloc failed for cpu array\n");
+        printf("failed to allocate system\n");
         ExitProcess(__LINE__);
     }
 
-    if (FALSE == QueryPerformanceFrequency(&theSystem.mPerfFreq))
+    sgpSystem->mpCpus = new SKCpu[cpuCount];
+    if (NULL == sgpSystem->mpCpus)
+    {
+        printf("failed to create cpu array\n");
+        ExitProcess(__LINE__);
+    }
+
+    if (FALSE == QueryPerformanceFrequency(&sgpSystem->mPerfFreq))
     {
         printf("failed to get core perf frequency\n");
         ExitProcess(__LINE__);
     }
 
-    K2LIST_Init(&theSystem.ProcessList);
-
-    for (ix = 0; ix < theSystem.mCpuCount; ix++)
+    for (ix = 0; ix < sgpSystem->mCpuCount; ix++)
     {
-        SKInitCpu(&theSystem, (DWORD)ix);
+        SKInitCpu(sgpSystem, (DWORD)ix);
     }
 }
 

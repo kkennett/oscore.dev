@@ -21,9 +21,6 @@
     <ClCompile Include="SKCpu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SKSpinLock.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="SimKern.h">

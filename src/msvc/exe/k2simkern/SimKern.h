@@ -2,59 +2,91 @@
 #define __SIMKERN_H
 
 #include <lib/k2win32.h>
+#include <lib/k2mem.h>
 #include <lib/k2list.h>
 
-typedef struct  _SKSystem       SKSystem;
-typedef struct  _SKCpu          SKCpu;
-typedef struct  _SKThread       SKThread;
-typedef struct  _SKICI          SKICI;
-typedef enum    _SKThreadState  SKThreadState;
-typedef struct  _SKPort         SKPort;
-typedef struct  _SKProcess      SKProcess;
+struct  SKSystem;
+struct  SKCpu;
+struct  SKThread;
+struct  SKICI;
+enum    SKThreadState;
+struct  SKPort;
+struct  SKProcess;
 
 #define SKICI_CODE_MIGRATED_THREAD  0xFEED0001
 
-struct _SKICI
+struct SKICI
 {
+    SKICI(void)
+    {
+        mpSenderCpu = NULL;
+        mCode = 0;
+        mpNext = NULL;
+    }
+
     SKCpu *             mpSenderCpu;
     UINT_PTR            mCode;
     volatile SKICI *    mpNext;
 };
 
-enum _SKThreadState
+struct SKPort
 {
-    SKThreadState_Invalid=0,
-    SKThreadState_Inception,
-    SKThreadState_Suspended,
-    SKThreadState_OnRunList,
-    SKThreadState_Migrating,
-    SKThreadState_BlockedOnPort,
-    SKThreadState_Dying,
-    SKThreadState_Dead
-};
-
-struct _SKPort
-{
+    SKPort(void)
+    {
+        mpOwnerProcess = NULL;
+        mpWaitingThread = NULL;
+    }
     SKProcess *     mpOwnerProcess;
     SKThread *      mpWaitingThread;
 };
 
-struct _SKProcess
+struct SKProcess
 {
-    UINT32          mId;
+    SKProcess(UINT32 aId) : mId(aId)
+    {
+        K2LIST_Init(&ThreadList);
+        K2MEM_Zero(&SystemProcessListLink, sizeof(SystemProcessListLink));
+    }
+    UINT32 const    mId;
     K2LIST_LINK     SystemProcessListLink;
     K2LIST_ANCHOR   ThreadList;
 };
 
-struct _SKThread
+struct SKThread
 {
+    enum State
+    {
+        Invalid=0,
+        Inception,
+        Suspended,
+        OnRunList,
+        Migrating,
+        BlockedOnPort,
+        Dying,
+        Dead
+    };
+
+    SKThread(void)
+    {
+        mhWin32Thread = NULL;
+        mWin32ThreadId = 0;
+        mpOwnerProcess = NULL;
+        mState = SKThread::State::Inception;
+        mRunTime.QuadPart = 0;
+        mQuantum = 0;
+        mpCurrentCpu = NULL;
+        mpCpuMigratedNext = NULL;
+        K2MEM_Zero(&ProcessThreadListLink, sizeof(ProcessThreadListLink));
+        K2MEM_Zero(&CpuThreadListLink, sizeof(CpuThreadListLink));
+    }
+
     HANDLE          mhWin32Thread;
     DWORD           mWin32ThreadId;
 
     SKProcess *     mpOwnerProcess;
     K2LIST_LINK     ProcessThreadListLink;
 
-    SKThreadState   mThreadState;
+    State           mState;
 
     LARGE_INTEGER   mRunTime;
 
@@ -66,11 +98,29 @@ struct _SKThread
 
     // Migrated threads are NOT on the Cpu's thread list (yet)
     // and will have a NULL mpCurrentCpu
-    SKThread volatile * mpMigratedNext;
+    SKThread volatile * mpCpuMigratedNext;
 };
 
-struct _SKCpu
+struct SKCpu
 {
+    SKCpu(void)
+    {
+        mpSystem = NULL;
+        mCpuIndex = (DWORD)-1;
+        mhWin32IciEvent = NULL;
+        mhWin32IrqEvent = NULL;
+        mhWin32SysCallEvent = NULL;
+        mhWin32KernelThread = NULL;
+        mWin32KernelThreadId = 0;
+        mpCurrentThread = NULL;
+        mpIdleThread = NULL;
+        mSchedTimeout.QuadPart = 0;
+        mTimeNow.QuadPart = 0;
+        mpPendingIcis = NULL;
+        K2LIST_Init(&RunningThreadList);
+        mpMigratedListHead = NULL;
+    }
+
     SKSystem *          mpSystem;
     DWORD               mCpuIndex;
 
@@ -85,6 +135,7 @@ struct _SKCpu
 
     SKThread *          mpIdleThread;
 
+    BOOL                mSchedTimerExpired;
     LARGE_INTEGER       mSchedTimeout;
     LARGE_INTEGER       mTimeNow;
 
@@ -93,18 +144,64 @@ struct _SKCpu
     // can only be modified by its own kernel thread
     K2LIST_ANCHOR       RunningThreadList;
 
-    SKThread volatile * mpMigratedList;
+    SKThread volatile * mpMigratedListHead;
+
+    void SendIci(DWORD aTargetCpu, UINT_PTR aCode);
+
+    void OnStartup(void);
+    void OnShutdown(void);
+    void OnRecvIci(SKCpu *apSenderCpu, UINT_PTR aCode);
+    void OnIrqInterrupt(void);
+    void OnSchedTimerExpiry(void);
+    void OnSystemCall(void);
 };
 
-typedef struct _SKSpinLock SKSpinLock;
-struct _SKSpinLock
+struct SKSpinLock
 {
-    CRITICAL_SECTION    mWin32Sec;
+    SKSpinLock(void)
+    {
+        InitializeCriticalSection(&Win32Sec);
+    }
+
+    ~SKSpinLock(void)
+    {
+        DeleteCriticalSection(&Win32Sec);
+    }
+
+    CRITICAL_SECTION    Win32Sec;
+
+    void Lock(void)
+    {
+        EnterCriticalSection(&Win32Sec);
+    }
+
+    void Unlock(void)
+    {
+        LeaveCriticalSection(&Win32Sec);
+    }
+
 };
 
-struct _SKSystem
+struct SKSystem
 {
-    UINT_PTR        mCpuCount;
+    SKSystem(UINT_PTR aCpuCount) : mCpuCount(aCpuCount)
+    {
+        mpCpus = NULL;
+        mPerfFreq.QuadPart = 0;
+        K2LIST_Init(&ProcessList);
+    }
+
+    void MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apRetCpuTime)
+    {
+        apRetCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * mPerfFreq.QuadPart) / 1000ll;
+    }
+
+    DWORD CpuTimeToMs(LARGE_INTEGER const *apCpuTime)
+    {
+        return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
+    }
+
+    UINT_PTR const  mCpuCount;
     SKCpu      *    mpCpus;
 
     LARGE_INTEGER   mPerfFreq;
@@ -113,20 +210,5 @@ struct _SKSystem
 };
 
 extern HANDLE   theWin32ExitSignal;
-
-void  SKSpinLock_Init(SKSpinLock *apLock);
-void  SKSpinLock_Lock(SKSpinLock *apLock);
-void  SKSpinLock_Unlock(SKSpinLock *apLock);
-
-void  SKKernel_SendIci(SKCpu *apThisCpu, DWORD aTargetCpu, UINT_PTR aCode);
-void  SKKernel_MsToCpuTime(SKSystem *apSystem, DWORD aMilliseconds, LARGE_INTEGER *apCpuTime);
-DWORD SKKernel_CpuTimeToMs(SKSystem *apSystem, LARGE_INTEGER *apCpuTime);
-
-void  SKCpu_OnStartup(SKCpu *apThisCpu);
-void  SKCpu_OnShutdown(SKCpu *apThisCpu);
-void  SKCpu_OnRecvIci(SKCpu *apThisCpu, SKCpu *apSenderCpu, UINT_PTR aCode);
-void  SKCpu_OnIrqInterrupt(SKCpu *apThisCpu);
-void  SKCpu_OnSchedTimerExpiry(SKCpu *apThisCpu);
-void  SKCpu_OnSystemCall(SKCpu *apThisCpu);
 
 #endif // __SIMKERN_H
