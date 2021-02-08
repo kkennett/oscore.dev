@@ -3,6 +3,17 @@
 HANDLE      theWin32ExitSignal;
 static SKSystem * sgpSystem;
 
+void SKSendThreadToCpu(SKCpu *apThisCpu, SKCpu *apTargetCpu, SKThread *apThread)
+{
+    //
+    // latch thread onto receiving thread's cpu list
+    //
+    apTargetCpu->mpMigratedListHead = apThread;
+
+    apThisCpu->SendIci(apTargetCpu->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+}
+
+
 static void SKKernel_RecvIcis(SKCpu *apThisCpu)
 {
     SKICI volatile *pIciList;
@@ -248,7 +259,7 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
         ExitProcess(__LINE__);
     }
 
-    pCpu->mpIdleThread = pIdleThread = new SKThread;
+    pCpu->mpIdleThread = pIdleThread = new SKThread(apSystem);
     pIdleThread->mhWin32Thread = CreateThread(
         NULL, 
         0, 

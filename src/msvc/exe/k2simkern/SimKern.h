@@ -9,11 +9,39 @@ struct  SKSystem;
 struct  SKCpu;
 struct  SKThread;
 struct  SKICI;
-enum    SKThreadState;
 struct  SKPort;
 struct  SKProcess;
+struct  SKNotify;
+struct  SKIpcEndpoint;
+typedef enum _SKThreadState SKThreadState;
+typedef enum _SKNotifyState SKNotifyState;
 
 #define SKICI_CODE_MIGRATED_THREAD  0xFEED0001
+
+struct SKSpinLock
+{
+    SKSpinLock(void)
+    {
+        InitializeCriticalSection(&Win32Sec);
+    }
+
+    ~SKSpinLock(void)
+    {
+        DeleteCriticalSection(&Win32Sec);
+    }
+
+    CRITICAL_SECTION    Win32Sec;
+
+    void Lock(void)
+    {
+        EnterCriticalSection(&Win32Sec);
+    }
+
+    void Unlock(void)
+    {
+        LeaveCriticalSection(&Win32Sec);
+    }
+};
 
 struct SKICI
 {
@@ -31,14 +59,53 @@ struct SKICI
 
 struct SKProcess
 {
-    SKProcess(UINT32 aId) : mId(aId)
+    SKProcess(SKSystem *apSystem, UINT32 aId) : mId(aId), mpSystem(apSystem)
     {
         K2LIST_Init(&ThreadList);
         K2MEM_Zero(&SystemProcessListLink, sizeof(SystemProcessListLink));
     }
-    UINT32 const    mId;
-    K2LIST_LINK     SystemProcessListLink;
-    K2LIST_ANCHOR   ThreadList;
+    UINT32 const        mId;
+    SKSystem * const    mpSystem;
+    K2LIST_LINK         SystemProcessListLink;
+    K2LIST_ANCHOR       ThreadList;
+};
+
+typedef enum _SKNotifyState SKNotifyState;
+enum _SKNotifyState
+{
+    SKNotifyState_Idle,
+    SKNotifyState_Waiting,
+    SKNotifyState_Active
+};
+
+struct SKNotify
+{
+    SKNotify(SKSystem *apSystem) : mpSystem(apSystem)
+    {
+        mState = SKNotifyState_Idle;
+        K2LIST_Init(&WaitingThreadList);
+        mDataWord = 0;
+    }
+
+    SKSystem * const    mpSystem;
+    SKSpinLock          Lock;
+    UINT_PTR            mDataWord;
+    SKNotifyState       mState;
+    K2LIST_ANCHOR       WaitingThreadList;
+};
+
+typedef UINT32 SKIpcMessage;
+
+struct SKIpcEndpoint
+{
+    SKIpcEndpoint(SKSystem *apSystem) : mpSystem(apSystem)
+    {
+        K2LIST_Init(&SendingThreadList);
+        K2LIST_Init(&RecvingThreadList);
+    }
+    SKSystem * const    mpSystem;
+    K2LIST_ANCHOR   SendingThreadList;
+    K2LIST_ANCHOR   RecvingThreadList;
 };
 
 typedef enum _SKThreadState SKThreadState;
@@ -49,15 +116,15 @@ enum _SKThreadState
     SKThreadState_Suspended,
     SKThreadState_OnRunList,
     SKThreadState_Migrating,
-    SKThreadState_SendBlocked,
-    SKThreadState_RecvBlocked,
+    SKThreadState_SendBlocked,  // waiting to send on IPC Endpoint
+    SKThreadState_RecvBlocked,  // waiting to recv IPC Endpoint or to recv a Notify
     SKThreadState_Dying,
     SKThreadState_Dead
 };
 
 struct SKThread
 {
-    SKThread(void)
+    SKThread(SKSystem *apSystem) : mpSystem(apSystem)
     {
         mhWin32Thread = NULL;
         mWin32ThreadId = 0;
@@ -67,9 +134,13 @@ struct SKThread
         mQuantum = 0;
         mpCurrentCpu = NULL;
         mpCpuMigratedNext = NULL;
+        mSysCallResult = 0;
         K2MEM_Zero(&ProcessThreadListLink, sizeof(ProcessThreadListLink));
         K2MEM_Zero(&CpuThreadListLink, sizeof(CpuThreadListLink));
+        K2MEM_Zero(&BlockedOnListLink, sizeof(BlockedOnListLink));
     }
+
+    SKSystem * const mpSystem;
 
     HANDLE          mhWin32Thread;
     DWORD           mWin32ThreadId;
@@ -78,6 +149,9 @@ struct SKThread
     K2LIST_LINK     ProcessThreadListLink;
 
     SKThreadState   mState;
+    K2LIST_LINK     BlockedOnListLink;
+
+    UINT_PTR        mSysCallResult;
 
     LARGE_INTEGER   mRunTime;
 
@@ -150,30 +224,7 @@ struct SKCpu
     void OnSystemCall(void);
 };
 
-struct SKSpinLock
-{
-    SKSpinLock(void)
-    {
-        InitializeCriticalSection(&Win32Sec);
-    }
-
-    ~SKSpinLock(void)
-    {
-        DeleteCriticalSection(&Win32Sec);
-    }
-
-    CRITICAL_SECTION    Win32Sec;
-
-    void Lock(void)
-    {
-        EnterCriticalSection(&Win32Sec);
-    }
-
-    void Unlock(void)
-    {
-        LeaveCriticalSection(&Win32Sec);
-    }
-};
+void SKSendThreadToCpu(SKCpu *apThisCpu, SKCpu *apTargetCpu, SKThread *apThread);
 
 struct SKSystem
 {
@@ -191,6 +242,11 @@ struct SKSystem
 
     K2LIST_ANCHOR   ProcessList;
 
+    SKCpu * GetCurrentCpu(void)
+    {
+        return &mpCpus[GetCurrentProcessorNumber()];
+    }
+
     void MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apRetCpuTime)
     {
         apRetCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * mPerfFreq.QuadPart) / 1000ll;
@@ -200,6 +256,154 @@ struct SKSystem
     {
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
+
+    void SysCall_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    {
+        SKThread *  pReleasedThread;
+        UINT_PTR    result;
+        SKCpu *     pCurrentCpu;
+        SKCpu *     pCpuReceivingThread;
+
+        //
+        // this function is threadless, and so can never block
+        // and can be called from interrupt handlers.  if this is issued
+        // by a thread, the capability (rights) to notify this object
+        // will already have been checked
+        //
+
+        pCurrentCpu = apNotify->mpSystem->GetCurrentCpu();
+
+        pReleasedThread = NULL;
+
+        apNotify->Lock.Lock();
+
+        if (apNotify->mState != SKNotifyState_Waiting)
+        {
+            K2_ASSERT(0 == apNotify->WaitingThreadList.mNodeCount);
+
+            if (apNotify->mState == SKNotifyState_Idle)
+            {
+                apNotify->mDataWord = aDataWord;
+                apNotify->mState = SKNotifyState_Active;
+            }
+            else
+            {
+                // active. received more notify info
+                apNotify->mDataWord |= aDataWord;
+            }
+        }
+        else
+        {
+            K2_ASSERT(0 != apNotify->WaitingThreadList.mNodeCount);
+
+            pReleasedThread = K2_GET_CONTAINER(SKThread, apNotify->WaitingThreadList.mpHead, BlockedOnListLink);
+            
+            K2LIST_Remove(&apNotify->WaitingThreadList, &pReleasedThread->BlockedOnListLink);
+            
+            K2_ASSERT(SKThreadState_RecvBlocked == pReleasedThread->mState);
+            
+            result = aDataWord;
+            
+            if (0 == apNotify->WaitingThreadList.mNodeCount)
+            {
+                apNotify->mState = SKNotifyState_Idle;
+            }
+        }
+
+        apNotify->Lock.Unlock();
+
+        if (NULL != pReleasedThread)
+        {
+            pReleasedThread->mSysCallResult = result;
+
+            pCpuReceivingThread = (SKCpu *)0xFEEDF00D;
+
+            if (pCurrentCpu != pCpuReceivingThread)
+            {
+                SKSendThreadToCpu(pCurrentCpu, pCpuReceivingThread, pReleasedThread);
+            }
+            else
+            {
+                pReleasedThread->mState = SKThreadState_OnRunList;
+                K2LIST_AddAtTail(&pCpuReceivingThread->RunningThreadList, &pReleasedThread->CpuThreadListLink);
+            }
+        }
+       
+
+        //
+        // set the thread's system call result to the value 'result'
+        // pick Cpu to put thread onto and set its state to SKThreadState_OnRunList
+        // then shove it at that Cpu.  If the cpu is not this one, then send that cpu
+        // an ici to tell it what just happened. otherwise handle it ourselves here
+        // (adding the released thread to the run list for this cpu)
+        //
+    }
+
+    void SysCall_WaitForNotify(SKNotify *apNotify)
+    {
+        SKCpu *     pCurrentCpu;
+        SKThread *  pCurrentThread;
+
+        //
+        // this can only be called by a thread.  the check to see if the thread
+        // has the capability (rights) to wait on this object has already been checked
+        // by the time you get here.
+        //
+        pCurrentCpu = apNotify->mpSystem->GetCurrentCpu();
+        pCurrentThread = pCurrentCpu->mpCurrentThread;
+
+        apNotify->Lock.Lock();
+
+        if (apNotify->mState == SKNotifyState_Active)
+        {
+            //
+            // we are not going to block
+            //
+            pCurrentThread->mSysCallResult = apNotify->mDataWord;
+            apNotify->mDataWord = 0;
+            apNotify->mState = SKNotifyState_Idle;
+        }
+        else
+        {
+            if (apNotify->mState == SKNotifyState_Idle)
+            {
+                apNotify->mState = SKNotifyState_Waiting;
+            }
+            else
+            {
+                K2_ASSERT(SKNotifyState_Waiting == apNotify->mState);
+            }
+
+            K2LIST_Remove(&pCurrentCpu->RunningThreadList, &pCurrentThread->CpuThreadListLink);
+            pCurrentCpu->mpCurrentThread = pCurrentCpu->mpIdleThread;
+
+            pCurrentThread->mState = SKThreadState_RecvBlocked;
+            K2LIST_AddAtTail(&apNotify->WaitingThreadList, &pCurrentThread->BlockedOnListLink);
+        }
+
+        apNotify->Lock.Unlock();
+    }
+
+    SKIpcMessage WaitForIpc(SKIpcEndpoint *apEndpoint)
+    {
+        return 0;
+    }
+
+    SKIpcMessage PollForIpc(SKIpcEndpoint *apEndpoint)
+    {
+        return 0;
+    }
+
+    void SendIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
+    {
+
+    }
+
+    bool TryIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
+    {
+        return false;
+    }
+
 };
 
 extern HANDLE   theWin32ExitSignal;
