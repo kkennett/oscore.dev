@@ -1,18 +1,28 @@
 #include "SimKern.h"
 
-HANDLE      theWin32ExitSignal;
-static SKSystem * sgpSystem;
+HANDLE              theWin32ExitSignal;
 
-void SKSendThreadToCpu(SKCpu *apThisCpu, SKCpu *apTargetCpu, SKThread *apThread)
+void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
 {
-    //
-    // latch thread onto receiving thread's cpu list
-    //
-    apTargetCpu->mpMigratedListHead = apThread;
+    SKCpu *pTarget = &mpCpus[aTargetCpu];
+    SKCpu *pThisCpu = GetCurrentCpu();
 
-    apThisCpu->SendIci(apTargetCpu->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+    K2_ASSERT(pThisCpu != pTarget);
+    K2_ASSERT(apThread->mState == SKThreadState_Migrating);
+
+    SKThread volatile *pLast;
+    SKThread volatile *pOld;
+    do
+    {
+        pLast = pTarget->mpMigratedHead;
+        K2_CpuWriteBarrier();
+        apThread->mpCpuMigratedNext = pLast;
+        K2_CpuReadBarrier();
+        pOld = (SKThread volatile *)InterlockedCompareExchangePointer((volatile PVOID *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
+    } while (pOld != pLast);
+
+    pThisCpu->SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
 }
-
 
 static void SKKernel_RecvIcis(SKCpu *apThisCpu)
 {
@@ -319,7 +329,9 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
     }
 }
 
-void Startup(void)
+static SKSystem *   sgpSystem;
+
+static void Startup(void)
 {
     UINT_PTR ix;
     UINT_PTR cpuCount;
@@ -361,13 +373,13 @@ void Startup(void)
     }
 }
 
-void Run(void)
+static void Run(void)
 {
     WaitForSingleObject(theWin32ExitSignal, INFINITE);
     printf("Run exiting\n");
 }
 
-void Shutdown(void)
+static void Shutdown(void)
 {
 
 }

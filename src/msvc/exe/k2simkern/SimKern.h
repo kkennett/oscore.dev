@@ -9,7 +9,6 @@ struct  SKSystem;
 struct  SKCpu;
 struct  SKThread;
 struct  SKICI;
-struct  SKPort;
 struct  SKProcess;
 struct  SKNotify;
 struct  SKIpcEndpoint;
@@ -164,8 +163,6 @@ struct SKThread
     // Migrated threads are NOT on the Cpu's thread list (yet)
     // and will have a NULL mpCurrentCpu
     SKThread volatile * mpCpuMigratedNext;
-
-    SKPort *        mpBlockedOnPort;
 };
 
 struct SKCpu
@@ -185,8 +182,9 @@ struct SKCpu
         mTimeNow.QuadPart = 0;
         mpPendingIcis = NULL;
         K2LIST_Init(&RunningThreadList);
-        mpMigratedListHead = NULL;
+        mpMigratedHead = NULL;
         mSchedTimerExpired = FALSE;
+        mReschedFlag = FALSE;
     }
 
     SKSystem *          mpSystem;
@@ -206,13 +204,14 @@ struct SKCpu
     BOOL                mSchedTimerExpired;
     LARGE_INTEGER       mSchedTimeout;
     LARGE_INTEGER       mTimeNow;
+    BOOL                mReschedFlag;
 
     volatile SKICI *    mpPendingIcis;
 
     // can only be modified by its own kernel thread
     K2LIST_ANCHOR       RunningThreadList;
 
-    SKThread volatile * mpMigratedListHead;
+    SKThread volatile * mpMigratedHead;
 
     void SendIci(DWORD aTargetCpu, UINT_PTR aCode);
 
@@ -224,7 +223,6 @@ struct SKCpu
     void OnSystemCall(void);
 };
 
-void SKSendThreadToCpu(SKCpu *apThisCpu, SKCpu *apTargetCpu, SKThread *apThread);
 
 struct SKSystem
 {
@@ -247,6 +245,8 @@ struct SKSystem
         return &mpCpus[GetCurrentProcessorNumber()];
     }
 
+    void SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread);
+
     void MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apRetCpuTime)
     {
         apRetCpuTime->QuadPart = (((LONGLONG)aMilliseconds) * mPerfFreq.QuadPart) / 1000ll;
@@ -257,7 +257,7 @@ struct SKSystem
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
 
-    void SysCall_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    void SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
     {
         SKThread *  pReleasedThread;
         UINT_PTR    result;
@@ -320,23 +320,15 @@ struct SKSystem
 
             if (pCurrentCpu != pCpuReceivingThread)
             {
-                SKSendThreadToCpu(pCurrentCpu, pCpuReceivingThread, pReleasedThread);
+                apNotify->mpSystem->SendThreadToCpu(pCpuReceivingThread->mCpuIndex, pReleasedThread);
             }
             else
             {
                 pReleasedThread->mState = SKThreadState_OnRunList;
                 K2LIST_AddAtTail(&pCpuReceivingThread->RunningThreadList, &pReleasedThread->CpuThreadListLink);
+                pCurrentCpu->mReschedFlag = TRUE;
             }
         }
-       
-
-        //
-        // set the thread's system call result to the value 'result'
-        // pick Cpu to put thread onto and set its state to SKThreadState_OnRunList
-        // then shove it at that Cpu.  If the cpu is not this one, then send that cpu
-        // an ici to tell it what just happened. otherwise handle it ourselves here
-        // (adding the released thread to the run list for this cpu)
-        //
     }
 
     void SysCall_WaitForNotify(SKNotify *apNotify)
@@ -376,6 +368,7 @@ struct SKSystem
 
             K2LIST_Remove(&pCurrentCpu->RunningThreadList, &pCurrentThread->CpuThreadListLink);
             pCurrentCpu->mpCurrentThread = pCurrentCpu->mpIdleThread;
+            pCurrentCpu->mReschedFlag = TRUE;
 
             pCurrentThread->mState = SKThreadState_RecvBlocked;
             K2LIST_AddAtTail(&apNotify->WaitingThreadList, &pCurrentThread->BlockedOnListLink);
@@ -386,6 +379,13 @@ struct SKSystem
 
     SKIpcMessage WaitForIpc(SKIpcEndpoint *apEndpoint)
     {
+        //
+        // data will either already be in the receive buffer (kernel page) or will come in after we block
+        // kernel page should always be read-only to user mode code, but r/w to kernel
+        //
+        // buffer head/tail indexes can live in one UINT32 in high/low
+        //
+        // use zeroth cache line (64 bytes) for counters (head/tail)
         return 0;
     }
 
@@ -396,7 +396,17 @@ struct SKSystem
 
     void SendIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
     {
+        //
+        // use current thread's (pinned) send buffer if message uses one.
+        // copy the data into the receive buffer space (kernel page) at the point of the send
+        // and if the endpoint has an associated notify, then signal it
+        //
 
+        //
+        // if there is a send buffer, then check to make sure it is pinned
+        // if it is not, then transform the system call into a 'pin buffer' IPC message send
+        // to the pager, that will be chained to the real send system call when it completes
+        //
     }
 
     bool TryIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
