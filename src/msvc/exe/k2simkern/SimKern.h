@@ -95,6 +95,8 @@ struct SKNotify
 
 typedef UINT32 SKIpcMessage;
 
+
+
 struct SKIpcEndpoint
 {
     SKIpcEndpoint(SKSystem *apSystem) : mpSystem(apSystem)
@@ -103,8 +105,8 @@ struct SKIpcEndpoint
         K2LIST_Init(&RecvingThreadList);
     }
     SKSystem * const    mpSystem;
-    K2LIST_ANCHOR   SendingThreadList;
-    K2LIST_ANCHOR   RecvingThreadList;
+    K2LIST_ANCHOR       SendingThreadList;
+    K2LIST_ANCHOR       RecvingThreadList;
 };
 
 typedef enum _SKThreadState SKThreadState;
@@ -223,6 +225,8 @@ struct SKCpu
     void OnSystemCall(void);
 };
 
+#define SYSCALL_ID_SIGNAL_NOTIFY    1
+#define SYSCALL_ID_WAIT_FOR_NOTIFY  2
 
 struct SKSystem
 {
@@ -257,7 +261,12 @@ struct SKSystem
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
 
-    void SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    void SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2)
+    {
+
+    }
+
+    void ThreadFree_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
     {
         SKThread *  pReleasedThread;
         UINT_PTR    result;
@@ -331,7 +340,12 @@ struct SKSystem
         }
     }
 
-    void SysCall_WaitForNotify(SKNotify *apNotify)
+    void InsideSysCall_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    {
+        ThreadFree_SignalNotify(apNotify, aDataWord);
+    }
+
+    void InsideSysCall_WaitForNotify(SKNotify *apNotify)
     {
         SKCpu *     pCurrentCpu;
         SKThread *  pCurrentThread;
@@ -415,6 +429,212 @@ struct SKSystem
     }
 
 };
+
+#define IPC_CHANNEL_CONSUMER_ACTIVE_FLAG    0x80000000
+#define IPC_CHANNEL_COUNT_MASK              0x0000003F  // 0-63
+
+struct SKIpcChannel
+{
+    SKIpcChannel(SKSystem *apSystem) : mpSystem(apSystem)
+    {
+        mEntryBytes = 0;
+        mpSharedOwnerMask = NULL;
+        mpConsumerCountAndActiveFlag = NULL;  // init value to IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+        mpProducerCount = NULL;
+        mpConsumerNotify = NULL;
+
+        mpConsumerRoViewOfBuffer = NULL;
+        mpProducerRwViewOfBuffer = NULL;
+    };
+
+    SKSystem * const        mpSystem;
+    UINT32                  mEntryBytes;
+
+    UINT64 volatile *       mpSharedOwnerMask;
+    UINT32 volatile *       mpConsumerCountAndActiveFlag;
+    UINT32 volatile *       mpProducerCount;
+    SKNotify *              mpConsumerNotify;
+
+    UINT8 volatile *        mpConsumerRoViewOfBuffer;
+    UINT8 volatile *        mpProducerRwViewOfBuffer;
+
+    bool Produce(UINT8 const *apMsg, UINT32 aMsgBytes)
+    {
+        UINT32 slotIndex;
+        UINT32 exchangeVal;
+        UINT32 valResult;
+
+        UINT64 ownerMask64;
+        UINT64 exchangeVal64;
+        UINT64 valResult64;
+
+        //
+        // atomically increment producer count if there is room
+        //
+        do
+        {
+            slotIndex = *mpProducerCount;
+            if (0 != ((*mpSharedOwnerMask) & (1ull << slotIndex)))
+            {
+                //
+                // no space to produce into
+                //
+                return false;
+            }
+            exchangeVal = ((slotIndex + 1) & IPC_CHANNEL_COUNT_MASK);
+            valResult = InterlockedCompareExchange(mpProducerCount, exchangeVal, slotIndex);
+        } while (valResult != slotIndex);
+
+        //
+        // we have the target slot number.  do the copy now
+        //
+        K2MEM_Copy((void *)(mpProducerRwViewOfBuffer + (slotIndex * mEntryBytes)), apMsg, aMsgBytes);
+
+        //
+        // set the slot to 'full' status now
+        //
+        do
+        {
+            ownerMask64 = *mpSharedOwnerMask;
+            exchangeVal64 = ownerMask64 | (1ull << slotIndex);
+            valResult64 = InterlockedCompareExchange64((volatile LONG64 *)mpSharedOwnerMask, exchangeVal64, ownerMask64);
+        } while (valResult64 != ownerMask64);
+
+        //
+        // if the produce and consume counts were the same and now they are not, and the consumer active flag is clear
+        // then we need to wake up the consumer by signalling the notify
+        //
+        if ((*mpConsumerCountAndActiveFlag) == slotIndex)
+        {
+            //
+            // active flag not set so wake the receiver
+            //
+            mpSystem->SysCall(SYSCALL_ID_SIGNAL_NOTIFY, (UINT_PTR)mpConsumerNotify, 1);
+        }
+
+        return true;
+    }
+
+    UINT8 volatile * ConsumeAcquire(UINT32 *apRetKey)
+    {
+        UINT32 slotIndex;
+        UINT32 exchangeVal;
+        UINT32 valResult;
+        bool   doWait;
+
+        K2_ASSERT(apRetKey != NULL);
+
+        //
+        // check value at current consume count to see if it is 'full'
+        //
+        do
+        {
+            slotIndex = *mpConsumerCountAndActiveFlag;
+
+            if (0 != ((*mpSharedOwnerMask) & (1ull << (slotIndex & IPC_CHANNEL_COUNT_MASK))))
+            {
+                exchangeVal = ((slotIndex + 1) & IPC_CHANNEL_COUNT_MASK) | IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
+                if (valResult != slotIndex)
+                    break;
+            }
+            else
+            {
+                //
+                // next slot is empty, so nothing to consume.  we may need to block this thread
+                //
+                if (slotIndex & IPC_CHANNEL_CONSUMER_ACTIVE_FLAG)
+                {
+                    exchangeVal = slotIndex & ~IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                    valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
+                    if (valResult != slotIndex)
+                    {
+                        //
+                        // we successfully cleared the active flag
+                        //
+                        if (0 != ((*mpSharedOwnerMask) & (1ull << exchangeVal)))
+                        {
+                            // 
+                            // slot is full now (set in between first check and after we cleared the active flag
+                            // so make sure our active flag is set and go around again
+                            //
+                            do
+                            {
+                                slotIndex = *mpConsumerCountAndActiveFlag;
+                                if (slotIndex & IPC_CHANNEL_CONSUMER_ACTIVE_FLAG)
+                                {
+                                    //
+                                    // somebody else set the active flag so we can stop trying to do that
+                                    //
+                                    break;
+                                }
+                                exchangeVal = slotIndex | IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                                valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
+                            } while (valResult == slotIndex);
+
+                            //
+                            // active flag is now set. go around again
+                            //
+                            doWait = false;
+                        }
+                        else
+                        {
+                            //
+                            // still nothing for us to consume after we cleared the active flag. so wait
+                            //
+                            doWait = true;
+                        }
+                    }
+                    else
+                    {
+                        //
+                        // we couldn't clear the active flag.  go around again
+                        //
+                        doWait = false;
+                    }
+                }
+                else
+                {
+                    //
+                    // active flag is already clear. just wait
+                    //
+                    doWait = true;
+                }
+
+                if (doWait)
+                    mpSystem->SysCall(SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT_PTR)mpConsumerNotify, 0);
+            }
+
+        } while (true);
+
+        slotIndex &= ~IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+
+        *apRetKey = slotIndex;
+
+        return mpConsumerRoViewOfBuffer + (mEntryBytes * slotIndex);
+    }
+
+    void ConsumeRelease(UINT32 aKey)
+    {
+        UINT64 ownerMask64;
+        UINT64 exchangeVal64;
+        UINT64 valResult64;
+
+        K2_ASSERT(aKey < 64);
+
+        //
+        // set the slot to 'empty' status so producer can produce into it again
+        //
+        do
+        {
+            ownerMask64 = *mpSharedOwnerMask;
+            K2_ASSERT(0 != (ownerMask64 & (1ull << aKey)));
+            exchangeVal64 = ownerMask64 & ~(1ull << aKey);
+            valResult64 = InterlockedCompareExchange64((volatile LONG64 *)mpSharedOwnerMask, exchangeVal64, ownerMask64);
+        } while (valResult64 != ownerMask64);
+    }
+};
+
 
 extern HANDLE   theWin32ExitSignal;
 
