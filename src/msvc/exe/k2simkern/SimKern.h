@@ -227,6 +227,7 @@ struct SKCpu
 
 #define SYSCALL_ID_SIGNAL_NOTIFY    1
 #define SYSCALL_ID_WAIT_FOR_NOTIFY  2
+#define SYSCALL_ID_SLEEP            3
 
 struct SKSystem
 {
