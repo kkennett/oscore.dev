@@ -215,6 +215,7 @@ static DWORD WINAPI SKKernelThread(void *apParam)
                 printf("Idle thread did system call on CPU %d\n", pThisCpu->mCpuIndex);
                 ExitProcess(__LINE__);
             }
+
             pThisCpu->OnSystemCall();
         }
 
@@ -234,6 +235,7 @@ static DWORD WINAPI SKKernelThread(void *apParam)
 static DWORD WINAPI SKIdleThread(void *apParam)
 {
     SKThread *pThisThread = (SKThread *)apParam;
+    TlsSetValue(pThisThread->mpSystem->mThreadSelfSlot, apParam);
     do
     {
         Sleep(1000);
@@ -364,6 +366,13 @@ static void Startup(void)
     if (FALSE == QueryPerformanceFrequency(&sgpSystem->mPerfFreq))
     {
         printf("failed to get core perf frequency\n");
+        ExitProcess(__LINE__);
+    }
+
+    sgpSystem->mThreadSelfSlot = TlsAlloc();
+    if (TLS_OUT_OF_INDEXES == sgpSystem->mThreadSelfSlot)
+    {
+        printf("failed to thread self tls slot\n");
         ExitProcess(__LINE__);
     }
 

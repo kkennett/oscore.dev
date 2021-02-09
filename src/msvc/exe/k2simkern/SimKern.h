@@ -123,6 +123,8 @@ enum _SKThreadState
     SKThreadState_Dead
 };
 
+#define THREAD_FLAG_ENTER_SYSTEM_CALL  1        // do not migrate until kernel clear this flag
+
 struct SKThread
 {
     SKThread(SKSystem *apSystem) : mpSystem(apSystem)
@@ -135,7 +137,11 @@ struct SKThread
         mQuantum = 0;
         mpCurrentCpu = NULL;
         mpCpuMigratedNext = NULL;
-        mSysCallResult = 0;
+        mSysCall_Result = 0;
+        mSysCall_Id = 0;
+        mSysCall_Arg1 = 0;
+        mSysCall_Arg2 = 0;
+        mFlags = 0;
         K2MEM_Zero(&ProcessThreadListLink, sizeof(ProcessThreadListLink));
         K2MEM_Zero(&CpuThreadListLink, sizeof(CpuThreadListLink));
         K2MEM_Zero(&BlockedOnListLink, sizeof(BlockedOnListLink));
@@ -152,7 +158,12 @@ struct SKThread
     SKThreadState   mState;
     K2LIST_LINK     BlockedOnListLink;
 
-    UINT_PTR        mSysCallResult;
+    UINT32          mFlags;
+
+    UINT_PTR        mSysCall_Result;
+    UINT_PTR        mSysCall_Id;
+    UINT_PTR        mSysCall_Arg1;
+    UINT_PTR        mSysCall_Arg2;
 
     LARGE_INTEGER   mRunTime;
 
@@ -236,6 +247,7 @@ struct SKSystem
         mpCpus = NULL;
         mPerfFreq.QuadPart = 0;
         K2LIST_Init(&ProcessList);
+        mThreadSelfSlot = TLS_OUT_OF_INDEXES;
     }
 
     UINT_PTR const  mCpuCount;
@@ -244,6 +256,8 @@ struct SKSystem
     LARGE_INTEGER   mPerfFreq;
 
     K2LIST_ANCHOR   ProcessList;
+
+    DWORD           mThreadSelfSlot;
 
     SKCpu * GetCurrentCpu(void)
     {
@@ -262,9 +276,53 @@ struct SKSystem
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
 
-    void SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2)
+    UINT32 SetThreadFlags(UINT32 aNewFlags)
     {
+        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
+        UINT32 result = pThisThread->mFlags;
+        pThisThread->mFlags = aNewFlags;
+        K2_CpuWriteBarrier();
+        return result;
+    }
 
+    UINT32 GetThreadFlags(void)
+    {
+        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
+        return pThisThread->mFlags;
+    }
+
+    UINT_PTR SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2)
+    {
+        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
+        UINT32 threadFlags;
+
+        // set thread flags (do not migrate, do not preempt)
+        pThisThread->mSysCall_Id = aCallId;
+        pThisThread->mSysCall_Arg1 = aArg1;
+        pThisThread->mSysCall_Arg2 = aArg2;
+
+        //
+        // this tells the system not to migrate this thread until 
+        // it is inside the kernel thread system call code.  the flag
+        // will be automatically removed when that happens
+        //
+        threadFlags = SetThreadFlags(THREAD_FLAG_ENTER_SYSTEM_CALL);
+
+        // mpCurrentCpu will not change here
+
+        // set system call event. win32 thread backing this thread should suspend 
+        // since the kernel thread for this real cpu is going to run because
+        // it has higher priority.  kernel thread will take over and do the
+        // actual system call stuff for this thread, then schedule it again
+        // when the system call processing is complete.
+        SetEvent(pThisThread->mpCurrentCpu->mhWin32SysCallEvent);
+
+        //
+        // enter system call flag should be clear here (cleared by kernel);
+        //
+        K2_ASSERT(0 == (GetThreadFlags() & THREAD_FLAG_ENTER_SYSTEM_CALL));
+
+        return pThisThread->mSysCall_Result;
     }
 
     void ThreadFree_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
@@ -281,7 +339,7 @@ struct SKSystem
         // will already have been checked
         //
 
-        pCurrentCpu = apNotify->mpSystem->GetCurrentCpu();
+        pCurrentCpu = GetCurrentCpu();
 
         pReleasedThread = NULL;
 
@@ -324,7 +382,7 @@ struct SKSystem
 
         if (NULL != pReleasedThread)
         {
-            pReleasedThread->mSysCallResult = result;
+            pReleasedThread->mSysCall_Result = result;
 
             pCpuReceivingThread = (SKCpu *)0xFEEDF00D;
 
@@ -366,7 +424,7 @@ struct SKSystem
             //
             // we are not going to block
             //
-            pCurrentThread->mSysCallResult = apNotify->mDataWord;
+            pCurrentThread->mSysCall_Result = apNotify->mDataWord;
             apNotify->mDataWord = 0;
             apNotify->mState = SKNotifyState_Idle;
         }
@@ -391,44 +449,6 @@ struct SKSystem
 
         apNotify->Lock.Unlock();
     }
-
-    SKIpcMessage WaitForIpc(SKIpcEndpoint *apEndpoint)
-    {
-        //
-        // data will either already be in the receive buffer (kernel page) or will come in after we block
-        // kernel page should always be read-only to user mode code, but r/w to kernel
-        //
-        // buffer head/tail indexes can live in one UINT32 in high/low
-        //
-        // use zeroth cache line (64 bytes) for counters (head/tail)
-        return 0;
-    }
-
-    SKIpcMessage PollForIpc(SKIpcEndpoint *apEndpoint)
-    {
-        return 0;
-    }
-
-    void SendIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
-    {
-        //
-        // use current thread's (pinned) send buffer if message uses one.
-        // copy the data into the receive buffer space (kernel page) at the point of the send
-        // and if the endpoint has an associated notify, then signal it
-        //
-
-        //
-        // if there is a send buffer, then check to make sure it is pinned
-        // if it is not, then transform the system call into a 'pin buffer' IPC message send
-        // to the pager, that will be chained to the real send system call when it completes
-        //
-    }
-
-    bool TryIpc(SKIpcEndpoint *apEndpoint, SKIpcMessage aMessage)
-    {
-        return false;
-    }
-
 };
 
 #define IPC_CHANNEL_CONSUMER_ACTIVE_FLAG    0x80000000
