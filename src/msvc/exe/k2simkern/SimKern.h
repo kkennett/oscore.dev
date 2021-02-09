@@ -11,7 +11,6 @@ struct  SKThread;
 struct  SKICI;
 struct  SKProcess;
 struct  SKNotify;
-struct  SKIpcEndpoint;
 typedef enum _SKThreadState SKThreadState;
 typedef enum _SKNotifyState SKNotifyState;
 
@@ -93,29 +92,14 @@ struct SKNotify
     K2LIST_ANCHOR       WaitingThreadList;
 };
 
-typedef UINT32 SKIpcMessage;
-
-
-
-struct SKIpcEndpoint
-{
-    SKIpcEndpoint(SKSystem *apSystem) : mpSystem(apSystem)
-    {
-        K2LIST_Init(&SendingThreadList);
-        K2LIST_Init(&RecvingThreadList);
-    }
-    SKSystem * const    mpSystem;
-    K2LIST_ANCHOR       SendingThreadList;
-    K2LIST_ANCHOR       RecvingThreadList;
-};
-
 typedef enum _SKThreadState SKThreadState;
 enum _SKThreadState
 {
     SKThreadState_Invalid=0,
     SKThreadState_Inception,
-    SKThreadState_Suspended,
     SKThreadState_OnRunList,
+    SKThreadState_WaitingOnNotify,
+    SKThreadState_Suspended,
     SKThreadState_Migrating,
     SKThreadState_SendBlocked,  // waiting to send on IPC Endpoint
     SKThreadState_RecvBlocked,  // waiting to recv IPC Endpoint or to recv a Notify
@@ -276,25 +260,9 @@ struct SKSystem
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
 
-    UINT32 SetThreadFlags(UINT32 aNewFlags)
-    {
-        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
-        UINT32 result = pThisThread->mFlags;
-        pThisThread->mFlags = aNewFlags;
-        K2_CpuWriteBarrier();
-        return result;
-    }
-
-    UINT32 GetThreadFlags(void)
-    {
-        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
-        return pThisThread->mFlags;
-    }
-
     UINT_PTR SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2)
     {
         SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
-        UINT32 threadFlags;
 
         // set thread flags (do not migrate, do not preempt)
         pThisThread->mSysCall_Id = aCallId;
@@ -306,7 +274,7 @@ struct SKSystem
         // it is inside the kernel thread system call code.  the flag
         // will be automatically removed when that happens
         //
-        threadFlags = SetThreadFlags(THREAD_FLAG_ENTER_SYSTEM_CALL);
+        pThisThread->mFlags |= THREAD_FLAG_ENTER_SYSTEM_CALL;
 
         // mpCurrentCpu will not change here
 
@@ -320,7 +288,7 @@ struct SKSystem
         //
         // enter system call flag should be clear here (cleared by kernel);
         //
-        K2_ASSERT(0 == (GetThreadFlags() & THREAD_FLAG_ENTER_SYSTEM_CALL));
+        K2_ASSERT(0 == (pThisThread->mFlags & THREAD_FLAG_ENTER_SYSTEM_CALL));
 
         return pThisThread->mSysCall_Result;
     }
@@ -368,7 +336,7 @@ struct SKSystem
             
             K2LIST_Remove(&apNotify->WaitingThreadList, &pReleasedThread->BlockedOnListLink);
             
-            K2_ASSERT(SKThreadState_RecvBlocked == pReleasedThread->mState);
+            K2_ASSERT(SKThreadState_WaitingOnNotify == pReleasedThread->mState);
             
             result = aDataWord;
             
@@ -443,7 +411,7 @@ struct SKSystem
             pCurrentCpu->mpCurrentThread = pCurrentCpu->mpIdleThread;
             pCurrentCpu->mReschedFlag = TRUE;
 
-            pCurrentThread->mState = SKThreadState_RecvBlocked;
+            pCurrentThread->mState = SKThreadState_WaitingOnNotify;
             K2LIST_AddAtTail(&apNotify->WaitingThreadList, &pCurrentThread->BlockedOnListLink);
         }
 
@@ -452,14 +420,15 @@ struct SKSystem
 };
 
 #define IPC_CHANNEL_CONSUMER_ACTIVE_FLAG    0x80000000
-#define IPC_CHANNEL_COUNT_MASK              0x0000003F  // 0-63
+#define IPC_CHANNEL_COUNT_MASK              0x7FFFFFFF
 
 struct SKIpcChannel
 {
     SKIpcChannel(SKSystem *apSystem) : mpSystem(apSystem)
     {
         mEntryBytes = 0;
-        mpSharedOwnerMask = NULL;
+        mEntryCount = 0;
+        mpSharedOwnerMaskArray = NULL;
         mpConsumerCountAndActiveFlag = NULL;  // init value to IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
         mpProducerCount = NULL;
         mpConsumerNotify = NULL;
@@ -470,8 +439,9 @@ struct SKIpcChannel
 
     SKSystem * const        mpSystem;
     UINT32                  mEntryBytes;
+    UINT32                  mEntryCount;
 
-    UINT64 volatile *       mpSharedOwnerMask;
+    UINT32 volatile *       mpSharedOwnerMaskArray; // (((mEntryCount+31)&~31)>>5) is number of UINT32s
     UINT32 volatile *       mpConsumerCountAndActiveFlag;
     UINT32 volatile *       mpProducerCount;
     SKNotify *              mpConsumerNotify;
@@ -484,10 +454,9 @@ struct SKIpcChannel
         UINT32 slotIndex;
         UINT32 exchangeVal;
         UINT32 valResult;
-
-        UINT64 ownerMask64;
-        UINT64 exchangeVal64;
-        UINT64 valResult64;
+        UINT32 wordIndex;
+        UINT32 bitIndex;
+        UINT32 ownerMask;
 
         //
         // atomically increment producer count if there is room
@@ -495,14 +464,18 @@ struct SKIpcChannel
         do
         {
             slotIndex = *mpProducerCount;
-            if (0 != ((*mpSharedOwnerMask) & (1ull << slotIndex)))
+            wordIndex = slotIndex >> 5;
+            bitIndex = slotIndex & 0x1F;
+            if (0 != (mpSharedOwnerMaskArray[wordIndex] & (1<<bitIndex)))
             {
                 //
                 // no space to produce into
                 //
                 return false;
             }
-            exchangeVal = ((slotIndex + 1) & IPC_CHANNEL_COUNT_MASK);
+            exchangeVal = slotIndex + 1;
+            if (exchangeVal == mEntryCount)
+                exchangeVal = 0;
             valResult = InterlockedCompareExchange(mpProducerCount, exchangeVal, slotIndex);
         } while (valResult != slotIndex);
 
@@ -516,10 +489,10 @@ struct SKIpcChannel
         //
         do
         {
-            ownerMask64 = *mpSharedOwnerMask;
-            exchangeVal64 = ownerMask64 | (1ull << slotIndex);
-            valResult64 = InterlockedCompareExchange64((volatile LONG64 *)mpSharedOwnerMask, exchangeVal64, ownerMask64);
-        } while (valResult64 != ownerMask64);
+            ownerMask = mpSharedOwnerMaskArray[wordIndex];
+            exchangeVal = ownerMask | (1 << bitIndex);
+            valResult = InterlockedCompareExchange(&mpSharedOwnerMaskArray[wordIndex], exchangeVal, ownerMask);
+        } while (valResult != ownerMask);
 
         //
         // if the produce and consume counts were the same and now they are not, and the consumer active flag is clear
@@ -541,6 +514,8 @@ struct SKIpcChannel
         UINT32 slotIndex;
         UINT32 exchangeVal;
         UINT32 valResult;
+        UINT32 wordIndex;
+        UINT32 bitIndex;
         bool   doWait;
 
         K2_ASSERT(apRetKey != NULL);
@@ -551,10 +526,15 @@ struct SKIpcChannel
         do
         {
             slotIndex = *mpConsumerCountAndActiveFlag;
+            wordIndex = (slotIndex & IPC_CHANNEL_COUNT_MASK) >> 5;
+            bitIndex = slotIndex & 0x1F;
 
-            if (0 != ((*mpSharedOwnerMask) & (1ull << (slotIndex & IPC_CHANNEL_COUNT_MASK))))
+            if (0 != (mpSharedOwnerMaskArray[wordIndex] & (1 << bitIndex)))
             {
-                exchangeVal = ((slotIndex + 1) & IPC_CHANNEL_COUNT_MASK) | IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                exchangeVal = (slotIndex & IPC_CHANNEL_COUNT_MASK) + 1;
+                if (exchangeVal == mEntryCount)
+                    exchangeVal = 0;
+                exchangeVal |= IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
                 valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
                 if (valResult != slotIndex)
                     break;
@@ -573,7 +553,7 @@ struct SKIpcChannel
                         //
                         // we successfully cleared the active flag
                         //
-                        if (0 != ((*mpSharedOwnerMask) & (1ull << exchangeVal)))
+                        if (0 != (mpSharedOwnerMaskArray[wordIndex] & (1 << bitIndex)))
                         {
                             // 
                             // slot is full now (set in between first check and after we cleared the active flag
@@ -637,22 +617,28 @@ struct SKIpcChannel
 
     void ConsumeRelease(UINT32 aKey)
     {
-        UINT64 ownerMask64;
-        UINT64 exchangeVal64;
-        UINT64 valResult64;
+        UINT32 wordIndex;
+        UINT32 bitIndex;
 
-        K2_ASSERT(aKey < 64);
+        UINT32 exchangeVal;
+        UINT32 valResult;
+        UINT32 ownerMask;
+
+        K2_ASSERT(aKey < mEntryCount);
+
+        wordIndex = aKey >> 5;
+        bitIndex = aKey & 0x1F;
 
         //
         // set the slot to 'empty' status so producer can produce into it again
         //
         do
         {
-            ownerMask64 = *mpSharedOwnerMask;
-            K2_ASSERT(0 != (ownerMask64 & (1ull << aKey)));
-            exchangeVal64 = ownerMask64 & ~(1ull << aKey);
-            valResult64 = InterlockedCompareExchange64((volatile LONG64 *)mpSharedOwnerMask, exchangeVal64, ownerMask64);
-        } while (valResult64 != ownerMask64);
+            ownerMask = mpSharedOwnerMaskArray[wordIndex];
+            K2_ASSERT(0 != (ownerMask & (1 << bitIndex)));
+            exchangeVal = ownerMask & ~(1 << bitIndex);
+            valResult = InterlockedCompareExchange(&mpSharedOwnerMaskArray[wordIndex], exchangeVal, ownerMask);
+        } while (valResult != ownerMask);
     }
 };
 
