@@ -52,7 +52,7 @@ struct SKICI
 
     SKCpu *             mpSenderCpu;
     UINT_PTR            mCode;
-    volatile SKICI *    mpNext;
+    SKICI * volatile    mpNext;
 };
 
 struct SKProcess
@@ -92,13 +92,28 @@ struct SKNotify
     K2LIST_ANCHOR       WaitingThreadList;
 };
 
+typedef enum _SKTimerItemType SKTimerItemType;
+enum _SKTimerItemType
+{
+    SKTimerItemType_Invalid=0,
+    SKTimerItemType_Thread_SleepTimerItem,
+};
+
+struct SKTimerItem
+{
+    SKTimerItemType mType;
+    UINT_PTR        mDeltaT;
+    SKTimerItem *   mpNext;
+};
+
 typedef enum _SKThreadState SKThreadState;
 enum _SKThreadState
 {
-    SKThreadState_Invalid=0,
+    SKThreadState_Invalid = 0,
     SKThreadState_Inception,
     SKThreadState_OnRunList,
     SKThreadState_WaitingOnNotify,
+    SKThreadState_Sleeping,
     SKThreadState_Suspended,
     SKThreadState_Migrating,
     SKThreadState_SendBlocked,  // waiting to send on IPC Endpoint
@@ -121,10 +136,11 @@ struct SKThread
         mQuantum = 0;
         mpCurrentCpu = NULL;
         mpCpuMigratedNext = NULL;
-        mSysCall_Result = 0;
+        mSysCall_ResultStatus = 0;
         mSysCall_Id = 0;
         mSysCall_Arg1 = 0;
         mSysCall_Arg2 = 0;
+        mSysCall_ResultValue = 0;
         mFlags = 0;
         K2MEM_Zero(&ProcessThreadListLink, sizeof(ProcessThreadListLink));
         K2MEM_Zero(&CpuThreadListLink, sizeof(CpuThreadListLink));
@@ -144,10 +160,11 @@ struct SKThread
 
     UINT32          mFlags;
 
-    UINT_PTR        mSysCall_Result;
+    K2STAT          mSysCall_ResultStatus;
     UINT_PTR        mSysCall_Id;
     UINT_PTR        mSysCall_Arg1;
     UINT_PTR        mSysCall_Arg2;
+    UINT_PTR        mSysCall_ResultValue;
 
     LARGE_INTEGER   mRunTime;
 
@@ -157,10 +174,14 @@ struct SKThread
     SKCpu *         mpCurrentCpu;
     K2LIST_LINK     CpuThreadListLink;
 
+    SKTimerItem     SleepTimerItem;
+
     // Migrated threads are NOT on the Cpu's thread list (yet)
     // and will have a NULL mpCurrentCpu
-    SKThread volatile * mpCpuMigratedNext;
+    SKThread * volatile mpCpuMigratedNext;
 };
+
+#define SKIRQ_INDEX_TIMER 0
 
 struct SKCpu
 {
@@ -181,7 +202,7 @@ struct SKCpu
         K2LIST_Init(&RunningThreadList);
         mpMigratedHead = NULL;
         mSchedTimerExpired = FALSE;
-        mReschedFlag = FALSE;
+        mIrqStatus = 0;
     }
 
     SKSystem *          mpSystem;
@@ -201,16 +222,18 @@ struct SKCpu
     BOOL                mSchedTimerExpired;
     LARGE_INTEGER       mSchedTimeout;
     LARGE_INTEGER       mTimeNow;
-    BOOL                mReschedFlag;
 
-    volatile SKICI *    mpPendingIcis;
+    UINT32 volatile     mIrqStatus;
+
+    SKICI * volatile    mpPendingIcis;
 
     // can only be modified by its own kernel thread
     K2LIST_ANCHOR       RunningThreadList;
 
-    SKThread volatile * mpMigratedHead;
+    SKThread * volatile mpMigratedHead;
 
     void SendIci(DWORD aTargetCpu, UINT_PTR aCode);
+    void SetNewCurrentThread(SKThread *apThread);
 
     void OnStartup(void);
     void OnShutdown(void);
@@ -218,6 +241,10 @@ struct SKCpu
     void OnIrqInterrupt(void);
     void OnSchedTimerExpiry(void);
     void OnSystemCall(void);
+
+    void OnIrq_Timer(void);
+
+    void OnReschedule(void);
 };
 
 #define SYSCALL_ID_SIGNAL_NOTIFY    1
@@ -232,6 +259,8 @@ struct SKSystem
         mPerfFreq.QuadPart = 0;
         K2LIST_Init(&ProcessList);
         mThreadSelfSlot = TLS_OUT_OF_INDEXES;
+        mpTimerQueueHead = NULL;
+        mhWin32TimerQueueTimer = NULL;
     }
 
     UINT_PTR const  mCpuCount;
@@ -242,6 +271,12 @@ struct SKSystem
     K2LIST_ANCHOR   ProcessList;
 
     DWORD           mThreadSelfSlot;
+
+    SKNotify *      mpSystemTimerIrqNotify;
+
+    SKSpinLock      TimerQueueLock;
+    SKTimerItem *   mpTimerQueueHead;
+    HANDLE          mhWin32TimerQueueTimer;
 
     SKCpu * GetCurrentCpu(void)
     {
@@ -260,7 +295,50 @@ struct SKSystem
         return (DWORD)((apCpuTime->QuadPart * 1000ll) / mPerfFreq.QuadPart);
     }
 
-    UINT_PTR SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2)
+    void SignalTimerItem(SKTimerItem *apTimerItem)
+    {
+        SKThread *apThread;
+
+        switch (apTimerItem->mType)
+        {
+        case SKTimerItemType_Thread_SleepTimerItem:
+            apThread = K2_GET_CONTAINER(SKThread, apTimerItem, SleepTimerItem);
+            K2_ASSERT(SKThreadState_Sleeping == apThread->mState);
+            //
+            // wake up the thread and throw it at the least busy CPU
+            //
+            apThread->mSysCall_ResultStatus = K2STAT_THREAD_WAITED;
+            apThread->mSysCall_ResultValue = 0;
+            apThread->mState = SKThreadState_Migrating;
+            SendThreadToCpu(0, apThread);
+            break;
+        default:
+            K2_ASSERT(0);
+            break;
+        }
+    }
+
+    static VOID CALLBACK sMsTimerCallback(void *apParam, BOOLEAN TimerOrWaitFired)
+    {
+        SKSystem *pSystem = (SKSystem *)apParam;
+        UINT32 irqStatus;
+        UINT32 irqStatusNew;
+        UINT32 irqStatusResult;
+        SKCpu *pCpu;
+
+        pCpu = &pSystem->mpCpus[((UINT32)rand()) % pSystem->mCpuCount];
+
+        do
+        {
+            irqStatus = pCpu->mIrqStatus;
+            irqStatusNew |= (1 << SKIRQ_INDEX_TIMER);
+            irqStatusResult = InterlockedCompareExchange(&pCpu->mIrqStatus, irqStatusNew, irqStatus);
+        } while (irqStatusResult == irqStatus);
+
+        SetEvent(pCpu->mhWin32IrqEvent);
+    }
+
+    K2STAT SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2, UINT_PTR *apResultValue)
     {
         SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
 
@@ -290,10 +368,18 @@ struct SKSystem
         //
         K2_ASSERT(0 == (pThisThread->mFlags & THREAD_FLAG_ENTER_SYSTEM_CALL));
 
-        return pThisThread->mSysCall_Result;
+        K2STAT resultStatus = pThisThread->mSysCall_ResultStatus;
+
+        if (!K2STAT_IS_ERROR(resultStatus))
+        {
+            if (NULL != apResultValue)
+                *apResultValue = pThisThread->mSysCall_ResultValue;
+        }
+
+        return resultStatus;
     }
 
-    void ThreadFree_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    UINT_PTR ThreadFree_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
     {
         SKThread *  pReleasedThread;
         UINT_PTR    result;
@@ -327,6 +413,8 @@ struct SKSystem
                 // active. received more notify info
                 apNotify->mDataWord |= aDataWord;
             }
+
+            result = apNotify->mDataWord;
         }
         else
         {
@@ -350,72 +438,168 @@ struct SKSystem
 
         if (NULL != pReleasedThread)
         {
-            pReleasedThread->mSysCall_Result = result;
+            pReleasedThread->mSysCall_ResultValue = result;
+            pReleasedThread->mSysCall_ResultStatus = K2STAT_THREAD_WAITED;
 
-            pCpuReceivingThread = (SKCpu *)0xFEEDF00D;
+            pCpuReceivingThread = (SKCpu *)&mpCpus[((UINT32)rand()) % mCpuCount];
 
             if (pCurrentCpu != pCpuReceivingThread)
             {
+                pReleasedThread->mState = SKThreadState_Migrating;
                 apNotify->mpSystem->SendThreadToCpu(pCpuReceivingThread->mCpuIndex, pReleasedThread);
             }
             else
             {
+                // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
                 pReleasedThread->mState = SKThreadState_OnRunList;
                 K2LIST_AddAtTail(&pCpuReceivingThread->RunningThreadList, &pReleasedThread->CpuThreadListLink);
-                pCurrentCpu->mReschedFlag = TRUE;
             }
         }
+
+        return result;
     }
 
-    void InsideSysCall_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    void InsideSysCall_Sleep(SKCpu *apThisCpu, SKThread *apCallingThread)
     {
-        ThreadFree_SignalNotify(apNotify, aDataWord);
+        UINT_PTR aMsToSleep = apCallingThread->mSysCall_Arg1;
+        SKTimerItem *pTimerItem;
+        SKTimerItem *pPrevTimerItem;
+
+        // sleep can never fail
+        apCallingThread->mSysCall_ResultStatus = K2STAT_NO_ERROR;
+
+        //
+        // latch timer queue item that is part of thread onto the timer queue
+        // and if the timer is not running start it
+        //
+        if (aMsToSleep == 0)
+        {
+            //
+            // move this thread to the end of the run list (after idle thread)
+            //
+            K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+            K2LIST_AddAtTail(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+            apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
+            return;
+        }
+
+        //
+        // remove from cpu run list and set new current thread
+        //
+        K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+        apCallingThread->mState = SKThreadState_Sleeping;
+        apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
+
+        //
+        // latch onto system timer queue
+        //
+        apCallingThread->SleepTimerItem.mType = SKTimerItemType_Thread_SleepTimerItem;
+        apCallingThread->SleepTimerItem.mDeltaT = aMsToSleep;
+        apCallingThread->SleepTimerItem.mpNext = NULL;
+
+        TimerQueueLock.Lock();
+
+        if (mpTimerQueueHead == NULL)
+        {
+            //
+            // timer is not running.  add this as the sole item and start the timer
+            //
+            mpTimerQueueHead = &apCallingThread->SleepTimerItem;
+            K2_ASSERT(NULL == mhWin32TimerQueueTimer);
+            if (FALSE == CreateTimerQueueTimer(&mhWin32TimerQueueTimer, NULL, sMsTimerCallback, this, 1, 1, 0))
+            {
+                printf("CreateTimerQueueTimer failed\n");
+                ExitProcess(__LINE__);
+            }
+        }
+        else
+        {
+            // 
+            // timer is already running. just add this in the right place
+            //
+            pPrevTimerItem = NULL;
+            pTimerItem = mpTimerQueueHead;
+            do
+            {
+                if (pTimerItem->mDeltaT > apCallingThread->SleepTimerItem.mDeltaT)
+                {
+                    //
+                    // alter pTimerItem delta and break to add after pPrevTimerItem
+                    //
+                    pTimerItem->mDeltaT -= apCallingThread->SleepTimerItem.mDeltaT;
+                    break;
+                }
+
+                apCallingThread->SleepTimerItem.mDeltaT -= pTimerItem->mDeltaT;
+                pPrevTimerItem = pTimerItem;
+                pTimerItem = pTimerItem->mpNext;
+
+            } while (pTimerItem != NULL);
+
+            apCallingThread->SleepTimerItem.mpNext = pTimerItem;
+            if (NULL == pPrevTimerItem)
+            {
+                mpTimerQueueHead = &apCallingThread->SleepTimerItem;
+            }
+            else
+            {
+                pPrevTimerItem->mpNext = &apCallingThread->SleepTimerItem;
+            }
+        }
+        TimerQueueLock.Unlock();
     }
 
-    void InsideSysCall_WaitForNotify(SKNotify *apNotify)
+    void InsideSysCall_SignalNotify(SKCpu *apThisCpu, SKThread *apCallingThread)
     {
-        SKCpu *     pCurrentCpu;
-        SKThread *  pCurrentThread;
+        SKNotify *pNotify = (SKNotify *)apCallingThread->mSysCall_Arg1;
+        // result is comined signal dataword at completion of the call, just as FYI
+        apCallingThread->mSysCall_ResultValue = ThreadFree_SignalNotify(pNotify, apCallingThread->mSysCall_Arg2);
+        apCallingThread->mSysCall_ResultStatus = K2STAT_NO_ERROR;
+    }
+
+    void InsideSysCall_WaitForNotify(SKCpu *apThisCpu, SKThread *apCallingThread)
+    {
+        SKNotify *pNotify = (SKNotify *)apCallingThread->mSysCall_Arg1;
 
         //
         // this can only be called by a thread.  the check to see if the thread
         // has the capability (rights) to wait on this object has already been checked
         // by the time you get here.
         //
-        pCurrentCpu = apNotify->mpSystem->GetCurrentCpu();
-        pCurrentThread = pCurrentCpu->mpCurrentThread;
 
-        apNotify->Lock.Lock();
+        pNotify->Lock.Lock();
 
-        if (apNotify->mState == SKNotifyState_Active)
+        if (pNotify->mState == SKNotifyState_Active)
         {
             //
             // we are not going to block
             //
-            pCurrentThread->mSysCall_Result = apNotify->mDataWord;
-            apNotify->mDataWord = 0;
-            apNotify->mState = SKNotifyState_Idle;
+            apCallingThread->mSysCall_ResultValue = pNotify->mDataWord;
+            apCallingThread->mSysCall_ResultStatus = K2STAT_NO_ERROR;
+            pNotify->mDataWord = 0;
+            pNotify->mState = SKNotifyState_Idle;
         }
         else
         {
-            if (apNotify->mState == SKNotifyState_Idle)
+            if (pNotify->mState == SKNotifyState_Idle)
             {
-                apNotify->mState = SKNotifyState_Waiting;
+                pNotify->mState = SKNotifyState_Waiting;
             }
             else
             {
-                K2_ASSERT(SKNotifyState_Waiting == apNotify->mState);
+                K2_ASSERT(SKNotifyState_Waiting == pNotify->mState);
             }
 
-            K2LIST_Remove(&pCurrentCpu->RunningThreadList, &pCurrentThread->CpuThreadListLink);
-            pCurrentCpu->mpCurrentThread = pCurrentCpu->mpIdleThread;
-            pCurrentCpu->mReschedFlag = TRUE;
-
-            pCurrentThread->mState = SKThreadState_WaitingOnNotify;
-            K2LIST_AddAtTail(&apNotify->WaitingThreadList, &pCurrentThread->BlockedOnListLink);
+            //
+            // remove from the run list and set new current thread
+            //
+            K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+            apCallingThread->mState = SKThreadState_WaitingOnNotify;
+            K2LIST_AddAtTail(&pNotify->WaitingThreadList, &apCallingThread->BlockedOnListLink);
+            apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
         }
 
-        apNotify->Lock.Unlock();
+        pNotify->Lock.Unlock();
     }
 };
 
@@ -503,7 +687,7 @@ struct SKIpcChannel
             //
             // active flag not set so wake the receiver
             //
-            mpSystem->SysCall(SYSCALL_ID_SIGNAL_NOTIFY, (UINT_PTR)mpConsumerNotify, 1);
+            mpSystem->SysCall(SYSCALL_ID_SIGNAL_NOTIFY, (UINT_PTR)mpConsumerNotify, 1, NULL);
         }
 
         return true;
@@ -603,7 +787,7 @@ struct SKIpcChannel
                 }
 
                 if (doWait)
-                    mpSystem->SysCall(SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT_PTR)mpConsumerNotify, 0);
+                    mpSystem->SysCall(SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT_PTR)mpConsumerNotify, 0, NULL);
             }
 
         } while (true);

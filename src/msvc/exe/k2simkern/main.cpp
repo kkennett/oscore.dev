@@ -10,15 +10,15 @@ void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
     K2_ASSERT(pThisCpu != pTarget);
     K2_ASSERT(apThread->mState == SKThreadState_Migrating);
 
-    SKThread volatile *pLast;
-    SKThread volatile *pOld;
+    SKThread * pLast;
+    SKThread * pOld;
     do
     {
         pLast = pTarget->mpMigratedHead;
         K2_CpuWriteBarrier();
         apThread->mpCpuMigratedNext = pLast;
         K2_CpuReadBarrier();
-        pOld = (SKThread volatile *)InterlockedCompareExchangePointer((volatile PVOID *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
+        pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
     } while (pOld != pLast);
 
     pThisCpu->SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
@@ -26,13 +26,13 @@ void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
 
 static void SKKernel_RecvIcis(SKCpu *apThisCpu)
 {
-    SKICI volatile *pIciList;
-    SKICI volatile *pTemp;
-    SKICI volatile *pHold;
+    SKICI * pIciList;
+    SKICI * pTemp;
+    SKICI * pHold;
 
     do
     {
-        pIciList = (SKICI volatile *)InterlockedExchangePointer((volatile PVOID *)&apThisCpu->mpPendingIcis, NULL);
+        pIciList = (SKICI *)InterlockedExchangePointer((PVOID volatile *)&apThisCpu->mpPendingIcis, NULL);
         if (NULL == pIciList)
             break;
 
@@ -80,15 +80,15 @@ void SKCpu::SendIci(DWORD aTargetCpu, UINT_PTR aCode)
     pIci->mCode = aCode;
     pIci->mpSenderCpu = this;
 
-    SKICI volatile *pLast;
-    SKICI volatile *pOld;
+    SKICI * pLast;
+    SKICI * pOld;
     do
     {
         pLast = pTarget->mpPendingIcis;
         K2_CpuWriteBarrier();
         pIci->mpNext = pLast;
         K2_CpuReadBarrier();
-        pOld = (SKICI volatile *)InterlockedCompareExchangePointer((volatile PVOID *)&pTarget->mpPendingIcis, pIci, (PVOID)pLast);
+        pOld = (SKICI *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpPendingIcis, pIci, (PVOID)pLast);
     } while (pOld != pLast);
 
     if (((DWORD)-1) == SetEvent(pTarget->mhWin32IciEvent))
@@ -96,6 +96,17 @@ void SKCpu::SendIci(DWORD aTargetCpu, UINT_PTR aCode)
         printf("Could not fire action event for cpu %d from cpu %d\n", pTarget->mCpuIndex, mCpuIndex);
         ExitProcess(__LINE__);
     }
+}
+
+void SKCpu::SetNewCurrentThread(SKThread *apThread)
+{
+    K2_ASSERT(apThread != mpCurrentThread);
+    K2_ASSERT(apThread->mState == SKThreadState_OnRunList);
+    if (apThread == mpIdleThread)
+        mSchedTimeout.QuadPart = 0;
+    else
+        mpSystem->MsToCpuTime(apThread->mQuantum, &mSchedTimeout);
+    mpCurrentThread = apThread;
 }
 
 static DWORD WINAPI SKKernelThread(void *apParam)
@@ -140,6 +151,11 @@ static DWORD WINAPI SKKernelThread(void *apParam)
             //
             if (pThisCpu->mpCurrentThread == pThisCpu->mpIdleThread)
             {
+                //
+                // in order to run the idle thread nothing else must be able to run on this cpu
+                //
+                K2_ASSERT(pThisCpu->RunningThreadList.mpHead == &pThisCpu->mpIdleThread->CpuThreadListLink);
+                K2_ASSERT(pThisCpu->RunningThreadList.mpTail == &pThisCpu->mpIdleThread->CpuThreadListLink);
                 printf("CPU %d ENTER IDLE\n", pThisCpu->mCpuIndex);
             }
             if (((DWORD)-1) == ResumeThread(pThisCpu->mpCurrentThread->mhWin32Thread))
@@ -223,6 +239,11 @@ static DWORD WINAPI SKKernelThread(void *apParam)
         {
             pThisCpu->mSchedTimerExpired = FALSE;
             pThisCpu->OnSchedTimerExpiry();
+        }
+
+        if (pThisCpu->mpCurrentThread == pThisCpu->mpIdleThread)
+        {
+            pThisCpu->OnReschedule();
         }
 
     } while (true);
