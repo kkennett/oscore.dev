@@ -151,12 +151,16 @@ struct SKThread
         K2MEM_Zero(&ProcessThreadListLink, sizeof(ProcessThreadListLink));
         K2MEM_Zero(&CpuThreadListLink, sizeof(CpuThreadListLink));
         K2MEM_Zero(&BlockedOnListLink, sizeof(BlockedOnListLink));
+        mhWin32StartupMutex = NULL;
+        mhWin32StartupEvent = NULL;
     }
 
     SKSystem * const mpSystem;
 
     HANDLE          mhWin32Thread;
     DWORD           mWin32ThreadId;
+    HANDLE          mhWin32StartupMutex;
+    HANDLE          mhWin32StartupEvent;
 
     SKProcess *     mpOwnerProcess;
     K2LIST_LINK     ProcessThreadListLink;
