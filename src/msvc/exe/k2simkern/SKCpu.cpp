@@ -30,50 +30,57 @@ void SKCpu::OnIrq_Timer(void)
 
     pSystem->TimerQueueLock.Lock();
 
-    pTimerItem = pSystem->mpTimerQueueHead;
-
-    if (NULL != pTimerItem)
+    //
+    // only process if it is not a superfluous timer interrupt that occurred in between
+    // the last timer interrupt and when the timer was disabled
+    //
+    if (NULL != pSystem->mhWin32TimerQueueTimer)
     {
-        K2_ASSERT(pTimerItem->mDeltaT > 0);
+        pTimerItem = pSystem->mpTimerQueueHead;
 
-        for (ixTick = 0; ixTick < SCHED_TICK_GRANULARITY; ixTick++)
+        if (NULL != pTimerItem)
         {
-            if (0 == --pTimerItem->mDeltaT)
+            K2_ASSERT(pTimerItem->mDeltaT > 0);
+
+            for (ixTick = 0; ixTick < SCHED_TICK_GRANULARITY; ixTick++)
             {
-                do
+                if (0 == --pTimerItem->mDeltaT)
                 {
-                    pSystem->mpTimerQueueHead = pTimerItem->mpNext;
-
-                    // 
-                    // timer item has elapsed.
-                    //
-                    pTimerItem->mpNext = NULL;
-                    if (NULL == pSignalList)
+                    do
                     {
-                        pSignalList = pSignalListEnd = pTimerItem;
-                    }
-                    else
-                    {
-                        pSignalListEnd->mpNext = pTimerItem;
-                        pSignalListEnd = pTimerItem;
-                    }
+                        pSystem->mpTimerQueueHead = pTimerItem->mpNext;
 
-                    pTimerItem = pSystem->mpTimerQueueHead;
+                        // 
+                        // timer item has elapsed.
+                        //
+                        pTimerItem->mpNext = NULL;
+                        if (NULL == pSignalList)
+                        {
+                            pSignalList = pSignalListEnd = pTimerItem;
+                        }
+                        else
+                        {
+                            pSignalListEnd->mpNext = pTimerItem;
+                            pSignalListEnd = pTimerItem;
+                        }
 
-                } while ((NULL != pTimerItem) && (pTimerItem->mDeltaT == 0));
+                        pTimerItem = pSystem->mpTimerQueueHead;
+
+                    } while ((NULL != pTimerItem) && (pTimerItem->mDeltaT == 0));
+                }
             }
         }
-    }
 
-    if (NULL == pSystem->mpTimerQueueHead)
-    {
-        if (FALSE == DeleteTimerQueueTimer(NULL, pSystem->mhWin32TimerQueueTimer, INVALID_HANDLE_VALUE))
+        if (NULL == pSystem->mpTimerQueueHead)
         {
-            printf("DeleteTimerQueueTimer failed\n");
-            ExitProcess(__LINE__);
-        }
+            if (FALSE == DeleteTimerQueueTimer(NULL, pSystem->mhWin32TimerQueueTimer, INVALID_HANDLE_VALUE))
+            {
+                printf("DeleteTimerQueueTimer failed\n");
+                ExitProcess(__LINE__);
+            }
 
-        pSystem->mhWin32TimerQueueTimer = NULL;
+            pSystem->mhWin32TimerQueueTimer = NULL;
+        }
     }
 
     pSystem->TimerQueueLock.Unlock();
@@ -104,31 +111,34 @@ void SKCpu::OnIrqInterrupt(void)
 
     do
     {
-        irqStatus = mIrqStatus;
-        if (0 == irqStatus)
-            return;
-        irqBit = (irqStatus ^ (irqStatus & (irqStatus - 1)));
-        irqNew = irqStatus & ~irqBit;
-        irqResult = InterlockedCompareExchange(&mIrqStatus, irqNew, irqStatus);
-    } while (irqResult != irqStatus);
+        do
+        {
+            irqStatus = mIrqStatus;
+            if (0 == irqStatus)
+                return;
+            irqBit = (irqStatus ^ (irqStatus & (irqStatus - 1)));
+            irqNew = irqStatus & ~irqBit;
+            irqResult = InterlockedCompareExchange(&mIrqStatus, irqNew, irqStatus);
+        } while (irqResult != irqStatus);
 
-    //
-    // we just stripped the lowest bit that was set from the current irq Status
-    //
-    _BitScanForward(&irqIndex, irqBit);
+        //
+        // we just stripped the lowest bit that was set from the current irq Status
+        //
+        _BitScanForward(&irqIndex, irqBit);
 
-    switch (irqIndex)
-    {
-    case SKIRQ_INDEX_TIMER:
-        //
-        // timer interrupt
-        //
-        OnIrq_Timer();
-        break;
-    default:
-        K2_ASSERT(0);
-        break;
-    }
+        switch (irqIndex)
+        {
+        case SKIRQ_INDEX_TIMER:
+            //
+            // timer interrupt
+            //
+            OnIrq_Timer();
+            break;
+        default:
+            K2_ASSERT(0);
+            break;
+        }
+    } while (true);
 }
 
 void SKCpu::OnSystemCall(void)
