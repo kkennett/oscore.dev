@@ -190,7 +190,14 @@ void SKCpu::OnRecvIci(SKCpu *apSenderCpu, UINT_PTR aCode)
         while (pThreadList)
         {
             K2LIST_AddAtTail(&RunningThreadList, &pThreadList->CpuThreadListLink);
+            if (0 == SetThreadAffinityMask(pThreadList->mhWin32Thread, (1 << mCpuIndex)))
+            {
+                printf("Could not set thread affinity mask\n");
+                ExitProcess(__LINE__);
+            }
+            pThreadList->mpCurrentCpu = this;
             pThreadList->mState = SKThreadState_OnRunList;
+
             pThreadList = pThreadList->mpCpuMigratedNext;
         }
         break;

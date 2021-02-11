@@ -26,5 +26,8 @@
     <ClInclude Include="SimKern.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UserApi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

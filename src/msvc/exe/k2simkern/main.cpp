@@ -1,12 +1,20 @@
 #include "SimKern.h"
 
-HANDLE              theWin32ExitSignal;
+HANDLE  theWin32ExitSignal = NULL;
+DWORD   theThreadSelfSlot = TLS_OUT_OF_INDEXES;
+
+K2STAT SK_SystemCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2, UINT_PTR *apResultValue)
+{
+    SKThread *pThisThread = (SKThread *)TlsGetValue(theThreadSelfSlot);
+    return pThisThread->mpSystem->SysCall(aCallId, aArg1, aArg2, apResultValue);
+}
 
 void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
 {
     SKCpu *pTarget = &mpCpus[aTargetCpu];
     SKCpu *pThisCpu = GetCurrentCpu();
 
+    K2_ASSERT(NULL == apThread->mpCurrentCpu);
     K2_ASSERT(pThisCpu != pTarget);
     K2_ASSERT(apThread->mState == SKThreadState_Migrating);
 
@@ -102,6 +110,7 @@ void SKCpu::SetNewCurrentThread(SKThread *apThread)
 {
     K2_ASSERT(apThread != mpCurrentThread);
     K2_ASSERT(apThread->mState == SKThreadState_OnRunList);
+    K2_ASSERT(apThread->mpCurrentCpu == this);
     if (apThread == mpIdleThread)
         mSchedTimeout.QuadPart = 0;
     else
@@ -256,7 +265,7 @@ static DWORD WINAPI SKKernelThread(void *apParam)
 static DWORD WINAPI SKIdleThread(void *apParam)
 {
     SKThread *pThisThread = (SKThread *)apParam;
-    TlsSetValue(pThisThread->mpSystem->mThreadSelfSlot, apParam);
+    TlsSetValue(theThreadSelfSlot, apParam);
     do
     {
         Sleep(1000);
@@ -311,7 +320,10 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
         ExitProcess(__LINE__);
     }
 
+    K2LIST_AddAtTail(&apSystem->mpProcess0->ThreadList, &pIdleThread->ProcessThreadListLink);
+    pIdleThread->mpOwnerProcess = apSystem->mpProcess0;
     pCpu->mpIdleThread->mpCurrentCpu = pCpu;
+    pIdleThread->mState = SKThreadState_OnRunList;
     K2LIST_AddAtHead(&pCpu->RunningThreadList, &pIdleThread->CpuThreadListLink);
 
     pCpu->mhWin32KernelThread = CreateThread(
@@ -370,6 +382,8 @@ static void Startup(void)
     if (cpuCount > 64)
         cpuCount = 64;
 
+    cpuCount = 1;
+
     sgpSystem = new SKSystem(cpuCount);
     if (NULL == sgpSystem)
     {
@@ -390,12 +404,20 @@ static void Startup(void)
         ExitProcess(__LINE__);
     }
 
-    sgpSystem->mThreadSelfSlot = TlsAlloc();
-    if (TLS_OUT_OF_INDEXES == sgpSystem->mThreadSelfSlot)
+    theThreadSelfSlot = TlsAlloc();
+    if (TLS_OUT_OF_INDEXES == theThreadSelfSlot)
     {
         printf("failed to thread self tls slot\n");
         ExitProcess(__LINE__);
     }
+
+    sgpSystem->mpProcess0 = new SKProcess(sgpSystem, 0);
+    if (NULL == sgpSystem->mpProcess0)
+    {
+        printf("failed to create process 0\n");
+        ExitProcess(__LINE__);
+    }
+    K2LIST_AddAtTail(&sgpSystem->ProcessList, &sgpSystem->mpProcess0->SystemProcessListLink);
 
     for (ix = 0; ix < sgpSystem->mCpuCount; ix++)
     {
@@ -403,8 +425,33 @@ static void Startup(void)
     }
 }
 
+static DWORD WINAPI sInitThread(void *apParam)
+{
+    return 0;
+}
+
 static void Run(void)
 {
+    //
+    // push the first thread into the system
+    //
+    SKThread *pNewThread;
+    pNewThread = new SKThread(sgpSystem);
+    if (pNewThread == NULL)
+    {
+        printf("failed to create thread 1\n");
+        ExitProcess(__LINE__);
+    }
+    pNewThread->mhWin32Thread = CreateThread(NULL, 0, sInitThread, NULL, CREATE_SUSPENDED, &pNewThread->mWin32ThreadId);
+    pNewThread->mState = SKThreadState_Migrating;
+    pNewThread->mpOwnerProcess = sgpSystem->mpProcess0;
+    K2LIST_AddAtTail(&sgpSystem->mpProcess0->ThreadList, &pNewThread->ProcessThreadListLink);
+
+    SKCpu *pTarget = &sgpSystem->mpCpus[0];
+    pTarget->mpMigratedHead = pNewThread;
+    K2_CpuWriteBarrier();
+    pTarget->SendIci(0, SKICI_CODE_MIGRATED_THREAD);
+
     WaitForSingleObject(theWin32ExitSignal, INFINITE);
     printf("Run exiting\n");
 }

@@ -4,6 +4,7 @@
 #include <lib/k2win32.h>
 #include <lib/k2mem.h>
 #include <lib/k2list.h>
+#include "UserApi.h"
 
 struct  SKSystem;
 struct  SKCpu;
@@ -13,6 +14,9 @@ struct  SKProcess;
 struct  SKNotify;
 typedef enum _SKThreadState SKThreadState;
 typedef enum _SKNotifyState SKNotifyState;
+
+extern DWORD    theThreadSelfSlot;
+extern HANDLE   theWin32ExitSignal;
 
 #define SKICI_CODE_MIGRATED_THREAD  0xFEED0001
 
@@ -247,18 +251,17 @@ struct SKCpu
     void OnReschedule(void);
 };
 
-#define SYSCALL_ID_SIGNAL_NOTIFY    1
-#define SYSCALL_ID_WAIT_FOR_NOTIFY  2
-#define SYSCALL_ID_SLEEP            3
-
 struct SKSystem
 {
     SKSystem(UINT_PTR aCpuCount) : mCpuCount(aCpuCount)
     {
         mpCpus = NULL;
+
         mPerfFreq.QuadPart = 0;
+
+        mpProcess0 = NULL;
         K2LIST_Init(&ProcessList);
-        mThreadSelfSlot = TLS_OUT_OF_INDEXES;
+
         mpTimerQueueHead = NULL;
         mhWin32TimerQueueTimer = NULL;
     }
@@ -268,11 +271,8 @@ struct SKSystem
 
     LARGE_INTEGER   mPerfFreq;
 
+    SKProcess *     mpProcess0;
     K2LIST_ANCHOR   ProcessList;
-
-    DWORD           mThreadSelfSlot;
-
-    SKNotify *      mpSystemTimerIrqNotify;
 
     SKSpinLock      TimerQueueLock;
     SKTimerItem *   mpTimerQueueHead;
@@ -340,7 +340,7 @@ struct SKSystem
 
     K2STAT SysCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2, UINT_PTR *apResultValue)
     {
-        SKThread *pThisThread = (SKThread *)TlsGetValue(mThreadSelfSlot);
+        SKThread *pThisThread = (SKThread *)TlsGetValue(theThreadSelfSlot);
 
         // set thread flags (do not migrate, do not preempt)
         pThisThread->mSysCall_Id = aCallId;
@@ -452,6 +452,7 @@ struct SKSystem
             {
                 // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
                 pReleasedThread->mState = SKThreadState_OnRunList;
+                pReleasedThread->mpCurrentCpu = pCurrentCpu;
                 K2LIST_AddAtTail(&pCpuReceivingThread->RunningThreadList, &pReleasedThread->CpuThreadListLink);
             }
         }
@@ -487,6 +488,7 @@ struct SKSystem
         // remove from cpu run list and set new current thread
         //
         K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+        apCallingThread->mpCurrentCpu = NULL;
         apCallingThread->mState = SKThreadState_Sleeping;
         apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
 
@@ -594,6 +596,7 @@ struct SKSystem
             // remove from the run list and set new current thread
             //
             K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+            apCallingThread->mpCurrentCpu = NULL;
             apCallingThread->mState = SKThreadState_WaitingOnNotify;
             K2LIST_AddAtTail(&pNotify->WaitingThreadList, &apCallingThread->BlockedOnListLink);
             apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
@@ -826,7 +829,5 @@ struct SKIpcChannel
     }
 };
 
-
-extern HANDLE   theWin32ExitSignal;
 
 #endif // __SIMKERN_H
