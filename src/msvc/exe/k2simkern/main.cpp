@@ -276,14 +276,61 @@ static DWORD WINAPI SKKernelThread(void *apParam)
     return 0;
 }
 
-static DWORD WINAPI SKIdleThread(void *apParam)
+void SetupThread(SKThread *apNewThread)
+{
+    //
+    // win32 thread must have completed startup and entered its thread routine
+    // before SuspendThread() will work reliably.  So these shenanigans are 
+    // necessary when starting a new thread
+    //
+    apNewThread->mhWin32StartupMutex = CreateMutex(NULL, TRUE, NULL);
+    if (NULL == apNewThread->mhWin32StartupMutex)
+    {
+        printf("failed to create thread 1 startup event\n");
+        ExitProcess(__LINE__);
+    }
+    apNewThread->mhWin32StartupEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (NULL == apNewThread->mhWin32StartupEvent)
+    {
+        printf("failed to create thread 1 startup event\n");
+        ExitProcess(__LINE__);
+    }
+    if (((DWORD)-1) == ResumeThread(apNewThread->mhWin32Thread))
+    {
+        printf("failed to resume thread 1\n");
+        ExitProcess(__LINE__);
+    }
+    if (WAIT_OBJECT_0 != WaitForSingleObject(apNewThread->mhWin32StartupEvent, 10000))
+    {
+        printf("failed to wait for thread 1 to start\n");
+        ExitProcess(__LINE__);
+    }
+    CloseHandle(apNewThread->mhWin32StartupEvent);
+    apNewThread->mhWin32StartupEvent = NULL;
+    if (((DWORD)-1) == SuspendThread(apNewThread->mhWin32Thread))
+    {
+        printf("failed to suspend thread 1\n");
+        ExitProcess(__LINE__);
+    }
+    ReleaseMutex(apNewThread->mhWin32StartupMutex);
+}
+
+static DWORD WINAPI sIdleThread(void *apParam)
 {
     SKThread *pThisThread = (SKThread *)apParam;
     TlsSetValue(theThreadSelfSlot, apParam);
+
+    SetEvent(pThisThread->mhWin32StartupEvent);
+    WaitForSingleObject(pThisThread->mhWin32StartupMutex, INFINITE);
+    ReleaseMutex(pThisThread->mhWin32StartupMutex);
+    CloseHandle(pThisThread->mhWin32StartupMutex);
+    pThisThread->mhWin32StartupMutex = NULL;
+
     do
     {
         Sleep(1000);
     } while (true);
+
     return 0;
 }
 
@@ -319,7 +366,7 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
     pIdleThread->mhWin32Thread = CreateThread(
         NULL, 
         0, 
-        SKIdleThread, 
+        sIdleThread, 
         pIdleThread, 
         CREATE_SUSPENDED, 
         &pIdleThread->mWin32ThreadId);
@@ -339,6 +386,7 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
     pCpu->mpIdleThread->mpCurrentCpu = pCpu;
     pIdleThread->mState = SKThreadState_OnRunList;
     K2LIST_AddAtHead(&pCpu->RunningThreadList, &pIdleThread->CpuThreadListLink);
+    SetupThread(pIdleThread);
 
     pCpu->mhWin32KernelThread = CreateThread(
         NULL,
@@ -477,42 +525,6 @@ static void Run(void)
     pNewThread->mState = SKThreadState_Migrating;
     pNewThread->mpOwnerProcess = sgpSystem->mpProcess0;
     K2LIST_AddAtTail(&sgpSystem->mpProcess0->ThreadList, &pNewThread->ProcessThreadListLink);
-
-    //
-    // win32 thread must have completed startup and entered its thread routine
-    // before SuspendThread() will work reliably.  So these shenanigans are 
-    // necessary when starting a new thread
-    //
-    pNewThread->mhWin32StartupMutex = CreateMutex(NULL, TRUE, NULL);
-    if (NULL == pNewThread->mhWin32StartupMutex)
-    {
-        printf("failed to create thread 1 startup event\n");
-        ExitProcess(__LINE__);
-    }
-    pNewThread->mhWin32StartupEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (NULL == pNewThread->mhWin32StartupEvent)
-    {
-        printf("failed to create thread 1 startup event\n");
-        ExitProcess(__LINE__);
-    }
-    if (((DWORD)-1) == ResumeThread(pNewThread->mhWin32Thread))
-    {
-        printf("failed to resume thread 1\n");
-        ExitProcess(__LINE__);
-    }
-    if (WAIT_OBJECT_0 != WaitForSingleObject(pNewThread->mhWin32StartupEvent, 10000))
-    {
-        printf("failed to wait for thread 1 to start\n");
-        ExitProcess(__LINE__);
-    }
-    CloseHandle(pNewThread->mhWin32StartupEvent);
-    pNewThread->mhWin32StartupEvent = NULL;
-    if (((DWORD)-1) == SuspendThread(pNewThread->mhWin32Thread))
-    {
-        printf("failed to suspend thread 1\n");
-        ExitProcess(__LINE__);
-    }
-    ReleaseMutex(pNewThread->mhWin32StartupMutex);
 
     //
     // we are sending the thread from "outside the system" :)  so we need to
