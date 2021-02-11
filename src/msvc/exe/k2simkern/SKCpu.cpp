@@ -21,9 +21,10 @@ void SKCpu::OnIrq_Timer(void)
     SKTimerItem *pSignalList;
     SKTimerItem *pSignalListEnd;
     SKTimerItem *pTimerItem;
+    UINT32 ixTick;
 
     //
-    // called every millisecond while the timer is running
+    // called every SCHED_TICK_GRANULARITY milliseconds while the timer is running
     //
     pSignalList = pSignalListEnd = NULL;
 
@@ -34,27 +35,32 @@ void SKCpu::OnIrq_Timer(void)
     if (NULL != pTimerItem)
     {
         K2_ASSERT(pTimerItem->mDeltaT > 0);
-        if (0 == --pTimerItem->mDeltaT)
+
+        for (ixTick = 0; ixTick < SCHED_TICK_GRANULARITY; ixTick++)
         {
-            while (0 == pTimerItem->mDeltaT)
+            if (0 == --pTimerItem->mDeltaT)
             {
-                pSystem->mpTimerQueueHead = pTimerItem->mpNext;
-
-                // 
-                // timer item has elapsed.
-                //
-                pTimerItem->mpNext = NULL;
-                if (NULL == pSignalList)
+                do
                 {
-                    pSignalList = pSignalListEnd = pTimerItem;
-                }
-                else
-                {
-                    pSignalListEnd->mpNext = pTimerItem;
-                    pSignalListEnd = pTimerItem;
-                }
+                    pSystem->mpTimerQueueHead = pTimerItem->mpNext;
 
-                pTimerItem = pSystem->mpTimerQueueHead;
+                    // 
+                    // timer item has elapsed.
+                    //
+                    pTimerItem->mpNext = NULL;
+                    if (NULL == pSignalList)
+                    {
+                        pSignalList = pSignalListEnd = pTimerItem;
+                    }
+                    else
+                    {
+                        pSignalListEnd->mpNext = pTimerItem;
+                        pSignalListEnd = pTimerItem;
+                    }
+
+                    pTimerItem = pSystem->mpTimerQueueHead;
+
+                } while ((NULL != pTimerItem) && (pTimerItem->mDeltaT == 0));
             }
         }
     }
@@ -104,7 +110,7 @@ void SKCpu::OnIrqInterrupt(void)
         irqBit = (irqStatus ^ (irqStatus & (irqStatus - 1)));
         irqNew = irqStatus & ~irqBit;
         irqResult = InterlockedCompareExchange(&mIrqStatus, irqNew, irqStatus);
-    } while (irqResult == irqStatus);
+    } while (irqResult != irqStatus);
 
     //
     // we just stripped the lowest bit that was set from the current irq Status
@@ -145,6 +151,10 @@ void SKCpu::OnSystemCall(void)
 
     switch (pCallingThread->mSysCall_Id)
     {
+    case SYSCALL_ID_THREAD_EXIT:
+        mpSystem->InsideSysCall_ThreadExit(this, pCallingThread);
+        break;
+
     case SYSCALL_ID_SIGNAL_NOTIFY:
         mpSystem->InsideSysCall_SignalNotify(this, pCallingThread);
         break;
@@ -167,9 +177,12 @@ void SKCpu::OnSchedTimerExpiry(void)
     //
     // this current CPU's local timer expired
     //
-    K2LIST_Remove(&RunningThreadList, &mpCurrentThread->CpuThreadListLink);
-    K2LIST_AddAtTail(&RunningThreadList, &mpCurrentThread->CpuThreadListLink);
-    SetNewCurrentThread(K2_GET_CONTAINER(SKThread, RunningThreadList.mpHead, CpuThreadListLink));
+    if (!mThreadChanged)
+    {
+        K2LIST_Remove(&RunningThreadList, &mpCurrentThread->CpuThreadListLink);
+        K2LIST_AddAtTail(&RunningThreadList, &mpCurrentThread->CpuThreadListLink);
+        SetNextThread();
+    }
 }
 
 void SKCpu::OnRecvIci(SKCpu *apSenderCpu, UINT_PTR aCode)
@@ -216,31 +229,47 @@ void SKCpu::OnReschedule(void)
     // should only ever be here if the idle thread is about to run
     //
     K2_ASSERT(mpIdleThread == mpCurrentThread);
-    
+
     //
     // if the only thing to run is the idle thread, let it go
     //
-    if (mpCurrentThread->CpuThreadListLink.mpNext == &mpCurrentThread->CpuThreadListLink)
+    if (1 == RunningThreadList.mNodeCount)
     {
         mSchedTimeout.QuadPart = 0;
         return;
     }
 
     //
-    // otherwise we reschedule by refreshing all the quanta for the next run list cycle
+    // reschedule
     //
+
     K2LIST_Remove(&RunningThreadList, &mpIdleThread->CpuThreadListLink);
 
     pListLink = RunningThreadList.mpHead;
     K2_ASSERT(NULL != pListLink);
-    do
+
+    if (1 == RunningThreadList.mNodeCount)
     {
+        //
+        // only one thread, so don't preempt it
+        //
         pThread = K2_GET_CONTAINER(SKThread, pListLink, CpuThreadListLink);
-        pListLink = pListLink->mpNext;
-        pThread->mQuantum = 100;
-    } while (NULL != pListLink);
+        pThread->mQuantum = 0;
+    }
+    else
+    {
+        //
+        // more than one thread, so we need to use preemption
+        //
+        do
+        {
+            pThread = K2_GET_CONTAINER(SKThread, pListLink, CpuThreadListLink);
+            pListLink = pListLink->mpNext;
+            pThread->mQuantum = 100;
+        } while (NULL != pListLink);
+    }
 
     K2LIST_AddAtTail(&RunningThreadList, &mpIdleThread->CpuThreadListLink);
 
-    SetNewCurrentThread(K2_GET_CONTAINER(SKThread, RunningThreadList.mpHead, CpuThreadListLink));
+    SetNextThread();
 }

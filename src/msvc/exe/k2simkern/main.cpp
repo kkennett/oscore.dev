@@ -15,21 +15,31 @@ void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
     SKCpu *pThisCpu = GetCurrentCpu();
 
     K2_ASSERT(NULL == apThread->mpCurrentCpu);
-    K2_ASSERT(pThisCpu != pTarget);
     K2_ASSERT(apThread->mState == SKThreadState_Migrating);
 
-    SKThread * pLast;
-    SKThread * pOld;
-    do
+    if (pThisCpu == pTarget)
     {
-        pLast = pTarget->mpMigratedHead;
-        K2_CpuWriteBarrier();
-        apThread->mpCpuMigratedNext = pLast;
-        K2_CpuReadBarrier();
-        pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
-    } while (pOld != pLast);
+        // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
+        // before it executes
+        apThread->mState = SKThreadState_OnRunList;
+        apThread->mpCurrentCpu = pThisCpu;
+        K2LIST_AddAtTail(&pThisCpu->RunningThreadList, &apThread->CpuThreadListLink);
+    }
+    else
+    {
+        SKThread * pLast;
+        SKThread * pOld;
+        do
+        {
+            pLast = pTarget->mpMigratedHead;
+            K2_CpuWriteBarrier();
+            apThread->mpCpuMigratedNext = pLast;
+            K2_CpuReadBarrier();
+            pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
+        } while (pOld != pLast);
 
-    pThisCpu->SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+        pThisCpu->SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+    }
 }
 
 static void SKKernel_RecvIcis(SKCpu *apThisCpu)
@@ -106,16 +116,18 @@ void SKCpu::SendIci(DWORD aTargetCpu, UINT_PTR aCode)
     }
 }
 
-void SKCpu::SetNewCurrentThread(SKThread *apThread)
+void SKCpu::SetNextThread(void)
 {
-    K2_ASSERT(apThread != mpCurrentThread);
-    K2_ASSERT(apThread->mState == SKThreadState_OnRunList);
-    K2_ASSERT(apThread->mpCurrentCpu == this);
-    if (apThread == mpIdleThread)
+    SKThread *pThread = K2_GET_CONTAINER(SKThread, RunningThreadList.mpHead, CpuThreadListLink);
+    K2_ASSERT(pThread != mpCurrentThread);
+    K2_ASSERT(pThread->mState == SKThreadState_OnRunList);
+    K2_ASSERT(pThread->mpCurrentCpu == this);
+    if (pThread == mpIdleThread)
         mSchedTimeout.QuadPart = 0;
     else
-        mpSystem->MsToCpuTime(apThread->mQuantum, &mSchedTimeout);
-    mpCurrentThread = apThread;
+        mpSystem->MsToCpuTime(pThread->mQuantum, &mSchedTimeout);
+    mpCurrentThread = pThread;
+    mThreadChanged = TRUE;
 }
 
 static DWORD WINAPI SKKernelThread(void *apParam)
@@ -165,7 +177,7 @@ static DWORD WINAPI SKKernelThread(void *apParam)
                 //
                 K2_ASSERT(pThisCpu->RunningThreadList.mpHead == &pThisCpu->mpIdleThread->CpuThreadListLink);
                 K2_ASSERT(pThisCpu->RunningThreadList.mpTail == &pThisCpu->mpIdleThread->CpuThreadListLink);
-                printf("CPU %d ENTER IDLE\n", pThisCpu->mCpuIndex);
+//                printf("CPU %d ENTER IDLE\n", pThisCpu->mCpuIndex);
             }
             if (((DWORD)-1) == ResumeThread(pThisCpu->mpCurrentThread->mhWin32Thread))
             {
@@ -187,7 +199,7 @@ static DWORD WINAPI SKKernelThread(void *apParam)
             }
             if (pThisCpu->mpCurrentThread == pThisCpu->mpIdleThread)
             {
-                printf("CPU %d EXIT IDLE\n", pThisCpu->mCpuIndex);
+//                printf("CPU %d EXIT IDLE\n", pThisCpu->mCpuIndex);
             }
         }
 
@@ -214,6 +226,8 @@ static DWORD WINAPI SKKernelThread(void *apParam)
                 pThisCpu->mSchedTimeout.QuadPart -= timeDelta.QuadPart;
             }
         }
+
+        pThisCpu->mThreadChanged = FALSE;
 
         if (lastWaitResult == WAIT_OBJECT_0)
         {
@@ -427,6 +441,12 @@ static void Startup(void)
 
 static DWORD WINAPI sInitThread(void *apParam)
 {
+    SKThread *pThisThread = (SKThread *)apParam;
+    TlsSetValue(theThreadSelfSlot, pThisThread);
+
+    SK_SystemCall(SYSCALL_ID_SLEEP, 3000, 0, NULL);
+
+    SK_SystemCall(SYSCALL_ID_THREAD_EXIT, 0, 0, NULL);
     return 0;
 }
 
@@ -442,11 +462,15 @@ static void Run(void)
         printf("failed to create thread 1\n");
         ExitProcess(__LINE__);
     }
-    pNewThread->mhWin32Thread = CreateThread(NULL, 0, sInitThread, NULL, CREATE_SUSPENDED, &pNewThread->mWin32ThreadId);
+    pNewThread->mhWin32Thread = CreateThread(NULL, 0, sInitThread, pNewThread, CREATE_SUSPENDED, &pNewThread->mWin32ThreadId);
     pNewThread->mState = SKThreadState_Migrating;
     pNewThread->mpOwnerProcess = sgpSystem->mpProcess0;
     K2LIST_AddAtTail(&sgpSystem->mpProcess0->ThreadList, &pNewThread->ProcessThreadListLink);
 
+    //
+    // we are sending the thread from "outside the system" :)  so we need to
+    // add it via the foreign CPU mechanism and not via SendThreadToCpu
+    //
     SKCpu *pTarget = &sgpSystem->mpCpus[0];
     pTarget->mpMigratedHead = pNewThread;
     K2_CpuWriteBarrier();

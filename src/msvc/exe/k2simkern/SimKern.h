@@ -18,6 +18,8 @@ typedef enum _SKNotifyState SKNotifyState;
 extern DWORD    theThreadSelfSlot;
 extern HANDLE   theWin32ExitSignal;
 
+#define SCHED_TICK_GRANULARITY      10
+
 #define SKICI_CODE_MIGRATED_THREAD  0xFEED0001
 
 struct SKSpinLock
@@ -207,6 +209,7 @@ struct SKCpu
         mpMigratedHead = NULL;
         mSchedTimerExpired = FALSE;
         mIrqStatus = 0;
+        mThreadChanged = FALSE;
     }
 
     SKSystem *          mpSystem;
@@ -226,6 +229,7 @@ struct SKCpu
     BOOL                mSchedTimerExpired;
     LARGE_INTEGER       mSchedTimeout;
     LARGE_INTEGER       mTimeNow;
+    BOOL                mThreadChanged;
 
     UINT32 volatile     mIrqStatus;
 
@@ -237,7 +241,7 @@ struct SKCpu
     SKThread * volatile mpMigratedHead;
 
     void SendIci(DWORD aTargetCpu, UINT_PTR aCode);
-    void SetNewCurrentThread(SKThread *apThread);
+    void SetNextThread(void);
 
     void OnStartup(void);
     void OnShutdown(void);
@@ -307,6 +311,7 @@ struct SKSystem
             //
             // wake up the thread and throw it at the least busy CPU
             //
+            printf("Thread %04X wake from sleep\n", apThread->mWin32ThreadId);
             apThread->mSysCall_ResultStatus = K2STAT_THREAD_WAITED;
             apThread->mSysCall_ResultValue = 0;
             apThread->mState = SKThreadState_Migrating;
@@ -331,9 +336,11 @@ struct SKSystem
         do
         {
             irqStatus = pCpu->mIrqStatus;
-            irqStatusNew |= (1 << SKIRQ_INDEX_TIMER);
+            if (0 != (irqStatus & (1 << SKIRQ_INDEX_TIMER)))
+                return;
+            irqStatusNew = irqStatus | (1 << SKIRQ_INDEX_TIMER);
             irqStatusResult = InterlockedCompareExchange(&pCpu->mIrqStatus, irqStatusNew, irqStatus);
-        } while (irqStatusResult == irqStatus);
+        } while (irqStatusResult != irqStatus);
 
         SetEvent(pCpu->mhWin32IrqEvent);
     }
@@ -443,18 +450,9 @@ struct SKSystem
 
             pCpuReceivingThread = (SKCpu *)&mpCpus[((UINT32)rand()) % mCpuCount];
 
-            if (pCurrentCpu != pCpuReceivingThread)
-            {
-                pReleasedThread->mState = SKThreadState_Migrating;
-                apNotify->mpSystem->SendThreadToCpu(pCpuReceivingThread->mCpuIndex, pReleasedThread);
-            }
-            else
-            {
-                // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
-                pReleasedThread->mState = SKThreadState_OnRunList;
-                pReleasedThread->mpCurrentCpu = pCurrentCpu;
-                K2LIST_AddAtTail(&pCpuReceivingThread->RunningThreadList, &pReleasedThread->CpuThreadListLink);
-            }
+            pReleasedThread->mState = SKThreadState_Migrating;
+
+            apNotify->mpSystem->SendThreadToCpu(pCpuReceivingThread->mCpuIndex, pReleasedThread);
         }
 
         return result;
@@ -480,7 +478,7 @@ struct SKSystem
             //
             K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
             K2LIST_AddAtTail(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
-            apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
+            apThisCpu->SetNextThread();
             return;
         }
 
@@ -490,7 +488,8 @@ struct SKSystem
         K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
         apCallingThread->mpCurrentCpu = NULL;
         apCallingThread->mState = SKThreadState_Sleeping;
-        apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
+        printf("Thread %04X Sleeping %d\n", apCallingThread->mWin32ThreadId, aMsToSleep);
+        apThisCpu->SetNextThread();
 
         //
         // latch onto system timer queue
@@ -508,7 +507,7 @@ struct SKSystem
             //
             mpTimerQueueHead = &apCallingThread->SleepTimerItem;
             K2_ASSERT(NULL == mhWin32TimerQueueTimer);
-            if (FALSE == CreateTimerQueueTimer(&mhWin32TimerQueueTimer, NULL, sMsTimerCallback, this, 1, 1, 0))
+            if (FALSE == CreateTimerQueueTimer(&mhWin32TimerQueueTimer, NULL, sMsTimerCallback, this, SCHED_TICK_GRANULARITY, SCHED_TICK_GRANULARITY, 0))
             {
                 printf("CreateTimerQueueTimer failed\n");
                 ExitProcess(__LINE__);
@@ -549,6 +548,19 @@ struct SKSystem
             }
         }
         TimerQueueLock.Unlock();
+    }
+
+    void InsideSysCall_ThreadExit(SKCpu *apThisCpu, SKThread *apCallingThread)
+    {
+        printf("THREAD %d EXIT\n", apCallingThread->mWin32ThreadId);
+        K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+        apCallingThread->mState = SKThreadState_Dying;
+        apThisCpu->SetNextThread();
+
+        //
+        // latch thread to cleanup task and set the notify for that task so it can run
+        //
+        // TODO
     }
 
     void InsideSysCall_SignalNotify(SKCpu *apThisCpu, SKThread *apCallingThread)
@@ -599,7 +611,7 @@ struct SKSystem
             apCallingThread->mpCurrentCpu = NULL;
             apCallingThread->mState = SKThreadState_WaitingOnNotify;
             K2LIST_AddAtTail(&pNotify->WaitingThreadList, &apCallingThread->BlockedOnListLink);
-            apThisCpu->SetNewCurrentThread(K2_GET_CONTAINER(SKThread, apThisCpu->RunningThreadList.mpHead, CpuThreadListLink));
+            apThisCpu->SetNextThread();
         }
 
         pNotify->Lock.Unlock();
@@ -723,8 +735,9 @@ struct SKIpcChannel
                     exchangeVal = 0;
                 exchangeVal |= IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
                 valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
-                if (valResult != slotIndex)
+                if (valResult == slotIndex)
                     break;
+                // else try again from top of loop
             }
             else
             {
@@ -758,7 +771,7 @@ struct SKIpcChannel
                                 }
                                 exchangeVal = slotIndex | IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
                                 valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
-                            } while (valResult == slotIndex);
+                            } while (valResult != slotIndex);
 
                             //
                             // active flag is now set. go around again
