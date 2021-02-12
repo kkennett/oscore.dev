@@ -244,7 +244,7 @@ struct SKCpu
 
     SKThread * volatile mpMigratedHead;
 
-    void SendIci(DWORD aTargetCpu, UINT_PTR aCode);
+    void NB_SendIci(DWORD aTargetCpu, UINT_PTR aCode);
     void SetNextThread(void);
 
     void OnStartup(void);
@@ -261,7 +261,7 @@ struct SKCpu
 
 struct SKSystem
 {
-    SKSystem(UINT_PTR aCpuCount) : mCpuCount(aCpuCount)
+    SKSystem(UINT_PTR aCpuCount, DWORD aCacheLineLen) : mCpuCount(aCpuCount), mCacheLineBytes(aCacheLineLen)
     {
         mpCpus = NULL;
 
@@ -277,6 +277,8 @@ struct SKSystem
     UINT_PTR const  mCpuCount;
     SKCpu      *    mpCpus;
 
+    DWORD const     mCacheLineBytes;
+
     LARGE_INTEGER   mPerfFreq;
 
     SKProcess *     mpProcess0;
@@ -291,7 +293,7 @@ struct SKSystem
         return &mpCpus[GetCurrentProcessorNumber()];
     }
 
-    void SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread);
+    void NB_SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread);
 
     void MsToCpuTime(DWORD aMilliseconds, LARGE_INTEGER *apRetCpuTime)
     {
@@ -319,7 +321,7 @@ struct SKSystem
             apThread->mSysCall_ResultStatus = K2STAT_THREAD_WAITED;
             apThread->mSysCall_ResultValue = 0;
             apThread->mState = SKThreadState_Migrating;
-            SendThreadToCpu(0, apThread);
+            NB_SendThreadToCpu((DWORD)-1, apThread);
             break;
         default:
             K2_ASSERT(0);
@@ -390,12 +392,11 @@ struct SKSystem
         return resultStatus;
     }
 
-    UINT_PTR ThreadFree_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
+    UINT_PTR ThreadFree_NB_SignalNotify(SKNotify *apNotify, UINT_PTR aDataWord)
     {
         SKThread *  pReleasedThread;
         UINT_PTR    result;
         SKCpu *     pCurrentCpu;
-        SKCpu *     pCpuReceivingThread;
 
         //
         // this function is threadless, and so can never block
@@ -451,12 +452,9 @@ struct SKSystem
         {
             pReleasedThread->mSysCall_ResultValue = result;
             pReleasedThread->mSysCall_ResultStatus = K2STAT_THREAD_WAITED;
-
-            pCpuReceivingThread = (SKCpu *)&mpCpus[((UINT32)rand()) % mCpuCount];
-
             pReleasedThread->mState = SKThreadState_Migrating;
 
-            apNotify->mpSystem->SendThreadToCpu(pCpuReceivingThread->mCpuIndex, pReleasedThread);
+            apNotify->mpSystem->NB_SendThreadToCpu((DWORD)-1, pReleasedThread);
         }
 
         return result;
@@ -571,11 +569,11 @@ struct SKSystem
     {
         SKNotify *pNotify = (SKNotify *)apCallingThread->mSysCall_Arg1;
         // result is comined signal dataword at completion of the call, just as FYI
-        apCallingThread->mSysCall_ResultValue = ThreadFree_SignalNotify(pNotify, apCallingThread->mSysCall_Arg2);
+        apCallingThread->mSysCall_ResultValue = ThreadFree_NB_SignalNotify(pNotify, apCallingThread->mSysCall_Arg2);
         apCallingThread->mSysCall_ResultStatus = K2STAT_NO_ERROR;
     }
 
-    void InsideSysCall_WaitForNotify(SKCpu *apThisCpu, SKThread *apCallingThread)
+    void InsideSysCall_WaitForNotify(SKCpu *apThisCpu, SKThread *apCallingThread, bool aNonBlocking)
     {
         SKNotify *pNotify = (SKNotify *)apCallingThread->mSysCall_Arg1;
 
@@ -599,23 +597,31 @@ struct SKSystem
         }
         else
         {
-            if (pNotify->mState == SKNotifyState_Idle)
+            if (aNonBlocking)
             {
-                pNotify->mState = SKNotifyState_Waiting;
+                apCallingThread->mSysCall_ResultValue = 0;
+                apCallingThread->mSysCall_ResultStatus = K2STAT_ERROR_WAIT_FAILED;
             }
             else
             {
-                K2_ASSERT(SKNotifyState_Waiting == pNotify->mState);
-            }
+                if (pNotify->mState == SKNotifyState_Idle)
+                {
+                    pNotify->mState = SKNotifyState_Waiting;
+                }
+                else
+                {
+                    K2_ASSERT(SKNotifyState_Waiting == pNotify->mState);
+                }
 
-            //
-            // remove from the run list and set new current thread
-            //
-            K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
-            apCallingThread->mpCurrentCpu = NULL;
-            apCallingThread->mState = SKThreadState_WaitingOnNotify;
-            K2LIST_AddAtTail(&pNotify->WaitingThreadList, &apCallingThread->BlockedOnListLink);
-            apThisCpu->SetNextThread();
+                //
+                // remove from the run list and set new current thread
+                //
+                K2LIST_Remove(&apThisCpu->RunningThreadList, &apCallingThread->CpuThreadListLink);
+                apCallingThread->mpCurrentCpu = NULL;
+                apCallingThread->mState = SKThreadState_WaitingOnNotify;
+                K2LIST_AddAtTail(&pNotify->WaitingThreadList, &apCallingThread->BlockedOnListLink);
+                apThisCpu->SetNextThread();
+            }
         }
 
         pNotify->Lock.Unlock();
@@ -631,28 +637,119 @@ struct SKIpcChannel
     {
         mEntryBytes = 0;
         mEntryCount = 0;
-        mpSharedOwnerMaskArray = NULL;
-        mpConsumerCountAndActiveFlag = NULL;  // init value to IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+
+        mhWin32ConsumerMappingObj = NULL;
+        mpConsumerCountAndActiveFlag = NULL; 
+        
+        mhWin32ProducerMappingObj = NULL;
         mpProducerCount = NULL;
+        mpProducerRoViewOfConsumerCountAndActiveFlag = NULL;
+
         mpConsumerNotify = NULL;
 
+        mhWin32BufferMappingObj = NULL;
         mpConsumerRoViewOfBuffer = NULL;
         mpProducerRwViewOfBuffer = NULL;
+        mpSharedOwnerMaskArray = NULL;
+        mOwnerMapArraySizeInEntries = 0;
     };
 
     SKSystem * const        mpSystem;
     UINT32                  mEntryBytes;
     UINT32                  mEntryCount;
 
-    UINT32 volatile *       mpSharedOwnerMaskArray; // (((mEntryCount+31)&~31)>>5) is number of UINT32s
+    HANDLE                  mhWin32ConsumerMappingObj;
     UINT32 volatile *       mpConsumerCountAndActiveFlag;
+
+    HANDLE                  mhWin32ProducerMappingObj;
     UINT32 volatile *       mpProducerCount;
+    UINT32 volatile *       mpProducerRoViewOfConsumerCountAndActiveFlag;
+
     SKNotify *              mpConsumerNotify;
 
+    HANDLE                  mhWin32BufferMappingObj;
     UINT8 volatile *        mpConsumerRoViewOfBuffer;
     UINT8 volatile *        mpProducerRwViewOfBuffer;
+    UINT32 volatile *       mpSharedOwnerMaskArray;     
+    UINT32                  mOwnerMapArraySizeInEntries;
 
-    bool Produce(UINT8 const *apMsg, UINT32 aMsgBytes)
+    void Setup(UINT32 aEntryBytes, UINT32 aEntryCount)
+    {
+        DWORD bufferBytes;
+
+        mpConsumerNotify = new SKNotify(mpSystem);
+        if (NULL == mpConsumerNotify)
+        {
+            printf("Failed to create Notify for IpcChannel\n");
+            ExitProcess(__LINE__);
+        }
+
+        mhWin32ConsumerMappingObj = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(UINT32), NULL);
+        if (NULL == mhWin32ConsumerMappingObj)
+        {
+            printf("Failed to create consumer mapping\n");
+            ExitProcess(__LINE__);
+        }
+        mpConsumerCountAndActiveFlag = (UINT32 volatile *)MapViewOfFile(mhWin32ConsumerMappingObj, FILE_MAP_WRITE, 0, 0, 0);
+        if (NULL == mpConsumerCountAndActiveFlag)
+        {
+            printf("Failed to map consumer mapping\n");
+            ExitProcess(__LINE__);
+        }
+        *mpConsumerCountAndActiveFlag = IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+        mpProducerRoViewOfConsumerCountAndActiveFlag = (UINT32 volatile *)MapViewOfFile(mhWin32ConsumerMappingObj, FILE_MAP_READ, 0, 0, 0);
+        if (NULL == mpProducerRoViewOfConsumerCountAndActiveFlag)
+        {
+            printf("Failed to map consumer mapping\n");
+            ExitProcess(__LINE__);
+        }
+
+        mhWin32ProducerMappingObj = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, sizeof(UINT32), NULL);
+        if (NULL == mhWin32ProducerMappingObj)
+        {
+            printf("Failed to create consumer mapping\n");
+            ExitProcess(__LINE__);
+        }
+        mpProducerCount = (UINT32 volatile *)MapViewOfFile(mhWin32ProducerMappingObj, FILE_MAP_WRITE, 0, 0, 0);
+        if (NULL == mpProducerCount)
+        {
+            printf("Failed to map consumer mapping\n");
+            ExitProcess(__LINE__);
+        }
+        *mpProducerCount = 0;
+
+        aEntryBytes = ((aEntryBytes + (mpSystem->mCacheLineBytes - 1)) / mpSystem->mCacheLineBytes) * mpSystem->mCacheLineBytes;
+
+        bufferBytes = (((aEntryCount + 31) / 32) * 4);
+        mOwnerMapArraySizeInEntries = ((bufferBytes + (aEntryBytes - 1)) / aEntryBytes);
+        bufferBytes = aEntryBytes * (mOwnerMapArraySizeInEntries + aEntryCount);
+
+        mhWin32BufferMappingObj = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, bufferBytes, NULL);
+        if (NULL == mhWin32BufferMappingObj)
+        {
+            printf("Failed to create file mapping for IpcChannel\n");
+            ExitProcess(__LINE__);
+        }
+        mpProducerRwViewOfBuffer = (UINT8 volatile *)MapViewOfFile(mhWin32BufferMappingObj, FILE_MAP_WRITE, 0, 0, 0);
+        if (NULL == mpProducerRwViewOfBuffer)
+        {
+            printf("Failed to map IpcChannel buffer RW\n");
+            ExitProcess(__LINE__);
+        }
+        K2MEM_Zero((void *)mpProducerRwViewOfBuffer, bufferBytes);
+        mpSharedOwnerMaskArray = (UINT32 volatile *)mpProducerRwViewOfBuffer;
+        mpConsumerRoViewOfBuffer = (UINT8 volatile *)MapViewOfFile(mhWin32BufferMappingObj, FILE_MAP_READ, 0, 0, 0);
+        if (NULL == mpConsumerRoViewOfBuffer)
+        {
+            printf("Failed to map IpcChannel buffer RO\n");
+            ExitProcess(__LINE__);
+        }
+
+        mEntryBytes = aEntryBytes;
+        mEntryCount = aEntryCount;
+    }
+
+    bool Produce(UINT8 const *apData, UINT32 aDataBytes)
     {
         UINT32 slotIndex;
         UINT32 exchangeVal;
@@ -685,7 +782,7 @@ struct SKIpcChannel
         //
         // we have the target slot number.  do the copy now
         //
-        K2MEM_Copy((void *)(mpProducerRwViewOfBuffer + (slotIndex * mEntryBytes)), apMsg, aMsgBytes);
+        K2MEM_Copy((void *)(mpProducerRwViewOfBuffer + ((slotIndex + mOwnerMapArraySizeInEntries) * mEntryBytes)), apData, aDataBytes);
 
         //
         // set the slot to 'full' status now
@@ -701,7 +798,7 @@ struct SKIpcChannel
         // if the produce and consume counts were the same and now they are not, and the consumer active flag is clear
         // then we need to wake up the consumer by signalling the notify
         //
-        if ((*mpConsumerCountAndActiveFlag) == slotIndex)
+        if ((*mpProducerRoViewOfConsumerCountAndActiveFlag) == slotIndex)
         {
             //
             // active flag not set so wake the receiver
@@ -752,7 +849,7 @@ struct SKIpcChannel
                 {
                     exchangeVal = slotIndex & ~IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
                     valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
-                    if (valResult != slotIndex)
+                    if (valResult == slotIndex)
                     {
                         //
                         // we successfully cleared the active flag
@@ -816,7 +913,7 @@ struct SKIpcChannel
 
         *apRetKey = slotIndex;
 
-        return mpConsumerRoViewOfBuffer + (mEntryBytes * slotIndex);
+        return mpConsumerRoViewOfBuffer + (mEntryBytes * (slotIndex + mOwnerMapArraySizeInEntries));
     }
 
     void ConsumeRelease(UINT32 aKey)

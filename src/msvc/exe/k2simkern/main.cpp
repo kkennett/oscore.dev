@@ -9,10 +9,19 @@ K2STAT SK_SystemCall(UINT_PTR aCallId, UINT_PTR aArg1, UINT_PTR aArg2, UINT_PTR 
     return pThisThread->mpSystem->SysCall(aCallId, aArg1, aArg2, apResultValue);
 }
 
-void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
+void SKSystem::NB_SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
 {
-    SKCpu *pTarget = &mpCpus[aTargetCpu];
+    SKCpu *pTarget;
     SKCpu *pThisCpu = GetCurrentCpu();
+
+    if (((DWORD)-1) == aTargetCpu)
+    {
+        //
+        // choose target cpu
+        //
+        aTargetCpu = ((DWORD)rand()) % mCpuCount;
+    }
+    pTarget = &mpCpus[aTargetCpu];
 
     K2_ASSERT(NULL == apThread->mpCurrentCpu);
     K2_ASSERT(apThread->mState == SKThreadState_Migrating);
@@ -38,7 +47,7 @@ void SKSystem::SendThreadToCpu(DWORD aTargetCpu, SKThread *apThread)
             pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
         } while (pOld != pLast);
 
-        pThisCpu->SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+        pThisCpu->NB_SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
     }
 }
 
@@ -84,7 +93,7 @@ static void SKKernel_RecvIcis(SKCpu *apThisCpu)
     } while (true);
 }
 
-void SKCpu::SendIci(DWORD aTargetCpu, UINT_PTR aCode)
+void SKCpu::NB_SendIci(DWORD aTargetCpu, UINT_PTR aCode)
 {
     SKCpu *pTarget = &mpSystem->mpCpus[aTargetCpu];
     
@@ -426,12 +435,15 @@ static void SKInitCpu(SKSystem *apSystem, DWORD aCpuIndex)
     }
 }
 
-static SKSystem *   sgpSystem;
+static SKSystem * sgpSystem;
 
 static void Startup(void)
 {
     UINT_PTR ix;
     UINT_PTR cpuCount;
+    SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *pLogInfo;
+    DWORD minLineLen;
+    DWORD dwOutBytes;
 
     theWin32ExitSignal = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (NULL == theWin32ExitSignal)
@@ -444,9 +456,34 @@ static void Startup(void)
     if (cpuCount > 64)
         cpuCount = 64;
 
-    cpuCount = 1;
+    dwOutBytes = 0;
+    GetLogicalProcessorInformationEx(RelationCache, NULL, &dwOutBytes);
+    if (0 == dwOutBytes)
+    {
+        printf("failed to get system cache info 1\n");
+        ExitProcess(__LINE__);
+    }
+    pLogInfo = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)malloc(dwOutBytes + 4);
+    if (FALSE == GetLogicalProcessorInformationEx(RelationCache, pLogInfo, &dwOutBytes))
+    {
+        printf("failed to get system cache info 2\n");
+        ExitProcess(__LINE__);
+    }
+    minLineLen = 0xFFFFFFFF;
+    do
+    {
+        if (pLogInfo->Relationship == RelationCache)
+        {
+            if (pLogInfo->Cache.LineSize < minLineLen)
+                minLineLen = pLogInfo->Cache.LineSize;
+        }
+        if (dwOutBytes <= pLogInfo->Size)
+            break;
+        dwOutBytes -= pLogInfo->Size;
+        pLogInfo = (SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX *)(((UINT8 *)pLogInfo) + pLogInfo->Size);
+    } while (true);
 
-    sgpSystem = new SKSystem(cpuCount);
+    sgpSystem = new SKSystem(cpuCount, minLineLen);
     if (NULL == sgpSystem)
     {
         printf("failed to allocate system\n");
@@ -505,7 +542,6 @@ static DWORD WINAPI sInitThread(void *apParam)
 
     SK_SystemCall(SYSCALL_ID_THREAD_EXIT, 0, 0, NULL);
 
-
     return 0;
 }
 
@@ -533,7 +569,7 @@ static void Run(void)
     SKCpu *pTarget = &sgpSystem->mpCpus[0];
     pTarget->mpMigratedHead = pNewThread;
     K2_CpuWriteBarrier();
-    pTarget->SendIci(0, SKICI_CODE_MIGRATED_THREAD);
+    pTarget->NB_SendIci(0, SKICI_CODE_MIGRATED_THREAD);
 
     WaitForSingleObject(theWin32ExitSignal, INFINITE);
     printf("Run exiting\n");

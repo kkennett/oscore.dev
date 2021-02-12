@@ -170,7 +170,11 @@ void SKCpu::OnSystemCall(void)
         break;
 
     case SYSCALL_ID_WAIT_FOR_NOTIFY:
-        mpSystem->InsideSysCall_WaitForNotify(this, pCallingThread);
+        mpSystem->InsideSysCall_WaitForNotify(this, pCallingThread, false);
+        break;
+
+    case SYSCALL_ID_POLL_FOR_NOTIFY:
+        mpSystem->InsideSysCall_WaitForNotify(this, pCallingThread, true);
         break;
 
     case SYSCALL_ID_SLEEP:
