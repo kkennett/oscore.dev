@@ -677,6 +677,8 @@ struct SKIpcChannel
     {
         DWORD bufferBytes;
 
+        K2_ASSERT(aEntryCount >= 2);    // 1 entry wont work with this scheme
+
         mpConsumerNotify = new SKNotify(mpSystem);
         if (NULL == mpConsumerNotify)
         {
