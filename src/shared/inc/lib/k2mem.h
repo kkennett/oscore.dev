@@ -243,6 +243,33 @@ K2MEM_Compare(
     UINT32          aByteCount
     );
 
+//
+//------------------------------------------------------------------------
+//
+
+typedef struct _K2MEM_BUFVECTOR K2MEM_BUFVECTOR;
+struct _K2MEM_BUFVECTOR
+{
+    UINT8 * mpBuffer;
+    UINT32  mByteCount;
+};
+
+K2STAT
+K2MEM_Scatter(
+    UINT8 const*            apSrcBuffer,
+    UINT32*                 apSrcBufferBytes,
+    UINT32                  aVectorCount,
+    K2MEM_BUFVECTOR const*  apVectorArray
+);
+
+K2STAT
+K2MEM_Gather(
+    UINT32                  aVectorCount,
+    K2MEM_BUFVECTOR const*  apVectorArray,
+    UINT8*                  apDstBuffer,
+    UINT32*                 apDstBufferBytes
+);
+
 #ifdef __cplusplus
 };  // extern "C"
 #endif

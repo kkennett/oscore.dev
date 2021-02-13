@@ -90,6 +90,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\shared\lib\k2mem\gather.c" />
     <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare.c" />
     <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare16.c" />
     <ClCompile Include="..\..\..\shared\lib\k2mem\memcompare32.c" />
@@ -113,6 +114,7 @@
     <ClCompile Include="..\..\..\shared\lib\k2mem\memverify32.c" />
     <ClCompile Include="..\..\..\shared\lib\k2mem\memverify64.c" />
     <ClCompile Include="..\..\..\shared\lib\k2mem\memverify8.c" />
+    <ClCompile Include="..\..\..\shared\lib\k2mem\scatter.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\shared\inc\lib\k2mem.h" />

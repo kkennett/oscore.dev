@@ -84,6 +84,12 @@
     <ClCompile Include="..\..\..\shared\lib\k2mem\memswap64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\shared\lib\k2mem\gather.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\shared\lib\k2mem\scatter.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\shared\inc\lib\k2mem.h">
