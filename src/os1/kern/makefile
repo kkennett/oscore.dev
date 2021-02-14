@@ -30,44 +30,75 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/shared/build/pre.make
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_SPECIFIC_ARCH = A32
 TARGET_TYPE = LIB
+K2_KERNEL := TRUE
 
-SOURCES += bp.s
-SOURCES += dcache.s
-SOURCES += icache.s
-SOURCES += reg_auxctrl.s
-SOURCES += reg_ccsidr.s
-SOURCES += reg_clidr.s
-SOURCES += reg_context.s
-SOURCES += reg_cpacr.s
-SOURCES += reg_csselr.s
-SOURCES += reg_ctr.s
-SOURCES += reg_dacr.s
-SOURCES += reg_dfar.s
-SOURCES += reg_dfsr.s
-SOURCES += reg_idpfr.s
-SOURCES += reg_ifar.s
-SOURCES += reg_ifsr.s
-SOURCES += reg_midr.s
-SOURCES += reg_mpidr.s
-SOURCES += reg_scr.s
-SOURCES += reg_sctrl.s
-SOURCES += reg_tpidr.s
-SOURCES += reg_ttbr0.s
-SOURCES += reg_ttbr1.s
-SOURCES += reg_ttbcr.s
-SOURCES += setints.s
-SOURCES += tlb.s
-SOURCES += trans.s
-SOURCES += reg_cpsr.s
-SOURCES += reg_cbar.s
+SOURCES += dlx_entry.c
+SOURCES += seqlock.c
+SOURCES += debug.c
+SOURCES += panic.c
+SOURCES += exec.c
+SOURCES += exception.c
+SOURCES += dlxsupp.c
+SOURCES += device.c
+SOURCES += initmem.c
+SOURCES += esc.c
+SOURCES += proc.c 
+SOURCES += thread.c 
+SOURCES += seg.c
+SOURCES += sched.c
+SOURCES += hal.c
+SOURCES += cpucore.c
+SOURCES += monitor.c 
+SOURCES += schedex_threadexit.c 
+SOURCES += schedex_threadwait.c 
+SOURCES += schedex_debug.c
+SOURCES += schedex_invtlb.c
+SOURCES += schedex_purgept.c
+SOURCES += schedex_sem.c
+SOURCES += sched_time.c
+SOURCES += map.c
+SOURCES += intr.c
+SOURCES += mem.c
+SOURCES += object.c
+SOURCES += name.c
+SOURCES += event.c
+SOURCES += token.c
+SOURCES += sem.c
+SOURCES += thread0.c
+SOURCES += schedex_threadcreate.c
+SOURCES += mailbox.c
+SOURCES += schedex_evt.c
+SOURCES += schedex_mbox.c
+SOURCES += msg.c
+SOURCES += schedex_msg.c
+SOURCES += sysmsg.c
+SOURCES += alarm.c
+SOURCES += schedex_alarm.c
+SOURCES += service.c
+SOURCES += schedex_notify.c
+SOURCES += schedex_threadstop.c
+SOURCES += trace.c
+SOURCES += bootgraf.c
 
-# for creation of transition code
-#SOURCES += transit.s
+SOURCES += osapi_addr.c 
+SOURCES += osapi_alarm.c 
+SOURCES += osapi_critsec.c 
+SOURCES += osapi_debug.c 
+SOURCES += osapi_dlx.c
+SOURCES += osapi_event.c 
+SOURCES += osapi_heap.c 
+SOURCES += osapi_mailbox.c 
+SOURCES += osapi_msg.c 
+SOURCES += osapi_name.c 
+SOURCES += osapi_process.c 
+SOURCES += osapi_sem.c 
+SOURCES += osapi_sys.c 
+SOURCES += osapi_thread.c 
+SOURCES += osapi_time.c 
+SOURCES += osapi_virt.c 
 
 include $(K2_ROOT)/src/shared/build/post.make
-
 

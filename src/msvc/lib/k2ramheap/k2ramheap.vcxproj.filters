@@ -15,12 +15,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\os\lib\k2ramheap\ramheap.c">
+    <ClCompile Include="..\..\..\os1\lib\k2ramheap\ramheap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\os\inc\lib\k2ramheap.h">
+    <ClInclude Include="..\..\..\os1\inc\lib\k2ramheap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

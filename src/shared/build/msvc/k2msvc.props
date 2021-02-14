@@ -36,6 +36,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <K2_ROOT>C:\repo\oscore.dev</K2_ROOT>
+    <K2_OS>os1</K2_OS>
   </PropertyGroup>
   <PropertyGroup />
   <ItemDefinitionGroup>
@@ -47,6 +48,10 @@
   <ItemGroup>
     <BuildMacro Include="K2_ROOT">
       <Value>$(K2_ROOT)</Value>
+      <EnvironmentVariable>true</EnvironmentVariable>
+    </BuildMacro>
+    <BuildMacro Include="K2_OS">
+      <Value>$(K2_OS)</Value>
       <EnvironmentVariable>true</EnvironmentVariable>
     </BuildMacro>
   </ItemGroup>

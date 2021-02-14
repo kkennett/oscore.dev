@@ -30,44 +30,58 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/shared/build/pre.make
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_SPECIFIC_ARCH = A32
-TARGET_TYPE = LIB
+TARGET_TYPE = DLX
 
-SOURCES += bp.s
-SOURCES += dcache.s
-SOURCES += icache.s
-SOURCES += reg_auxctrl.s
-SOURCES += reg_ccsidr.s
-SOURCES += reg_clidr.s
-SOURCES += reg_context.s
-SOURCES += reg_cpacr.s
-SOURCES += reg_csselr.s
-SOURCES += reg_ctr.s
-SOURCES += reg_dacr.s
-SOURCES += reg_dfar.s
-SOURCES += reg_dfsr.s
-SOURCES += reg_idpfr.s
-SOURCES += reg_ifar.s
-SOURCES += reg_ifsr.s
-SOURCES += reg_midr.s
-SOURCES += reg_mpidr.s
-SOURCES += reg_scr.s
-SOURCES += reg_sctrl.s
-SOURCES += reg_tpidr.s
-SOURCES += reg_ttbr0.s
-SOURCES += reg_ttbr1.s
-SOURCES += reg_ttbcr.s
-SOURCES += setints.s
-SOURCES += tlb.s
-SOURCES += trans.s
-SOURCES += reg_cpsr.s
-SOURCES += reg_cbar.s
+TARGET_SPECIFIC_ARCH = X32
 
-# for creation of transition code
-#SOURCES += transit.s
+K2_KERNEL := TRUE
+
+DLX_INF := ../../k2oskern.inf
+
+SOURCES += x32kern.c
+
+SOURCES += x32coreix.c
+
+SOURCES += x32gdt.c
+SOURCES += x32gdtasm.s
+
+SOURCES += x32idt.c
+SOURCES += x32idtasm.s
+
+SOURCES += x32intr.c 
+SOURCES += x32intrasm.s
+SOURCES += x32intrhand.c
+SOURCES += x32devintr.c
+
+SOURCES += x32tss.c
+
+SOURCES += x32kernex.c
+SOURCES += x32kernexasm.s
+
+SOURCES += x32map.c
+
+SOURCES += x32cpu.c
+SOURCES += x32cpuasm.s
+
+SOURCES += x32monitor.c 
+SOURCES += x32monitorasm.s 
+
+SOURCES += x32thread.c 
+SOURCES += x32threadasm.s 
+
+SOURCES += x32stall.c
+
+STATIC_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2heap
+STATIC_LIBS += @shared/lib/k2bit
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
+
+STATIC_LIBS += @$(K2_OS)/lib/k2ramheap
+
+STATIC_KERNEL_LIBS += @$(K2_OS)/kern
 
 include $(K2_ROOT)/src/shared/build/post.make
-
 

@@ -16,6 +16,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>k2ramheap</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>os1_k2ramheap</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -84,7 +85,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(K2_ROOT)\src\shared\inc;$(K2_ROOT)\src\os\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(K2_ROOT)\src\shared\inc;$(K2_ROOT)\src\os1\inc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -92,10 +93,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\os\lib\k2ramheap\ramheap.c" />
+    <ClCompile Include="..\..\..\os1\lib\k2ramheap\ramheap.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\os\inc\lib\k2ramheap.h" />
+    <ClInclude Include="..\..\..\os1\inc\lib\k2ramheap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -41,6 +41,10 @@ ifeq ($(K2_ROOT),)
 $(error K2_ROOT not set)
 endif
 
+ifeq ($(K2_OS),)
+$(error K2_OS not set)
+endif
+
 ifeq ($(K2_ARCH),)
 $(error error - no arch set. use 'setarch xxx' at command line)
 endif
@@ -64,7 +68,7 @@ K2_TARGET_BASE ?= $(K2_ROOT)/bld/out/gcc
 K2_TEMP_BASE   ?= $(K2_ROOT)/bld/tmp/gcc
 K2_IMAGE_BASE  ?= $(K2_ROOT)/img
 
-GCCOPT_SYSTEM += -D__K2OS__
+GCCOPT_SYSTEM += -DK2_OS=$(K2_OS)
 
 SOURCES             := 
 SOURCE_LIBS         :=

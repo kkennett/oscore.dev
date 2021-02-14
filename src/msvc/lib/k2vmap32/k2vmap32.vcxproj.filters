@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\os\lib\k2vmap32\vmap32.c">
+    <ClCompile Include="..\..\..\os1\lib\k2vmap32\vmap32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\os\lib\k2vmap32\vmdump.c">
+    <ClCompile Include="..\..\..\os1\lib\k2vmap32\vmdump.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\os\inc\lib\k2vmap32.h">
+    <ClInclude Include="..\..\..\os1\inc\lib\k2vmap32.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -30,44 +30,16 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/shared/build/pre.make
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_SPECIFIC_ARCH = A32
-TARGET_TYPE = LIB
+TARGET_SPECIFIC_ARCH = X32
 
-SOURCES += bp.s
-SOURCES += dcache.s
-SOURCES += icache.s
-SOURCES += reg_auxctrl.s
-SOURCES += reg_ccsidr.s
-SOURCES += reg_clidr.s
-SOURCES += reg_context.s
-SOURCES += reg_cpacr.s
-SOURCES += reg_csselr.s
-SOURCES += reg_ctr.s
-SOURCES += reg_dacr.s
-SOURCES += reg_dfar.s
-SOURCES += reg_dfsr.s
-SOURCES += reg_idpfr.s
-SOURCES += reg_ifar.s
-SOURCES += reg_ifsr.s
-SOURCES += reg_midr.s
-SOURCES += reg_mpidr.s
-SOURCES += reg_scr.s
-SOURCES += reg_sctrl.s
-SOURCES += reg_tpidr.s
-SOURCES += reg_ttbr0.s
-SOURCES += reg_ttbr1.s
-SOURCES += reg_ttbcr.s
-SOURCES += setints.s
-SOURCES += tlb.s
-SOURCES += trans.s
-SOURCES += reg_cpsr.s
-SOURCES += reg_cbar.s
+TARGET_TYPE = IMAGE
 
-# for creation of transition code
-#SOURCES += transit.s
+IMAGE_HAL_DLX = @$(K2_OS)/demo/virtpc/hal/k2oshal
+
+BUILTIN_KERNEL_DRIVERS += @$(K2_OS)/driver/pcibus
+BUILTIN_KERNEL_DRIVERS += @$(K2_OS)/driver/vga
 
 include $(K2_ROOT)/src/shared/build/post.make
-
 

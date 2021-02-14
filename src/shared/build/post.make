@@ -191,12 +191,12 @@ CRTSTUB_OBJ :=
 else
 
 LDENTRY := -e __K2OS_dlx_crt
-CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/os/crtstub/crtstub.o
+CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_OS)/crtstub/crtstub.o
 
 ifneq ($(K2_KERNEL),)
-IMPORT_KERNEL_LIBS += @os/crt/crtkern/$(K2_ARCH)/k2oscrt
+IMPORT_KERNEL_LIBS += @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
 else
-IMPORT_LIBS += @os/crt/crtuser/$(K2_ARCH)/k2oscrt
+IMPORT_LIBS += @$(K2_OS)/crt/crtuser/$(K2_ARCH)/k2oscrt
 endif
 
 endif
@@ -319,10 +319,10 @@ default: $(K2_TARGET_FULL_SPEC)
 
 #========================================================================================
 
-STOCK_IMAGE_KERN_DLX := @os/crt/crtkern/$(K2_ARCH)/k2oscrt
-STOCK_IMAGE_KERN_DLX += @os/kern/$(K2_ARCH)/k2oskern 
-STOCK_IMAGE_KERN_DLX += @os/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @os/kern/k2osexec 
+STOCK_IMAGE_KERN_DLX := @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
+STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/$(K2_ARCH)/k2oskern 
+STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
+STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
 
 ONE_K2_STOCK_KERNEL_DLX = stock_$(basename $(1))
 EXPAND_ONE_STOCK_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_STOCK_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
@@ -362,7 +362,7 @@ $(K2_TARGET_FULL_SPEC): $(CHECK_HAL) $(BUILTIN_KERNEL_DRIVER_DLX) $(BUILT_IMAGE_
 	@-if not exist $(subst /,\,$(K2_TARGET_EFI_PATH)) md $(subst /,\,$(K2_TARGET_EFI_PATH))
 	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
 	@echo -------- Creating IMAGE $@ --------
-	@copy /Y $(subst /,\,$(K2_ROOT)/src/os/boot/*) $(subst /,\,$(K2_TARGET_EFI_PATH)) 1>NUL
+	@copy /Y $(subst /,\,$(K2_ROOT)/src/$(K2_OS)/boot/*) $(subst /,\,$(K2_TARGET_EFI_PATH)) 1>NUL
 	@k2zipper $(subst /,\,$(K2_TARGET_BUILTIN_PATH)) $(subst /,\,$@)
 
 endif

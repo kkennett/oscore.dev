@@ -11,11 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\os\lib\k2vmap32\vmap32.c" />
-    <ClCompile Include="..\..\..\os\lib\k2vmap32\vmdump.c" />
+    <ClCompile Include="..\..\..\os1\lib\k2vmap32\vmap32.c" />
+    <ClCompile Include="..\..\..\os1\lib\k2vmap32\vmdump.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\os\inc\lib\k2vmap32.h" />
+    <ClInclude Include="..\..\..\os1\inc\lib\k2vmap32.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>k2vmap32</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>os1_k2vmap32</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -74,6 +75,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>$(K2_ROOT)\src\shared\inc;$(K2_ROOT)\src\os1\inc</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
