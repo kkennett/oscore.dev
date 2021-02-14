@@ -628,12 +628,12 @@ struct SKSystem
     }
 };
 
-#define IPC_CHANNEL_CONSUMER_ACTIVE_FLAG    0x80000000
-#define IPC_CHANNEL_COUNT_MASK              0x7FFFFFFF
+#define IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG    0x80000000
+#define IPC_ENDPOINT_COUNT_MASK              0x7FFFFFFF
 
-struct SKIpcChannel
+struct SKIpcEndpoint
 {
-    SKIpcChannel(SKSystem *apSystem) : mpSystem(apSystem)
+    SKIpcEndpoint(SKSystem *apSystem) : mpSystem(apSystem)
     {
         mEntryBytes = 0;
         mEntryCount = 0;
@@ -677,12 +677,45 @@ struct SKIpcChannel
     {
         DWORD bufferBytes;
 
-        K2_ASSERT(aEntryCount >= 2);    // 1 entry wont work with this scheme
+#if 0
+        // for single entry (aEntryCount==1), only four maps are necessary
+        // 1 - the shared owner array page containing one control variable RW in producer space
+        // 2 - the shared owner array page containing one control variable RW in consumer space
+        // 3 - the data RW in producer space
+        // 4 - the data RO in consumer space 
+        0 - empty -> 1 by producer 
+        1 - producer captured but not filled -> 3 by producer, if consumer not active notify consumer
+        2 - consumer captured but not emptied -> 0 by consumer
+        3 - producer captured and full -> 2 by consumer
+
+        // for everything else (aEntryCount > 1), we need:
+        - pages for ownermap array - 1 bit per entry.  more than one page
+            would mean that there is more than 4096 * 8 entries (32k entries).
+            unlikely and should limit anyway to this maximum.  so make it
+            one page
+            - RW mapping for consumer
+            - RW mapping for producer
+        - page for producer count
+            - RO mapping for consumer (debug)
+            - RW mapping for producer
+        - page for consumer count
+            - RW mapping for consumer
+            - RO mapping for producer
+        - pages for payload 
+            - RO mapping for consumer 
+            - RW mapping for producer 
+        - total 4 physical allocations (1, 1, 1, N)
+        - total 8 mappings 
+#endif
+
+
+        K2_ASSERT(aEntryCount >= 2);        // 1 entry wont work with this scheme
+        K2_ASSERT(aEntryCount < 4096 * 8);  // maximum # of bits in a page of memory
 
         mpConsumerNotify = new SKNotify(mpSystem);
         if (NULL == mpConsumerNotify)
         {
-            printf("Failed to create Notify for IpcChannel\n");
+            printf("Failed to create Notify for IpcEndpoint\n");
             ExitProcess(__LINE__);
         }
 
@@ -698,7 +731,7 @@ struct SKIpcChannel
             printf("Failed to map consumer mapping\n");
             ExitProcess(__LINE__);
         }
-        *mpConsumerCountAndActiveFlag = IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+        *mpConsumerCountAndActiveFlag = IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG;
         mpProducerRoViewOfConsumerCountAndActiveFlag = (UINT32 volatile *)MapViewOfFile(mhWin32ConsumerMappingObj, FILE_MAP_READ, 0, 0, 0);
         if (NULL == mpProducerRoViewOfConsumerCountAndActiveFlag)
         {
@@ -729,13 +762,13 @@ struct SKIpcChannel
         mhWin32BufferMappingObj = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, bufferBytes, NULL);
         if (NULL == mhWin32BufferMappingObj)
         {
-            printf("Failed to create file mapping for IpcChannel\n");
+            printf("Failed to create file mapping for IpcEndpoint\n");
             ExitProcess(__LINE__);
         }
         mpProducerRwViewOfBuffer = (UINT8 volatile *)MapViewOfFile(mhWin32BufferMappingObj, FILE_MAP_WRITE, 0, 0, 0);
         if (NULL == mpProducerRwViewOfBuffer)
         {
-            printf("Failed to map IpcChannel buffer RW\n");
+            printf("Failed to map IpcEndpoint buffer RW\n");
             ExitProcess(__LINE__);
         }
         K2MEM_Zero((void *)mpProducerRwViewOfBuffer, bufferBytes);
@@ -743,7 +776,7 @@ struct SKIpcChannel
         mpConsumerRoViewOfBuffer = (UINT8 volatile *)MapViewOfFile(mhWin32BufferMappingObj, FILE_MAP_READ, 0, 0, 0);
         if (NULL == mpConsumerRoViewOfBuffer)
         {
-            printf("Failed to map IpcChannel buffer RO\n");
+            printf("Failed to map IpcEndpoint buffer RO\n");
             ExitProcess(__LINE__);
         }
 
@@ -828,15 +861,15 @@ struct SKIpcChannel
         do
         {
             slotIndex = *mpConsumerCountAndActiveFlag;
-            wordIndex = (slotIndex & IPC_CHANNEL_COUNT_MASK) >> 5;
+            wordIndex = (slotIndex & IPC_ENDPOINT_COUNT_MASK) >> 5;
             bitIndex = slotIndex & 0x1F;
 
             if (0 != (mpSharedOwnerMaskArray[wordIndex] & (1 << bitIndex)))
             {
-                exchangeVal = (slotIndex & IPC_CHANNEL_COUNT_MASK) + 1;
+                exchangeVal = (slotIndex & IPC_ENDPOINT_COUNT_MASK) + 1;
                 if (exchangeVal == mEntryCount)
                     exchangeVal = 0;
-                exchangeVal |= IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                exchangeVal |= IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG;
                 valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
                 if (valResult == slotIndex)
                     break;
@@ -847,9 +880,9 @@ struct SKIpcChannel
                 //
                 // next slot is empty, so nothing to consume.  we may need to block this thread
                 //
-                if (slotIndex & IPC_CHANNEL_CONSUMER_ACTIVE_FLAG)
+                if (slotIndex & IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG)
                 {
-                    exchangeVal = slotIndex & ~IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                    exchangeVal = slotIndex & ~IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG;
                     valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
                     if (valResult == slotIndex)
                     {
@@ -865,14 +898,14 @@ struct SKIpcChannel
                             do
                             {
                                 slotIndex = *mpConsumerCountAndActiveFlag;
-                                if (slotIndex & IPC_CHANNEL_CONSUMER_ACTIVE_FLAG)
+                                if (slotIndex & IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG)
                                 {
                                     //
                                     // somebody else set the active flag so we can stop trying to do that
                                     //
                                     break;
                                 }
-                                exchangeVal = slotIndex | IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+                                exchangeVal = slotIndex | IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG;
                                 valResult = InterlockedCompareExchange(mpConsumerCountAndActiveFlag, exchangeVal, slotIndex);
                             } while (valResult != slotIndex);
 
@@ -911,7 +944,7 @@ struct SKIpcChannel
 
         } while (true);
 
-        slotIndex &= ~IPC_CHANNEL_CONSUMER_ACTIVE_FLAG;
+        slotIndex &= ~IPC_ENDPOINT_CONSUMER_ACTIVE_FLAG;
 
         *apRetKey = slotIndex;
 
