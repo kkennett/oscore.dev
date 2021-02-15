@@ -32,46 +32,19 @@
 
 #include "x32kern.h"
 
-BOOL
-K2_CALLCONV_REGS
+BOOL K2_CALLCONV_REGS 
 K2OSKERN_SetIntr(
     BOOL aEnable
 )
 {
-    return !X32_SetCoreInterruptMask(!aEnable);
+    return FALSE;
 }
 
-BOOL
-K2_CALLCONV_REGS
+BOOL K2_CALLCONV_REGS   
 K2OSKERN_GetIntr(
     void
-    )
+)
 {
-    return X32_GetCoreInterruptMask() ? FALSE : TRUE;
-}
-
-void KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx)
-{
-    UINT32 reg;
-
-    /* wait for pending send bit to clear */
-    do {
-        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32);
-    } while (reg & (1 << 12));
-
-    /* set target CPUs to send to */
-    if (!aSendToSpecific)
-    {
-        /* set mask */
-        reg = (1 << gData.mCpuCount) - 1;
-        reg &= ~(1 << aCurCoreIx);
-    }
-    else
-        reg = 1 << aTargetCpuIx;
-    reg <<= 24;
-
-    /* send to logical CPU interrupt X32KERN_VECTOR_ICI_BASE + my Index */
-    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_HIGH32, reg);
-    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_LOGICAL | X32_LOCAPIC_ICR_LOW_MODE_FIXED | (X32KERN_VECTOR_ICI_BASE + aCurCoreIx));
+    return FALSE;
 }
 

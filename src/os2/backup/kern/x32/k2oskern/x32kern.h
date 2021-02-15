@@ -37,6 +37,7 @@
 #include "x32kerndef.inc"
 #include <spec/x32pcdef.inc>
 
+
 /* --------------------------------------------------------------------------------- */
 
 K2_STATIC_ASSERT(K2OS_KVA_X32_ARCHSPEC_END <= (K2OS_KVA_ARCHSPEC_BASE + K2OS_KVA_ARCHSPEC_SIZE));

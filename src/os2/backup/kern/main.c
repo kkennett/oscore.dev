@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,19 +28,34 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0xFFF01000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) }
-  . = ALIGN(4096);
-  __data_end = .;
+//
+
+#include "kern.h"
+
+//
+// global
+//
+KERN_DATA               gData;
+K2_pf_ASSERT            K2_Assert = KernEx_Assert;
+K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount = KernEx_TrapMount;
+K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount = KernEx_TrapDismount;
+K2_pf_RAISE_EXCEPTION   K2_RaiseException = KernEx_RaiseException;
+
+void K2_CALLCONV_REGS __attribute__((noreturn)) 
+Kern_Main(
+    K2OS_UEFI_LOADINFO const *apLoadInfo
+    )
+{
+    K2MEM_Zero(&gData, sizeof(KERN_DATA));
+
+    K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
+
+    K2OSKERN_SeqIntrInit(&gData.DebugSeqLock);
+
+    K2OSKERN_Debug("Kern_Main()\n");
+
+    while (1);
+
+
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+

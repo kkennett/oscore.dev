@@ -29,12 +29,12 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <k2asmx32.inc>
-#include <k2osdefs.inc>
+
+#include "x32kernasm.inc"
 
 /* --------------------------------------------------------------------------------- */
 
-.extern X32Kern_C_Entry
+.extern Kern_Main
 
 BEGIN_X32_PROC(X32Kern_EntryPoint)
 
@@ -49,7 +49,7 @@ BEGIN_X32_PROC(X32Kern_EntryPoint)
     //
     // leave ecx as address of transition page's copy of the load info
     // and jump into the C code
-    jmp X32Kern_C_Entry
+    jmp Kern_Main
            
 END_X32_PROC(X32Kern_EntryPoint)
 

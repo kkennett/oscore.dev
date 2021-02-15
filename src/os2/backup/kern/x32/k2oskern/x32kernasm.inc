@@ -30,52 +30,17 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#ifndef __X32KERNASM_INC
+#define __X32KERNASM_INC
 
-static 
-void 
-K2_CALLCONV_REGS 
-sPreKernelAssert(
-    char const *    apFile, 
-    int             aLineNum, 
-    char const *    apCondition
-)
-{
-    while (1);
-}
-K2_pf_ASSERT            K2_Assert = sPreKernelAssert;
-K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount = NULL;
-K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount = NULL;
-K2_pf_RAISE_EXCEPTION   K2_RaiseException = NULL;
+#include <k2asmx32.inc>
+#include <spec/x32pcdef.inc>
+#include "x32kerndef.inc"
 
-void KernInit_Stage(KernInitStage aStage)
-{
-    gData.mKernInitStage = aStage;
+/* --------------------------------------------------------------------------------- */
 
-    // init latched modules
-    KernInit_Arch();
 
-}
 
-static void sInit(void)
-{
-    KernInitStage initStage;
-    for (initStage = KernInitStage_dlx_entry + 1; initStage < KernInitStage_Threaded; initStage++)
-    {
-        KernInit_Stage(initStage);
-    }
-}
+/* --------------------------------------------------------------------------------- */
 
-void K2_CALLCONV_REGS KernExec(void)
-{
-    sInit();
-
-    // should never return
-    K2OSKERN_Debug("Launch Cores...\n");
-    KernArch_LaunchCores();
-
-    // must never return
-    K2OSKERN_Debug("Init end - HANG\n");
-    while (1);
-}
-
+#endif // __X32KERNASM_INC

@@ -1,4 +1,4 @@
-//   
+/*
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,16 +28,32 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-#include "x32kern.h"
+*/
+#include <k2asmx32.inc>
+#include <k2osdefs.inc>
 
-void
-K2_CALLCONV_REGS
-X32Kern_C_Entry(
-    K2OS_UEFI_LOADINFO const *apLoadInfo
-    )
-{
-    dlx_entry((DLX *)apLoadInfo, 0);
+/* --------------------------------------------------------------------------------- */
 
-    while (1);
-}
+.extern Kern_Main
+
+BEGIN_X32_PROC(X32Kern_EntryPoint)
+
+    // set startup stack to be core zero's stack
+    mov %esp, K2OS_KVA_CORE0_STACK_INIT
+
+    // double terminate the stack
+    mov dword ptr [%esp], 0
+    sub %esp, 4
+    mov dword ptr [%esp], 0
+
+    //
+    // leave ecx as address of transition page's copy of the load info
+    // and jump into the C code
+    jmp Kern_Main
+           
+END_X32_PROC(X32Kern_EntryPoint)
+
+/* --------------------------------------------------------------------------------- */
+
+    .end
+

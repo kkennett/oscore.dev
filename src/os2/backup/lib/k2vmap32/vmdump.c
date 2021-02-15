@@ -30,45 +30,73 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include <lib/k2vmap32.h>
 
-void 
-K2_CALLCONV_REGS 
-KernEx_Assert(
-    char const *    apFile,
-    int             aLineNum,
-    char const *    apCondition
+void
+K2VMAP32_Dump(
+    K2VMAP32_CONTEXT *  apContext,
+    pfK2VMAP32_Dump     afDump,
+    UINT32              aStartVirt,
+    UINT32              aEndVirt
     )
 {
-    K2OSKERN_Panic("***KERNEL ASSERT:\nLocation: %s(%d)\nFALSE ==> %s\n", apFile, aLineNum, apCondition);
-    while (1);
+    UINT32      pdeIx;
+    UINT32      pde;
+    UINT32 *    pPT;
+    UINT32      pte;
+    UINT32      pteIx;
+    UINT32      pdeFlagPresent;
+    UINT32      pteFlagPresent;
+
+    if (apContext->mFlags & K2VMAP32_FLAG_REALIZED)
+    {
+#if K2_TARGET_ARCH_IS_ARM
+        pdeFlagPresent = A32_TTBE_PT_PRESENT;
+        pteFlagPresent = A32_PTE_PRESENT;
+#else
+        pdeFlagPresent = X32_PDE_PRESENT;
+        pteFlagPresent = X32_PTE_PRESENT;
+#endif
+    }
+    else
+    {
+        pdeFlagPresent = K2VMAP32_FLAG_PRESENT;
+        pteFlagPresent = K2VMAP32_FLAG_PRESENT;
+    }
+
+    pdeIx = aStartVirt / K2_VA32_PAGETABLE_MAP_BYTES;
+
+    pteIx = (aStartVirt - (pdeIx * K2_VA32_PAGETABLE_MAP_BYTES)) / K2_VA32_MEMPAGE_BYTES;
+
+    do
+    {
+        pde = K2VMAP32_ReadPDE(apContext, pdeIx);
+
+        if ((pde & pdeFlagPresent) != 0)
+        {
+            afDump(TRUE, pdeIx * K2_VA32_PAGETABLE_MAP_BYTES, pde);
+
+            pPT = (UINT32 *)(pde & K2VMAP32_PAGEPHYS_MASK);
+
+            do
+            {
+                pte = pPT[pteIx];
+                if ((pte & pteFlagPresent) != 0)
+                    afDump(FALSE, aStartVirt, pte);
+
+                aStartVirt += K2_VA32_MEMPAGE_BYTES;
+
+                pteIx++;
+
+            } while ((pteIx < K2_VA32_ENTRIES_PER_PAGETABLE) && (aStartVirt < aEndVirt));
+
+            pteIx = 0;
+        }
+        else
+            aStartVirt += K2_VA32_PAGETABLE_MAP_BYTES;
+
+        pdeIx++;
+
+    } while ((pdeIx < K2_VA32_ENTRIES_PER_PAGETABLE) && (aStartVirt < aEndVirt));
 }
 
-BOOL K2_CALLCONV_REGS 
-KernEx_TrapMount(
-    K2_EXCEPTION_TRAP *apTrap
-)
-{
-    // always return FALSE as there is no trap handling inside the kernel
-    return FALSE;
-}
-
-K2STAT 
-K2_CALLCONV_REGS 
-KernEx_TrapDismount(
-    K2_EXCEPTION_TRAP *apTrap
-    )
-{
-    // there is no trap handling inside the kernel, so if this is called there was no exception
-    return K2STAT_NO_ERROR;
-}
-
-void   
-K2_CALLCONV_REGS 
-KernEx_RaiseException(
-    K2STAT aExceptionCode
-)
-{
-    K2OSKERN_Panic("***KERNEL EXCEPTION: %08X\n", aExceptionCode);
-    while (1);
-}

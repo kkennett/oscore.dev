@@ -55,145 +55,14 @@ typedef struct _K2OSKERN_SEQLOCK K2OSKERN_SEQLOCK;
 //------------------------------------------------------------------------
 //
 
-typedef
-UINT32
-(*K2OSKERN_pf_Debug)(
-    char const *apFormat,
-    ...
-);
-
-UINT32
-K2OSKERN_Debug(
-    char const *apFormat,
-    ...
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef
-void
-(*K2OSKERN_pf_Panic)(
-    char const *apFormat,
-    ...
-);
-
-void
-K2OSKERN_Panic(
-    char const *apFormat,
-    ...
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef
-void
-(K2_CALLCONV_REGS *K2OSKERN_pf_MicroStall)(
-    UINT32      aMicroseconds
-    );
-
-void
-K2_CALLCONV_REGS
-K2OSKERN_MicroStall(
-    UINT32      aMicroseconds
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef
-BOOL
-(K2_CALLCONV_REGS *K2OSKERN_pf_SetIntr)(
-    BOOL aEnable
-);
-
-BOOL
-K2_CALLCONV_REGS
-K2OSKERN_SetIntr(
-    BOOL aEnable
-);
-
-typedef
-BOOL
-(K2_CALLCONV_REGS *K2OSKERN_pf_GetIntr)(
-    void
-    );
-
-BOOL
-K2_CALLCONV_REGS
-K2OSKERN_GetIntr(
-    void
-    );
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef
-void
-(K2_CALLCONV_REGS *K2OSKERN_pf_SeqIntrInit)(
-    K2OSKERN_SEQLOCK *  apLock
-);
-
-void
-K2_CALLCONV_REGS
-K2OSKERN_SeqIntrInit(
-    K2OSKERN_SEQLOCK *  apLock
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef 
-BOOL
-(K2_CALLCONV_REGS *K2OSKERN_pf_SeqIntrLock)(
-    K2OSKERN_SEQLOCK *  apLock
-);
-
-BOOL
-K2_CALLCONV_REGS
-K2OSKERN_SeqIntrLock(
-    K2OSKERN_SEQLOCK *  apLock
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef 
-void
-(K2_CALLCONV_REGS *K2OSKERN_pf_SeqIntrUnlock)(
-    K2OSKERN_SEQLOCK *  apLock,
-    BOOL                aDisp
-);
-
-void
-K2_CALLCONV_REGS
-K2OSKERN_SeqIntrUnlock(
-    K2OSKERN_SEQLOCK *  apLock,
-    BOOL                aDisp
-);
-
-//
-//------------------------------------------------------------------------
-//
-
-typedef 
-UINT32
-(K2_CALLCONV_REGS *K2OSKERN_pf_GetCpuIndex)(
-    void
-);
-
-UINT32
-K2_CALLCONV_REGS
-K2OSKERN_GetCpuIndex(
-    void
-);
+UINT32                  K2OSKERN_Debug(char const *apFormat, ...);
+void                    K2OSKERN_Panic(char const *apFormat, ...);
+BOOL K2_CALLCONV_REGS   K2OSKERN_SetIntr(BOOL aEnable);
+BOOL K2_CALLCONV_REGS   K2OSKERN_GetIntr(void);
+void K2_CALLCONV_REGS   K2OSKERN_SeqIntrInit(K2OSKERN_SEQLOCK * apLock);
+BOOL K2_CALLCONV_REGS   K2OSKERN_SeqIntrLock(K2OSKERN_SEQLOCK * apLock);
+void K2_CALLCONV_REGS   K2OSKERN_SeqIntrUnlock(K2OSKERN_SEQLOCK *apLock, BOOL aDisp);
+UINT32 K2_CALLCONV_REGS K2OSKERN_GetCpuIndex(void);
 
 //
 //------------------------------------------------------------------------
@@ -216,9 +85,6 @@ struct _K2OSKERN_IRQ_CONFIG
 };
 typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
 
-//
-// calling convention must match ACPI_SYSTEM_XFACE
-//
 typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
 
 //

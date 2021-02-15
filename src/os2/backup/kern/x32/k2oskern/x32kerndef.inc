@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,19 +28,17 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0xFFF01000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) }
-  . = ALIGN(4096);
-  __data_end = .;
-}
-__ctors_count = SIZEOF(.ctors) / 4;
+//
+
+#ifndef __X32KERNDEF_INC
+#define __X32KERNDEF_INC
+
+#include "../../kerndef.inc"
+
+/* --------------------------------------------------------------------------------- */
+
+#define X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT   (14 * 4)
+
+/* --------------------------------------------------------------------------------- */
+
+#endif // __X32KERNDEF_INC

@@ -29,53 +29,15 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include "x32kern.h"
 
-#include "kern.h"
-
-//
-// global
-//
-KERN_DATA gData;
-
-//
-// dlx_entry needs to call this.  all other calls are in init.c
-//
-void KernInit_Stage(KernInitStage aStage);
-
-
-K2STAT 
-K2_CALLCONV_REGS 
-dlx_entry(
-    DLX *   apDlx,
-    UINT32  aReason
+void
+K2_CALLCONV_REGS
+X32Kern_C_Entry(
+    K2OS_UEFI_LOADINFO const *apLoadInfo
     )
 {
-    K2MEM_Zero(&gData, sizeof(KERN_DATA));
+    Kern_Main((DLX *)apLoadInfo);
 
-    gData.mpShared = (K2OSKERN_SHARED *)aReason;
-
-    K2OSKERN_SeqIntrInit(&gData.DebugSeqLock);
-
-    gData.mCpuCount = gData.mpShared->LoadInfo.mCpuCoreCount;
-
-    gData.mpShared->FuncTab.Exec = KernExec;
-
-    gData.mpShared->FuncTab.Debug = K2OSKERN_Debug;
-    gData.mpShared->FuncTab.Panic = K2OSKERN_Panic;
-    gData.mpShared->FuncTab.SetIntr = K2OSKERN_SetIntr;
-    gData.mpShared->FuncTab.GetIntr = K2OSKERN_GetIntr;
-    gData.mpShared->FuncTab.MicroStall = K2OSKERN_MicroStall;
-    gData.mpShared->FuncTab.SeqIntrInit = K2OSKERN_SeqIntrInit;
-    gData.mpShared->FuncTab.SeqIntrLock = K2OSKERN_SeqIntrLock;
-    gData.mpShared->FuncTab.SeqIntrUnlock = K2OSKERN_SeqIntrUnlock;
-    gData.mpShared->FuncTab.GetCpuIndex = K2OSKERN_GetCpuIndex;
-
-    gData.mpShared->FuncTab.Assert = KernEx_Assert;
-    gData.mpShared->FuncTab.ExTrap_Mount = KernEx_TrapMount;
-    gData.mpShared->FuncTab.ExTrap_Dismount = KernEx_TrapDismount;
-
-    KernInit_Stage(KernInitStage_dlx_entry);
-
-    return 0;
+    while (1);
 }
-

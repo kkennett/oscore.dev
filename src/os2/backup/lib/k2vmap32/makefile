@@ -33,15 +33,9 @@
 include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
 TARGET_TYPE = LIB
-K2_KERNEL := TRUE
 
-SOURCES += main.c
-SOURCES += exception.c
-SOURCES += seqlock.c
-SOURCES += debug.c
-SOURCES += panic.c
-
-#SOURCES += map.c
+SOURCES += vmap32.c
+SOURCES += vmdump.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

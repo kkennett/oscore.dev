@@ -70,37 +70,33 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
+typedef struct _K2OS_UEFI_LOADINFO K2OS_UEFI_LOADINFO;
+
+typedef
+void
+(K2_CALLCONV_REGS *K2OSKERN_EntryPoint)(
+    K2OS_UEFI_LOADINFO const *apLoadInfo
+    );
 
 //
 // this data comes in halfway into the
 // transition page between UEFI and the kernel
 //
-typedef struct _K2OS_UEFI_LOADINFO K2OS_UEFI_LOADINFO;
 struct _K2OS_UEFI_LOADINFO
 {
     UINT32                  mMarker;
-
+    UINT32                  mCpuCoreCount;
     K2EFI_SYSTEM_TABLE *    mpEFIST;
-
-    DLX_pf_ENTRYPOINT       mSystemVirtualEntrypoint;
-    DLX_pf_ENTRYPOINT       mKernDlxEntry;
-
+    UINT32                  mKernSizeBytes;
+    K2OSKERN_EntryPoint     mKernEntryPoint;
     UINT32                  mBuiltinRofsPhys;
-
-    DLX *                   mpDlxCrt;
-
     UINT32                  mTransBasePhys;
-
     UINT32                  mZeroPagePhys;
     UINT32                  mTransitionPageAddr;
     UINT32                  mDebugPageVirt;
-
     UINT32                  mEfiMapSize;
     UINT32                  mEfiMemDescSize;
     UINT32                  mEfiMemDescVer;
-
-    UINT32                  mCpuCoreCount;
-
     UINT32                  mFwTabPagesPhys;
     UINT32                  mFwTabPagesVirt;
     UINT32                  mFwTabPageCount;

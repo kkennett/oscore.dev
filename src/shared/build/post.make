@@ -102,7 +102,10 @@ GCCOPT     += -c -nostdinc -fno-common -Wall -I $(K2_ROOT)/src/shared/inc
 GCCOPT_S   += 
 GCCOPT_C   += 
 GCCOPT_CPP += 
-LDOPT      += -q -static -nostdlib --no-define-common --no-undefined
+LDOPT      += -nostdlib
+LDOPT      += -static
+LDOPT      += --no-define-common 
+LDOPT      += --no-undefined
 LDENTRY    ?= -e __entry
 
 BUILD_CONTROL_FILES = makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
@@ -212,8 +215,8 @@ endif
 $(K2_TARGET_FULL_SPEC): $(OBJECTS) $(LIBRARIES) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_OBJECT_PATH)) md $(subst /,\,$(K2_OBJECT_PATH))
-	echo -------- Linking ELF $@ --------
-	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
+	@echo -------- Linking ELF $@ --------
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
 
 endif
 
@@ -232,6 +235,7 @@ ifeq ($(DLX_STACK),)
 DLX_STACK := 0
 endif
 
+LDOPT += -q 
 LDOPT += --script $(K2_ROOT)/src/shared/build/gcc_link.l
 
 ifeq ($(basename $(K2_TARGET_NAME)),k2oscrt)

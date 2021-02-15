@@ -32,16 +32,52 @@
 
 include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_TYPE = LIB
+TARGET_TYPE = ELF
+
+TARGET_SPECIFIC_ARCH = X32
+
 K2_KERNEL := TRUE
 
-SOURCES += main.c
-SOURCES += exception.c
-SOURCES += seqlock.c
-SOURCES += debug.c
-SOURCES += panic.c
+LINKER_SCRIPT := $(K2_ROOT)/src/$(K2_OS)/kern/kern_link.l
+LDENTRY := -e X32Kern_EntryPoint
 
-#SOURCES += map.c
+#SOURCES += x32kern.c
+
+#SOURCES += x32coreix.c
+
+#SOURCES += x32gdt.c
+#SOURCES += x32gdtasm.s
+
+#SOURCES += x32idt.c
+#SOURCES += x32idtasm.s
+
+#SOURCES += x32intr.c 
+#SOURCES += x32intrasm.s
+#SOURCES += x32intrhand.c
+#SOURCES += x32devintr.c
+
+#SOURCES += x32tss.c
+
+#SOURCES += x32kernex.c
+
+#SOURCES += x32map.c
+
+#SOURCES += x32cpu.c
+#SOURCES += x32cpuasm.s
+
+#SOURCES += x32stall.c
+
+SOURCES += x32entryasm.s 
+
+STATIC_LIBS += @shared/lib/k2archx32
+STATIC_LIBS += @shared/lib/k2mem
+STATIC_LIBS += @shared/lib/k2asc
+STATIC_LIBS += @shared/lib/k2list
+STATIC_LIBS += @shared/lib/k2tree
+STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2crc
+
+STATIC_KERNEL_LIBS += @$(K2_OS)/kern
 
 include $(K2_ROOT)/src/shared/build/post.make
 

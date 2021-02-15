@@ -30,7 +30,7 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 SECTIONS { 
-  . = 0xFFF01000;
+  . = 0x80001000;
   .text : { *(.text) *(.text.*) }
   . = ALIGN(4096);
   .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
@@ -38,7 +38,6 @@ SECTIONS {
   .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
   . = ALIGN(4096);
   .data : { *(.data) *(.data.*) }
-  __bss_begin = .;
   .bss :  { *(.bss) *(.bss.*) }
   . = ALIGN(4096);
   __data_end = .;

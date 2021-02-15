@@ -34,6 +34,7 @@
 #define __X32KERNASM_INC
 
 #include <k2asmx32.inc>
+#include <k2osdefs.inc>
 #include <spec/x32pcdef.inc>
 #include "x32kerndef.inc"
 

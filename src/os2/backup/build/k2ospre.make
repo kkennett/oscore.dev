@@ -30,18 +30,7 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
+GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
 
-TARGET_TYPE = LIB
-K2_KERNEL := TRUE
-
-SOURCES += main.c
-SOURCES += exception.c
-SOURCES += seqlock.c
-SOURCES += debug.c
-SOURCES += panic.c
-
-#SOURCES += map.c
-
-include $(K2_ROOT)/src/shared/build/post.make
+include $(K2_ROOT)/src/shared/build/pre.make
 

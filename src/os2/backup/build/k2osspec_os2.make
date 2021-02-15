@@ -30,18 +30,12 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
+#========================================================================================
+# TARGET_TYPE == IMAGE
+#========================================================================================
+ifeq ($(TARGET_TYPE),IMAGE)
 
-TARGET_TYPE = LIB
-K2_KERNEL := TRUE
+$(error No image type supported yet)
 
-SOURCES += main.c
-SOURCES += exception.c
-SOURCES += seqlock.c
-SOURCES += debug.c
-SOURCES += panic.c
-
-#SOURCES += map.c
-
-include $(K2_ROOT)/src/shared/build/post.make
+endif
 

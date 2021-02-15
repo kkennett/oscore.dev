@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,19 +28,22 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0xFFF01000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) }
-  . = ALIGN(4096);
-  __data_end = .;
+//
+
+#include "x32kern.h"
+
+void K2_CALLCONV_REGS 
+K2OSHAL_DebugOut(
+    UINT8 aByte
+)
+{
+
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+
+void K2_CALLCONV_REGS 
+K2OSHAL_MicroStall(
+    UINT32 aMicroseconds
+)
+{
+
+}

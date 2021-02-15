@@ -42,29 +42,8 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
-typedef
-void
-(K2_CALLCONV_REGS *K2OSHAL_pf_DebugOut)(
-    UINT8 aByte
-    );
-
-void
-K2_CALLCONV_REGS
-K2OSHAL_DebugOut(
-    UINT8 aByte
-);
-
-typedef
-BOOL
-(K2_CALLCONV_REGS *K2OSHAL_pf_DebugIn)(
-    UINT8 *apRetData
-    );
-
-BOOL
-K2_CALLCONV_REGS
-K2OSHAL_DebugIn(
-    UINT8 *apRetData
-);
+void K2_CALLCONV_REGS K2OSHAL_DebugOut(UINT8 aByte);
+void K2_CALLCONV_REGS K2OSHAL_MicroStall(UINT32 aMicroseconds);
 
 //
 //------------------------------------------------------------------------

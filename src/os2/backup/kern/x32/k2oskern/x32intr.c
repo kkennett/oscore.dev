@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,19 +28,50 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0xFFF01000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) }
-  . = ALIGN(4096);
-  __data_end = .;
+//
+
+#include "x32kern.h"
+
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_SetIntr(
+    BOOL aEnable
+)
+{
+    return !X32_SetCoreInterruptMask(!aEnable);
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_GetIntr(
+    void
+    )
+{
+    return X32_GetCoreInterruptMask() ? FALSE : TRUE;
+}
+
+void KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx)
+{
+    UINT32 reg;
+
+    /* wait for pending send bit to clear */
+    do {
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32);
+    } while (reg & (1 << 12));
+
+    /* set target CPUs to send to */
+    if (!aSendToSpecific)
+    {
+        /* set mask */
+        reg = (1 << gData.mCpuCount) - 1;
+        reg &= ~(1 << aCurCoreIx);
+    }
+    else
+        reg = 1 << aTargetCpuIx;
+    reg <<= 24;
+
+    /* send to logical CPU interrupt X32KERN_VECTOR_ICI_BASE + my Index */
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_HIGH32, reg);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_LOGICAL | X32_LOCAPIC_ICR_LOW_MODE_FIXED | (X32KERN_VECTOR_ICI_BASE + aCurCoreIx));
+}
+
