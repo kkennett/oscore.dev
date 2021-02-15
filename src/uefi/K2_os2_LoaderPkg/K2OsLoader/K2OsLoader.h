@@ -62,43 +62,17 @@
 
 #endif
 
-typedef struct _EFIDLX EFIDLX;
-struct _EFIDLX
-{
-    UINTN               mEfiDlxBytes;
-    UINTN               mFirstNonLink;
-    K2DLXSUPP_SEGALLOC  SegAlloc;
-    DLX_INFO            Info;
-    // must be last thing in structure as it is vairable length
-};
-
-#define MAX_EFI_FILE_NAME_LEN 64
-
-typedef struct _EFIFILE EFIFILE;
-struct _EFIFILE
-{
-    K2LIST_LINK             ListLink;  // must be first thing in structure
-    EFI_PHYSICAL_ADDRESS    mPageAddr_Phys;
-    UINTN                   mPageAddr_Virt;
-    EFI_FILE_PROTOCOL *     mpProt;
-    EFI_FILE_INFO *         mpFileInfo;
-    UINT64                  mCurPos;
-    char                    mFileName[MAX_EFI_FILE_NAME_LEN];
-    EFIDLX *                mpDlx;
-};
-
 typedef struct _LOADER_DATA LOADER_DATA;
 struct _LOADER_DATA
 {
     EFI_HANDLE										mLoaderImageHandle;
-    K2LIST_ANCHOR									EfiFileList;
-    EFI_PHYSICAL_ADDRESS							mLoaderPagePhys;
     K2VMAP32_CONTEXT								Map;
     EFI_MEMORY_DESCRIPTOR *							mpMemoryMap;
     UINTN											mMemMapKey;
     K2OS_UEFI_LOADINFO								LoadInfo;           // this is copied to transition page
     SMBIOS_STRUCTURE_POINTER *                      mpSmbios;
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  * mpAcpi;
+    UINT32                                          mKernElfPhys;
     UINT32                                          mKernArenaLow;
     UINT32                                          mKernArenaHigh;
     UINT32                                          mPreRuntimeHigh;
@@ -106,33 +80,24 @@ struct _LOADER_DATA
 
 extern LOADER_DATA gData;
 
-EFI_STATUS  sysDLX_Init(IN EFI_HANDLE ImageHandle);
-void        sysDLX_Done(void);
-K2STAT      sysDLX_CritSec(BOOL aEnter);
-K2STAT      sysDLX_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
-K2STAT      sysDLX_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-K2STAT      sysDLX_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-BOOL        sysDLX_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
-K2STAT      sysDLX_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
-K2STAT      sysDLX_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
-K2STAT      sysDLX_Purge(K2DLXSUPP_HOST_FILE aHostFile);
-
-BOOL        sysDLX_ConvertLoadPtr(UINT32 * apAddr);
+UINTN       K2Printf(CHAR16 const * apFormat, ...);
 
 EFI_STATUS  Loader_InitArch(void);
 void        Loader_DoneArch(void);
 
 EFI_STATUS  Loader_FillCpuInfo(void);
-EFI_STATUS  Loader_UpdateMemoryMap(void);
-K2STAT      Loader_CreateVirtualMap(void);
-K2STAT      Loader_MapAllDLX(void);
-K2STAT      Loader_TrackEfiMap(void);
-void        Loader_TransitionToKernel(void);
-K2STAT      Loader_AssignRuntimeVirtual(void);
-K2STAT      Loader_AssembleAcpi(void);
 
-void        DumpFile(CHAR16 const *apFileName, void *apData, UINTN aDataBytes);
+EFI_STATUS  Loader_CreateVirtualMap(void);
 
-UINTN       K2Printf(CHAR16 const * apFormat, ...);
+EFI_STATUS  Loader_MapKernelElf(void);
+
+//EFI_STATUS  Loader_UpdateMemoryMap(void);
+//K2STAT      Loader_TrackEfiMap(void);
+//void        Loader_TransitionToKernel(void);
+//K2STAT      Loader_AssignRuntimeVirtual(void);
+//K2STAT      Loader_AssembleAcpi(void);
+
+//void        DumpFile(CHAR16 const *apFileName, void *apData, UINTN aDataBytes);
+
 
 #endif /* __K2OSLOADER_H__ */

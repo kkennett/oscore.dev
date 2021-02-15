@@ -42,15 +42,16 @@
     K2OsLoader.c
     K2OsLoader.h
     k2stub.c
-    dlxsupp.c
-    dlxstub.c
-    transit.c
-    mapalldlx.c
     virtmap.c
-    trackefi.c
-    updatemap.c
+    kernelf.c
+
+#    dlxsupp.c
+#    dlxstub.c
+#    transit.c
+#    trackefi.c
+#    updatemap.c
     printf.c
-    asmacpi.c
+#    asmacpi.c
   
     DEFINE K2_ROOT            =   C:\repo\oscore.dev
     DEFINE K2_SHARED_LIB_SRC  =   $(K2_ROOT)/src/shared/lib
@@ -61,7 +62,6 @@
     DEFINE K2_ASCIILIB    =   $(K2_SHARED_LIB_SRC)/k2asc
     DEFINE K2_CRCLIB      =   $(K2_SHARED_LIB_SRC)/k2crc
     DEFINE K2_ELFLIB      =   $(K2_SHARED_LIB_SRC)/k2elf32
-    DEFINE K2_DLXSUPPLIB  =   $(K2_SHARED_LIB_SRC)/k2dlxsupp
 
     DEFINE K2_OS          =   $(K2_ROOT)/src/os2
     DEFINE K2_VMAPLIB     =   $(K2_OS)/lib/k2vmap32
@@ -129,24 +129,6 @@
     $(K2_TREELIB)\treefind.c
     $(K2_TREELIB)\treeinit.c
     $(K2_TREELIB)\treeremove.c
-
-    #
-    # DLX sources
-    #
-    $(K2_DLXSUPPLIB)\dlx_acquire.c
-    $(K2_DLXSUPPLIB)\dlx_addref.c
-    $(K2_DLXSUPPLIB)\dlx_addrname.c
-    $(K2_DLXSUPPLIB)\dlx_callback.c
-    $(K2_DLXSUPPLIB)\dlx_cleanup.c
-    $(K2_DLXSUPPLIB)\dlx_findcont.c
-    $(K2_DLXSUPPLIB)\dlx_findexp.c
-    $(K2_DLXSUPPLIB)\dlx_handoff.c
-    $(K2_DLXSUPPLIB)\dlx_init.c
-    $(K2_DLXSUPPLIB)\dlx_link.c
-    $(K2_DLXSUPPLIB)\dlx_loadseg.c
-    $(K2_DLXSUPPLIB)\dlx_release.c
-    $(K2_DLXSUPPLIB)\dlx_getinfo.c
-    $(K2_DLXSUPPLIB)\idlx.h
 
     #
     # VMAP32 sources

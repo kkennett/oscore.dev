@@ -68,21 +68,17 @@
 // "MemoryType values in the range 0x80000000..0xFFFFFFFF are reserved for use by UEFI OS loaders
 // that are provided by operating system vendors."
 //
-#define K2OS_EFIMEMTYPE_PAGING          0x80000000  //  page directory and page tables
-#define K2OS_EFIMEMTYPE_TEXT            0x80000001  //  dlx code
-#define K2OS_EFIMEMTYPE_READ            0x80000002  //  dlx read-only
-#define K2OS_EFIMEMTYPE_DATA            0x80000003  //  dlx read/write
-#define K2OS_EFIMEMTYPE_PROC1           0x80000004  //  process 1 default memory 
-#define K2OS_EFIMEMTYPE_DLX             0x80000005  //  loader DLX page
-#define K2OS_EFIMEMTYPE_LOADER          0x80000006  //  loader master page
-#define K2OS_EFIMEMTYPE_ZERO            0x80000007  //  one and only zero page
-#define K2OS_EFIMEMTYPE_CORES           0x80000008  //  one page per core
-#define K2OS_EFIMEMTYPE_PHYS_TRACK      0x80000009  //  used for tracking physical memory
-#define K2OS_EFIMEMTYPE_TRANSITION      0x8000000A  //  one and only transition page
-#define K2OS_EFIMEMTYPE_EFI_MAP         0x8000000B  //  EFI memory map
-#define K2OS_EFIMEMTYPE_FW_TABLES       0x8000000C  //  Firmware ACPI and SMBIOS tables
-#define K2OS_EFIMEMTYPE_ARCH_SPEC       0x8000000D  //  Architecture Specific reservation
-#define K2OS_EFIMEMTYPE_BUILTIN         0x8000000E  //  Builtin Read Only File System (ROFS)
+#define K2OS_EFIMEMTYPE_KERNEL_ELF      0x80000000  //  kernel elf image
+#define K2OS_EFIMEMTYPE_PAGING          0x80000001  //  page directory and page tables
+#define K2OS_EFIMEMTYPE_PROC1           0x80000002  //  process 1 default memory 
+#define K2OS_EFIMEMTYPE_ZERO            0x80000003  //  one and only zero page
+#define K2OS_EFIMEMTYPE_CORES           0x80000004  //  4 pages per core
+#define K2OS_EFIMEMTYPE_PHYS_TRACK      0x80000005  //  used for tracking physical memory
+#define K2OS_EFIMEMTYPE_TRANSITION      0x80000006  //  one and only transition page
+#define K2OS_EFIMEMTYPE_EFI_MAP         0x80000007  //  EFI memory map
+#define K2OS_EFIMEMTYPE_FW_TABLES       0x80000008  //  Firmware ACPI and SMBIOS tables
+#define K2OS_EFIMEMTYPE_ARCH_SPEC       0x80000009  //  Architecture Specific reservation
+#define K2OS_EFIMEMTYPE_BUILTIN         0x8000000A  //  Builtin Read Only File System (ROFS)
 #define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_BUILTIN
 
 //
@@ -125,7 +121,7 @@
 #define K2OS_KVA_KERNEL_ELF_AREA                    0xFFF00000
 #define K2OS_KVA_KERNEL_ELF_AREA_SIZE               0x000D0000 // 832kB
 
-#define K2OS_KVA_FREE_TOP                           K2OS_KVA_COREMEMORY_BASE
+#define K2OS_KVA_FREE_TOP                           K2OS_KVA_KERNEL_ELF_AREA
 
 /* --------------------------------------------------------------------------------- */
 
@@ -223,9 +219,7 @@
 
 #define K2OS_KVA_PTPAGECOUNT_BASE                   (K2OS_KVA_EFIMAP_BASE + K2OS_KVA_EFIMAP_SIZE)
 
-#define K2OS_KVA_LOADERPAGE_BASE                    (K2OS_KVA_PTPAGECOUNT_BASE + K2_VA32_MEMPAGE_BYTES)
-
-#define K2OS_KVA_PROC1_BASE                         (K2OS_KVA_LOADERPAGE_BASE + K2_VA32_MEMPAGE_BYTES)
+#define K2OS_KVA_PROC1_BASE                         (K2OS_KVA_PTPAGECOUNT_BASE + K2_VA32_MEMPAGE_BYTES)
 #define K2OS_KVA_PROC1_SIZE                         (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
 #define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_PROC1_BASE + K2OS_KVA_PROC1_SIZE)

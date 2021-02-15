@@ -33,6 +33,301 @@
 
 LOADER_DATA gData;
 
+#if K2_TARGET_ARCH_IS_ARM
+static CHAR16 const * const sgpKernSubDirName = L"k2os\\a32\\kern";
+#else
+static CHAR16 const * const sgpKernSubDirName = L"k2os\\x32\\kern";
+#endif
+
+static EFI_GUID const sgEfiFileInfoId = EFI_FILE_INFO_ID;
+
+static EFI_STATUS sLoadRofs(EFI_FILE_PROTOCOL * apKernDir)
+{
+    EFI_STATUS              efiStatus;
+    EFI_FILE_PROTOCOL *     pProt;
+    UINTN                   infoSize;
+    EFI_FILE_INFO *         pFileInfo;
+    UINT32                  filePages;
+    EFI_PHYSICAL_ADDRESS    pagesPhys;
+    UINTN                   bytesToRead;
+
+    //
+    // load the builtin ROFS now from sgpKernDir.  shove physical address into gData.LoadInfo.mBuiltinRofsPhys
+    //
+    efiStatus = apKernDir->Open(
+        apKernDir,
+        &pProt,
+        L"builtin.img",
+        EFI_FILE_MODE_READ,
+        0);
+    if (EFI_ERROR(efiStatus))
+        return efiStatus;
+
+    do {
+        infoSize = 0;
+        efiStatus = pProt->GetInfo(
+            pProt,
+            (EFI_GUID *)&sgEfiFileInfoId,
+            &infoSize, NULL);
+        if (efiStatus != EFI_BUFFER_TOO_SMALL)
+        {
+            K2Printf(L"*** could not retrieve size of file info, status %r\n", efiStatus);
+            break;
+        }
+
+        efiStatus = gBS->AllocatePool(EfiLoaderData, infoSize, (void **)&pFileInfo);
+        if (efiStatus != EFI_SUCCESS)
+        {
+            K2Printf(L"*** could not allocate memory for file info, status %r\n", efiStatus);
+            break;
+        }
+
+        do
+        {
+            efiStatus = pProt->GetInfo(
+                pProt,
+                (EFI_GUID *)&sgEfiFileInfoId,
+                &infoSize, pFileInfo);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** could not get file info, status %r\n", efiStatus);
+                break;
+            }
+
+            bytesToRead = (UINTN)pFileInfo->FileSize;
+
+            filePages = (UINT32)(K2_ROUNDUP(bytesToRead, K2_VA32_MEMPAGE_BYTES) / K2_VA32_MEMPAGE_BYTES);
+
+            efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_BUILTIN, filePages, &pagesPhys);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** AllocatePages for builtin failed with status %r\n", efiStatus);
+                break;
+            }
+
+            do {
+                gData.LoadInfo.mBuiltinRofsPhys = ((UINT32)pagesPhys);
+
+                K2MEM_Zero((void *)gData.LoadInfo.mBuiltinRofsPhys, filePages * K2_VA32_MEMPAGE_BYTES);
+
+                efiStatus = pProt->Read(pProt, &bytesToRead, (void *)((UINT32)pagesPhys));
+                if (EFI_ERROR(efiStatus))
+                {
+                    K2Printf(L"*** ReadSectors failed with efi Status %r\n", efiStatus);
+                }
+
+            } while (0);
+
+            if (EFI_ERROR(efiStatus))
+            {
+                gBS->FreePages(pagesPhys, filePages);
+            }
+
+        } while (0);
+
+        gBS->FreePool(pFileInfo);
+
+    } while (0);
+
+    pProt->Close(pProt);
+
+    return efiStatus;
+}
+
+static EFI_STATUS sLoadKernelElf(EFI_FILE_PROTOCOL * apKernDir)
+{
+    EFI_STATUS              efiStatus;
+    EFI_FILE_PROTOCOL *     pProt;
+    UINTN                   infoSize;
+    EFI_FILE_INFO *         pFileInfo;
+    UINT32                  filePages;
+    EFI_PHYSICAL_ADDRESS    pagesPhys;
+    UINTN                   bytesToRead;
+
+    //
+    // load the kernel ELF now from sgpKernDir.  shove physical address into gData.mKernElfPhys
+    //
+    efiStatus = apKernDir->Open(
+        apKernDir,
+        &pProt,
+        L"k2oskern.elf",
+        EFI_FILE_MODE_READ,
+        0);
+    if (EFI_ERROR(efiStatus))
+        return efiStatus;
+
+    do {
+        infoSize = 0;
+        efiStatus = pProt->GetInfo(
+            pProt,
+            (EFI_GUID *)&sgEfiFileInfoId,
+            &infoSize, NULL);
+        if (efiStatus != EFI_BUFFER_TOO_SMALL)
+        {
+            K2Printf(L"*** could not retrieve size of file info, status %r\n", efiStatus);
+            break;
+        }
+
+        efiStatus = gBS->AllocatePool(EfiLoaderData, infoSize, (void **)&pFileInfo);
+        if (efiStatus != EFI_SUCCESS)
+        {
+            K2Printf(L"*** could not allocate memory for file info, status %r\n", efiStatus);
+            break;
+        }
+
+        do
+        {
+            efiStatus = pProt->GetInfo(
+                pProt,
+                (EFI_GUID *)&sgEfiFileInfoId,
+                &infoSize, pFileInfo);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** could not get file info, status %r\n", efiStatus);
+                break;
+            }
+
+            gData.LoadInfo.mKernSizeBytes = (UINT32)pFileInfo->FileSize;
+
+            bytesToRead = (UINTN)pFileInfo->FileSize;
+
+            filePages = (UINT32)(K2_ROUNDUP(bytesToRead, K2_VA32_MEMPAGE_BYTES) / K2_VA32_MEMPAGE_BYTES);
+
+            efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_KERNEL_ELF, filePages, &pagesPhys);
+            if (efiStatus != EFI_SUCCESS)
+            {
+                K2Printf(L"*** AllocatePages for builtin failed with status %r\n", efiStatus);
+                break;
+            }
+
+            do {
+                gData.mKernElfPhys = ((UINT32)pagesPhys);
+
+                K2MEM_Zero((void *)gData.mKernElfPhys, filePages * K2_VA32_MEMPAGE_BYTES);
+
+                efiStatus = pProt->Read(pProt, &bytesToRead, (void *)((UINT32)pagesPhys));
+                if (EFI_ERROR(efiStatus))
+                {
+                    K2Printf(L"*** ReadSectors failed with efi Status %r\n", efiStatus);
+                }
+
+            } while (0);
+
+            if (EFI_ERROR(efiStatus))
+            {
+                gBS->FreePages(pagesPhys, filePages);
+            }
+
+        } while (0);
+
+        gBS->FreePool(pFileInfo);
+
+    } while (0);
+
+    pProt->Close(pProt);
+
+    return efiStatus;
+}
+
+EFI_STATUS LoadKernelAndRofs(void)
+{
+    EFI_STATUS                       status;
+    EFI_LOADED_IMAGE_PROTOCOL *      pLoadedImage = NULL;
+    EFI_SIMPLE_FILE_SYSTEM_PROTOCOL *pFileProt = NULL;
+    EFI_FILE_PROTOCOL *              pRootDir = NULL;
+    EFI_FILE_PROTOCOL *              pKernDir = NULL;
+
+    status = gBS->OpenProtocol(gData.mLoaderImageHandle,
+        &gEfiLoadedImageProtocolGuid,
+        (void **)&pLoadedImage,
+        gData.mLoaderImageHandle,
+        NULL,
+        EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+
+    if (status != EFI_SUCCESS)
+    {
+        K2Printf(L"*** Open LoadedImageProt failed with %r\n", status);
+        return status;
+    }
+
+    do
+    {
+        status = gBS->OpenProtocol(pLoadedImage->DeviceHandle,
+            &gEfiSimpleFileSystemProtocolGuid,
+            (void **)&pFileProt,
+            gData.mLoaderImageHandle,
+            NULL, 
+            EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
+
+        if (status != EFI_SUCCESS)
+        {
+            K2Printf(L"*** Open FileSystemProt failed with %r\n", status);
+            break;
+        }
+        
+        do
+        {
+            status = pFileProt->OpenVolume(pFileProt, &pRootDir);
+            if (status != EFI_SUCCESS)
+            {
+                K2Printf(L"*** OpenVolume failed with %r\n", status);
+                break;
+            }
+
+            do
+            {
+                status = pRootDir->Open(pRootDir, &pKernDir, (CHAR16 *)sgpKernSubDirName, EFI_FILE_MODE_READ, 0);
+                if (status != EFI_SUCCESS)
+                {
+                    K2Printf(L"*** Open %s failed with %r\n", sgpKernSubDirName, status);
+                    break;
+                }
+
+                do
+                {
+                    status = sLoadRofs(pKernDir);
+                    if (status != EFI_SUCCESS)
+                    {
+                        K2Printf(L"*** Could not load builtin image 'builtin.img' from %s with error %r\n", sgpKernSubDirName);
+                        break;
+                    }
+
+                    status = sLoadKernelElf(pKernDir);
+                    if (status != EFI_SUCCESS)
+                    {
+                        K2Printf(L"*** Could not load kernel ELF from %s with error %r\n", sgpKernSubDirName);
+                        break;
+                    }
+
+                } while (0);
+
+                pKernDir->Close(pKernDir);
+                pKernDir = NULL;
+
+            } while (0);
+
+            pRootDir->Close(pRootDir);
+            pRootDir = NULL;
+
+        } while (0);
+
+        gBS->CloseProtocol(pLoadedImage->DeviceHandle,
+            &gEfiSimpleFileSystemProtocolGuid,
+            gData.mLoaderImageHandle,
+            NULL);
+        pFileProt = NULL;
+
+    } while (0);
+
+    gBS->CloseProtocol(gData.mLoaderImageHandle,
+        &gEfiLoadedImageProtocolGuid,
+        gData.mLoaderImageHandle, 
+        NULL);
+    pLoadedImage = NULL;
+
+    return status;
+}
+
 static
 EFI_STATUS
 sFindSmbiosAndAcpi(
@@ -40,6 +335,8 @@ sFindSmbiosAndAcpi(
 )
 {
     EFI_STATUS status;
+
+    K2Printf(L"Scanning for SMBIOS and ACPI...\n");
 
     status = EfiGetSystemConfigurationTable(&gEfiSmbiosTableGuid, (VOID**)&gData.mpSmbios);
     if (EFI_ERROR(status))
@@ -76,64 +373,12 @@ sFindSmbiosAndAcpi(
         return EFI_NOT_FOUND;
     }
 
-//    K2Printf(L"ACPI OEM ID:  %c%c%c%c%c%c\n",
-//        gData.mpAcpi->OemId[0], gData.mpAcpi->OemId[1], gData.mpAcpi->OemId[2],
-//        gData.mpAcpi->OemId[3], gData.mpAcpi->OemId[4], gData.mpAcpi->OemId[5]);
+    K2Printf(L"ACPI OEM ID:  %c%c%c%c%c%c\n",
+        gData.mpAcpi->OemId[0], gData.mpAcpi->OemId[1], gData.mpAcpi->OemId[2],
+        gData.mpAcpi->OemId[3], gData.mpAcpi->OemId[4], gData.mpAcpi->OemId[5]);
 
     return EFI_SUCCESS;
 }
-
-static
-BOOLEAN
-sVerifyHAL(
-    DLX * apHalDlx
-    )
-{
-    K2STAT  stat;
-    UINT32  funcAddr;
-
-    stat = DLX_FindExport(
-        apHalDlx,
-        DlxSeg_Text,
-        "K2OSHAL_DebugOut",
-        &funcAddr);
-    if (K2STAT_IS_ERROR(stat))
-    {
-        K2Printf(L"*** Required HAL export \"K2OSHAL_DebugOut\" missing\n");
-        return FALSE;
-    }
-
-    stat = DLX_FindExport(
-        apHalDlx,
-        DlxSeg_Text,
-        "K2OSHAL_DebugIn",
-        &funcAddr);
-    if (K2STAT_IS_ERROR(stat))
-    {
-        K2Printf(L"*** Required HAL export \"K2OSHAL_DebugIn\" missing\n");
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-static K2DLXSUPP_HOST sgDlxHost =
-{
-    sizeof(K2DLXSUPP_HOST),
-
-    sysDLX_CritSec,
-    NULL,
-    sysDLX_Open,
-    NULL,
-    sysDLX_ReadSectors,
-    sysDLX_Prepare,
-    sysDLX_PreCallback,
-    sysDLX_PostCallback,
-    sysDLX_Finalize,
-    NULL,
-    sysDLX_Purge,
-    NULL
-};
 
 static
 VOID
@@ -156,61 +401,41 @@ K2OsLoaderEntryPoint (
     )
 {
     EFI_STATUS              efiStatus;
-    K2STAT                  k2Stat;
-    DLX *                   pDlxHal;
-    DLX *                   pDlxKern;
     EFI_EVENT               efiEvent;
     EFI_PHYSICAL_ADDRESS    physAddr;
 
     K2Printf(L"\n\n\nK2Loader\n----------------\n");
 
-    efiStatus = Loader_InitArch();
-    if (EFI_ERROR(efiStatus))
-        return efiStatus;
-
     K2MEM_Zero(&gData, sizeof(gData));
+
+    gData.mLoaderImageHandle = ImageHandle;
     gData.mKernArenaLow = K2OS_KVA_FREE_BOTTOM;
     gData.mKernArenaHigh = K2OS_KVA_FREE_TOP;
     gData.LoadInfo.mpEFIST = (K2EFI_SYSTEM_TABLE *)gST;
 
-//    K2Printf(L"Scanning for SMBIOS and ACPI...\n");
-
-    efiStatus = sFindSmbiosAndAcpi();
+    efiStatus = Loader_InitArch();
     if (EFI_ERROR(efiStatus))
-    {
-        K2Printf(L"*** Failed to validate SMBIOS/ACPI = %r\n\n\n", efiStatus);
-        Loader_DoneArch();
         return efiStatus;
-    }
 
-    efiStatus = Loader_FillCpuInfo();
-    if (EFI_ERROR(efiStatus))
+    do
     {
-        K2Printf(L"*** Failed to gather CPU info with result = %r\n\n\n", efiStatus);
-        Loader_DoneArch();
-        return efiStatus;
-    }
+        efiStatus = sFindSmbiosAndAcpi();
+        if (EFI_ERROR(efiStatus))
+        {
+            K2Printf(L"*** Failed to validate SMBIOS/ACPI = %r\n\n\n", efiStatus);
+            break;
+        }
 
-    ASSERT(gData.LoadInfo.mCpuCoreCount > 0);
+        efiStatus = Loader_FillCpuInfo();
+        if (EFI_ERROR(efiStatus))
+        {
+            K2Printf(L"*** Failed to gather CPU info with result = %r\n\n\n", efiStatus);
+            break;
+        }
 
-//    K2Printf(L"CpuInfo says there are %d CPUs\n", gData.LoadInfo.mCpuCoreCount);
+        ASSERT(gData.LoadInfo.mCpuCoreCount > 0);
+        K2Printf(L"CpuInfo says there are %d CPUs\n", gData.LoadInfo.mCpuCoreCount);
 
-    efiStatus = gBS->CreateEventEx (
-        EVT_NOTIFY_SIGNAL,
-        TPL_NOTIFY,
-        sAddressChangeEvent,
-        NULL,
-        &gEfiEventVirtualAddressChangeGuid,
-        &efiEvent
-        );
-    if (efiStatus != EFI_SUCCESS)
-    {
-        K2Printf(L"*** Failed to allocate address change event with %r\n", efiStatus);
-        Loader_DoneArch();
-        return efiStatus;
-    }
-
-    do {
         efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_EFI_MAP, K2OS_EFIMAP_PAGECOUNT, (EFI_PHYSICAL_ADDRESS *)&physAddr);
         if (efiStatus != EFI_SUCCESS)
         {
@@ -218,59 +443,71 @@ K2OsLoaderEntryPoint (
             break;
         }
 
-        gData.mpMemoryMap = (EFI_MEMORY_DESCRIPTOR *)(UINTN)physAddr;
+        do
+        {
+            gData.mpMemoryMap = (EFI_MEMORY_DESCRIPTOR *)(UINTN)physAddr;
 
-        do {
-            efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_LOADER, 1, &gData.mLoaderPagePhys);
+            efiStatus = gBS->CreateEventEx(
+                EVT_NOTIFY_SIGNAL,
+                TPL_NOTIFY,
+                sAddressChangeEvent,
+                NULL,
+                &gEfiEventVirtualAddressChangeGuid,
+                &efiEvent
+            );
             if (efiStatus != EFI_SUCCESS)
             {
-                K2Printf(L"*** Failed to allocate page for K2 loader with %r\n", efiStatus);
+                K2Printf(L"*** Failed to allocate address change event with %r\n", efiStatus);
                 break;
             }
 
             do
             {
-                efiStatus = sysDLX_Init(ImageHandle);
-                if (efiStatus != EFI_SUCCESS)
+                efiStatus = Loader_CreateVirtualMap();
+                if (EFI_ERROR(efiStatus))
                 {
-                    K2Printf(L"*** sysDLX_Init failed with %r\n", efiStatus);
+                    K2Printf(L"*** Failed to create virtual map, result = %r\n\n\n", efiStatus);
                     break;
                 }
 
-                do
+                efiStatus = LoadKernelAndRofs();
+                if (EFI_ERROR(efiStatus))
                 {
-                    K2_ASSERT(gData.mLoaderImageHandle == ImageHandle);
-                    efiStatus = EFI_NOT_FOUND;
-                    k2Stat = K2DLXSUPP_Init((void *)((UINT32)gData.mLoaderPagePhys), &sgDlxHost, TRUE, FALSE);
-                    if (K2STAT_IS_ERROR(k2Stat))
-                    {
-                        K2Printf(L"*** InitDLX returned status 0x%08X\n", k2Stat);
-                        break;
-                    }
-                    //                    K2Printf(L"Loading k2oshal.dlx...\n");
-                    k2Stat = DLX_Acquire("k2oshal.dlx", NULL, &pDlxHal);
-                    if (K2STAT_IS_ERROR(k2Stat))
-                        break;
-                    do
-                    {
-                        //                        K2Printf(L"Verifying k2oshal.dlx...\n");
-                        if (!sVerifyHAL(pDlxHal))
-                            break;
-                        do
-                        {
-                            k2Stat = DLX_Acquire("k2oskern.dlx", NULL, &pDlxKern);
-                            if (K2STAT_IS_ERROR(k2Stat))
-                                break;
-                            do
-                            {
-                                k2Stat = DLX_Acquire("k2oscrt.dlx", NULL, &gData.LoadInfo.mpDlxCrt);
-                                if (gData.LoadInfo.mpDlxCrt == NULL)
-                                    break;
+                    K2Printf(L"*** Failed to load ROFS and kernel ELF, result = %r\n\n\n", efiStatus);
+                    break;
+                }
+
+                efiStatus = Loader_MapKernelElf();
+                if (EFI_ERROR(efiStatus))
+                {
+                    K2Printf(L"*** Failed to map the kernel.elf into the virtual map, result = %r\n\n\n", efiStatus);
+                    break;
+                }
+
+
+                K2Printf(L"ok.\n");
+
+            } while (0);
+
+            gBS->CloseEvent(efiEvent);
+
+        } while (0);
+
+        gBS->FreePages((EFI_PHYSICAL_ADDRESS)((UINTN)gData.mpMemoryMap), K2OS_EFIMAP_PAGECOUNT);
+
+    } while (0);
+
+    Loader_DoneArch();
+
+while (1);
+
+    return efiStatus;
+}
+
+#if 0
+
                                 do
                                 {
-                                    k2Stat = Loader_CreateVirtualMap();
-                                    if (K2STAT_IS_ERROR(k2Stat))
-                                        break;
                                     k2Stat = Loader_MapAllDLX();
                                     if (K2STAT_IS_ERROR(k2Stat))
                                         break;
@@ -323,35 +560,6 @@ K2OsLoaderEntryPoint (
 
                                 gRT->ResetSystem(EfiResetWarm, EFI_DEVICE_ERROR, 0, NULL);
 
-                                while (1);
 
-                            } while (0);
 
-                            DLX_Release(pDlxKern);
-
-                        } while (0);
-
-                        DLX_Release(pDlxHal);
-
-                    } while (0);
-
-                } while (0);
-
-                sysDLX_Done();
-
-            } while (0);
-
-            gBS->FreePages(gData.mLoaderPagePhys, 1);
-
-        } while (0);
-
-        gBS->FreePages((EFI_PHYSICAL_ADDRESS)((UINTN)gData.mpMemoryMap), K2OS_EFIMAP_PAGECOUNT);
-
-    } while (0);
-
-    gBS->CloseEvent(efiEvent);
-
-    Loader_DoneArch();
-
-    return efiStatus;
-}
+#endif

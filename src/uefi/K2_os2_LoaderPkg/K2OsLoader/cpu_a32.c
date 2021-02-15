@@ -37,45 +37,6 @@
 
 EFI_STATUS Loader_FillCpuInfo(void)
 {
-    EFI_HOB_GUID_TYPE * pGuidHob;
-    UINTN               coreCount;
-    ARM_CORE_INFO *     pInfo;
-    UINTN               ix;
-
-    //
-    // fill gData.LoadInfo.CpuInfo for gData.LoadInfo.mCpuCount
-    //
-
-    //
-    // find the arm multicore info table in the hob list
-    //
-    pGuidHob = (EFI_HOB_GUID_TYPE *)GetFirstGuidHob(&gArmMpCoreInfoGuid);
-    if (pGuidHob == NULL)
-    {
-        K2Printf(L"Arm MpCore Info Hob not found. Default to 1 cpu.\n");
-        gData.LoadInfo.mCpuCoreCount = 1;
-        return EFI_SUCCESS;
-    }
-
-    gData.LoadInfo.mCpuCoreCount = 0;
-
-    coreCount = (pGuidHob->Header.HobLength - sizeof(EFI_HOB_GUID_TYPE)) / sizeof(ARM_CORE_INFO);
-
-    pInfo = (ARM_CORE_INFO *)(((UINT8 *)pGuidHob) + sizeof(EFI_HOB_GUID_TYPE));
-
-    for (ix = 0;ix < coreCount;ix++)
-    {
-        gData.LoadInfo.CpuInfo[ix].mCpuId =
-            ((pInfo[ix].ClusterId & 0xFFFF) << 16) |
-            (pInfo[ix].CoreId & 0xFFFF);
-
-        gData.LoadInfo.CpuInfo[ix].mAddrSet = (UINT32)pInfo[ix].MailboxSetAddress;
-        gData.LoadInfo.CpuInfo[ix].mAddrGet = (UINT32)pInfo[ix].MailboxGetAddress;
-        gData.LoadInfo.CpuInfo[ix].mAddrClear = (UINT32)pInfo[ix].MailboxClearAddress;
-        gData.LoadInfo.CpuInfo[ix].mClearValue = (UINT32)pInfo[ix].MailboxClearValue;
-
-        gData.LoadInfo.mCpuCoreCount++;
-    }
-
+    gData.LoadInfo.mCpuCoreCount = 1;
     return EFI_SUCCESS;
 }

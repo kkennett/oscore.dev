@@ -118,7 +118,7 @@ static void sDumpMap(char const *apFormat)
 }
 #endif
 
-K2STAT 
+EFI_STATUS 
 Loader_CreateVirtualMap(
     void
     )
@@ -140,7 +140,7 @@ Loader_CreateVirtualMap(
     if (efiStatus != EFI_SUCCESS)
     {
         K2Printf(L"*** Allocate pages for translation table failed with %r\n", efiStatus);
-        return K2STAT_ERROR_OUT_OF_MEMORY;
+        return efiStatus;
     }
 
     gData.LoadInfo.mTransBasePhys = (UINT32)efiPhysAddr;
@@ -182,6 +182,10 @@ Loader_CreateVirtualMap(
     }
 
     //
+    // start manual map stuff now - EFIMAP, PTPAGECOUNT, PROC1
+    //
+
+    //
     // efi map, map manually
     //
     virtAddr = K2OS_KVA_EFIMAP_BASE;
@@ -217,41 +221,19 @@ Loader_CreateVirtualMap(
     }
 
     //
-    // process 0 pages map manually
+    // process 1 pages map manually
     //
-#if 0
-    ix = ((K2OS_KVA_THREAD0_AREA_HIGH - K2OS_KVA_THREAD0_AREA_LOW) / K2_VA32_MEMPAGE_BYTES);
-#else
-    ix = 0;
-#endif
-
     efiStatus = gBS->AllocatePages(AllocateAnyPages, 
-        K2OS_EFIMEMTYPE_PROC0, 
-        K2OS_PROC_PAGECOUNT + ix,
+        K2OS_EFIMEMTYPE_PROC1, 
+        K2OS_PROC_PAGECOUNT,
         &efiPhysAddr);
     if (efiStatus != EFI_SUCCESS)
     {
-        K2Printf(L"*** Allocate page for proc0+thread0 failed with %r\n", efiStatus);
+        K2Printf(L"*** Allocate page for proc1 failed with %r\n", efiStatus);
         return K2STAT_ERROR_OUT_OF_MEMORY;
     }
 
-#if 0
-    virtAddr = K2OS_KVA_THREAD0_AREA_LOW;
-    do
-    {
-        K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-        status = K2VMAP32_MapPage(&gData.Map, virtAddr, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
-        if (K2STAT_IS_ERROR(status))
-        {
-            K2Printf(L"*** K2VMAP32_MapPage for thread0 stack failed with status 0x%08X\n", status);
-            return status;
-        }
-        virtAddr += K2_VA32_MEMPAGE_BYTES;
-        efiPhysAddr += K2_VA32_MEMPAGE_BYTES;
-    } while (--ix > 0);
-#endif
-
-    virtAddr = K2OS_KVA_PROC0_BASE;
+    virtAddr = K2OS_KVA_PROC1_BASE;
     ix = K2OS_PROC_PAGECOUNT;
     do
     {
@@ -290,15 +272,6 @@ Loader_CreateVirtualMap(
         virtAddr += K2_VA32_MEMPAGE_BYTES;
         efiPhysAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix > 0);
-
-    //
-    // loader page
-    //
-    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_LOADERPAGE_BASE, (UINT32)gData.mLoaderPagePhys, K2OS_MAPTYPE_KERN_DATA);
-    if (K2STAT_IS_ERROR(status))
-    {
-        K2Printf(L"*** mapping loader page failed with status 0x%08X\n", status);
-    }
 
     return status;
 }

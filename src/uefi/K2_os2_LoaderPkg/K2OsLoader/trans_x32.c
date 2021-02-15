@@ -74,7 +74,7 @@ static UINT8 const sTransitionCode[] =
     0x0f, 0x22, 0xd8,                       // mov cr3,eax
 
     // jump into kernel virtual entry point
-    0x8b, 0x41, 0x08,                       // mov eax,DWORD PTR[ecx + 0x8]     0x8 is K2OS_UEFI_LOADINFO_OFFSET_SYSVIRTENTRY
+    0x8b, 0x41, 0x10,                       // mov eax,DWORD PTR[ecx + 0x10]     0x10 is K2OS_UEFI_LOADINFO_OFFSET_KERN_ENTRY_POINT
     0xff, 0xe0,                             // jmp eax
 
     0x00, 0x00, 0x00, 0x00

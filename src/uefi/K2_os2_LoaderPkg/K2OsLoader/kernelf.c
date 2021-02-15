@@ -31,22 +31,23 @@
 //
 #include "K2OsLoader.h"
 
-EFI_STATUS Loader_InitArch(void)
+EFI_STATUS  
+Loader_MapKernelElf(
+    void
+)
 {
-    EFI_STATUS              efiStatus;
-    EFI_PHYSICAL_ADDRESS    physAddr;
-
-    physAddr = K2OS_X32_ARCH_PAGES_BASE;
-    efiStatus = gBS->AllocatePages(AllocateAddress, K2OS_EFIMEMTYPE_ARCH_SPEC, K2OS_X32_ARCH_PAGES_COUNT, (EFI_PHYSICAL_ADDRESS *)&physAddr);
-    if (efiStatus != EFI_SUCCESS)
-    {
-        K2Printf(L"*** Failed to allocate low memory pages for auxiliary processor startup, status %r\n", efiStatus);
-    }
+    //
+    // gData.mKernElfPhys has physical address where k2oskern.elf was loaded
+    // gData.LoadInfo.mKernSizeBytes has the count of data that was loaded
+    // into the position
+    //
+    // we need to map the different portions of the kernel.elf with the right
+    // attributes.  the file segments should be page aligned already and we
+    // should barf if they are not
+    //
 
     return EFI_SUCCESS;
+
+
 }
 
-void Loader_DoneArch(void)
-{
-    
-}
