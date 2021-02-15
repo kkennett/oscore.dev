@@ -73,7 +73,7 @@
 #define K2OS_EFIMEMTYPE_TEXT            0x80000001  //  dlx code
 #define K2OS_EFIMEMTYPE_READ            0x80000002  //  dlx read-only
 #define K2OS_EFIMEMTYPE_DATA            0x80000003  //  dlx read/write
-#define K2OS_EFIMEMTYPE_PROC0           0x80000004  //  process 0 default memory 
+#define K2OS_EFIMEMTYPE_PROC1           0x80000004  //  process 1 default memory 
 #define K2OS_EFIMEMTYPE_DLX             0x80000005  //  loader DLX page
 #define K2OS_EFIMEMTYPE_LOADER          0x80000006  //  loader master page
 #define K2OS_EFIMEMTYPE_ZERO            0x80000007  //  one and only zero page
@@ -223,10 +223,10 @@
 
 #define K2OS_KVA_LOADERPAGE_BASE                    (K2OS_KVA_PTPAGECOUNT_BASE + K2_VA32_MEMPAGE_BYTES)
 
-#define K2OS_KVA_PROC0_BASE                         (K2OS_KVA_LOADERPAGE_BASE + K2_VA32_MEMPAGE_BYTES)
-#define K2OS_KVA_PROC0_SIZE                         (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
+#define K2OS_KVA_PROC1_BASE                         (K2OS_KVA_LOADERPAGE_BASE + K2_VA32_MEMPAGE_BYTES)
+#define K2OS_KVA_PROC1_SIZE                         (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
-#define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_PROC0_BASE + K2OS_KVA_PROC0_SIZE)
+#define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_PROC1_BASE + K2OS_KVA_PROC1_SIZE)
 
 /* --------------------------------------------------------------------------------- */
 

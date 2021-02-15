@@ -40,19 +40,19 @@ void KernArch_MonitorSwitchToProcZero(K2OSKERN_CPUCORE volatile *apThisCore)
     pThread = apThisCore->mpActiveThread;
     if (pThread != NULL)
     {
-        K2_ASSERT(pThread->mpProc == gpProc0);
+        K2_ASSERT(pThread->mpProc == gpProc1);
     }
 
     pOldProc = apThisCore->mpActiveProc;
-    if (gpProc0 != pOldProc)
+    if (gpProc1 != pOldProc)
     {
         if (pOldProc != NULL)
             A32_TLBInvalidateASID_UP(pOldProc->mId);
 
-        A32_WriteTTBR0(gpProc0->mTransTableRegVal);
-        A32_WriteCONTEXT(gpProc0->mId);
+        A32_WriteTTBR0(gpProc1->mTransTableRegVal);
+        A32_WriteCONTEXT(gpProc1->mId);
 		
-        apThisCore->mpActiveProc = gpProc0;
+        apThisCore->mpActiveProc = gpProc1;
         K2_CpuFullBarrier();
     }
 }

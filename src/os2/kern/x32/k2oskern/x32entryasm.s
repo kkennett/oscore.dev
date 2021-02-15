@@ -1,4 +1,4 @@
-/*   
+/*
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -29,31 +29,29 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-#include <k2asma32.inc>
+#include <k2asmx32.inc>
 #include <k2osdefs.inc>
 
 /* --------------------------------------------------------------------------------- */
 
-.extern A32CrtKern_Entry
+.extern X32Kern_C_Entry
 
-BEGIN_A32_PROC(__k2oscrt_kern_entry)
+BEGIN_X32_PROC(X32Kern_EntryPoint)
 
     // set startup stack to be core zero's stack
-    ldr sp, =K2OS_KVA_CORE0_STACK_INIT
+    mov %esp, K2OS_KVA_CORE0_STACK_INIT
 
-    // double terminate the stack and kill the link register
-    mov r12, #0
-    str r12, [sp]
-    sub r12, r12, #4
-    str r12, [sp]
-    mov lr, #0
+    // double terminate the stack
+    mov dword ptr [%esp], 0
+    sub %esp, 4
+    mov dword ptr [%esp], 0
 
     //
-    // leave r0 as address of transition page's copy of the load info
+    // leave ecx as address of transition page's copy of the load info
     // and jump into the C code
-    b A32CrtKern_Entry
-            
-END_A32_PROC(__k2oscrt_kern_entry)
+    jmp X32Kern_C_Entry
+           
+END_X32_PROC(X32Kern_EntryPoint)
 
 /* --------------------------------------------------------------------------------- */
 

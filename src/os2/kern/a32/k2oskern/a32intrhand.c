@@ -258,7 +258,7 @@ A32Kern_InterruptHandler(
     K2OSKERN_Debug("A32Kern_InterruptHandler(%d, %08X, %08X)\n", aReason, aStackPtr, aCPSR);
 
     A32Kern_DumpExceptionContext(pThisCore, aReason, pEx);
-    A32Kern_DumpStackTrace(gpProc0, pEx->R[15], pEx->R[13], (UINT32*)pEx->R[11], pEx->R[14], &sgSymDump[pThisCore->mCoreIx * SYM_NAME_MAX_LEN]);
+    A32Kern_DumpStackTrace(gpProc1, pEx->R[15], pEx->R[13], (UINT32*)pEx->R[11], pEx->R[14], &sgSymDump[pThisCore->mCoreIx * SYM_NAME_MAX_LEN]);
     K2OSKERN_Panic("mointor fault stop\n");
 
     while (1);
@@ -279,7 +279,7 @@ void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)
     if (aDumpStack)
     {
         A32Kern_DumpStackTrace(
-            apThisCore->mIsInMonitor ? gpProc0 : apThisCore->mpActiveProc,
+            apThisCore->mIsInMonitor ? gpProc1 : apThisCore->mpActiveProc,
             (UINT32)KernArch_Panic,
             A32_ReadStackPointer(),
             (UINT32 *)A32_ReadFramePointer(),

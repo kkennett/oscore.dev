@@ -29,27 +29,13 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_TYPE = DLX
-TARGET_SPECIFIC_ARCH = X32
-K2_KERNEL := TRUE
+#========================================================================================
+# TARGET_TYPE == IMAGE
+#========================================================================================
+ifeq ($(TARGET_TYPE),IMAGE)
 
-DLX_INF := ../../../k2oscrt.inf
+$(error No image type supported yet)
 
-SOURCES += x32entry_asm.s
-SOURCES += x32entry.c
-
-STATIC_LIBS += @shared/lib/k2archx32
-STATIC_LIBS += @shared/lib/k2mem
-STATIC_LIBS += @shared/lib/k2asc
-STATIC_LIBS += @shared/lib/k2list
-STATIC_LIBS += @shared/lib/k2tree
-STATIC_LIBS += @shared/lib/k2atomic
-STATIC_LIBS += @shared/lib/k2crc
-
-STATIC_KERNEL_LIBS += @$(K2_OS)/crt/crtkern
-
-include $(K2_ROOT)/src/shared/build/post.make
-
+endif
 

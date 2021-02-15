@@ -32,6 +32,22 @@
 
 #include "kern.h"
 
+static 
+void 
+K2_CALLCONV_REGS 
+sPreKernelAssert(
+    char const *    apFile, 
+    int             aLineNum, 
+    char const *    apCondition
+)
+{
+    while (1);
+}
+K2_pf_ASSERT            K2_Assert = sPreKernelAssert;
+K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount = NULL;
+K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount = NULL;
+K2_pf_RAISE_EXCEPTION   K2_RaiseException = NULL;
+
 void KernInit_Stage(KernInitStage aStage)
 {
     gData.mKernInitStage = aStage;

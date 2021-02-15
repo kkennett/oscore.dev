@@ -52,7 +52,7 @@ void KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST
     }
     else if (apDlx == gData.mpDlxKern)
     {
-        // init dlx object for krn - sInitBuiltInDlx(&gpProc0->PrimaryModule, apDlx, aModulePageLinkAddr, apInOutHostFile);
+        // init dlx object for krn - sInitBuiltInDlx(&gpProc1->PrimaryModule, apDlx, aModulePageLinkAddr, apInOutHostFile);
     }
     else
     {

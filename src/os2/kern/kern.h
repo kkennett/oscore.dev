@@ -103,7 +103,7 @@ struct _K2OSKERN_OBJ_PROCESS
 
 };
 
-#define gpProc0 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC0_BASE)
+#define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1_BASE)
 
 /* --------------------------------------------------------------------------------- */
 

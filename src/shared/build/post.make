@@ -50,29 +50,37 @@ endif
 # CHECK TARGET TYPES AND FORM TARGET PATH
 #========================================================================================
 ifeq ($(TARGET_TYPE),OBJ)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+	K2_TARGET_PATH := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
 else
-ifeq ($(TARGET_TYPE),LIB)
-ifneq ($(K2_KERNEL),)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
-else
-K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
-endif
-else
-ifeq ($(TARGET_TYPE),DLX)
-ifneq ($(K2_KERNEL),)
-K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)
-else
-K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
-endif
-else
-ifeq ($(TARGET_TYPE),IMAGE)
-K2_TARGET_PATH := $(K2_IMAGE_BASE)/$(K2_BUILD_SPEC)
-else
-$(error No Valid TARGET_TYPE defined.)
-endif
-endif
-endif
+	ifeq ($(TARGET_TYPE),LIB)
+		ifneq ($(K2_KERNEL),)
+			K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+		else
+			K2_TARGET_PATH := $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
+		endif
+	else
+		ifeq ($(TARGET_TYPE),ELF)
+			ifneq ($(K2_KERNEL),)
+				K2_TARGET_PATH := $(K2_TARGET_BASE)/elf/kern/$(K2_BUILD_SPEC)
+			else
+				K2_TARGET_PATH := $(K2_TARGET_BASE)/elf/$(K2_BUILD_SPEC)
+			endif
+		else
+			ifeq ($(TARGET_TYPE),DLX)
+				ifneq ($(K2_KERNEL),)
+					K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)
+				else
+					K2_TARGET_PATH := $(K2_TARGET_BASE)/dlx/$(K2_BUILD_SPEC)
+				endif
+			else
+				ifeq ($(TARGET_TYPE),IMAGE)
+					K2_TARGET_PATH := $(K2_IMAGE_BASE)/$(K2_BUILD_SPEC)
+				else
+					$(error No Valid TARGET_TYPE defined.)
+				endif
+			endif
+		endif
+	endif
 endif
 
 K2_OBJECT_PATH := $(K2_TEMP_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_SUBPATH)
@@ -161,6 +169,53 @@ $(K2_TARGET_FULL_SPEC): $(OBJECTS) $(BUILD_CONTROL_FILES)
 
 endif
 	
+#========================================================================================
+
+$(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/%.lib : always
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/,,$(@D))
+	@echo.
+
+ONE_K2_STATIC_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_STATIC_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_LIB,$(subst @,,$(libdep))),$(libdep))
+STATIC_LIBRARIES = $(foreach libdep, $(STATIC_LIBS), $(EXPAND_ONE_STATIC_LIB))
+
+#========================================================================================
+
+$(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/%.lib : always
+	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/,,$(@D))
+	@echo.
+
+ONE_K2_STATIC_KERNEL_LIB = $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
+EXPAND_ONE_STATIC_KERNEL_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_KERNEL_LIB,$(subst @,,$(libdep))),$(libdep))
+STATIC_KERNEL_LIBRARIES = $(foreach libdep, $(STATIC_KERNEL_LIBS), $(EXPAND_ONE_STATIC_KERNEL_LIB))
+
+#========================================================================================
+# TARGET_TYPE == ELF
+#========================================================================================
+ifeq ($(TARGET_TYPE),ELF)
+
+K2_TARGET_NAME_SPEC := $(K2_TARGET_NAME).elf
+K2_TARGET_FULL_SPEC := $(K2_TARGET_PATH)/$(K2_TARGET_NAME_SPEC)
+
+LINKER_SCRIPT ?= $(K2_ROOT)/src/shared/build/gcc_link.l
+
+LDOPT += --script $(LINKER_SCRIPT) -Map $(K2_TARGET_PATH)/$(K2_TARGET_NAME).map
+
+default: $(K2_TARGET_FULL_SPEC)
+
+ifneq ($(K2_KERNEL),)
+LIBRARIES = $(STATIC_LIBRARIES) $(STATIC_KERNEL_LIBRARIES)
+else
+LIBRARIES = $(STATIC_LIBRARIES)
+endif
+
+$(K2_TARGET_FULL_SPEC): $(OBJECTS) $(LIBRARIES) $(BUILD_CONTROL_FILES)
+	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
+	@-if not exist $(subst /,\,$(K2_OBJECT_PATH)) md $(subst /,\,$(K2_OBJECT_PATH))
+	echo -------- Linking ELF $@ --------
+	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
+
+endif
 
 #========================================================================================
 # TARGET_TYPE == DLX
@@ -231,26 +286,6 @@ $(CRTSTUB_OBJ) : always
 
 #========================================================================================
 
-$(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/%.lib : always
-	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/,,$(@D))
-	@echo.
-
-ONE_K2_STATIC_LIB = $(K2_TARGET_BASE)/lib/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
-EXPAND_ONE_STATIC_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_LIB,$(subst @,,$(libdep))),$(libdep))
-STATIC_LIBRARIES = $(foreach libdep, $(STATIC_LIBS), $(EXPAND_ONE_STATIC_LIB))
-
-#========================================================================================
-
-$(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/%.lib : always
-	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/,,$(@D))
-	@echo.
-
-ONE_K2_STATIC_KERNEL_LIB = $(K2_TARGET_BASE)/lib/kern/$(K2_BUILD_SPEC)/$(basename $(1))/$(notdir $(1)).lib
-EXPAND_ONE_STATIC_KERNEL_LIB = $(if $(findstring @,$(libdep)), $(call ONE_K2_STATIC_KERNEL_LIB,$(subst @,,$(libdep))),$(libdep))
-STATIC_KERNEL_LIBRARIES = $(foreach libdep, $(STATIC_KERNEL_LIBS), $(EXPAND_ONE_STATIC_KERNEL_LIB))
-
-#========================================================================================
-
 $(K2_TARGET_IMPORTLIB_PATH)/%.lib: always 
 	@MAKE -S -C $(K2_ROOT)/src/$(subst $(K2_TARGET_BASE)/dlxlib/$(K2_BUILD_SPEC)/,,$(@D))
 	@echo.
@@ -298,72 +333,10 @@ endif
 
 
 #========================================================================================
-# TARGET_TYPE == IMAGE
+# OS specific (IMAGE, any others)
 #========================================================================================
-ifeq ($(TARGET_TYPE),IMAGE)
+include $(K2_ROOT)/src/$(K2_OS)/build/k2osspec_$(K2_OS).make
 
-K2_TARGET_NAME_SPEC := builtin.img
-K2_TARGET_OUT_PATH := $(K2_TARGET_PATH)/$(K2_SUBPATH)
-
-K2_TARGET_DISK_PATH := $(K2_TARGET_OUT_PATH)/bootdisk
-K2_TARGET_BUILTIN_PATH := $(K2_TARGET_OUT_PATH)/builtin
-K2_TARGET_BUILTIN_KERN_PATH := $(K2_TARGET_BUILTIN_PATH)/kern
-
-K2_TARGET_EFI_PATH := $(K2_TARGET_DISK_PATH)/EFI/BOOT
-K2_TARGET_OS_PATH := $(K2_TARGET_DISK_PATH)/K2OS
-K2_TARGET_OS_KERN_PATH := $(K2_TARGET_OS_PATH)/$(K2_ARCH)/KERN
-
-K2_TARGET_FULL_SPEC := $(K2_TARGET_OS_KERN_PATH)/$(K2_TARGET_NAME_SPEC)
-
-default: $(K2_TARGET_FULL_SPEC)
-
-#========================================================================================
-
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/$(K2_ARCH)/k2oskern 
-
-ONE_K2_STOCK_KERNEL_DLX = stock_$(basename $(1))
-EXPAND_ONE_STOCK_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_STOCK_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
-BUILT_IMAGE_HAL_DLX = $(foreach dlxdep, $(firstword $(IMAGE_HAL_DLX)), $(EXPAND_ONE_STOCK_KERNEL_DLX))
-BUILT_STOCK_IMAGE_KERN_DLX = $(foreach dlxdep, $(STOCK_IMAGE_KERN_DLX), $(EXPAND_ONE_STOCK_KERNEL_DLX))
-
-$(BUILT_IMAGE_HAL_DLX) $(BUILT_STOCK_IMAGE_KERN_DLX):
-	@MAKE -S -C $(K2_ROOT)/src/$(subst stock_,,$@)
-	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
-	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) 1>NUL
-	@echo.
-
-CHECK_REF_ONE_K2_HAL = checkhal_$(1)
-CHECK_HAL_DLX = $(if $(findstring @,$(haldlx)), $(call CHECK_REF_ONE_K2_HAL,$(subst @,,$(haldlx))),$(haldlx))
-CHECK_HAL = $(foreach haldlx, $(firstword $(IMAGE_HAL_DLX)), $(CHECK_HAL_DLX))
-$(CHECK_HAL):
-	@$(foreach wrong_thing, $(subst k2oshal,,$(@F)), $(error IMAGE_HAL_DLX must end in DLX named 'k2oshal'))
-
-#========================================================================================
-
-ONE_K2_BULITIN_KERNEL_DLX = builtin_$(basename $(1))
-EXPAND_ONE_BUILTIN_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_BULITIN_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
-BUILTIN_KERNEL_DRIVER_DLX = $(foreach dlxdep, $(BUILTIN_KERNEL_DRIVERS), $(EXPAND_ONE_BUILTIN_KERNEL_DLX))
-
-$(BUILTIN_KERNEL_DRIVER_DLX):
-	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH))
-	@MAKE -S -C $(K2_ROOT)/src/$(subst builtin_,,$@)
-	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) 1>NUL
-	@echo.
-
-#========================================================================================
-
-$(K2_TARGET_FULL_SPEC): $(CHECK_HAL) $(BUILTIN_KERNEL_DRIVER_DLX) $(BUILT_IMAGE_HAL_DLX) $(BUILT_STOCK_IMAGE_KERN_DLX) $(BUILD_CONTROL_FILES)
-	@-if not exist $(subst /,\,$(K2_TARGET_OUT_PATH)) md $(subst /,\,$(K2_TARGET_OUT_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_DISK_PATH)) md $(subst /,\,$(K2_TARGET_DISK_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_EFI_PATH)) md $(subst /,\,$(K2_TARGET_EFI_PATH))
-	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
-	@echo -------- Creating IMAGE $@ --------
-	@copy /Y $(subst /,\,$(K2_ROOT)/src/$(K2_OS)/boot/*) $(subst /,\,$(K2_TARGET_EFI_PATH)) 1>NUL
-	@k2zipper $(subst /,\,$(K2_TARGET_BUILTIN_PATH)) $(subst /,\,$@)
-
-endif
 
 #========================================================================================
 # Autodependencies

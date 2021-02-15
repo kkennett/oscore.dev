@@ -50,8 +50,6 @@ dlx_entry(
     UINT32  aReason
     )
 {
-    K2STAT stat;
-
     K2MEM_Zero(&gData, sizeof(KERN_DATA));
 
     gData.mpShared = (K2OSKERN_SHARED *)aReason;
@@ -75,27 +73,6 @@ dlx_entry(
     gData.mpShared->FuncTab.Assert = KernEx_Assert;
     gData.mpShared->FuncTab.ExTrap_Mount = KernEx_TrapMount;
     gData.mpShared->FuncTab.ExTrap_Dismount = KernEx_TrapDismount;
-
-    //
-    // first init is with no support functions.  reinit will not get called
-    //
-    stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, NULL, TRUE, TRUE);
-    while(K2STAT_IS_ERROR(stat));
-
-    stat = DLX_Acquire("k2oshal.dlx", NULL, &gData.mpDlxHal);
-    while(K2STAT_IS_ERROR(stat));
-
-    stat = DLX_Acquire("k2oskern.dlx", NULL, &gData.mpDlxKern);
-    while(K2STAT_IS_ERROR(stat));
-
-    //
-    // second init is with support functions. reinit will get called, and all dlx
-    // have been acquired
-    //
-    gData.DlxHost.mHostSizeBytes = sizeof(gData.DlxHost);
-    gData.DlxHost.AtReInit = KernDlxSupp_AtReInit;
-    stat = K2DLXSUPP_Init((void *)K2OS_KVA_LOADERPAGE_BASE, &gData.DlxHost, TRUE, TRUE);
-    while (K2STAT_IS_ERROR(stat));
 
     KernInit_Stage(KernInitStage_dlx_entry);
 

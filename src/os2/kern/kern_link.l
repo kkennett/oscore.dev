@@ -1,4 +1,4 @@
-//   
+/*   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,23 +28,18 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//
-#include "crtkern.h"
-
-typedef void (*__vfpv)(void *);
-
-int __cxa_atexit(__vfpv f, void *a, void *apModule)
-{
-    //
-    // kernel does not use loadable modules so exit will never happen
-    //
-    return 0;
+*/
+SECTIONS { 
+  . = 0x80001000;
+  .text : { *(.text) *(.text.*) }
+  . = ALIGN(4096);
+  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
+  __ctors = .;
+  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
+  . = ALIGN(4096);
+  .data : { *(.data) *(.data.*) }
+  .bss :  { *(.bss) *(.bss.*) }
+  . = ALIGN(4096);
+  __data_end = .;
 }
-
-void __call_dtors(DLX *apDlx)
-{
-    //
-    // kernel does not use loadable modules. an attempt to destroy one is bad.
-    //
-    K2_ASSERT(0);
-}
+__ctors_count = SIZEOF(.ctors) / 4;

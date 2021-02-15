@@ -79,7 +79,7 @@ GCCOPT_S            :=
 GCCOPT_C            :=
 GCCOPT_CPP          := -fno-rtti -fno-exceptions -fno-unwind-tables -fno-asynchronous-unwind-tables
 
-LDOPT               := --gc-sections 
+LDOPT               := --gc-sections
 
 ifneq ($(K2_MODE),FINAL)
 K2_BUILD_SPEC := $(K2_ARCH)/Debug
@@ -92,4 +92,3 @@ endif
 
 LIBGCC_PATH := $(K2_TOOLS_BIN_PATH)/libgcc.a
 
-STOCK_IMAGE_KERN_DLX := 

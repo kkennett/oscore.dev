@@ -29,20 +29,15 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "a32crtkern.h"
+#include "x32kern.h"
 
-void __aeabi_idiv0(void) K2_CALLCONV_NAKED;
-void __aeabi_idiv0(void)
+void
+K2_CALLCONV_REGS
+X32Kern_C_Entry(
+    K2OS_UEFI_LOADINFO const *apLoadInfo
+    )
 {
-    asm("mov r0, %[code]\n" : : [code]"r"(K2STAT_EX_ZERODIVIDE));
-    asm("mov r12, %[targ]\n" : : [targ]"r"((UINT32)K2_RaiseException));
-    asm("bx r12\n");
-}
+    dlx_entry((DLX *)apLoadInfo, 0);
 
-void __aebi_ldiv0(void) K2_CALLCONV_NAKED;
-void __aeabi_ldiv0(void)
-{
-    asm("mov r0, %[code]\n" : : [code]"r"(K2STAT_EX_ZERODIVIDE));
-    asm("mov r12, %[targ]\n" : : [targ]"r"((UINT32)K2_RaiseException));
-    asm("bx r12\n");
+    while (1);
 }

@@ -51,7 +51,7 @@ sAbort(
     K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
     X32Kern_DumpKernelModeExceptionContext(apContext);
     X32Kern_DumpStackTrace(
-        gpProc0,
+        gpProc1,
         apContext->KernelMode.EIP,
         apContext->REGS.EBP,
         ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
@@ -186,7 +186,7 @@ void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)
     if (aDumpStack)
     {
         X32Kern_DumpStackTrace(
-            gpProc0,
+            gpProc1,
             (UINT32)K2_RETURN_ADDRESS,
             X32_ReadEBP(),
             X32_ReadESP(),

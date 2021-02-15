@@ -75,10 +75,10 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT
     K2_ASSERT(apProc != NULL);
 
     //
-    // this may get called before proc0 is set up. so if we are called with proc 0
+    // this may get called before proc1 is set up. so if we are called with proc 0
     // we just use the transtab base as that is the same thing.
     //
-    if (apProc == gpProc0)
+    if (apProc == gpProc1)
         transBase = K2OS_KVA_TRANSTAB_BASE;
     else
         transBase = (apProc->mTransTableKVA & K2_VA32_PAGEFRAME_MASK);
@@ -100,10 +100,10 @@ UINT32 * KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT
     else
     {
         //
-        // this may get called before proc0 is set up. so if we are called with proc 0
+        // this may get called before proc1 is set up. so if we are called with proc 0
         // we just use the kernel va map base as that is the same thing.
         //
-        if (apProc == gpProc0)
+        if (apProc == gpProc1)
             pPTE = ((UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr));
         else
             pPTE = ((UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr));
