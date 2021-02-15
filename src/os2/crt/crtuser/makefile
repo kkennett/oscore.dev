@@ -29,11 +29,15 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
+TARGET_TYPE = LIB
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
+SOURCES += atexit.c
+SOURCES += main.c
 
-include $(K2_ROOT)/src/shared/build/pre.make
+include $(K2_ROOT)/src/shared/build/post.make
+
+
+
 

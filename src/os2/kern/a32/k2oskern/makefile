@@ -30,10 +30,44 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
+TARGET_TYPE = DLX
 
-include $(K2_ROOT)/src/shared/build/pre.make
+TARGET_SPECIFIC_ARCH = A32
+
+K2_KERNEL := TRUE
+
+DLX_INF := ../../k2oskern.inf
+
+SOURCES += a32kern.c
+SOURCES += a32setintr.c
+SOURCES += a32coreix.c
+SOURCES += a32kernex.c
+SOURCES += a32kernexasm.s
+SOURCES += a32raiseexasm.s
+SOURCES += a32map.c
+SOURCES += a32cpu.c
+SOURCES += a32cpuasm.s
+SOURCES += a32thread.c
+SOURCES += a32threadasm.s
+SOURCES += a32intr.c
+SOURCES += a32intrasm.s
+SOURCES += a32monitor.c 
+SOURCES += a32monitorasm.s
+SOURCES += a32auxcoreasm.s
+SOURCES += a32time.c
+SOURCES += a32intrhand.c
+
+STATIC_LIBS += @shared/lib/k2archa32
+STATIC_LIBS += @shared/lib/k2heap
+STATIC_LIBS += @shared/lib/k2bit
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
+
+STATIC_LIBS += @$(K2_OS)/lib/k2ramheap
+
+STATIC_KERNEL_LIBS += @$(K2_OS)/kern
+
+include $(K2_ROOT)/src/shared/build/post.make
 

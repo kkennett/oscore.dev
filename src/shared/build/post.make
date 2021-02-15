@@ -319,10 +319,8 @@ default: $(K2_TARGET_FULL_SPEC)
 
 #========================================================================================
 
-STOCK_IMAGE_KERN_DLX := @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
+STOCK_IMAGE_KERN_DLX += @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
 STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/$(K2_ARCH)/k2oskern 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
 
 ONE_K2_STOCK_KERNEL_DLX = stock_$(basename $(1))
 EXPAND_ONE_STOCK_KERNEL_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_STOCK_KERNEL_DLX,$(subst @,,$(dlxdep))),$(dlxdep))

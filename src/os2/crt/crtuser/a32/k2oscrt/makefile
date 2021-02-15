@@ -29,11 +29,28 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
+TARGET_TYPE = DLX
+TARGET_SPECIFIC_ARCH = A32
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
+DLX_INF := ../../../k2oscrt.inf
 
-include $(K2_ROOT)/src/shared/build/pre.make
+SOURCES += a32entry.c
+SOURCES += a32cache.c
+SOURCES += a32divzero.c
+
+STATIC_LIBS += @shared/lib/k2mem
+STATIC_LIBS += @shared/lib/k2asc
+STATIC_LIBS += @shared/lib/k2list
+STATIC_LIBS += @shared/lib/k2tree
+STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2crc
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
+
+STATIC_LIBS += @$(K2_OS)/crt/crtuser
+
+include $(K2_ROOT)/src/shared/build/post.make
+
 

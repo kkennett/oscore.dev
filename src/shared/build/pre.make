@@ -92,3 +92,4 @@ endif
 
 LIBGCC_PATH := $(K2_TOOLS_BIN_PATH)/libgcc.a
 
+STOCK_IMAGE_KERN_DLX := 

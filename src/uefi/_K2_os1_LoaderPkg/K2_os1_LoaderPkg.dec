@@ -30,10 +30,17 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
+[Defines]
+  DEC_SPECIFICATION              = 0x00010005
+  PACKAGE_NAME                   = K2_os1_LoaderPkg
+  PACKAGE_GUID                   = A382406A-D80F-4952-8AF9-CF2B1EFB6F58
+  PACKAGE_VERSION                = 0.1
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
+[Includes]
+  DEFINE K2_ROOT = C:\repo\oscore.dev
+  $(K2_ROOT)\src\shared\inc
+  $(K2_ROOT)\src\os1\inc
 
-include $(K2_ROOT)/src/shared/build/pre.make
+[Guids]
+  gK2OsLoaderTokenSpaceGuid    =  { 0x178514bd, 0xd820, 0x4854, { 0x93, 0x1b, 0x3e, 0xfe, 0x6e, 0xd9, 0x70, 0x7d } }
 

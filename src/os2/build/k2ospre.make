@@ -32,8 +32,5 @@
 
 GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
-
 include $(K2_ROOT)/src/shared/build/pre.make
 

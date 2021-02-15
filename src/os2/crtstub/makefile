@@ -30,10 +30,10 @@
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-GCCOPT_SYSTEM += -I $(K2_ROOT)/src/$(K2_OS)/inc
+include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osacpi 
-STOCK_IMAGE_KERN_DLX += @$(K2_OS)/kern/k2osexec 
+TARGET_TYPE = OBJ
 
-include $(K2_ROOT)/src/shared/build/pre.make
+SOURCES += crtstub.cpp
 
+include $(K2_ROOT)/src/shared/build/post.make
