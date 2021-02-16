@@ -40,7 +40,7 @@ K2_KERNEL := TRUE
 
 LINKER_SCRIPT := $(K2_ROOT)/src/$(K2_OS)/kern/kern_link.l
 LDENTRY := -e X32Kern_EntryPoint
-LDOPT += --no-omagic 
+LDOPT += --no-omagic --strip-debug
 
 SOURCES += x32entryasm.s 
 SOURCES += x32hal.c 

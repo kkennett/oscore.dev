@@ -41,6 +41,8 @@ K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount = KernEx_TrapMount;
 K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount = KernEx_TrapDismount;
 K2_pf_RAISE_EXCEPTION   K2_RaiseException = KernEx_RaiseException;
 
+UINT8 image_padding[4095] __attribute__((section(".bss_padding")));
+
 void K2_CALLCONV_REGS __attribute__((noreturn)) 
 Kern_Main(
     K2OS_UEFI_LOADINFO const *apLoadInfo
@@ -54,8 +56,9 @@ Kern_Main(
 
     K2OSKERN_Debug("Kern_Main()\n");
 
-    while (1);
+    K2MEM_Copy(&gData, image_padding, 4095);
 
+    while (1);
 
 }
 

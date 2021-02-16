@@ -180,7 +180,9 @@ int main(int argc, char **argv)
                 for (ix = 0; ix < pElfFile->Header().e_shnum; ix++)
                 {
                     Elf32_Shdr const &secHdr = pElfFile->Section(ix).Header();
-                    printf("    %02d %5d %s\n", ix, secHdr.sh_type, pNames + secHdr.sh_name);
+                    printf("    %02d %5d addr %08X size %08X off %08X %s\n", ix, secHdr.sh_type, 
+                        secHdr.sh_addr, secHdr.sh_size, secHdr.sh_offset,
+                        pNames + secHdr.sh_name);
                     if (!(secHdr.sh_flags & SHF_ALLOC))
                         continue;
 

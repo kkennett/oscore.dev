@@ -46,6 +46,21 @@ Loader_MapKernelElf(
     // should barf if they are not
     //
 
+    K2ELF32PARSE    parse;
+    K2STAT          stat;
+
+    stat = K2ELF32_Parse((UINT8 const *)gData.mKernElfPhys, gData.LoadInfo.mKernSizeBytes, &parse);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        return EFI_DEVICE_ERROR;
+    }
+
+    
+
+
+    
+
+
     return EFI_SUCCESS;
 
 

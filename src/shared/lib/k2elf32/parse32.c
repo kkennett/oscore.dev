@@ -432,7 +432,7 @@ sValidateRelocTable(
 K2STAT
 K2ELF32_Parse(
     UINT8 const *   apFileData,
-    UINT32           aFileSizeBytes,
+    UINT32          aFileSizeBytes,
     K2ELF32PARSE *  apRetParse
 )
 {

@@ -29,18 +29,31 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-SECTIONS { 
-  . = 0xFFF01000;
-  .text : { *(.text) *(.text.*) }
+PHDRS
+{
+  headers PT_PHDR FILEHDR PHDRS AT (0xFFF00000) ;
+  text PT_LOAD ;
+  rodata PT_LOAD ;
+  data PT_LOAD ;
+  other PT_LOAD ;
+}
+
+SECTIONS
+{
+  . = 0xFFF00000;
+  . = . + SIZEOF_HEADERS;
   . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
+  .text : { *(.text) *(.text.*) } : text
+  . = ALIGN(4096);
+  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) } : rodata
   __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
+  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) } : rodata
   . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
+  .data : { *(.data) *(.data.*) } : data
   __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) }
-  . = ALIGN(4096);
+  .bss :  { *(.bss) *(.bss.*) } : data
   __data_end = .;
+  .bss_padding :  { *(.bss_padding) } : data
+  . = ALIGN(4096);
 }
 __ctors_count = SIZEOF(.ctors) / 4;
