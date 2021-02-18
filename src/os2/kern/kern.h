@@ -35,6 +35,7 @@
 
 #include <k2oshal.h>
 #include "kerndef.inc"
+#include <lib/k2rofshelp.h>
 
 /* --------------------------------------------------------------------------------- */
 
@@ -50,12 +51,11 @@ struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
     /* must be first thing in struct */
-    X32_TSS                             TSS;
+    X32_TSS TSS;
 #endif
-    UINT32                              mCoreIx;
+    UINT32  mCoreIx;
 
-    BOOL                                mIsExecuting;
-
+    BOOL    mIsExecuting;
 };
 
 #define K2OSKERN_COREMEMORY_STACKS_BYTES  ((K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_CPUCORE)) + (K2_VA32_MEMPAGE_BYTES * 3))
@@ -86,7 +86,6 @@ struct _K2OSKERN_OBJ_HEADER
     UINT32                  mObjFlags;
     INT32 volatile          mRefCount;
     K2OSKERN_pf_ObjDispose  Dispose;
-
     K2TREE_NODE             ObjTreeNode;
 };
 
@@ -99,7 +98,6 @@ struct _K2OSKERN_OBJ_PROCESS
     UINT32                  mTransTableKVA;     // VIRT of root trans table
     UINT32                  mTransTableRegVal;  // PHYS(+) of root trans table
     UINT32                  mVirtMapKVA;        // VIRT of PTE array for user space
-
 };
 
 #define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1_BASE)
@@ -109,15 +107,10 @@ struct _K2OSKERN_OBJ_PROCESS
 struct _K2OSKERN_OBJ_INTR
 {
     K2OSKERN_OBJ_HEADER     Hdr;
-
     K2TREE_NODE             IntrTreeNode;
-
     K2OSKERN_IRQ_CONFIG     IrqConfig;
-
     K2OSKERN_pf_IntrHandler mfHandler;
-
     void *                  mpHandlerContext;
-
     //
     // TBD - notify for interrupt
     //
@@ -154,7 +147,6 @@ struct _KERN_DATA
 
 //    KernInitStage           mKernInitStage;
     K2OSKERN_SEQLOCK        DebugSeqLock;
-//    INT32 volatile          mCoresInPanic;
 
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM

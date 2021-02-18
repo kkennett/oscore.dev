@@ -74,6 +74,8 @@ Kern_Main(
     K2OS_UEFI_LOADINFO const *apLoadInfo
     )
 {
+    K2ROFS const *pROFS;
+
     //
     // zero globals
     //
@@ -94,6 +96,8 @@ Kern_Main(
     //
     K2OSKERN_Debug("Kern_Main()\n");
 
+
+
     //
     // call C++ constructors now if there are any
     //
@@ -107,6 +111,7 @@ Kern_Main(
     if (0x12345678 == (UINT32)apLoadInfo)
         K2MEM_Copy(&gData, image_padding, 4095);
 
+    K2OSKERN_Debug("Intentional hang\n");
     while (1);
 }
 
