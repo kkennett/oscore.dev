@@ -35,7 +35,6 @@ PHDRS
   text PT_LOAD ;
   rodata PT_LOAD ;
   data PT_LOAD ;
-  other PT_LOAD ;
 }
 
 SECTIONS
@@ -49,10 +48,7 @@ SECTIONS
   __ctors = .;
   .ctors : { *(.ctors) *(.init_array) *(.init_array.*) } : rodata
   . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) } : data
-  __bss_begin = .;
-  .bss :  { *(.bss) *(.bss.*) } : data
-  __data_end = .;
+  .data : { *(.data) *(.data.*) *(.bss) *(.bss.*) } : data
   .bss_padding :  { *(.bss_padding) } : data
   . = ALIGN(4096);
 }

@@ -31,6 +31,25 @@
 //
 #include "K2OsLoader.h"
 
+#if 0
+example:
+    00     0 addr 00000000 size 00000000 off 00000000
+    01     1 addr FFF01000 size 000016EE off 00001000 .text
+    02     1 addr FFF03000 size 00000484 off 00003000 .rodata
+    03     1 addr FFF04000 size 00000074 off 00004000 .data
+    04     1 addr FFF04080 size 00000FFF off 00004080 .bss_padding
+    05     1 addr 00000000 size 00000011 off 0000507F .comment
+    06     3 addr 00000000 size 00000045 off 00005090 .shstrtab
+    07     2 addr 00000000 size 00000240 off 00005240 .symtab
+    08     3 addr 00000000 size 000001C5 off 00005480 .strtab
+ map read-only up to .text
+ map text-only up to .rodata
+ map read-only up to .data
+ round up bss_padding START address to next page boundary.  map read-write up to that point
+ map read-only from that point to the end of the file
+ ELF header is the first byte of the region
+#endif
+
 EFI_STATUS  
 Loader_MapKernelElf(
     void
@@ -46,23 +65,187 @@ Loader_MapKernelElf(
     // should barf if they are not
     //
 
-    K2ELF32PARSE    parse;
-    K2STAT          stat;
+    K2ELF32PARSE        parse;
+    K2STAT              stat;
+    UINT32              ix;
+    UINT32              numSecHdr;
+    Elf32_Shdr const *  pSecHdr = NULL;
+    char const *        pSecStr;
+    UINT32              virtAddr;
+    UINT32              physAddr;
+    UINT32              lastOffset;
+    UINT32              dataEnd;
 
+    K2Printf(L"Kernel phys is %08X\n", gData.mKernElfPhys);
+    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ELF_AREA);
+    K2Printf(L"Kernel size is %08X\n", gData.LoadInfo.mKernSizeBytes);
     stat = K2ELF32_Parse((UINT8 const *)gData.mKernElfPhys, gData.LoadInfo.mKernSizeBytes, &parse);
     if (K2STAT_IS_ERROR(stat))
     {
         return EFI_DEVICE_ERROR;
     }
 
-    
+    pSecStr = (char const *)K2ELF32_GetSectionData(&parse, parse.mpRawFileData->e_shstrndx);
+    numSecHdr = parse.mpRawFileData->e_shnum;
 
+    //
+    // find text section
+    //
+    for (ix = 1; ix < numSecHdr; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (0 == K2ASC_Comp(pSecStr + pSecHdr->sh_name, ".text"))
+            break;
+    }
+    if (ix == numSecHdr)
+    {
+        K2Printf(L"kernel .text section not found\n");
+        return EFI_NOT_FOUND;
+    }
+    if (pSecHdr->sh_offset & 0xFFF)
+    {
+        K2Printf(L"kernel .text section is not page aligned\n");
+        return EFI_NOT_FOUND;
+    }
 
-    
+    physAddr = gData.mKernElfPhys;
+    virtAddr = K2OS_KVA_KERNEL_ELF_AREA;
 
+    ix = pSecHdr->sh_offset / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages r/o for elf header at start of image\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    lastOffset = pSecHdr->sh_offset;
+
+    //
+    // find rodata section
+    //
+    for (ix = 1; ix < numSecHdr; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (0 == K2ASC_Comp(pSecStr + pSecHdr->sh_name, ".rodata"))
+            break;
+    }
+    if (ix == numSecHdr)
+    {
+        K2Printf(L"kernel .rodata section not found\n");
+        return EFI_NOT_FOUND;
+    }
+    if (pSecHdr->sh_offset & 0xFFF)
+    {
+        K2Printf(L"kernel .rodata section is not page aligned\n");
+        return EFI_NOT_FOUND;
+    }
+    ix = (pSecHdr->sh_offset - lastOffset) / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages r+x for text area\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_TEXT);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X rx\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    lastOffset = pSecHdr->sh_offset;
+
+    //
+    // find data section
+    //
+    for (ix = 1; ix < numSecHdr; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (0 == K2ASC_Comp(pSecStr + pSecHdr->sh_name, ".data"))
+            break;
+    }
+    if (ix == numSecHdr)
+    {
+        K2Printf(L"kernel .data section not found\n");
+        return EFI_NOT_FOUND;
+    }
+    if (pSecHdr->sh_offset & 0xFFF)
+    {
+        K2Printf(L"kernel .data section is not page aligned\n");
+        return EFI_NOT_FOUND;
+    }
+    ix = (pSecHdr->sh_offset - lastOffset) / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages ro for read area\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    lastOffset = pSecHdr->sh_offset;
+
+    //
+    // find bss_padding section
+    //
+    for (ix = 1; ix < numSecHdr; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (0 == K2ASC_Comp(pSecStr + pSecHdr->sh_name, ".bss_padding"))
+            break;
+    }
+    if (ix == numSecHdr)
+    {
+        K2Printf(L"kernel .bss_padding section not found\n");
+        return EFI_NOT_FOUND;
+    }
+    dataEnd = (pSecHdr->sh_offset + 0xFFF) & ~0xFFF;
+
+    ix = (dataEnd - lastOffset) / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages rw for data area\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_DATA);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X rw\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    lastOffset = dataEnd;
+
+    dataEnd = (gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF;
+    ix = (dataEnd - lastOffset) / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages ro for extra goo\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    K2Printf(L"Mapping end is %08X\n", virtAddr);
 
     return EFI_SUCCESS;
-
-
 }
 

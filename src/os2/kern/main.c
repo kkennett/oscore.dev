@@ -43,22 +43,136 @@ K2_pf_RAISE_EXCEPTION   K2_RaiseException = KernEx_RaiseException;
 
 UINT8 image_padding[4095] __attribute__((section(".bss_padding")));
 
+//
+// C++ constructors/destructors
+//
+typedef void (*__vfpt)(void);
+typedef void (*__vfpv)(void *);
+extern __attribute__((weak)) __vfpt __ctors[];
+extern __attribute__((weak)) UINT32 __ctors_count;
+extern UINT32                       __bss_begin;
+extern UINT32                       __data_end;
+
+static 
+void 
+__call_ctors(
+    void
+)
+{
+    UINT32 i;
+    UINT32 c;
+
+    c = (UINT32)&__ctors_count;
+    if (c==0)
+        return;
+    for(i=0;i<c;i++)
+        (*__ctors[i])();
+}
+
 void K2_CALLCONV_REGS __attribute__((noreturn)) 
 Kern_Main(
     K2OS_UEFI_LOADINFO const *apLoadInfo
     )
 {
+    //
+    // zero globals
+    //
     K2MEM_Zero(&gData, sizeof(KERN_DATA));
 
+    //
+    // save the load info because we are going to destroy the transition page that holds it
+    //
     K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
 
+    //
+    // init for debug messages
+    //
     K2OSKERN_SeqIntrInit(&gData.DebugSeqLock);
 
+    //
+    // send out first debug message
+    //
     K2OSKERN_Debug("Kern_Main()\n");
 
-    K2MEM_Copy(&gData, image_padding, 4095);
+    //
+    // call C++ constructors now if there are any
+    //
+    if ((((UINT32)&__ctors_count)!=0) &&
+        (((UINT32)&__ctors)!=0))
+        __call_ctors();
+
+    //
+    // this will never actually happen.  this is here so that the bss padding comes in
+    //
+    if (0x12345678 == (UINT32)apLoadInfo)
+        K2MEM_Copy(&gData, image_padding, 4095);
 
     while (1);
-
 }
+
+//
+// libgcc functions
+//
+int  __cxa_atexit(__vfpv f, void * a, void *apModule)
+{
+    //
+    // should never be called
+    //
+    K2_ASSERT(0);
+    return 0;
+}
+
+void __call_dtors(void *apModule)
+{
+    //
+    // should never be called
+    //
+    K2_ASSERT(0);
+}
+
+#if K2_TARGET_ARCH_IS_ARM
+
+void 
+__aeabi_idiv0(
+    void
+) 
+K2_CALLCONV_NAKED;
+
+void 
+__aeabi_idiv0(
+    void
+)
+{
+    asm("mov r0, %[code]\n" : : [code]"r"(K2STAT_EX_ZERODIVIDE));
+    asm("mov r12, %[targ]\n" : : [targ]"r"((UINT32)K2_RaiseException));
+    asm("bx r12\n");
+}
+
+void
+__aeabi_ldiv0(
+    void
+)
+K2_CALLCONV_NAKED;
+
+void
+__aeabi_ldiv0(
+    void
+)
+{
+    asm("mov r0, %[code]\n" : : [code]"r"(K2STAT_EX_ZERODIVIDE));
+    asm("mov r12, %[targ]\n" : : [targ]"r"((UINT32)K2_RaiseException));
+    asm("bx r12\n");
+}
+
+int
+__aeabi_atexit(
+    void *  object, 
+    __vfpv  destroyer, 
+    void *  dso_handle
+)
+{
+    return __cxa_atexit(destroyer, object, (DLX *)dso_handle);
+}
+
+#endif
 
