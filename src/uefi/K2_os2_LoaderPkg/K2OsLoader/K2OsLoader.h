@@ -74,6 +74,7 @@ struct _LOADER_DATA
     SMBIOS_STRUCTURE_POINTER *                      mpSmbios;
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  * mpAcpi;
     UINT32                                          mKernElfPhys;
+    UINT32                                          mRofsBytes;
     UINT32                                          mKernArenaLow;
     UINT32                                          mKernArenaHigh;
     UINT32                                          mPreRuntimeHigh;
@@ -90,15 +91,16 @@ EFI_STATUS  Loader_FillCpuInfo(void);
 
 EFI_STATUS  Loader_CreateVirtualMap(void);
 
-EFI_STATUS  Loader_MapKernelElf(void);
+EFI_STATUS  Loader_MapKernelArena(void);
 
-//EFI_STATUS  Loader_UpdateMemoryMap(void);
-//K2STAT      Loader_TrackEfiMap(void);
-//void        Loader_TransitionToKernel(void);
-//K2STAT      Loader_AssignRuntimeVirtual(void);
-//K2STAT      Loader_AssembleAcpi(void);
+K2STAT      Loader_AssembleAcpi(void);
 
-//void        DumpFile(CHAR16 const *apFileName, void *apData, UINTN aDataBytes);
+K2STAT      Loader_TrackEfiMap(void);
 
+EFI_STATUS  Loader_UpdateMemoryMap(void);
+
+K2STAT      Loader_AssignRuntimeVirtual(void);
+
+void        Loader_TransitionToKernel(void);
 
 #endif /* __K2OSLOADER_H__ */

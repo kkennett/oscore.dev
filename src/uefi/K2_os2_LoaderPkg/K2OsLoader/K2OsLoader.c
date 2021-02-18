@@ -94,7 +94,7 @@ static EFI_STATUS sLoadRofs(EFI_FILE_PROTOCOL * apKernDir)
                 break;
             }
 
-            bytesToRead = (UINTN)pFileInfo->FileSize;
+            gData.mRofsBytes = bytesToRead = (UINTN)pFileInfo->FileSize;
 
             filePages = (UINT32)(K2_ROUNDUP(bytesToRead, K2_VA32_MEMPAGE_BYTES) / K2_VA32_MEMPAGE_BYTES);
 
@@ -187,9 +187,7 @@ static EFI_STATUS sLoadKernelElf(EFI_FILE_PROTOCOL * apKernDir)
                 break;
             }
 
-            gData.LoadInfo.mKernSizeBytes = (UINT32)pFileInfo->FileSize;
-
-            bytesToRead = (UINTN)pFileInfo->FileSize;
+            gData.LoadInfo.mKernSizeBytes = bytesToRead = (UINTN)pFileInfo->FileSize;
 
             filePages = (UINT32)(K2_ROUNDUP(bytesToRead, K2_VA32_MEMPAGE_BYTES) / K2_VA32_MEMPAGE_BYTES);
 
@@ -229,7 +227,7 @@ static EFI_STATUS sLoadKernelElf(EFI_FILE_PROTOCOL * apKernDir)
     return efiStatus;
 }
 
-EFI_STATUS LoadKernelAndRofs(void)
+EFI_STATUS LoadKernelArena(void)
 {
     EFI_STATUS                       status;
     EFI_LOADED_IMAGE_PROTOCOL *      pLoadedImage = NULL;
@@ -403,6 +401,7 @@ K2OsLoaderEntryPoint (
     EFI_STATUS              efiStatus;
     EFI_EVENT               efiEvent;
     EFI_PHYSICAL_ADDRESS    physAddr;
+    K2STAT                  stat;
 
     K2Printf(L"\n\n\nK2Loader\n----------------\n");
 
@@ -470,20 +469,48 @@ K2OsLoaderEntryPoint (
                     break;
                 }
 
-                efiStatus = LoadKernelAndRofs();
+                efiStatus = LoadKernelArena();
                 if (EFI_ERROR(efiStatus))
                 {
                     K2Printf(L"*** Failed to load ROFS and kernel ELF, result = %r\n\n\n", efiStatus);
                     break;
                 }
 
-                efiStatus = Loader_MapKernelElf();
+                efiStatus = Loader_MapKernelArena();
                 if (EFI_ERROR(efiStatus))
                 {
                     K2Printf(L"*** Failed to map the kernel.elf into the virtual map, result = %r\n\n\n", efiStatus);
                     break;
                 }
 
+                stat = Loader_AssembleAcpi();
+                if (K2STAT_IS_ERROR(stat))
+                {
+                    K2Printf(L"*** Failed to assemble ACPI info, result = %r\n\n\n", stat);
+                    break;
+                }
+
+#if 1
+                gData.LoadInfo.mDebugPageVirt = gData.mKernArenaLow;
+                gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
+#if K2_TARGET_ARCH_IS_ARM
+                k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x02020000, K2OS_MAPTYPE_KERN_DEVICEIO);   // IMX6 UART 1
+//                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);     // IMX6 UART 2
+#else
+                stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_MAPTYPE_KERN_DEVICEIO);
+#endif
+                //                        K2Printf(L"DebugPageVirt = 0x%08X\n", gData.LoadInfo.mDebugPageVirt);
+                if (K2STAT_IS_ERROR(stat))
+                    break;
+#else
+                gData.LoadInfo.mDebugPageVirt = 0;
+#endif
+                K2Printf(L"\n----------------\nTransition...\n");
+                stat = Loader_TrackEfiMap();
+                if (K2STAT_IS_ERROR(stat))
+                    break;
+
+                Loader_TransitionToKernel();
 
                 K2Printf(L"ok.\n");
 
@@ -506,31 +533,7 @@ while (1);
 
 #if 0
 
-                                do
-                                {
-                                    k2Stat = Loader_MapAllDLX();
-                                    if (K2STAT_IS_ERROR(k2Stat))
-                                        break;
                                     k2Stat = Loader_AssembleAcpi();
-                                    if (K2STAT_IS_ERROR(k2Stat))
-                                        break;
-#if 1
-                                    gData.LoadInfo.mDebugPageVirt = gData.mKernArenaLow;
-                                    gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
-#if K2_TARGET_ARCH_IS_ARM
-                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x02020000, K2OS_MAPTYPE_KERN_DEVICEIO);   // IMX6 UART 1
-//                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);     // IMX6 UART 2
-#else
-                                    k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x000B8000, K2OS_MAPTYPE_KERN_DEVICEIO);
-#endif
-                                    //                        K2Printf(L"DebugPageVirt = 0x%08X\n", gData.LoadInfo.mDebugPageVirt);
-                                    if (K2STAT_IS_ERROR(k2Stat))
-                                        break;
-#else
-                                    gData.LoadInfo.mDebugPageVirt = 0;
-#endif
-                                    K2Printf(L"\n----------------\nTransition...\n");
-                                    k2Stat = Loader_TrackEfiMap();
                                     if (K2STAT_IS_ERROR(k2Stat))
                                         break;
                                     //
@@ -554,8 +557,6 @@ while (1);
                                     if (K2STAT_IS_ERROR(k2Stat))
                                         break;
 
-                                    if (!K2STAT_IS_ERROR(k2Stat))
-                                        Loader_TransitionToKernel();
                                 } while (0);
 
                                 gRT->ResetSystem(EfiResetWarm, EFI_DEVICE_ERROR, 0, NULL);

@@ -43,22 +43,17 @@
     K2OsLoader.h
     k2stub.c
     virtmap.c
-    kernelf.c
-
-#    dlxsupp.c
-#    dlxstub.c
-#    transit.c
-#    trackefi.c
-#    updatemap.c
+    kernmap.c
+    transit.c
+    trackefi.c
+    updatemap.c
     printf.c
-#    asmacpi.c
+    asmacpi.c
   
     DEFINE K2_ROOT            =   C:\repo\oscore.dev
     DEFINE K2_SHARED_LIB_SRC  =   $(K2_ROOT)/src/shared/lib
 
     DEFINE K2_MEMLIB      =   $(K2_SHARED_LIB_SRC)/k2mem
-    DEFINE K2_LISTLIB     =   $(K2_SHARED_LIB_SRC)/k2list
-    DEFINE K2_TREELIB     =   $(K2_SHARED_LIB_SRC)/k2tree
     DEFINE K2_ASCIILIB    =   $(K2_SHARED_LIB_SRC)/k2asc
     DEFINE K2_CRCLIB      =   $(K2_SHARED_LIB_SRC)/k2crc
     DEFINE K2_ELFLIB      =   $(K2_SHARED_LIB_SRC)/k2elf32
@@ -70,13 +65,10 @@
     # ASCII sources
     #
     $(K2_ASCIILIB)\compare.c
-    $(K2_ASCIILIB)\len.c
-    $(K2_ASCIILIB)\conv.c
 
     #
     # CRC sources
     #
-    $(K2_CRCLIB)\crc16.c
     $(K2_CRCLIB)\crc32.c
 
     #
@@ -91,44 +83,15 @@
     $(K2_MEMLIB)\memset16.c
     $(K2_MEMLIB)\memset32.c
     $(K2_MEMLIB)\memset64.c
-    $(K2_MEMLIB)\memcompare.c
-    $(K2_MEMLIB)\memcompare8.c
-    $(K2_MEMLIB)\memcompare16.c
-    $(K2_MEMLIB)\memcompare32.c
-    $(K2_MEMLIB)\memcompare64.c
     $(K2_MEMLIB)\memverify8.c
     $(K2_MEMLIB)\memverify16.c
     $(K2_MEMLIB)\memverify32.c
     $(K2_MEMLIB)\memverify64.c
 
     #
-    # LIST sources
-    #
-    $(K2_LISTLIB)\addafter.c
-    $(K2_LISTLIB)\addathead.c
-    $(K2_LISTLIB)\addattail.c
-    $(K2_LISTLIB)\addbefore.c
-    $(K2_LISTLIB)\listinit.c
-    $(K2_LISTLIB)\listremove.c
-
-    #
     # ELFFILE sources
     #
     $(K2_ELFLIB)\parse32.c
-
-    #
-    # TREE sources
-    #
-    $(K2_TREELIB)\findorafter.c
-    $(K2_TREELIB)\firstnode.c
-    $(K2_TREELIB)\insert.c
-    $(K2_TREELIB)\lastnode.c
-    $(K2_TREELIB)\nextnode.c
-    $(K2_TREELIB)\prevnode.c
-    $(K2_TREELIB)\rot.c
-    $(K2_TREELIB)\treefind.c
-    $(K2_TREELIB)\treeinit.c
-    $(K2_TREELIB)\treeremove.c
 
     #
     # VMAP32 sources

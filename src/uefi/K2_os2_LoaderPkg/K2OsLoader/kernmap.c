@@ -48,10 +48,14 @@ example:
  round up bss_padding START address to next page boundary.  map read-write up to that point
  map read-only from that point to the end of the file
  ELF header is the first byte of the region
+
+ ROFS virtual is right after the end of that (page aligned).
+ size of the ROFS is embedded inside of it.  
+
 #endif
 
 EFI_STATUS  
-Loader_MapKernelElf(
+Loader_MapKernelArena(
     void
 )
 {
@@ -77,13 +81,16 @@ Loader_MapKernelElf(
     UINT32              dataEnd;
 
     K2Printf(L"Kernel phys is %08X\n", gData.mKernElfPhys);
-    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ELF_AREA);
+    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ARENA);
     K2Printf(L"Kernel size is %08X\n", gData.LoadInfo.mKernSizeBytes);
     stat = K2ELF32_Parse((UINT8 const *)gData.mKernElfPhys, gData.LoadInfo.mKernSizeBytes, &parse);
     if (K2STAT_IS_ERROR(stat))
     {
         return EFI_DEVICE_ERROR;
     }
+
+    gData.LoadInfo.mKernEntryPoint = (K2OSKERN_EntryPoint)parse.mpRawFileData->e_entry;
+    K2Printf(L"Kernel entrypoint at %08X\n", gData.LoadInfo.mKernEntryPoint);
 
     pSecStr = (char const *)K2ELF32_GetSectionData(&parse, parse.mpRawFileData->e_shstrndx);
     numSecHdr = parse.mpRawFileData->e_shnum;
@@ -109,7 +116,7 @@ Loader_MapKernelElf(
     }
 
     physAddr = gData.mKernElfPhys;
-    virtAddr = K2OS_KVA_KERNEL_ELF_AREA;
+    virtAddr = K2OS_KVA_KERNEL_ARENA;
 
     ix = pSecHdr->sh_offset / K2_VA32_MEMPAGE_BYTES;
     K2Printf(L"Mapping %d pages r/o for elf header at start of image\n", ix);
@@ -244,7 +251,24 @@ Loader_MapKernelElf(
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
-    K2Printf(L"Mapping end is %08X\n", virtAddr);
+    K2Printf(L"KernElf end is %08X, this is where ROFS starts\n", virtAddr);
+
+    physAddr = gData.LoadInfo.mBuiltinRofsPhys;
+    ix = ((gData.mRofsBytes + 0xFFF) & ~0xFFF) / K2_VA32_MEMPAGE_BYTES;
+    K2Printf(L"Mapping %d pages ro for ROFS\n", ix);
+    do
+    {
+        stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
+        if (K2STAT_IS_ERROR(stat))
+        {
+            K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
+            return EFI_NOT_FOUND;
+        }
+        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+        physAddr += K2_VA32_MEMPAGE_BYTES;
+        virtAddr += K2_VA32_MEMPAGE_BYTES;
+    } while (--ix);
+    K2Printf(L"ROFS v  end is %08X\n", virtAddr);
 
     return EFI_SUCCESS;
 }

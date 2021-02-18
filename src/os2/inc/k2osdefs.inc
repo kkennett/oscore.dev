@@ -118,10 +118,10 @@
 #define K2OS_KVA_COREMEMORY_BASE_HIGH16             0xFFFD
 #define K2OS_KVA_COREMEMORY_BASE_LOW16              0x0000
 
-#define K2OS_KVA_KERNEL_ELF_AREA                    0xFFF00000
-#define K2OS_KVA_KERNEL_ELF_AREA_SIZE               0x000D0000 // 832kB
+#define K2OS_KVA_KERNEL_ARENA                       0xFFF00000
+#define K2OS_KVA_KERNEL_ARENA_SIZE                  0x000D0000 // 832kB
 
-#define K2OS_KVA_FREE_TOP                           K2OS_KVA_KERNEL_ELF_AREA
+#define K2OS_KVA_FREE_TOP                           K2OS_KVA_KERNEL_ARENA
 
 /* --------------------------------------------------------------------------------- */
 
