@@ -148,7 +148,7 @@ void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
     }
 }
 
-void
+static void
 sPic_SetDevIrqMask(
     UINT32  aDevIrq,
     BOOL    aSetMask
@@ -172,13 +172,13 @@ sPic_SetDevIrqMask(
     }
 }
 
-UINT32 sReadIoApic(UINT32 aIndex, UINT32 aReg)
+static UINT32 sReadIoApic(UINT32 aIndex, UINT32 aReg)
 {
     MMREG_WRITE32(K2OS_KVA_X32_IOAPICS + (aIndex * K2_VA32_MEMPAGE_BYTES), X32_IOAPIC_OFFSET_IOREGSEL, aReg);
     return MMREG_READ32(K2OS_KVA_X32_IOAPICS + (aIndex * K2_VA32_MEMPAGE_BYTES), X32_IOAPIC_OFFSET_IOWIN);
 }
 
-void sWriteIoApic(UINT32 aIndex, UINT32 aReg, UINT32 aVal)
+static void sWriteIoApic(UINT32 aIndex, UINT32 aReg, UINT32 aVal)
 {
     MMREG_WRITE32(K2OS_KVA_X32_IOAPICS + (aIndex * K2_VA32_MEMPAGE_BYTES), X32_IOAPIC_OFFSET_IOREGSEL, aReg);
     MMREG_WRITE32(K2OS_KVA_X32_IOAPICS + (aIndex * K2_VA32_MEMPAGE_BYTES), X32_IOAPIC_OFFSET_IOWIN, aVal);
@@ -434,6 +434,7 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDHI(redIx), redHi);
 }
 
+static
 void
 sLvt_SetDevIrqMask(
     UINT32  aDevIrq,

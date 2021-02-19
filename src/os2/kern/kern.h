@@ -248,7 +248,7 @@ void    K2_CALLCONV_REGS KernEx_RaiseException(K2STAT aExceptionCode);
 
 void    K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO const *apLoadInfo);
 
-void    KernArch_InitOnEntry(void);
+void    KernArch_InitAtEntry(void);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
