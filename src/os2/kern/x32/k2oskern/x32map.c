@@ -30,65 +30,36 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "x32kern.h"
 
-static UINT32 * 
-sGetPTE(
-    UINT32 aVirtMapBase, 
-    UINT32 aVirtAddr
-)
-{
-    UINT32* pPTE;
-
-    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-    {
-        K2_ASSERT(aVirtMapBase == K2OS_KVA_KERNVAMAP_BASE);
-        pPTE = (UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr);
-    }
-    else
-    {
-        K2_ASSERT(aVirtMapBase != K2OS_KVA_KERNVAMAP_BASE);
-        pPTE = (UINT32*)K2_VA32_TO_PTE_ADDR(aVirtMapBase, aVirtAddr);
-    }
-
-    return pPTE;
-}
-
-void    
-KernMap_MakeOnePresentPage(
-    UINT32 aVirtMapBase, 
-    UINT32 aVirtAddr, 
+UINT32 
+KernArch_MakePTE(
     UINT32 aPhysAddr, 
     UINT32 aPageMapAttr
 )
 {
-    UINT32 * pPTE;
-    UINT32 * pPageCount;
-    UINT32   pteOld;
+    K2OSKERN_PHYSTRACK_PAGE *   pTrack;
+    UINT32                      pte;
 
-    aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
+    pTrack = (K2OSKERN_PHYSTRACK_PAGE *)K2OS_PHYS32_TO_PHYSTRACK(aPhysAddr);
+    K2_ASSERT(0 == (pTrack->mFlags & K2OSKERN_PHYSTRACK_UNALLOC_FLAG));
 
-    pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pte = X32_PTE_PRESENT | aPhysAddr;
 
-    pteOld = *pPTE;
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
+        pte |= X32_PTE_WRITEABLE;
 
-    K2_ASSERT((pteOld & K2OSKERN_PTE_PRESENT_BIT) == 0);
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_UNCACHED)
+        pte |= X32_PTE_CACHEDISABLE;
 
-    *pPTE = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
+        pte |= X32_PTE_WRITETHROUGH;
 
-    if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
-    {
-        if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-        {
-            pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
-        }
-        else
-        {
-            K2_ASSERT(0);
-        }
-        (*pPageCount)++;
-        K2_ASSERT((*pPageCount) <= 1024);
-    }
+    if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
+        pte |= X32_PTE_USER;
+    else
+        pte |= X32_PTE_GLOBAL;
 
-    K2_CpuWriteBarrier();
+    return pte;
 }
+

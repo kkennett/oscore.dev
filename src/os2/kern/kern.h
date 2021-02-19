@@ -53,6 +53,9 @@ typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
 typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 
+typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
+typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
+
 /* --------------------------------------------------------------------------------- */
 
 struct _K2OSKERN_SEQLOCK
@@ -91,6 +94,64 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_COREMEMORY) == (4 * K2_VA32_MEMPAGE_BYTES));
 
 #define K2OSKERN_COREIX_TO_COREMEMORY(x)    ((K2OSKERN_COREMEMORY *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
 #define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(KernCpu_GetIndex())
+
+/* --------------------------------------------------------------------------------- */
+
+typedef enum _KernPhysPageList KernPhysPageList;
+enum _KernPhysPageList
+{
+    KernPhysPageList_Error,         //  0        
+
+    KernPhysPageList_Unusable,      //  1       EFI_Reserved, EFI_ACPI_NVS
+    KernPhysPageList_Trans,         //  2       TRANSITION
+    KernPhysPageList_Paging,        //  3       PAGING
+    KernPhysPageList_Proc,          //  4       PROCESS, THREAD STACKS
+    KernPhysPageList_KOver,         //  5       PHYS_TRACK, ZERO, CORES, EFI_MAP, 
+    KernPhysPageList_Free_Dirty,    //  6
+    KernPhysPageList_Free_Clean,    //  7 
+    KernPhysPageList_KText,         //  8       TEXT, EFI_Run_Code
+    KernPhysPageList_KRead,         //  9       READ
+    KernPhysPageList_KData,         //  10      DATA, DLX, LOADER, EFI_Run_Data
+    KernPhysPageList_UText,         //  11
+    KernPhysPageList_URead,         //  12
+    KernPhysPageList_UData,         //  13
+    KernPhysPageList_General,       //  14
+    KernPhysPageList_DeviceU,       //  15
+    KernPhysPageList_DeviceC,       //  16
+
+    KernPhysPageList_Count,         //  17
+
+    KernPhysPageList_Thread_Working = 26,     // temporarily set as thread working page
+    KernPhysPageList_Thread_PtWorking = 27,   // temporarily set as thread pt working page
+    KernPhysPageList_Thread_Dirty  = 28,      // temporarily on thread dirty list
+    KernPhysPageList_Thread_Clean  = 29,      // temporarily on thread clean list
+    KernPhysPageList_Thread_PtDirty =30,      // temporarily on thread pagetable dirty list
+    KernPhysPageList_Thread_PtClean =31,      // temporarily on thread pagetable clean list
+    // 31 is max
+};
+
+K2_STATIC_ASSERT((K2OSKERN_PHYSTRACK_PAGE_LIST_MASK >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) >= KernPhysPageList_Count);
+
+struct _K2OSKERN_PHYSTRACK_PAGE
+{
+    UINT32      mFlags;
+    void *      mpOwnerObject;
+    K2LIST_LINK ListLink;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == K2OS_PHYSTRACK_BYTES);
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == sizeof(K2OS_PHYSTRACK_UEFI));
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_PAGE) == sizeof(K2TREE_NODE));
+
+struct _K2OSKERN_PHYSTRACK_FREE
+{
+    UINT32      mFlags; // must be exact same location as mUserVal
+    UINT32      mTreeNode_ParentBal;
+    UINT32      mTreeNode_LeftChild;
+    UINT32      mTreeNode_RightChild;
+};
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == K2OS_PHYSTRACK_BYTES);
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2OS_PHYSTRACK_UEFI));
+K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
 
 /* --------------------------------------------------------------------------------- */
 
@@ -191,8 +252,9 @@ void    KernArch_InitOnEntry(void);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
+UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
 
-void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapAttr);
+void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 
 UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);

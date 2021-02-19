@@ -37,6 +37,32 @@
 
 /* --------------------------------------------------------------------------------- */
 
+#define K2OSKERN_PHYSTRACK_UNALLOC_FLAG             0x00000001
+#define K2OSKERN_PHYSTRACK_CONTIG_ALLOC_FLAG        0x00000002
+
+#define K2OSKERN_PHYSTRACK_PROP_MASK                0x00000FFE
+
+#define K2OSKERN_PHYSTRACK_PROP_XP_CAP              0x00000800  // The memory region supports being configured so it is protected by system hardware from executing code.
+#define K2OSKERN_PHYSTRACK_PROP_RP_CAP              0x00000400  // The memory region supports being configured as read-protected by system hardware.
+#define K2OSKERN_PHYSTRACK_PROP_WP_CAP              0x00000200  // The memory region supports being configured as write-protected by system hardware.
+#define K2OSKERN_PHYSTRACK_PROP_UCE_CAP             0x00000100  // supports being configured as not cacheable, exported, and supports the “fetch and add” semaphore mechanism.
+#define K2OSKERN_PHYSTRACK_PROP_WB_CAP              0x00000080  // supports being configured as cacheable with a “write back” policy. Reads and writes that hit in the cache do not propagate to main memory. Dirty data is written back to main memory when a new cache line is allocated.
+#define K2OSKERN_PHYSTRACK_PROP_WT_CAP              0x00000040  // supports being configured as cacheable with a “write through” policy. Writes that hit in the cache will also be written to main memory.
+#define K2OSKERN_PHYSTRACK_PROP_WC_CAP              0x00000020  // supports being configured as write combining.
+#define K2OSKERN_PHYSTRACK_PROP_UC_CAP              0x00000010  // supports being configured as not cacheable.
+#define K2OSKERN_PHYSTRACK_RESERVED                 0x00000006
+
+#define K2OSKERN_PHYSTRACK_PROPMASK_UNCACHEABLE     (K2OSKERN_PHYSTRACK_PROP_UCE_CAP | K2OSKERN_PHYSTRACK_PROP_UC_CAP)
+
+#define K2OSKERN_PHYSTRACK_PAGE_COUNT_MASK          0xFFFFF000
+#define K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL           12
+
+#define K2OSKERN_PHYSTRACK_PAGE_LIST_MASK           0x0001F000
+#define K2OSKERN_PHYSTRACK_PAGE_LIST_SHL            12
+#define K2OSKERN_PHYSTRACK_PAGE_FLAGS_GET_LIST(x)   (((x) & K2OSKERN_PHYSTRACK_PAGE_LIST_MASK) >> K2OSKERN_PHYSTRACK_PAGE_LIST_SHL)
+
+/* --------------------------------------------------------------------------------- */
+
 #if K2_TARGET_ARCH_IS_ARM
 #define K2OSKERN_PDE_PRESENT_BIT            A32_TTBE_PT_PRESENT
 #define K2OSKERN_PTE_PRESENT_BIT            A32_PTE_PRESENT

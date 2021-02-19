@@ -54,6 +54,7 @@ SOURCES += x32devintr.c
 SOURCES += x32intrasm.s 
 SOURCES += x32intrhand.c
 SOURCES += x32kerndbg.c
+SOURCES += x32map.c 
 
 STATIC_LIBS += @shared/lib/k2archx32
 STATIC_LIBS += @shared/lib/k2mem
