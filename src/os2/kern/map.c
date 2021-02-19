@@ -40,7 +40,6 @@ KernMap_MakeOnePresentPage(
     UINT32 aMapAttr
 )
 {
-
-
+    K2_ASSERT(0);
 }
 

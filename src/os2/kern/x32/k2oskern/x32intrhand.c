@@ -38,7 +38,6 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
 static K2OSKERN_OBJ_INTR *  sgpIntrObjByIrqIx[X32_NUM_IDT_ENTRIES] = { 0, };
 
-
 static 
 void 
 sAbort(

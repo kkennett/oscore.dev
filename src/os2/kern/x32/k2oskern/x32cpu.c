@@ -37,6 +37,8 @@ KernCpu_GetIndex(
     void
 )
 {
-    return 0;
+    if (!gX32Kern_ApicReady)
+        return 0;
+    return (MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ID) >> 24);
 }
 

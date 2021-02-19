@@ -153,38 +153,17 @@ void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0);
 void X32Kern_PICInit(void);
 void X32Kern_APICInit(UINT32 aCpuIx);
 void X32Kern_IoApicInit(UINT32 aIoApicIx);
-
-void X32Kern_InitStall(void);
-
-void
-X32Kern_DumpStackTrace(
-    K2OSKERN_OBJ_PROCESS *apProc,
-    UINT32 aEIP,
-    UINT32 aEBP,
-    UINT32 aESP,
-    char *  apBuffer
-);
-
-void
-X32Kern_DumpUserModeExceptionContext(
-    X32_EXCEPTION_CONTEXT *apContext
-);
-
-void
-X32Kern_DumpKernelModeExceptionContext(
-    X32_EXCEPTION_CONTEXT * apContext
-);
-
 void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig);
 void X32Kern_MaskDevIrq(UINT8 aIrqIx);
 void X32Kern_UnmaskDevIrq(UINT8 aIrqIx);
-
 void X32Kern_EOI(UINT32 aVector);
-
 void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aESP, UINT32 aFSSel);
 
-typedef void (K2_CALLCONV_REGS *pf_X32Kern_LaunchEntryPoint)(UINT32 aCoreIx);
-void K2_CALLCONV_REGS X32Kern_LaunchEntryPoint(UINT32 aCoreIx);
+void X32Kern_InitStall(void);
+
+void X32Kern_DumpStackTrace(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aEIP, UINT32 aEBP, UINT32 aESP,char * apBuffer);
+void X32Kern_DumpUserModeExceptionContext(X32_EXCEPTION_CONTEXT *apContext);
+void X32Kern_DumpKernelModeExceptionContext(X32_EXCEPTION_CONTEXT * apContext);
 
 /* --------------------------------------------------------------------------------- */
 

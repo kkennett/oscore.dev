@@ -67,11 +67,14 @@ struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
     /* must be first thing in struct */
-    X32_TSS TSS;
+    X32_TSS         TSS;
 #endif
-    UINT32  mCoreIx;
 
-    BOOL    mIsExecuting;
+    UINT32          mCoreIx;
+
+    BOOL            mIsExecuting;
+
+    UINT32 volatile mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
 };
 
 #define K2OSKERN_COREMEMORY_STACKS_BYTES  ((K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_CPUCORE)) + (K2_VA32_MEMPAGE_BYTES * 3))
@@ -187,6 +190,7 @@ void    K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO 
 void    KernArch_InitOnEntry(void);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
+void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
 
 void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapAttr);
 
@@ -208,26 +212,13 @@ UINT32 K2_CALLCONV_REGS KernCpu_GetIndex(void);
 #if 0
 /* --------------------------------------------------------------------------------- */
 
-
-
-
 void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
 
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
 
-void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
-void KernArch_LaunchCores(void);
 void KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 
 UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
-void  KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPTE);
-
-
-void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
-
-void K2_CALLCONV_REGS KernExec(void);
-
-void KernInit_Stage(KernInitStage aStage);
 
 void   KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);

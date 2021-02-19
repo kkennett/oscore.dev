@@ -32,13 +32,33 @@
 
 #include "kern.h"
 
+static
+void
+sEmitter(
+    void *  apContext,
+    char    aCh
+)
+{
+    KernHal_DebugOut(aCh);
+}
+
 void
 KernDbg_Panic(
     char const *apFormat,
     ...
 )
 {
+    VALIST  vList;
+
+    KernSeqLock_Lock(&gData.DebugSeqLock);
+
+    K2_VASTART(vList, apFormat);
+    K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, "\n\nPANIC:\n", NULL);
+
+    K2_VASTART(vList, apFormat);
+    K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, vList);
+
+    KernArch_Panic(K2OSKERN_GET_CURRENT_CPUCORE, TRUE);
 
     while (1);
 }
-

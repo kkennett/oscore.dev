@@ -65,7 +65,6 @@ X32PC_DBGSER_OutByte(
     X32_IoWrite8(aByte, X32PC_SERIAL1_THR_RHR);
 }
 
-
 void K2_CALLCONV_REGS 
 KernHal_DebugOut(
     UINT8 aByte

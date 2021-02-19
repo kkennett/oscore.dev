@@ -32,7 +32,7 @@
 
 #include "x32kern.h"
 
-static BOOL     sgUseIoApics = FALSE;
+static BOOL sgUseIoApics = FALSE;
 
 void
 X32Kern_PICInit(void)

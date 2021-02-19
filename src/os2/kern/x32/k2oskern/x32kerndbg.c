@@ -39,6 +39,7 @@ sEmitSymbolName(
     char *                  pBuffer
 )
 {
+    *pBuffer = 0;
     KernDbg_FindClosestSymbol(apProc, aAddr, pBuffer, X32_SYM_NAME_MAX_LEN);
     if (*pBuffer == 0)
     {
