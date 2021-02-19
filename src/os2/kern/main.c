@@ -92,14 +92,12 @@ Kern_Main(
     //
     // send out first debug message
     //
-    KernDbg_Output("\n\n===========\nK2OS Kernel===========\n\n");
+    KernDbg_Output("\n\n===========\nK2OS Kernel\n===========\n\n");
 
     //
     // architectural inits
     //
     KernArch_InitAtEntry();
-
-    KernDbg_Output("Done Arch inits\n");
 
     //
     // call C++ constructors now if there are any

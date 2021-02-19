@@ -80,9 +80,9 @@ Loader_MapKernelArena(
     UINT32              lastOffset;
     UINT32              dataEnd;
 
-    K2Printf(L"Kernel phys is %08X\n", gData.mKernElfPhys);
-    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ARENA);
-    K2Printf(L"Kernel size is %08X\n", gData.LoadInfo.mKernSizeBytes);
+//    K2Printf(L"Kernel phys is %08X\n", gData.mKernElfPhys);
+//    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ARENA);
+//    K2Printf(L"Kernel size is %08X\n", gData.LoadInfo.mKernSizeBytes);
     stat = K2ELF32_Parse((UINT8 const *)gData.mKernElfPhys, gData.LoadInfo.mKernSizeBytes, &parse);
     if (K2STAT_IS_ERROR(stat))
     {
@@ -90,7 +90,7 @@ Loader_MapKernelArena(
     }
 
     gData.LoadInfo.mKernEntryPoint = (K2OSKERN_EntryPoint)parse.mpRawFileData->e_entry;
-    K2Printf(L"Kernel entrypoint at %08X\n", gData.LoadInfo.mKernEntryPoint);
+//    K2Printf(L"Kernel entrypoint at %08X\n", gData.LoadInfo.mKernEntryPoint);
 
     pSecStr = (char const *)K2ELF32_GetSectionData(&parse, parse.mpRawFileData->e_shstrndx);
     numSecHdr = parse.mpRawFileData->e_shnum;
@@ -119,7 +119,7 @@ Loader_MapKernelArena(
     virtAddr = K2OS_KVA_KERNEL_ARENA;
 
     ix = pSecHdr->sh_offset / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages r/o for elf header at start of image\n", ix);
+//    K2Printf(L"Mapping %d pages r/o for elf header at start of image\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
@@ -128,7 +128,7 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
@@ -154,7 +154,7 @@ Loader_MapKernelArena(
         return EFI_NOT_FOUND;
     }
     ix = (pSecHdr->sh_offset - lastOffset) / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages r+x for text area\n", ix);
+//    K2Printf(L"Mapping %d pages r+x for text area\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_TEXT);
@@ -163,7 +163,7 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X rx\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X rx\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
@@ -189,7 +189,7 @@ Loader_MapKernelArena(
         return EFI_NOT_FOUND;
     }
     ix = (pSecHdr->sh_offset - lastOffset) / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages ro for read area\n", ix);
+//    K2Printf(L"Mapping %d pages ro for read area\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
@@ -198,7 +198,7 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
@@ -221,7 +221,7 @@ Loader_MapKernelArena(
     dataEnd = (pSecHdr->sh_offset + 0xFFF) & ~0xFFF;
 
     ix = (dataEnd - lastOffset) / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages rw for data area\n", ix);
+//    K2Printf(L"Mapping %d pages rw for data area\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_DATA);
@@ -230,7 +230,7 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X rw\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X rw\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
@@ -238,7 +238,7 @@ Loader_MapKernelArena(
 
     dataEnd = (gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF;
     ix = (dataEnd - lastOffset) / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages ro for extra goo\n", ix);
+//    K2Printf(L"Mapping %d pages ro for extra goo\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
@@ -247,15 +247,15 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
-    K2Printf(L"KernElf end is %08X, this is where ROFS starts\n", virtAddr);
+//    K2Printf(L"KernElf end is %08X, this is where ROFS starts\n", virtAddr);
 
     physAddr = gData.LoadInfo.mBuiltinRofsPhys;
     ix = ((gData.mRofsBytes + 0xFFF) & ~0xFFF) / K2_VA32_MEMPAGE_BYTES;
-    K2Printf(L"Mapping %d pages ro for ROFS\n", ix);
+//    K2Printf(L"Mapping %d pages ro for ROFS\n", ix);
     do
     {
         stat = K2VMAP32_MapPage(&gData.Map, virtAddr, physAddr, K2OS_MAPTYPE_KERN_READ);
@@ -264,11 +264,11 @@ Loader_MapKernelArena(
             K2Printf(L"mapping %08X->%08X failed\n", virtAddr, physAddr);
             return EFI_NOT_FOUND;
         }
-        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
+//        K2Printf(L"mapped %08X->%08X r\n", virtAddr, physAddr);
         physAddr += K2_VA32_MEMPAGE_BYTES;
         virtAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix);
-    K2Printf(L"ROFS v  end is %08X\n", virtAddr);
+//    K2Printf(L"ROFS v  end is %08X\n", virtAddr);
 
     return EFI_SUCCESS;
 }

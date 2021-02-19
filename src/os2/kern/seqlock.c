@@ -57,7 +57,7 @@ KernSeqLock_Lock(
     do
     {
         mySeq = apLock->mSeqIn;
-    } while (mySeq == K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
+    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
 
     do {
         if (apLock->mSeqOut == mySeq)

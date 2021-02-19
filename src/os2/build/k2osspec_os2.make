@@ -35,7 +35,58 @@
 #========================================================================================
 ifeq ($(TARGET_TYPE),IMAGE)
 
-$(error No image type supported yet)
+K2_TARGET_NAME_SPEC := builtin.img
+K2_TARGET_OUT_PATH := $(K2_TARGET_PATH)/$(K2_SUBPATH)
+
+K2_TARGET_DISK_PATH := $(K2_TARGET_OUT_PATH)/bootdisk
+K2_TARGET_BUILTIN_PATH := $(K2_TARGET_OUT_PATH)/builtin
+K2_TARGET_BUILTIN_KERN_PATH := $(K2_TARGET_BUILTIN_PATH)/kern
+
+K2_TARGET_EFI_PATH := $(K2_TARGET_DISK_PATH)/EFI/BOOT
+K2_TARGET_OS_PATH := $(K2_TARGET_DISK_PATH)/K2OS
+K2_TARGET_OS_KERN_PATH := $(K2_TARGET_OS_PATH)/$(K2_ARCH)/KERN
+
+K2_TARGET_FULL_SPEC := $(K2_TARGET_OS_KERN_PATH)/$(K2_TARGET_NAME_SPEC)
+
+default: $(K2_TARGET_FULL_SPEC)
+
+#========================================================================================
+
+STOCK_IMAGE_KERN += @$(K2_OS)/kern/$(K2_ARCH)/k2oskern 
+
+ONE_K2_STOCK_KERNEL = stock_$(basename $(1))
+EXPAND_ONE_STOCK_KERNEL = $(if $(findstring @,$(kern)), $(call ONE_K2_STOCK_KERNEL,$(subst @,,$(kern))),$(kern))
+BUILT_STOCK_IMAGE_KERN = $(foreach kern, $(STOCK_IMAGE_KERN), $(EXPAND_ONE_STOCK_KERNEL))
+
+$(BUILT_STOCK_IMAGE_KERN):
+	@MAKE -S -C $(K2_ROOT)/src/$(subst stock_,,$@)
+	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
+	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/elf/kern/$(K2_BUILD_SPEC)/$(@F).elf) $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) 1>NUL
+	@echo.
+
+#========================================================================================
+
+ONE_K2_BULITIN_DLX = builtin_$(basename $(1))
+EXPAND_ONE_BUILTIN_DLX = $(if $(findstring @,$(dlxdep)), $(call ONE_K2_BULITIN_DLX,$(subst @,,$(dlxdep))),$(dlxdep))
+BUILTIN_DLX = $(foreach dlxdep, $(BUILTIN_DLX), $(EXPAND_ONE_BUILTIN_DLX))
+
+$(BUILT_BUILTIN_DLX):
+	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH))
+	@MAKE -S -C $(K2_ROOT)/src/$(subst builtin_,,$@)
+	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/dlx/kern/$(K2_BUILD_SPEC)/$(@F).dlx) $(subst /,\,$(K2_TARGET_BUILTIN_KERN_PATH)) 1>NUL
+	@echo.
+
+#========================================================================================
+
+$(K2_TARGET_FULL_SPEC): $(BUILT_STOCK_IMAGE_KERN) $(BUILT_BUILTIN_DLX) $(BUILD_CONTROL_FILES)
+	@-if not exist $(subst /,\,$(K2_TARGET_OUT_PATH)) md $(subst /,\,$(K2_TARGET_OUT_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_DISK_PATH)) md $(subst /,\,$(K2_TARGET_DISK_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_BUILTIN_PATH)) md $(subst /,\,$(K2_TARGET_BUILTIN_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_EFI_PATH)) md $(subst /,\,$(K2_TARGET_EFI_PATH))
+	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
+	@echo -------- Creating IMAGE $@ --------
+	@copy /Y $(subst /,\,$(K2_ROOT)/src/$(K2_OS)/boot/*) $(subst /,\,$(K2_TARGET_EFI_PATH)) 1>NUL
+	@k2zipper $(subst /,\,$(K2_TARGET_BUILTIN_PATH)) $(subst /,\,$@)
 
 endif
 

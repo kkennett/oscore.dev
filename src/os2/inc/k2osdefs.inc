@@ -202,9 +202,11 @@
 #define K2OS_KVA_KERN_BASE                          0x80000000             
 #define K2OS_KVA_KERN_SELFMAP_ADDR                  0x80000000  // virtual address of PTE mapping itself
 
+// 0x80000000 - 0x803FFFFF
 #define K2OS_KVA_KERNVAMAP_BASE                     K2OS_KVA_KERN_BASE
-#define K2OS_KVA_KERNVAMAP_SIZE                     (K2_VA32_PAGEFRAMES_FOR_4G * 4)
+#define K2OS_KVA_KERNVAMAP_SIZE                     (K2_VA32_PAGEFRAMES_FOR_4G * 4)     
 
+// 0x80400000 - 0x813FFFFF
 #define K2OS_KVA_PHYSTRACKAREA_BASE                 (K2OS_KVA_KERNVAMAP_BASE + K2OS_KVA_KERNVAMAP_SIZE)
 #define K2OS_KVA_PHYSTRACKAREA_SIZE                 (K2_VA32_PAGEFRAMES_FOR_4G * K2OS_PHYSTRACK_BYTES)
 #define K2OS_KVA_PHYSTRACKAREA_END                  (K2OS_KVA_PHYSTRACKAREA_BASE + K2OS_KVA_PHYSTRACKAREA_SIZE)
@@ -212,16 +214,21 @@
 //
 // translation table base must be aligned on 16KB boundary on A32
 //
+// 0x81400000
 #define K2OS_KVA_TRANSTAB_BASE                      K2OS_KVA_PHYSTRACKAREA_END
 
+// 0x81401000
 #define K2OS_KVA_EFIMAP_BASE                        (K2OS_KVA_TRANSTAB_BASE + K2_VA32_TRANSTAB_SIZE)
 #define K2OS_KVA_EFIMAP_SIZE                        (K2OS_EFIMAP_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
+// 0x81403000
 #define K2OS_KVA_PTPAGECOUNT_BASE                   (K2OS_KVA_EFIMAP_BASE + K2OS_KVA_EFIMAP_SIZE)
 
+// 0x81404000
 #define K2OS_KVA_PROC1_BASE                         (K2OS_KVA_PTPAGECOUNT_BASE + K2_VA32_MEMPAGE_BYTES)
 #define K2OS_KVA_PROC1_SIZE                         (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
+// 0x81408000
 #define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_PROC1_BASE + K2OS_KVA_PROC1_SIZE)
 
 /* --------------------------------------------------------------------------------- */
@@ -230,6 +237,7 @@
 // derived definitions
 //
 
+// 0xFFFD3FFC 
 #define K2OS_KVA_CORE0_STACK_INIT                   (K2OS_KVA_COREMEMORY_BASE + (K2_VA32_MEMPAGE_BYTES * 4) - 4)
 
 #define K2OS_KVA_TO_PTE_ADDR(x)                     K2_VA32_TO_PTE_ADDR(K2OS_KVA_KERNVAMAP_BASE, (x))

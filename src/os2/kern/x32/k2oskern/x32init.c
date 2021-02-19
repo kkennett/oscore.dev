@@ -123,7 +123,10 @@ void KernArch_InitAtEntry(void)
             do
             {
                 if ((*pPTE) != 0)
+                {
+                    KernDbg_Output("%08X - %08X\n", virtBase, *pPTE);
                     (*pCountPTPages)++;
+                }
                 pPTE++;
                 virtBase += K2_VA32_MEMPAGE_BYTES;
             } while (--pteLeft);
@@ -185,6 +188,7 @@ void KernArch_InitAtEntry(void)
         //
         // HPET exists and pHeader points to it 
         //
+        KernDbg_Output("HPET exists\n");
         gpX32Kern_HPET = (ACPI_HPET *)pHeader;
         do {
             if (gpX32Kern_HPET->Address.AddressSpaceId != ACPI_ASID_SYSTEM_MEMORY)
@@ -201,6 +205,10 @@ void KernArch_InitAtEntry(void)
             ixCpu &= K2_VA32_PAGEFRAME_MASK;
             KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_X32_HPET, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
         } while (0);
+    }
+    else
+    {
+        KernDbg_Output("no HPET found\n");
     }
 
     //
