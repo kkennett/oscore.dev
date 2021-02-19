@@ -70,12 +70,7 @@ X32Kern_PICInit(void)
 
 void X32Kern_PIC_EOI_BitNum(UINT8 aBitNum)
 {
-    BOOL disp;
-
     K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
-
-    /* disable interrupts */
-    disp = K2OSKERN_SetIntr(FALSE);
 
     if (aBitNum > 7)
     {
@@ -90,39 +85,25 @@ void X32Kern_PIC_EOI_BitNum(UINT8 aBitNum)
 
     /* mark specific EOI for master PIC */
     X32_IoWrite8(X32PC_8259_OCW_SPECIFIC_EOI(aBitNum), X32PC_PIC1_COMMAND);
-
-    /* put interrupts back to whatever they were */
-    K2OSKERN_SetIntr(disp);
 }
 
 UINT32 X32Kern_PIC_ReadMask(void)
 {
-    BOOL    disp;
     UINT32  mask;
-
-    /* disable interrupts */
-    disp = K2OSKERN_SetIntr(FALSE);
 
     /* read the mask for the first PIC */
     mask = X32_IoRead8(X32PC_PIC1_DATA);
     mask |= (((UINT32)X32_IoRead8(X32PC_PIC2_DATA)) << 8);
-
-    /* put interrupts back to whatever they were */
-    K2OSKERN_SetIntr(disp);
 
     return mask;
 }
 
 void X32Kern_PIC_Mask_BitNum(UINT32 aBitNum)
 {
-    BOOL    disp;
     UINT8   mask;
     UINT16  port;
 
     K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
-
-    /* disable interrupts */
-    disp = K2OSKERN_SetIntr(FALSE);
 
     if (aBitNum > 7)
     {
@@ -140,21 +121,14 @@ void X32Kern_PIC_Mask_BitNum(UINT32 aBitNum)
         mask |= (1 << aBitNum);
         X32_IoWrite8(mask, port);
     }
-
-    /* put interrupts back to whatever they were */
-    K2OSKERN_SetIntr(disp);
 }
 
 void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
 {
-    BOOL    disp;
     UINT16  port;
     UINT8   mask;
 
     K2_ASSERT((aBitNum != X32PC_IRQ_PIC2) && (aBitNum <= X32PC_IRQ_LAST));
-
-    /* disable interrupts */
-    disp = K2OSKERN_SetIntr(FALSE);
 
     if (aBitNum > 7)
     {
@@ -172,9 +146,6 @@ void X32Kern_PIC_Unmask_BitNum(UINT32 aBitNum)
         mask &= ~(1 << aBitNum);
         X32_IoWrite8(mask, port);
     }
-
-    /* put interrupts back to whatever they were */
-    K2OSKERN_SetIntr(disp);
 }
 
 void
@@ -191,12 +162,12 @@ sPic_SetDevIrqMask(
 
     if (aSetMask)
     {
-//        K2OSKERN_Debug("PIC.Mask Device Irq %d(%d)\n", aDevIrq, bitNum);
+//        KernDbg_Output("PIC.Mask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Mask_BitNum(bitNum);
     }
     else
     {
-//        K2OSKERN_Debug("PIC.Unmask Device Irq %d(%d)\n", aDevIrq, bitNum);
+//        KernDbg_Output("PIC.Unmask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Unmask_BitNum(bitNum);
     }
 }
@@ -239,7 +210,7 @@ void X32Kern_IoApicInit(UINT32 aIndex)
 
         if (gX32Kern_IrqToIoApicIndexMap[v] != 0xFF)
         {
-            K2OSKERN_Debug("*** Vector %d attempt to map to more than one APIC.  Ignored.\n");
+            KernDbg_Output("*** Vector %d attempt to map to more than one APIC.  Ignored.\n");
         }
         else
         {
@@ -363,7 +334,7 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
 
     if (apConfig->mSourceIrq >= X32_DEVIRQ_LVT_BASE)
     {
-//        K2OSKERN_Debug("ConfigDevIrq(%d) ignored\n", apConfig->mSourceIrq);
+//        KernDbg_Output("ConfigDevIrq(%d) ignored\n", apConfig->mSourceIrq);
         return;
     }
 
@@ -430,7 +401,7 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
         //
         redIx = apConfig->mSourceIrq;
 
-        K2_ASSERT(apConfig->mDestCoreIx < gData.mCpuCount);
+        K2_ASSERT(apConfig->mDestCoreIx < gData.LoadInfo.mCpuCoreCount);
 
         redHi = (1 << (X32_IOAPIC_REDHI_DEST_SHIFT + apConfig->mDestCoreIx));
 
@@ -457,7 +428,7 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig)
     redLo |= X32_IOAPIC_REDLO_MODE_FIXED;
     redLo |= ((redIx + X32KERN_DEVVECTOR_BASE) & X32_IOAPIC_REDLO_VECTOR_MASK);
 
-//    K2OSKERN_Debug("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
+//    KernDbg_Output("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
 
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDLO(redIx), redLo);
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDHI(redIx), redHi);
@@ -488,12 +459,12 @@ sLvt_SetDevIrqMask(
     reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, offset);
     if (aSetMask)
     {
-//        K2OSKERN_Debug("LVT.Mask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+//        KernDbg_Output("LVT.Mask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
         reg |= X32_LOCAPIC_LVT_MASK;
     }
     else
     {
-//        K2OSKERN_Debug("LVT.Unmask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+//        KernDbg_Output("LVT.Unmask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
         reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
     }
     MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, offset, reg);
@@ -501,8 +472,6 @@ sLvt_SetDevIrqMask(
 
 void X32Kern_MaskDevIrq(UINT8 aDevIrqIx)
 {
-    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-
     K2_ASSERT(aDevIrqIx < X32_DEVIRQ_MAX_COUNT);
 
     if (aDevIrqIx >= X32_DEVIRQ_LVT_BASE)
@@ -515,8 +484,6 @@ void X32Kern_MaskDevIrq(UINT8 aDevIrqIx)
 
 void X32Kern_UnmaskDevIrq(UINT8 aDevIrqIx)
 {
-    K2_ASSERT(K2OSKERN_GetIntr() == FALSE);
-
     K2_ASSERT(aDevIrqIx < X32_DEVIRQ_MAX_COUNT);
 
     if (aDevIrqIx >= X32_DEVIRQ_LVT_BASE)

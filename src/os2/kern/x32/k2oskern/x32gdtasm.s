@@ -29,29 +29,46 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OSHAL_H
-#define __K2OSHAL_H
 
-#include "k2oskern.h"
+#include "x32kernasm.inc"
 
-#if __cplusplus
-extern "C" {
-#endif
+.extern gX32Kern_GDTPTR
 
-//
-//------------------------------------------------------------------------
-//
+BEGIN_X32_PROC(X32Kern_GDTFlush)
 
-void K2_CALLCONV_REGS K2OSHAL_DebugOut(UINT8 aByte);
-void K2_CALLCONV_REGS K2OSHAL_MicroStall(UINT32 aMicroseconds);
+    // flush cache
+    wbinvd
 
-//
-//------------------------------------------------------------------------
-//
+    // flush tlb
+    mov %eax, %cr3
+    mov %cr3, %eax
 
-#if __cplusplus
-}
-#endif
+    // load new gdt pointer
+    mov    %eax, OFFSET gX32Kern_GDTPTR
+    lgdt   %ds:[%eax]
 
+    // far jump over cache line to reset code selector
+    jmp    (X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_KERNEL):_flush    
+.space 32
+.align 16
+_flush:
 
-#endif // __K2OSHAL_H
+    // flush tlb again
+    mov %eax, %cr3
+    mov %cr3, %eax
+
+    // reload other selectors
+    xor    %eax, %eax
+    mov    %ax, (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL)
+    mov    %ds, %ax
+    mov    %es, %ax
+    mov    %fs, %ax
+    mov    %gs, %ax
+    mov    %ss, %ax
+
+    ret
+            
+END_X32_PROC(X32Kern_GDTFlush)
+  
+    .end
+

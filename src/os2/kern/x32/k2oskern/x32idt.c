@@ -32,56 +32,32 @@
 
 #include "x32kern.h"
 
-#define TX_EMPTY_BITS (X32PC_SERIAL_LSR_ALLTX_EMPTY | X32PC_SERIAL_LSR_THR_EMPTY)
+#define SIZEOF_ONE_STUB 12
 
-static int initDone = 0;
+extern void * const X32Kern_InterruptStubs;
 
-void
-X32PC_DBGSER_Init(
-    void
-)
+void X32Kern_IDTFlush(void);
+
+void X32Kern_IDTSetup(void)
 {
-    X32_IoWrite8(0, X32PC_SERIAL1_IER);
-    X32_IoWrite8(X32PC_SERIAL_LCR_DLAB, X32PC_SERIAL1_LCR);
-    X32_IoWrite8(X32PC_SERIAL_DIV_BAUD115200, X32PC_SERIAL1_DLAB1_LOWDIV);
-    X32_IoWrite8(0, X32PC_SERIAL1_DLAB1_HIDIV);
-    X32_IoWrite8(X32PC_SERIAL_LCR_DATABITS_8 |
-        X32PC_SERIAL_LCR_PARITY_NONE |
-        X32PC_SERIAL_LCR_STOPBITS_1, X32PC_SERIAL1_LCR);
-    X32_IoWrite8(X32PC_SERIAL_FCR_LCR_BYTE1 |
-        X32PC_SERIAL_FCR_CLEAR_TX |
-        X32PC_SERIAL_FCR_CLEAR_RX, X32PC_SERIAL1_IIR_FIFOCR);
-    X32_IoWrite8(X32PC_SERIAL_MCR_AUX2 |
-        X32PC_SERIAL_MCR_RTS |
-        X32PC_SERIAL_MCR_DTR, X32PC_SERIAL1_MCR);
-}
+    UINT32 ix;
+    UINT32 workAddr;
 
-void
-X32PC_DBGSER_OutByte(
-    UINT8 aByte
-)
-{
-    while ((X32_IoRead8(X32PC_SERIAL1_LSR) & TX_EMPTY_BITS) != TX_EMPTY_BITS);
-    X32_IoWrite8(aByte, X32PC_SERIAL1_THR_RHR);
-}
-
-
-void K2_CALLCONV_REGS 
-KernHal_DebugOut(
-    UINT8 aByte
-)
-{
-    if (!initDone)
+    /* init table */
+    workAddr = (UINT32)&X32Kern_InterruptStubs;
+    for(ix=0;ix<X32_NUM_IDT_ENTRIES;ix++)
     {
-        X32PC_DBGSER_Init();
+        gX32Kern_IDT[ix].mAddrLow16 = (UINT16)(workAddr & 0xFFFF);
+        gX32Kern_IDT[ix].mAddrHigh16 = (UINT16)((workAddr >> 16) & 0xFFFF);
+        gX32Kern_IDT[ix].mSelector = X32_SEGMENT_SELECTOR_KERNEL_CODE;
+        gX32Kern_IDT[ix].mFlags = 0x8E;    /* 0x8E = Present, DPL 0, NonSystem, 32-bit gate */
+        gX32Kern_IDT[ix].mAlwaysZero = 0;
+        workAddr += SIZEOF_ONE_STUB;
     }
-    X32PC_DBGSER_OutByte(aByte);
+
+    gX32Kern_IDTPTR.mBaseAddr = (UINT32)&gX32Kern_IDT;
+    gX32Kern_IDTPTR.mTableSize = (X32_NUM_IDT_ENTRIES * sizeof(X32_IDTENTRY)) - 1;
+    
+    X32Kern_IDTFlush();
 }
 
-void K2_CALLCONV_REGS 
-KernHal_MicroStall(
-    UINT32 aMicroseconds
-)
-{
-
-}

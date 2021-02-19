@@ -216,7 +216,7 @@ $(K2_TARGET_FULL_SPEC): $(OBJECTS) $(LIBRARIES) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_OBJECT_PATH)) md $(subst /,\,$(K2_OBJECT_PATH))
 	@echo -------- Linking ELF $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
+	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
 
 endif
 

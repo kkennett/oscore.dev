@@ -40,8 +40,7 @@ SOURCES += exception.c
 SOURCES += seqlock.c
 SOURCES += debug.c
 SOURCES += panic.c
-
-#SOURCES += map.c
+SOURCES += map.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

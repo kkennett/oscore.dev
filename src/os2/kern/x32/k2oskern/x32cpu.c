@@ -33,7 +33,7 @@
 #include "x32kern.h"
 
 UINT32 K2_CALLCONV_REGS 
-K2OSKERN_GetCpuIndex(
+KernCpu_GetIndex(
     void
 )
 {

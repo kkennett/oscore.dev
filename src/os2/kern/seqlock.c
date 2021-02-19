@@ -34,7 +34,7 @@
 
 void
 K2_CALLCONV_REGS
-K2OSKERN_SeqIntrInit(
+KernSeqLock_Init(
     K2OSKERN_SEQLOCK *  apLock
 )
 {
@@ -43,53 +43,38 @@ K2OSKERN_SeqIntrInit(
     K2_CpuWriteBarrier();
 }
 
-BOOL
+void
 K2_CALLCONV_REGS
-K2OSKERN_SeqIntrLock(
+KernSeqLock_Lock(
     K2OSKERN_SEQLOCK *  apLock
 )
 {
-    BOOL    enabled;
     UINT32  mySeq;
 
-    enabled = K2OSKERN_SetIntr(FALSE);
+    if (1 == gData.LoadInfo.mCpuCoreCount)
+        return;
 
-    if (gData.LoadInfo.mCpuCoreCount > 1)
+    do
     {
-        do {
-            mySeq = apLock->mSeqIn;
-            if (mySeq == K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq))
-                break;
-            if (enabled)
-            {
-                K2OSKERN_SetIntr(TRUE);
-                K2OSHAL_MicroStall(10);
-                K2OSKERN_SetIntr(FALSE);
-            }
-        } while (1);
+        mySeq = apLock->mSeqIn;
+    } while (mySeq == K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
 
-        do {
-            if (apLock->mSeqOut == mySeq)
-                break;
-            K2OSHAL_MicroStall(10);
-        } while (1);
-    }
-
-    return enabled;
+    do {
+        if (apLock->mSeqOut == mySeq)
+            break;
+        KernHal_MicroStall(10);
+    } while (1);
 }
 
 void
 K2_CALLCONV_REGS
-K2OSKERN_SeqIntrUnlock(
-    K2OSKERN_SEQLOCK *  apLock,
-    BOOL                aDisp
+KernSeqLock_Unlock(
+    K2OSKERN_SEQLOCK *  apLock
 )
 {
-    if (gData.LoadInfo.mCpuCoreCount > 1)
-    {
-        apLock->mSeqOut = apLock->mSeqOut + 1;
-        K2_CpuWriteBarrier();
-    }
-    if (aDisp)
-        K2OSKERN_SetIntr(TRUE);
+    if (1 == gData.LoadInfo.mCpuCoreCount)
+        return;
+
+    apLock->mSeqOut = apLock->mSeqOut + 1;
+    K2_CpuWriteBarrier();
 }

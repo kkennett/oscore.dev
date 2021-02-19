@@ -29,71 +29,18 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OSKERN_H
-#define __K2OSKERN_H
 
-#include "k2os.h"
+#include "kern.h"
 
-#include <lib/k2archx32.h>
-
-#if __cplusplus
-extern "C" {
-#endif
-
-//
-//------------------------------------------------------------------------
-//
-
-struct _K2OSKERN_SEQLOCK
+void    
+KernMap_MakeOnePresentPage(
+    UINT32 aVirtMapBase, 
+    UINT32 aVirtAddr, 
+    UINT32 aPhysAddr, 
+    UINT32 aMapAttr
+)
 {
-    UINT32 volatile mSeqIn;
-    UINT32 volatile mSeqOut;
-};
-typedef struct _K2OSKERN_SEQLOCK K2OSKERN_SEQLOCK;
 
-//
-//------------------------------------------------------------------------
-//
 
-UINT32                  K2OSKERN_Debug(char const *apFormat, ...);
-void                    K2OSKERN_Panic(char const *apFormat, ...);
-BOOL K2_CALLCONV_REGS   K2OSKERN_SetIntr(BOOL aEnable);
-BOOL K2_CALLCONV_REGS   K2OSKERN_GetIntr(void);
-void K2_CALLCONV_REGS   K2OSKERN_SeqIntrInit(K2OSKERN_SEQLOCK * apLock);
-BOOL K2_CALLCONV_REGS   K2OSKERN_SeqIntrLock(K2OSKERN_SEQLOCK * apLock);
-void K2_CALLCONV_REGS   K2OSKERN_SeqIntrUnlock(K2OSKERN_SEQLOCK *apLock, BOOL aDisp);
-UINT32 K2_CALLCONV_REGS K2OSKERN_GetCpuIndex(void);
-
-//
-//------------------------------------------------------------------------
-//
-
-struct _K2OSKERN_IRQ_LINE_CONFIG
-{
-    BOOL    mIsEdgeTriggered;
-    BOOL    mIsActiveLow;
-    BOOL    mShareConfig;
-    BOOL    mWakeConfig;
-};
-typedef struct _K2OSKERN_IRQ_LINE_CONFIG K2OSKERN_IRQ_LINE_CONFIG;
-
-struct _K2OSKERN_IRQ_CONFIG
-{
-    UINT32                      mSourceIrq;
-    UINT32                      mDestCoreIx;
-    K2OSKERN_IRQ_LINE_CONFIG    Line;
-};
-typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
-
-typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
-
-//
-//------------------------------------------------------------------------
-//
-
-#if __cplusplus
 }
-#endif
 
-
-#endif // __K2OSKERN_H

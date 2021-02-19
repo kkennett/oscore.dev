@@ -33,7 +33,7 @@
 #include "kern.h"
 
 void
-K2OSKERN_Panic(
+KernDbg_Panic(
     char const *apFormat,
     ...
 )

@@ -74,8 +74,6 @@ Kern_Main(
     K2OS_UEFI_LOADINFO const *apLoadInfo
     )
 {
-    K2ROFS const *pROFS;
-
     //
     // zero globals
     //
@@ -89,14 +87,12 @@ Kern_Main(
     //
     // init for debug messages
     //
-    K2OSKERN_SeqIntrInit(&gData.DebugSeqLock);
+    KernSeqLock_Init(&gData.DebugSeqLock);
 
     //
     // send out first debug message
     //
-    K2OSKERN_Debug("Kern_Main()\n");
-
-
+    KernDbg_Output("Kern_Main()\n");
 
     //
     // call C++ constructors now if there are any
@@ -111,7 +107,7 @@ Kern_Main(
     if (0x12345678 == (UINT32)apLoadInfo)
         K2MEM_Copy(&gData, image_padding, 4095);
 
-    K2OSKERN_Debug("Intentional hang\n");
+    KernDbg_Output("Intentional hang\n");
     while (1);
 }
 
@@ -176,7 +172,7 @@ __aeabi_atexit(
     void *  dso_handle
 )
 {
-    return __cxa_atexit(destroyer, object, (DLX *)dso_handle);
+    return __cxa_atexit(destroyer, object, dso_handle);
 }
 
 #endif

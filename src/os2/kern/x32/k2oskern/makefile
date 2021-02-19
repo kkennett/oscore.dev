@@ -36,7 +36,7 @@ TARGET_TYPE = ELF
 
 TARGET_SPECIFIC_ARCH = X32
 
-K2_KERNEL := TRUE
+K2_KERNEL := TRUE g
 
 LINKER_SCRIPT := $(K2_ROOT)/src/$(K2_OS)/kern/kern_link.l
 LDENTRY := -e X32Kern_EntryPoint
@@ -44,8 +44,16 @@ LDOPT += --no-omagic --strip-debug -x
 
 SOURCES += x32entryasm.s 
 SOURCES += x32hal.c 
-SOURCES += x32intr.c 
 SOURCES += x32cpu.c 
+SOURCES += x32init.c 
+SOURCES += x32gdt.c 
+SOURCES += x32gdtasm.s 
+SOURCES += x32idt.c 
+SOURCES += x32idtasm.s 
+SOURCES += x32devintr.c
+SOURCES += x32intrasm.s 
+SOURCES += x32intrhand.c
+SOURCES += x32kerndbg.c
 
 STATIC_LIBS += @shared/lib/k2archx32
 STATIC_LIBS += @shared/lib/k2mem

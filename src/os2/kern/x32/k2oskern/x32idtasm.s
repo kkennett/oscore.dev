@@ -30,21 +30,17 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "x32kern.h"
+#include "x32kernasm.inc"
 
-BOOL K2_CALLCONV_REGS 
-K2OSKERN_SetIntr(
-    BOOL aEnable
-)
-{
-    return FALSE;
-}
+.extern gX32Kern_IDTPTR
 
-BOOL K2_CALLCONV_REGS   
-K2OSKERN_GetIntr(
-    void
-)
-{
-    return FALSE;
-}
+BEGIN_X32_PROC(X32Kern_IDTFlush)
+
+    mov    %eax, OFFSET gX32Kern_IDTPTR
+    lidt   [%eax]
+	ret
+            
+END_X32_PROC(X32Kern_IDTFlush)
+  
+    .end
 

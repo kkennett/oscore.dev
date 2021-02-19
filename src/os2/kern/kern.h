@@ -33,17 +33,33 @@
 #ifndef __KERN_H
 #define __KERN_H
 
-#include <k2oshal.h>
+#include <k2os.h>
 #include "kerndef.inc"
 #include <lib/k2rofshelp.h>
 
+#if K2_TARGET_ARCH_IS_INTEL
+#include <lib/k2archx32.h>
+#endif
+#if K2_TARGET_ARCH_IS_ARM
+#include <lib/k2archa32.h>
+#endif
+
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OSKERN_SEQLOCK            K2OSKERN_SEQLOCK;
 typedef struct _K2OSKERN_CPUCORE            K2OSKERN_CPUCORE;
 typedef struct _K2OSKERN_COREMEMORY         K2OSKERN_COREMEMORY;
 typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
 typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
+
+/* --------------------------------------------------------------------------------- */
+
+struct _K2OSKERN_SEQLOCK
+{
+    UINT32 volatile mSeqIn;
+    UINT32 volatile mSeqOut;
+};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -68,10 +84,10 @@ struct _K2OSKERN_COREMEMORY
 K2_STATIC_ASSERT(sizeof(K2OSKERN_COREMEMORY) == (4 * K2_VA32_MEMPAGE_BYTES));
 
 #define K2OSKERN_COREIX_TO_CPUCORE(x)       ((K2OSKERN_CPUCORE volatile *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
-#define K2OSKERN_GET_CURRENT_CPUCORE        K2OSKERN_COREIX_TO_CPUCORE(K2OSKERN_GetCpuIndex())
+#define K2OSKERN_GET_CURRENT_CPUCORE        K2OSKERN_COREIX_TO_CPUCORE(KernCpu_GetIndex())
 
 #define K2OSKERN_COREIX_TO_COREMEMORY(x)    ((K2OSKERN_COREMEMORY *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
-#define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(K2OSKERN_GetCpuIndex())
+#define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(KernCpu_GetIndex())
 
 /* --------------------------------------------------------------------------------- */
 
@@ -104,6 +120,25 @@ struct _K2OSKERN_OBJ_PROCESS
 
 /* --------------------------------------------------------------------------------- */
 
+struct _K2OSKERN_IRQ_LINE_CONFIG
+{
+    BOOL    mIsEdgeTriggered;
+    BOOL    mIsActiveLow;
+    BOOL    mShareConfig;
+    BOOL    mWakeConfig;
+};
+typedef struct _K2OSKERN_IRQ_LINE_CONFIG K2OSKERN_IRQ_LINE_CONFIG;
+
+struct _K2OSKERN_IRQ_CONFIG
+{
+    UINT32                      mSourceIrq;
+    UINT32                      mDestCoreIx;
+    K2OSKERN_IRQ_LINE_CONFIG    Line;
+};
+typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
+
+typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
+
 struct _K2OSKERN_OBJ_INTR
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -118,25 +153,6 @@ struct _K2OSKERN_OBJ_INTR
 
 /* --------------------------------------------------------------------------------- */
 
-typedef enum _KernInitStage KernInitStage;
-enum _KernInitStage
-{
-    KernInitStage_dlx_entry = 0,
-    KernInitStage_Before_Virt,
-    KernInitStage_After_Virt,
-    KernInitStage_Before_Hal,
-    KernInitStage_At_Hal_Entry,
-    KernInitStage_After_Hal,
-    KernInitStage_Before_Launch_Cores,
-    KernInitStage_Threaded,
-    KernInitStage_MemReady,
-    KernInitStage_MultiThreaded,
-    // should be last entry
-    KernInitStage_Count
-};
-
-/* --------------------------------------------------------------------------------- */
-
 typedef struct _KERN_DATA KERN_DATA;
 struct _KERN_DATA
 {
@@ -145,7 +161,6 @@ struct _KERN_DATA
     //
     K2OS_UEFI_LOADINFO      LoadInfo;
 
-//    KernInitStage           mKernInitStage;
     K2OSKERN_SEQLOCK        DebugSeqLock;
 
     // arch specific
@@ -162,12 +177,32 @@ extern KERN_DATA gData;
 
 /* --------------------------------------------------------------------------------- */
 
-void   K2_CALLCONV_REGS KernEx_Assert(char const * apFile, int aLineNum, char const * apCondition);
-K2STAT K2_CALLCONV_REGS KernEx_TrapDismount(K2_EXCEPTION_TRAP *apTrap);
-BOOL   K2_CALLCONV_REGS KernEx_TrapMount(K2_EXCEPTION_TRAP *apTrap);
-void   K2_CALLCONV_REGS KernEx_RaiseException(K2STAT aExceptionCode);
+void    K2_CALLCONV_REGS KernEx_Assert(char const * apFile, int aLineNum, char const * apCondition);
+K2STAT  K2_CALLCONV_REGS KernEx_TrapDismount(K2_EXCEPTION_TRAP *apTrap);
+BOOL    K2_CALLCONV_REGS KernEx_TrapMount(K2_EXCEPTION_TRAP *apTrap);
+void    K2_CALLCONV_REGS KernEx_RaiseException(K2STAT aExceptionCode);
 
-void K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO const *apLoadInfo);
+void    K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO const *apLoadInfo);
+
+void    KernArch_InitOnEntry(void);
+UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
+UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
+
+void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapAttr);
+
+UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
+UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
+UINT32  KernDbg_Output(char const *apFormat, ...);
+void    KernDbg_Panic(char const *apFormat, ...);
+
+void K2_CALLCONV_REGS KernHal_DebugOut(UINT8 aByte);
+void K2_CALLCONV_REGS KernHal_MicroStall(UINT32 aMicroseconds);
+
+void K2_CALLCONV_REGS KernSeqLock_Init(K2OSKERN_SEQLOCK * apLock);
+void K2_CALLCONV_REGS KernSeqLock_Lock(K2OSKERN_SEQLOCK * apLock);
+void K2_CALLCONV_REGS KernSeqLock_Unlock(K2OSKERN_SEQLOCK * apLock);
+
+UINT32 K2_CALLCONV_REGS KernCpu_GetIndex(void);
 
 
 #if 0
@@ -175,19 +210,13 @@ void K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO con
 
 
 
-void KernInit_Arch(void);
 
-
-
-UINT32 KernDebug_OutputWithArgs(char const *apFormat, VALIST aList);
 void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
 
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
 
 void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
 void KernArch_LaunchCores(void);
-UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
-UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 void KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 
 UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
@@ -195,13 +224,11 @@ void  KernArch_WritePTE(BOOL aIsMake, UINT32 aVirtAddr, UINT32* pPTE, UINT32 aPT
 
 
 void   KernDlxSupp_AtReInit(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
-UINT32 KernDlx_FindClosestSymbol(K2OSKERN_OBJ_PROCESS *apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 
 void K2_CALLCONV_REGS KernExec(void);
 
 void KernInit_Stage(KernInitStage aStage);
 
-void   KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aMapAttr);
 void   KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
 UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
 

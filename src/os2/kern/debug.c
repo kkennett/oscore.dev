@@ -39,29 +39,28 @@ sEmitter(
     char    aCh
 )
 {
-    K2OSHAL_DebugOut(aCh);
+    KernHal_DebugOut(aCh);
 }
 
 UINT32 
-KernDebug_OutputWithArgs(
+KernDbg_OutputWithArgs(
     char const *apFormat, 
     VALIST      aList
 )
 {
-    BOOL    disp;
     UINT32  result;
 
-    disp = K2OSKERN_SeqIntrLock(&gData.DebugSeqLock);
+    KernSeqLock_Lock(&gData.DebugSeqLock);
     
     result = K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, aList);
     
-    K2OSKERN_SeqIntrUnlock(&gData.DebugSeqLock, disp);
+    KernSeqLock_Unlock(&gData.DebugSeqLock);
 
     return result;
 }
 
 UINT32
-K2OSKERN_Debug(
+KernDbg_Output(
     char const *apFormat,
     ...
 )
@@ -71,9 +70,20 @@ K2OSKERN_Debug(
 
     K2_VASTART(vList, apFormat);
 
-    result = KernDebug_OutputWithArgs(apFormat, vList);
+    result = KernDbg_OutputWithArgs(apFormat, vList);
 
     K2_VAEND(vList);
 
     return result;
+}
+
+UINT32 
+KernDbg_FindClosestSymbol(
+    K2OSKERN_OBJ_PROCESS *  apCurProc, 
+    UINT32                  aAddr, 
+    char *                  apRetSymName, 
+    UINT32                  aRetSymNameBufLen
+)
+{
+    return 0;
 }
