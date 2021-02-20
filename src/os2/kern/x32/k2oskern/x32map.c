@@ -63,3 +63,36 @@ KernArch_MakePTE(
     return pte;
 }
 
+void 
+KernArch_BreakMapTransitionPageTable(
+    UINT32 *apRetVirtAddrPT, 
+    UINT32 *apRetPhysAddrPT
+)
+{
+    UINT32      virtAddrPT;
+    UINT32 *    pPDE;
+    UINT32 *    pPTE;
+    UINT32      pdePTAddr;
+
+    pPDE = ((UINT32 *)K2OS_KVA_TRANSTAB_BASE) + (gData.LoadInfo.mTransitionPageAddr / K2_VA32_PAGETABLE_MAP_BYTES);
+    pdePTAddr = (*pPDE) & K2_VA32_PAGEFRAME_MASK;
+    *pPDE = 0;
+
+    *apRetVirtAddrPT = virtAddrPT = K2OS_KVA_TO_PT_ADDR(gData.LoadInfo.mTransitionPageAddr);
+
+    pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtAddrPT);
+    *apRetPhysAddrPT = (*pPTE) & K2_VA32_PAGEFRAME_MASK;
+    K2_ASSERT((*apRetPhysAddrPT) == pdePTAddr);
+    *pPTE = 0;
+
+    K2_CpuWriteBarrier();
+}
+
+void 
+KernArch_InvalidateTlbPageOnThisCore(
+    UINT32 aVirtAddr
+)
+{
+    X32_TLBInvalidatePage(aVirtAddr);
+}
+

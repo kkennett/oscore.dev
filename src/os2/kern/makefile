@@ -41,6 +41,7 @@ SOURCES += seqlock.c
 SOURCES += debug.c
 SOURCES += panic.c
 SOURCES += map.c
+SOURCES += phys.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

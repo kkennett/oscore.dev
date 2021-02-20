@@ -93,9 +93,9 @@ enum _KernPhysPageList
     KernPhysPageList_KOver,         //  5       PHYS_TRACK, ZERO, CORES, EFI_MAP, 
     KernPhysPageList_Free_Dirty,    //  6
     KernPhysPageList_Free_Clean,    //  7 
-    KernPhysPageList_KText,         //  8       TEXT, EFI_Run_Code
-    KernPhysPageList_KRead,         //  9       READ
-    KernPhysPageList_KData,         //  10      DATA, DLX, LOADER, EFI_Run_Data
+    KernPhysPageList_KText,         //  8       KERNEL.ELF TEXT, EFI Runtime Code
+    KernPhysPageList_KRead,         //  9       KERNEl.ELF READ
+    KernPhysPageList_KData,         //  10      KERNEL.ELF DATA, EFI Runtime Data
     KernPhysPageList_UText,         //  11
     KernPhysPageList_URead,         //  12
     KernPhysPageList_UData,         //  13
@@ -211,6 +211,10 @@ struct _KERN_DATA
 
     K2OSKERN_SEQLOCK        DebugSeqLock;
 
+    K2OSKERN_SEQLOCK        PhysMemSeqLock;
+    K2TREE_ANCHOR           PhysFreeTree;
+    K2LIST_ANCHOR           PhysPageList[KernPhysPageList_Count];
+
     // arch specific
 #if K2_TARGET_ARCH_IS_ARM
     UINT32                  mA32VectorPagePhys;
@@ -237,11 +241,15 @@ UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
 UINT32  KernArch_VectorToDevIrq(UINT32 aVector);
 void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
 UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
+void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
+void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 
 void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 
 UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
+
+void    KernPhys_Init(void);
 
 
 #if 0
@@ -249,7 +257,6 @@ UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 
 void    KernDbg_PanicIci(K2OSKERN_CPUCORE volatile * apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
-void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 void    KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
 UINT32  KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
 

@@ -104,6 +104,11 @@ Kern_Main(
     KernArch_InitAtEntry();
 
     //
+    // physical memory inits
+    //
+    KernPhys_Init();
+
+    //
     // call C++ constructors now if there are any
     //
     if ((((UINT32)&__ctors_count)!=0) &&
