@@ -38,8 +38,7 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
 static K2OSKERN_OBJ_INTR *  sgpIntrObjByIrqIx[X32_NUM_IDT_ENTRIES] = { 0, };
 
-static 
-void 
+static void 
 sAbort(
     K2OSKERN_CPUCORE volatile * apThisCore,
     X32_EXCEPTION_CONTEXT *     apContext
@@ -124,7 +123,10 @@ X32Kern_InterruptHandler(
     sgInIntr[pThisCore->mCoreIx] = FALSE;
 }
 
-void KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
+void 
+KernArch_InstallDevIntrHandler(
+    K2OSKERN_OBJ_INTR *apIntr
+)
 {
     UINT32 irqIx;
 
@@ -141,7 +143,11 @@ void KernArch_InstallDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
     KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
 }
 
-void KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask)
+void 
+KernArch_SetDevIntrMask(
+    K2OSKERN_OBJ_INTR * apIntr, 
+    BOOL                aMask
+)
 {
     UINT32 irqIx;
 
@@ -160,7 +166,10 @@ void KernArch_SetDevIntrMask(K2OSKERN_OBJ_INTR *apIntr, BOOL aMask)
     KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
 }
 
-void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
+void 
+KernArch_RemoveDevIntrHandler(
+    K2OSKERN_OBJ_INTR *apIntr
+)
 {
     UINT32 irqIx;
 
@@ -177,7 +186,11 @@ void KernArch_RemoveDevIntrHandler(K2OSKERN_OBJ_INTR *apIntr)
     KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
 }
 
-void KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack)
+void
+KernArch_Panic(
+    K2OSKERN_CPUCORE volatile * apThisCore, 
+    BOOL                        aDumpStack
+)
 {
     if (aDumpStack)
     {

@@ -76,11 +76,3 @@ KernHal_DebugOut(
     }
     X32PC_DBGSER_OutByte(aByte);
 }
-
-void K2_CALLCONV_REGS 
-KernHal_MicroStall(
-    UINT32 aMicroseconds
-)
-{
-
-}

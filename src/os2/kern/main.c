@@ -53,8 +53,7 @@ extern __attribute__((weak)) UINT32 __ctors_count;
 extern UINT32                       __bss_begin;
 extern UINT32                       __data_end;
 
-static 
-void 
+static void 
 __call_ctors(
     void
 )
@@ -119,7 +118,12 @@ Kern_Main(
 //
 // libgcc functions
 //
-int  __cxa_atexit(__vfpv f, void * a, void *apModule)
+int  
+__cxa_atexit(
+    __vfpv f, 
+    void * a, 
+    void *apModule
+)
 {
     //
     // should never be called
@@ -128,7 +132,10 @@ int  __cxa_atexit(__vfpv f, void * a, void *apModule)
     return 0;
 }
 
-void __call_dtors(void *apModule)
+void 
+__call_dtors(
+    void *apModule
+)
 {
     //
     // should never be called

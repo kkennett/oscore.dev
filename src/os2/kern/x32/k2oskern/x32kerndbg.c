@@ -97,8 +97,7 @@ X32Kern_DumpStackTrace(
     } while (1);
 }
 
-static
-void
+static void
 sDumpCommonExContext(
     X32_EXCEPTION_CONTEXT *apContext
 )

@@ -38,7 +38,10 @@ extern void * const X32Kern_InterruptStubs;
 
 void X32Kern_IDTFlush(void);
 
-void X32Kern_IDTSetup(void)
+void 
+X32Kern_IDTSetup(
+    void
+)
 {
     UINT32 ix;
     UINT32 workAddr;

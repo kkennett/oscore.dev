@@ -32,8 +32,7 @@
 
 #include "kern.h"
 
-void 
-K2_CALLCONV_REGS 
+void K2_CALLCONV_REGS 
 KernEx_Assert(
     char const *    apFile,
     int             aLineNum,
@@ -53,8 +52,7 @@ KernEx_TrapMount(
     return FALSE;
 }
 
-K2STAT 
-K2_CALLCONV_REGS 
+K2STAT K2_CALLCONV_REGS 
 KernEx_TrapDismount(
     K2_EXCEPTION_TRAP *apTrap
     )
@@ -63,8 +61,7 @@ KernEx_TrapDismount(
     return K2STAT_NO_ERROR;
 }
 
-void   
-K2_CALLCONV_REGS 
+void K2_CALLCONV_REGS 
 KernEx_RaiseException(
     K2STAT aExceptionCode
 )

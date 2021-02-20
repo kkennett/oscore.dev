@@ -32,8 +32,7 @@
 
 #include "kern.h"
 
-static
-void
+static void
 sEmitter(
     void *  apContext,
     char    aCh

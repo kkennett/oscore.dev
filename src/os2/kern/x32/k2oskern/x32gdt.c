@@ -32,7 +32,10 @@
 
 #include "x32kern.h"
 
-void X32Kern_GDTSetup(void)
+void 
+X32Kern_GDTSetup(
+    void
+)
 {
     UINT32 addr;
     UINT32 coreIx;

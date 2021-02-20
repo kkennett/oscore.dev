@@ -58,7 +58,10 @@ UINT16                                  gX32Kern_GlobalSystemIrqOverrideFlags[X3
 UINT16                                  gX32Kern_VectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
 UINT8                                   gX32Kern_IrqToIoApicIndexMap[X32_DEVIRQ_MAX_COUNT];
 
-void KernArch_InitAtEntry(void)
+void 
+KernArch_InitAtEntry(
+    void
+)
 {
     UINT32 *            pCountPTPages;
     UINT32 *            pPDE;
@@ -123,10 +126,7 @@ void KernArch_InitAtEntry(void)
             do
             {
                 if ((*pPTE) != 0)
-                {
-                    KernDbg_Output("%08X - %08X\n", virtBase, *pPTE);
                     (*pCountPTPages)++;
-                }
                 pPTE++;
                 virtBase += K2_VA32_MEMPAGE_BYTES;
             } while (--pteLeft);
@@ -188,7 +188,6 @@ void KernArch_InitAtEntry(void)
         //
         // HPET exists and pHeader points to it 
         //
-        KernDbg_Output("HPET exists\n");
         gpX32Kern_HPET = (ACPI_HPET *)pHeader;
         do {
             if (gpX32Kern_HPET->Address.AddressSpaceId != ACPI_ASID_SYSTEM_MEMORY)
@@ -205,10 +204,6 @@ void KernArch_InitAtEntry(void)
             ixCpu &= K2_VA32_PAGEFRAME_MASK;
             KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_X32_HPET, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
         } while (0);
-    }
-    else
-    {
-        KernDbg_Output("no HPET found\n");
     }
 
     //
@@ -355,5 +350,10 @@ void KernArch_InitAtEntry(void)
     K2_ASSERT(workCount > 0);
 
     gpX32Kern_FADT = (ACPI_FADT *)pHeader;
+
+    //
+    // now we can init the stall counter
+    //
+    X32Kern_InitStall();
 }
 

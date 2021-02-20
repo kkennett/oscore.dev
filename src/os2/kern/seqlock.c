@@ -32,8 +32,7 @@
 
 #include "kern.h"
 
-void
-K2_CALLCONV_REGS
+void K2_CALLCONV_REGS
 KernSeqLock_Init(
     K2OSKERN_SEQLOCK *  apLock
 )
@@ -43,8 +42,7 @@ KernSeqLock_Init(
     K2_CpuWriteBarrier();
 }
 
-void
-K2_CALLCONV_REGS
+void K2_CALLCONV_REGS
 KernSeqLock_Lock(
     K2OSKERN_SEQLOCK *  apLock
 )
@@ -62,12 +60,11 @@ KernSeqLock_Lock(
     do {
         if (apLock->mSeqOut == mySeq)
             break;
-        KernHal_MicroStall(10);
+        KernCpu_MicroStall(10);
     } while (1);
 }
 
-void
-K2_CALLCONV_REGS
+void K2_CALLCONV_REGS
 KernSeqLock_Unlock(
     K2OSKERN_SEQLOCK *  apLock
 )

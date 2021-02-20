@@ -262,28 +262,23 @@ UINT32  KernDbg_Output(char const *apFormat, ...);
 void    KernDbg_Panic(char const *apFormat, ...);
 
 void K2_CALLCONV_REGS KernHal_DebugOut(UINT8 aByte);
-void K2_CALLCONV_REGS KernHal_MicroStall(UINT32 aMicroseconds);
 
 void K2_CALLCONV_REGS KernSeqLock_Init(K2OSKERN_SEQLOCK * apLock);
 void K2_CALLCONV_REGS KernSeqLock_Lock(K2OSKERN_SEQLOCK * apLock);
 void K2_CALLCONV_REGS KernSeqLock_Unlock(K2OSKERN_SEQLOCK * apLock);
 
 UINT32 K2_CALLCONV_REGS KernCpu_GetIndex(void);
+void   K2_CALLCONV_REGS KernCpu_MicroStall(UINT32 aMicroseconds);
 
 
 #if 0
 /* --------------------------------------------------------------------------------- */
 
-void   KernPanic_Ici(K2OSKERN_CPUCORE volatile * apThisCore);
-
+void    KernDbg_PanicIci(K2OSKERN_CPUCORE volatile * apThisCore);
 void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
-
-void KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
-
-UINT32 KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
-
-void   KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
-UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
+void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
+void    KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
+UINT32  KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
 
 #endif
 
