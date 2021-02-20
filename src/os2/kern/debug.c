@@ -39,7 +39,7 @@ sEmitter(
     char    aCh
 )
 {
-    KernHal_DebugOut(aCh);
+    K2OSHAL_DebugOut(aCh);
 }
 
 UINT32 
@@ -50,17 +50,17 @@ KernDbg_OutputWithArgs(
 {
     UINT32  result;
 
-    KernSeqLock_Lock(&gData.DebugSeqLock);
+    K2OSKERN_SeqLock(&gData.DebugSeqLock);
     
     result = K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, aList);
     
-    KernSeqLock_Unlock(&gData.DebugSeqLock);
+    K2OSKERN_SeqUnlock(&gData.DebugSeqLock);
 
     return result;
 }
 
 UINT32
-KernDbg_Output(
+K2OSKERN_Debug(
     char const *apFormat,
     ...
 )

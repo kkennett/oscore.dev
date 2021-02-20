@@ -29,49 +29,30 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#ifndef __K2OSHAL_H
+#define __K2OSHAL_H
 
-#include "kern.h"
+#include "k2oskern.h"
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
+#if __cplusplus
+extern "C" {
+#endif
+
+//
+//------------------------------------------------------------------------
+//
+
+void K2_CALLCONV_REGS K2OSHAL_DebugOut(UINT8 aByte);
+BOOL K2_CALLCONV_REGS K2OSHAL_DebugIn(UINT8 *apRetData);
+void K2_CALLCONV_REGS K2OSHAL_EarlyInit(void);
+
+//
+//------------------------------------------------------------------------
+//
+
+#if __cplusplus
 }
+#endif
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    UINT32  mySeq;
 
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    do
-    {
-        mySeq = apLock->mSeqIn;
-    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
-
-    do {
-        if (apLock->mSeqOut == mySeq)
-            break;
-        K2OSKERN_MicroStall(10);
-    } while (1);
-}
-
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    apLock->mSeqOut = apLock->mSeqOut + 1;
-    K2_CpuWriteBarrier();
-}
+#endif // __K2OSHAL_H

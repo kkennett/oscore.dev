@@ -44,9 +44,9 @@ sAbort(
     X32_EXCEPTION_CONTEXT *     apContext
 )
 {
-    KernDbg_Output("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
-    KernDbg_Output("Exception %d\n", apContext->Exception_Vector);
-    KernDbg_Output("CR2 = %08X\n", X32_ReadCR2());
+    K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
+    K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
+    K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
     X32Kern_DumpKernelModeExceptionContext(apContext);
     X32Kern_DumpStackTrace(
         gpProc1,
@@ -55,7 +55,7 @@ sAbort(
         ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
         &sgSymDump[apThisCore->mCoreIx * X32_SYM_NAME_MAX_LEN]
     );
-    KernDbg_Panic(NULL);
+    K2OSKERN_Panic(NULL);
 }
 
 void
@@ -71,7 +71,7 @@ X32Kern_InterruptHandler(
 
     if (sgInIntr[pThisCore->mCoreIx])
     {
-        KernDbg_Panic("Recursive exception or interrupt\n");
+        K2OSKERN_Panic("Recursive exception or interrupt\n");
         while (1);
     }
     sgInIntr[pThisCore->mCoreIx] = TRUE;
@@ -83,7 +83,7 @@ X32Kern_InterruptHandler(
     }
     else
     {
-        KernDbg_Output("Core %d Context %08X Vector %d\n", pThisCore->mCoreIx, &aContext, aContext.Exception_Vector);
+        K2OSKERN_Debug("Core %d Context %08X Vector %d\n", pThisCore->mCoreIx, &aContext, aContext.Exception_Vector);
         if (aContext.Exception_Vector >= X32KERN_VECTOR_ICI_BASE)
         {
             //
@@ -92,7 +92,7 @@ X32Kern_InterruptHandler(
             K2_ASSERT(aContext.Exception_Vector <= X32KERN_VECTOR_ICI_LAST);
             srcCore = aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE;
             // TBD - OnIci(srcCore);
-            KernDbg_Output("Ici from core %d\n", srcCore);
+            K2OSKERN_Debug("Ici from core %d\n", srcCore);
             sAbort(pThisCore, &aContext);
         }
         else
@@ -104,13 +104,13 @@ X32Kern_InterruptHandler(
             K2_ASSERT(devIrq < X32_DEVIRQ_MAX_COUNT);
             if (sgpIntrObjByIrqIx[devIrq] != NULL)
             {
-                KernDbg_Output("VECTOR %d -> IRQ %d on core %d\n", aContext.Exception_Vector, devIrq, pThisCore->mCoreIx);
+                K2OSKERN_Debug("VECTOR %d -> IRQ %d on core %d\n", aContext.Exception_Vector, devIrq, pThisCore->mCoreIx);
                 sgpIntrObjByIrqIx[devIrq]->mfHandler(sgpIntrObjByIrqIx[devIrq]->mpHandlerContext);
                 // TBD - signal interrupt object 
             }
             else
             {
-                KernDbg_Output("****Unhandled Interrupt VECTOR %d (IRQ %d). Masked\n", aContext.Exception_Vector, devIrq);
+                K2OSKERN_Debug("****Unhandled Interrupt VECTOR %d (IRQ %d). Masked\n", aContext.Exception_Vector, devIrq);
                 X32Kern_MaskDevIrq(devIrq);
             }
         }
@@ -134,13 +134,13 @@ KernArch_InstallDevIntrHandler(
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    KernSeqLock_Lock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] == NULL);
     sgpIntrObjByIrqIx[irqIx] = apIntr;
     X32Kern_ConfigDevIrq(&apIntr->IrqConfig);
 
-    KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
 }
 
 void 
@@ -155,7 +155,7 @@ KernArch_SetDevIntrMask(
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    KernSeqLock_Lock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] != NULL);
     if (aMask)
@@ -163,7 +163,7 @@ KernArch_SetDevIntrMask(
     else
         X32Kern_UnmaskDevIrq(irqIx);
 
-    KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
 }
 
 void 
@@ -177,13 +177,13 @@ KernArch_RemoveDevIntrHandler(
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    KernSeqLock_Lock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] == apIntr);
     X32Kern_MaskDevIrq(irqIx);
     sgpIntrObjByIrqIx[irqIx] = NULL;
 
-    KernSeqLock_Unlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
 }
 
 void

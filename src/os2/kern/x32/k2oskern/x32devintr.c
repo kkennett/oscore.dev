@@ -176,12 +176,12 @@ sPic_SetDevIrqMask(
 
     if (aSetMask)
     {
-//        KernDbg_Output("PIC.Mask Device Irq %d(%d)\n", aDevIrq, bitNum);
+//        K2OSKERN_Debug("PIC.Mask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Mask_BitNum(bitNum);
     }
     else
     {
-//        KernDbg_Output("PIC.Unmask Device Irq %d(%d)\n", aDevIrq, bitNum);
+//        K2OSKERN_Debug("PIC.Unmask Device Irq %d(%d)\n", aDevIrq, bitNum);
         X32Kern_PIC_Unmask_BitNum(bitNum);
     }
 }
@@ -236,7 +236,7 @@ X32Kern_IoApicInit(
 
         if (gX32Kern_IrqToIoApicIndexMap[v] != 0xFF)
         {
-            KernDbg_Output("*** Vector %d attempt to map to more than one APIC.  Ignored.\n");
+            K2OSKERN_Debug("*** Vector %d attempt to map to more than one APIC.  Ignored.\n");
         }
         else
         {
@@ -370,7 +370,7 @@ X32Kern_ConfigDevIrq(
 
     if (apConfig->mSourceIrq >= X32_DEVIRQ_LVT_BASE)
     {
-//        KernDbg_Output("ConfigDevIrq(%d) ignored\n", apConfig->mSourceIrq);
+//        K2OSKERN_Debug("ConfigDevIrq(%d) ignored\n", apConfig->mSourceIrq);
         return;
     }
 
@@ -464,7 +464,7 @@ X32Kern_ConfigDevIrq(
     redLo |= X32_IOAPIC_REDLO_MODE_FIXED;
     redLo |= ((redIx + X32KERN_DEVVECTOR_BASE) & X32_IOAPIC_REDLO_VECTOR_MASK);
 
-//    KernDbg_Output("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
+//    K2OSKERN_Debug("Writing to IOAPIC %d target %d, LO %08X HI %08X\n", redIx, (redLo & X32_IOAPIC_REDLO_VECTOR_MASK), redLo, redHi);
 
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDLO(redIx), redLo);
     sWriteIoApic(ioApicIndex, X32_IOAPIC_REGIX_REDHI(redIx), redHi);
@@ -495,12 +495,12 @@ sLvt_SetDevIrqMask(
     reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, offset);
     if (aSetMask)
     {
-//        KernDbg_Output("LVT.Mask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+//        K2OSKERN_Debug("LVT.Mask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
         reg |= X32_LOCAPIC_LVT_MASK;
     }
     else
     {
-//        KernDbg_Output("LVT.Unmask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
+//        K2OSKERN_Debug("LVT.Unmask Core %d local ix %d (%08X)\n", pThisCore->mCoreIx, localIrqIx, offset);
         reg &= ~(X32_LOCAPIC_LVT_MASK | X32_LOCAPIC_LVT_STATUS);
     }
     MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, offset, reg);

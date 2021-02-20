@@ -36,5 +36,8 @@ TARGET_SPECIFIC_ARCH = X32
 
 TARGET_TYPE = IMAGE
 
+K2_KERNEL_HAL_LIBS := @$(K2_OS)/demo/virtpc/kernhal
+K2_KERNEL_HAL_LIBS += @$(K2_OS)/demo/virtpc/kernhal/dbgser
+
 include $(K2_ROOT)/src/shared/build/post.make
 

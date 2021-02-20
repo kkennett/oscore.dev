@@ -39,7 +39,7 @@ KernEx_Assert(
     char const *    apCondition
     )
 {
-    KernDbg_Panic("***KERNEL ASSERT:\nLocation: %s(%d)\nFALSE ==> %s\n", apFile, aLineNum, apCondition);
+    K2OSKERN_Panic("***KERNEL ASSERT:\nLocation: %s(%d)\nFALSE ==> %s\n", apFile, aLineNum, apCondition);
     while (1);
 }
 
@@ -66,6 +66,6 @@ KernEx_RaiseException(
     K2STAT aExceptionCode
 )
 {
-    KernDbg_Panic("***KERNEL EXCEPTION: %08X\n", aExceptionCode);
+    K2OSKERN_Panic("***KERNEL EXCEPTION: %08X\n", aExceptionCode);
     while (1);
 }

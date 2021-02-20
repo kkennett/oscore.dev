@@ -108,7 +108,7 @@ LDOPT      += --no-define-common
 LDOPT      += --no-undefined
 LDENTRY    ?= -e __entry
 
-BUILD_CONTROL_FILES = makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make
+BUILD_CONTROL_FILES = makefile $(K2_ROOT)/src/shared/build/pre.make $(K2_ROOT)/src/shared/build/post.make $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make $(K2_ROOT)/src/$(K2_OS)/build/k2osspec_$(K2_OS).make
 
 $(K2_OBJECT_PATH)/%.o : %.s  $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(dir $@)) md $(subst /,\,$(dir $@))
@@ -216,7 +216,7 @@ $(K2_TARGET_FULL_SPEC): $(OBJECTS) $(LIBRARIES) $(BUILD_CONTROL_FILES)
 	@-if not exist $(subst /,\,$(K2_TARGET_PATH)) md $(subst /,\,$(K2_TARGET_PATH))
 	@-if not exist $(subst /,\,$(K2_OBJECT_PATH)) md $(subst /,\,$(K2_OBJECT_PATH))
 	@echo -------- Linking ELF $@ --------
-	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) -)
 
 endif
 

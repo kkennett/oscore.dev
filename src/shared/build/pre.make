@@ -72,6 +72,7 @@ GCCOPT_SYSTEM += -DK2_OS=$(K2_OS)
 
 SOURCES             := 
 SOURCE_LIBS         :=
+STATIC_LIBS         := $(AUX_STATIC_LIBS)
 KERN_SOURCE_LIBS    := 
 TARGET_LIBS         :=
 GCCOPT              := $(GCCOPT_SYSTEM) -fdata-sections --function-sections

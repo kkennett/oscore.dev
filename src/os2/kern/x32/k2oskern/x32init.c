@@ -107,7 +107,7 @@ KernArch_InitAtEntry(
     X32Kern_GDTSetup();
     X32Kern_IDTSetup();
 
-    KernSeqLock_Init(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqInit(&gX32Kern_IntrSeqLock);
 
     //
     // count # of pagetables in use for each translation table base entry

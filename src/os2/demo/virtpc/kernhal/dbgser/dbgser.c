@@ -30,48 +30,56 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "dbgser.h"
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
+#define TX_EMPTY_BITS (X32PC_SERIAL_LSR_ALLTX_EMPTY | X32PC_SERIAL_LSR_THR_EMPTY)
+
+void
+X32PC_DBGSER_Init(
+    void
 )
 {
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
+    X32_IoWrite8(0, X32PC_SERIAL1_IER);
+    X32_IoWrite8(X32PC_SERIAL_LCR_DLAB, X32PC_SERIAL1_LCR);
+    X32_IoWrite8(X32PC_SERIAL_DIV_BAUD115200, X32PC_SERIAL1_DLAB1_LOWDIV);
+    X32_IoWrite8(0, X32PC_SERIAL1_DLAB1_HIDIV);
+    X32_IoWrite8(X32PC_SERIAL_LCR_DATABITS_8 |
+        X32PC_SERIAL_LCR_PARITY_NONE |
+        X32PC_SERIAL_LCR_STOPBITS_1, X32PC_SERIAL1_LCR);
+    X32_IoWrite8(X32PC_SERIAL_FCR_LCR_BYTE1 |
+        X32PC_SERIAL_FCR_CLEAR_TX |
+        X32PC_SERIAL_FCR_CLEAR_RX, X32PC_SERIAL1_IIR_FIFOCR);
+    X32_IoWrite8(X32PC_SERIAL_MCR_AUX2 |
+        X32PC_SERIAL_MCR_RTS |
+        X32PC_SERIAL_MCR_DTR, X32PC_SERIAL1_MCR);
 }
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
+void
+X32PC_DBGSER_OutByte(
+    UINT8 aByte
 )
 {
-    UINT32  mySeq;
-
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    do
-    {
-        mySeq = apLock->mSeqIn;
-    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
-
-    do {
-        if (apLock->mSeqOut == mySeq)
-            break;
-        K2OSKERN_MicroStall(10);
-    } while (1);
+    while ((X32_IoRead8(X32PC_SERIAL1_LSR) & TX_EMPTY_BITS) != TX_EMPTY_BITS);
+    X32_IoWrite8(aByte, X32PC_SERIAL1_THR_RHR);
 }
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock
+BOOL
+X32PC_DBGSER_InAvail(
+    void
 )
 {
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
+    if (!X32_IoRead8(X32PC_SERIAL1_LSR) & X32PC_SERIAL_LSR_RHR_FULL)
+        return FALSE;
+    return TRUE;
+}
 
-    apLock->mSeqOut = apLock->mSeqOut + 1;
-    K2_CpuWriteBarrier();
+BOOL
+X32PC_DBGSER_InByte(
+    UINT8 *apRetByte
+)
+{
+    if (!X32PC_DBGSER_InAvail())
+        return FALSE;
+    *apRetByte = X32_IoRead8(X32PC_SERIAL1_THR_RHR);
+    return TRUE;
 }

@@ -143,7 +143,7 @@ X32Kern_InitStall(
 
 void
 K2_CALLCONV_REGS
-KernCpu_MicroStall(
+K2OSKERN_MicroStall(
     UINT32 aMicroseconds
 )
 {
@@ -158,7 +158,7 @@ KernCpu_MicroStall(
 
     while (aMicroseconds > 1000000)
     {
-        KernCpu_MicroStall(1000000);
+        K2OSKERN_MicroStall(1000000);
         aMicroseconds -= 1000000;
     }
 

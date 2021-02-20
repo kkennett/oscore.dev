@@ -30,48 +30,15 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#ifndef __X32PC_H
+#define __X32PC_H
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
-}
+/* --------------------------------------------------------------------------------- */
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    UINT32  mySeq;
+#include <spec/x32pcdef.inc>
+#include <k2oshal.h>
 
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
 
-    do
-    {
-        mySeq = apLock->mSeqIn;
-    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
+/* --------------------------------------------------------------------------------- */
 
-    do {
-        if (apLock->mSeqOut == mySeq)
-            break;
-        K2OSKERN_MicroStall(10);
-    } while (1);
-}
-
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    apLock->mSeqOut = apLock->mSeqOut + 1;
-    K2_CpuWriteBarrier();
-}
+#endif // __X32PC_H

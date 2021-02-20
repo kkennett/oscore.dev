@@ -29,49 +29,49 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#ifndef __K2OSKERN_H
+#define __K2OSKERN_H
 
-#include "kern.h"
+#include "k2os.h"
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
-)
+#if K2_TARGET_ARCH_IS_INTEL
+#include <lib/k2archx32.h>
+#endif
+#if K2_TARGET_ARCH_IS_ARM
+#include <lib/k2archa32.h>
+#endif
+
+#if __cplusplus
+extern "C" {
+#endif
+
+//
+//------------------------------------------------------------------------
+//
+
+struct _K2OSKERN_SEQLOCK
 {
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
+    UINT32 volatile mSeqIn;
+    UINT32 volatile mSeqOut;
+};
+typedef struct _K2OSKERN_SEQLOCK K2OSKERN_SEQLOCK;
+
+UINT32 K2OSKERN_Debug(char const *apFormat, ...);
+void   K2OSKERN_Panic(char const *apFormat, ...);
+
+void    K2_CALLCONV_REGS K2OSKERN_MicroStall(UINT32 aMicroseconds);
+void    K2_CALLCONV_REGS K2OSKERN_SeqInit(K2OSKERN_SEQLOCK * apLock);
+void    K2_CALLCONV_REGS K2OSKERN_SeqLock(K2OSKERN_SEQLOCK * apLock);
+void    K2_CALLCONV_REGS K2OSKERN_SeqUnlock(K2OSKERN_SEQLOCK * apLock);
+UINT32  K2_CALLCONV_REGS K2OSKERN_GetCpuIndex(void);
+
+//
+//------------------------------------------------------------------------
+//
+
+#if __cplusplus
 }
+#endif
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    UINT32  mySeq;
 
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    do
-    {
-        mySeq = apLock->mSeqIn;
-    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
-
-    do {
-        if (apLock->mSeqOut == mySeq)
-            break;
-        K2OSKERN_MicroStall(10);
-    } while (1);
-}
-
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock
-)
-{
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    apLock->mSeqOut = apLock->mSeqOut + 1;
-    K2_CpuWriteBarrier();
-}
+#endif // __K2OSKERN_H

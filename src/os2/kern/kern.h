@@ -33,20 +33,12 @@
 #ifndef __KERN_H
 #define __KERN_H
 
-#include <k2os.h>
+#include <k2oshal.h>    // includes k2oskern.h
 #include "kerndef.inc"
 #include <lib/k2rofshelp.h>
 
-#if K2_TARGET_ARCH_IS_INTEL
-#include <lib/k2archx32.h>
-#endif
-#if K2_TARGET_ARCH_IS_ARM
-#include <lib/k2archa32.h>
-#endif
-
 /* --------------------------------------------------------------------------------- */
 
-typedef struct _K2OSKERN_SEQLOCK            K2OSKERN_SEQLOCK;
 typedef struct _K2OSKERN_CPUCORE            K2OSKERN_CPUCORE;
 typedef struct _K2OSKERN_COREMEMORY         K2OSKERN_COREMEMORY;
 typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
@@ -55,14 +47,6 @@ typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
-
-/* --------------------------------------------------------------------------------- */
-
-struct _K2OSKERN_SEQLOCK
-{
-    UINT32 volatile mSeqIn;
-    UINT32 volatile mSeqOut;
-};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -90,10 +74,10 @@ struct _K2OSKERN_COREMEMORY
 K2_STATIC_ASSERT(sizeof(K2OSKERN_COREMEMORY) == (4 * K2_VA32_MEMPAGE_BYTES));
 
 #define K2OSKERN_COREIX_TO_CPUCORE(x)       ((K2OSKERN_CPUCORE volatile *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
-#define K2OSKERN_GET_CURRENT_CPUCORE        K2OSKERN_COREIX_TO_CPUCORE(KernCpu_GetIndex())
+#define K2OSKERN_GET_CURRENT_CPUCORE        K2OSKERN_COREIX_TO_CPUCORE(K2OSKERN_GetCpuIndex())
 
 #define K2OSKERN_COREIX_TO_COREMEMORY(x)    ((K2OSKERN_COREMEMORY *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
-#define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(KernCpu_GetIndex())
+#define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(K2OSKERN_GetCpuIndex())
 
 /* --------------------------------------------------------------------------------- */
 
@@ -258,17 +242,6 @@ void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32
 
 UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
-UINT32  KernDbg_Output(char const *apFormat, ...);
-void    KernDbg_Panic(char const *apFormat, ...);
-
-void K2_CALLCONV_REGS KernHal_DebugOut(UINT8 aByte);
-
-void K2_CALLCONV_REGS KernSeqLock_Init(K2OSKERN_SEQLOCK * apLock);
-void K2_CALLCONV_REGS KernSeqLock_Lock(K2OSKERN_SEQLOCK * apLock);
-void K2_CALLCONV_REGS KernSeqLock_Unlock(K2OSKERN_SEQLOCK * apLock);
-
-UINT32 K2_CALLCONV_REGS KernCpu_GetIndex(void);
-void   K2_CALLCONV_REGS KernCpu_MicroStall(UINT32 aMicroseconds);
 
 
 #if 0

@@ -59,7 +59,7 @@ EXPAND_ONE_STOCK_KERNEL = $(if $(findstring @,$(kern)), $(call ONE_K2_STOCK_KERN
 BUILT_STOCK_IMAGE_KERN = $(foreach kern, $(STOCK_IMAGE_KERN), $(EXPAND_ONE_STOCK_KERNEL))
 
 $(BUILT_STOCK_IMAGE_KERN):
-	@MAKE -S -C $(K2_ROOT)/src/$(subst stock_,,$@)
+	@MAKE -S -C $(K2_ROOT)/src/$(subst stock_,,$@) $(foreach hallib, $(K2_KERNEL_HAL_LIBS), AUX_STATIC_LIBS+=$(hallib)) 
 	@-if not exist $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) md $(subst /,\,$(K2_TARGET_OS_KERN_PATH))
 	@copy /Y $(subst /,\,$(K2_TARGET_BASE)/elf/kern/$(K2_BUILD_SPEC)/$(@F).elf) $(subst /,\,$(K2_TARGET_OS_KERN_PATH)) 1>NUL
 	@echo.

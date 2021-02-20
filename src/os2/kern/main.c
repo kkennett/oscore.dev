@@ -84,14 +84,19 @@ Kern_Main(
     K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
 
     //
+    // early hal init
+    //
+    K2OSHAL_EarlyInit();
+
+    //
     // init for debug messages
     //
-    KernSeqLock_Init(&gData.DebugSeqLock);
+    K2OSKERN_SeqInit(&gData.DebugSeqLock);
 
     //
     // send out first debug message
     //
-    KernDbg_Output("\n\n===========\nK2OS Kernel\n===========\n\n");
+    K2OSKERN_Debug("\n\n===========\nK2OS Kernel\n===========\n\n");
 
     //
     // architectural inits
@@ -111,7 +116,7 @@ Kern_Main(
     if (0x12345678 == (UINT32)apLoadInfo)
         K2MEM_Copy(&gData, image_padding, 4095);
 
-    KernDbg_Output("Intentional hang\n");
+    K2OSKERN_Debug("Intentional hang\n");
     while (1);
 }
 

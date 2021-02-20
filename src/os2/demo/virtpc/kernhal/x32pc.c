@@ -30,48 +30,37 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "x32pc.h"
+#include "dbgser\dbgser.h"
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
+void
+K2_CALLCONV_REGS
+K2OSHAL_DebugOut(
+    UINT8 aByte
 )
 {
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
+    if (aByte == '\n')
+        X32PC_DBGSER_OutByte('\r');
+    X32PC_DBGSER_OutByte(aByte);
 }
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
+BOOL
+K2_CALLCONV_REGS
+K2OSHAL_DebugIn(
+    UINT8 *apRetData
 )
 {
-    UINT32  mySeq;
-
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    do
-    {
-        mySeq = apLock->mSeqIn;
-    } while (mySeq != K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq));
-
-    do {
-        if (apLock->mSeqOut == mySeq)
-            break;
-        K2OSKERN_MicroStall(10);
-    } while (1);
+    return X32PC_DBGSER_InByte(apRetData);
 }
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock
+void
+K2_CALLCONV_REGS
+K2OSHAL_EarlyInit(
+    void
 )
 {
-    if (1 == gData.LoadInfo.mCpuCoreCount)
-        return;
-
-    apLock->mSeqOut = apLock->mSeqOut + 1;
-    K2_CpuWriteBarrier();
+    X32PC_DBGSER_Init();
 }
+
+
+
