@@ -341,7 +341,7 @@ sIoApic_SetDevIrqMask(
         redIx = aIrqIx;
 
     ioApicIndex = gX32Kern_IrqToIoApicIndexMap[redIx];
-    K2_ASSERT(ioApicIndex < gData.mX32IoApicCount);
+    K2_ASSERT(ioApicIndex < gX32Kern_IoApicCount);
     K2_ASSERT(gpX32Kern_MADT_IoApic[ioApicIndex] != NULL);
 
     redIx -= gpX32Kern_MADT_IoApic[ioApicIndex]->GlobalSystemIrqLineBase;
@@ -454,7 +454,7 @@ X32Kern_ConfigDevIrq(
 
     ioApicIndex = gX32Kern_IrqToIoApicIndexMap[redIx];
 
-    K2_ASSERT(ioApicIndex < gData.mX32IoApicCount);
+    K2_ASSERT(ioApicIndex < gX32Kern_IoApicCount);
     K2_ASSERT(gpX32Kern_MADT_IoApic[ioApicIndex] != NULL);
 
     redIx -= gpX32Kern_MADT_IoApic[ioApicIndex]->GlobalSystemIrqLineBase;

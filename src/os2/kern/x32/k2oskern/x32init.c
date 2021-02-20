@@ -57,6 +57,7 @@ UINT16                                  gX32Kern_GlobalSystemIrqOverrideMap[X32_
 UINT16                                  gX32Kern_GlobalSystemIrqOverrideFlags[X32_DEVIRQ_MAX_COUNT];
 UINT16                                  gX32Kern_VectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
 UINT8                                   gX32Kern_IrqToIoApicIndexMap[X32_DEVIRQ_MAX_COUNT];
+UINT32                                  gX32Kern_IoApicCount;
 
 void 
 KernArch_InitAtEntry(
@@ -276,10 +277,10 @@ KernArch_InitAtEntry(
             }
             else if (*pScan == ACPI_MADT_SUB_TYPE_IO_APIC)
             {
-                K2_ASSERT(gData.mX32IoApicCount < K2OS_X32_MAX_IOAPICS_COUNT);
-                K2_ASSERT(gpX32Kern_MADT_IoApic[gData.mX32IoApicCount] == NULL);
-                gpX32Kern_MADT_IoApic[gData.mX32IoApicCount] = (ACPI_MADT_SUB_IO_APIC *)pScan;
-                gData.mX32IoApicCount++;
+                K2_ASSERT(gX32Kern_IoApicCount < K2OS_X32_MAX_IOAPICS_COUNT);
+                K2_ASSERT(gpX32Kern_MADT_IoApic[gX32Kern_IoApicCount] == NULL);
+                gpX32Kern_MADT_IoApic[gX32Kern_IoApicCount] = (ACPI_MADT_SUB_IO_APIC *)pScan;
+                gX32Kern_IoApicCount++;
             }
             else if (*pScan == ACPI_MADT_SUB_TYPE_INTERRUPT_SOURCE_OVERRIDE)
             {
@@ -317,9 +318,9 @@ KernArch_InitAtEntry(
         //
         // find and configure io apic 
         //
-        if (gData.mX32IoApicCount > 0)
+        if (gX32Kern_IoApicCount > 0)
         {
-            for (left = 0; left < gData.mX32IoApicCount; left++)
+            for (left = 0; left < gX32Kern_IoApicCount; left++)
             {
                 //
                 // map and initialize this IO Apic

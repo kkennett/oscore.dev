@@ -42,6 +42,7 @@ SOURCES += debug.c
 SOURCES += panic.c
 SOURCES += map.c
 SOURCES += phys.c
+SOURCES += proc.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

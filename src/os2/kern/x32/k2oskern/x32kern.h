@@ -142,6 +142,7 @@ extern UINT16                               gX32Kern_GlobalSystemIrqOverrideMap[
 extern UINT16                               gX32Kern_GlobalSystemIrqOverrideFlags[X32_DEVIRQ_MAX_COUNT];
 extern UINT16                               gX32Kern_VectorToBeforeAnyOverrideIrqMap[X32_NUM_IDT_ENTRIES];
 extern UINT8                                gX32Kern_IrqToIoApicIndexMap[X32_DEVIRQ_MAX_COUNT];
+extern UINT32                               gX32Kern_IoApicCount;
 
 /* --------------------------------------------------------------------------------- */
 

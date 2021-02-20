@@ -32,21 +32,24 @@
 
 #include "x32kern.h"
 
-UINT32 K2_CALLCONV_REGS 
-K2OSKERN_GetCpuIndex(
-    void
-)
+void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0)
 {
-    if (!gX32Kern_ApicReady)
-        return 0;
-    return (MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ID) >> 24);
+    K2MEM_Zero(apTSS,sizeof(X32_TSS));
+
+    /* ring 0 exception stack segment */
+    /* ring 0 exception stack pointer */
+    apTSS->mSS0 = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL;
+    apTSS->mESP0 = aESP0;
+
+    /* kernel mode code selector, can switch to from user mode */
+    apTSS->mCS = X32_SEGMENT_SELECTOR_KERNEL_CODE | X32_SELECTOR_RPL_USER;
+
+    /* stack and data selectors for kernel data, can switch to from user mode */
+    apTSS->mSS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
+    apTSS->mDS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
+    apTSS->mES = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
+    apTSS->mFS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
+    apTSS->mGS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
+    apTSS->mSS = X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_USER;
 }
 
-void
-KernArch_LaunchCpuCores(
-    void
-)
-{
-    K2OSKERN_Debug("KernArch_LaunchCpuCores()\n");
-    while (1);
-}

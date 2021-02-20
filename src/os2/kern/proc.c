@@ -30,23 +30,23 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "x32kern.h"
-
-UINT32 K2_CALLCONV_REGS 
-K2OSKERN_GetCpuIndex(
-    void
-)
-{
-    if (!gX32Kern_ApicReady)
-        return 0;
-    return (MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ID) >> 24);
-}
+#include "kern.h"
 
 void
-KernArch_LaunchCpuCores(
+KernProc_Init(
     void
 )
 {
-    K2OSKERN_Debug("KernArch_LaunchCpuCores()\n");
-    while (1);
+    K2OSKERN_SeqInit(&gData.ProcListSeqLock);
+
+    K2LIST_Init(&gData.ProcList);
+
+    gpProc1->Hdr.mObjType = KernObj_Process;
+    gpProc1->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
+    gpProc1->Hdr.mRefCount = 0;
+    gpProc1->Hdr.Dispose = NULL;
+    gpProc1->mId = 1;
+    gpProc1->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
+    gpProc1->mTransTableRegVal = gData.LoadInfo.mTransBasePhys;
+    gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
 }

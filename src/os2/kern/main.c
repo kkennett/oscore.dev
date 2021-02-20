@@ -116,12 +116,21 @@ Kern_Main(
         __call_ctors();
 
     //
+    // set up process fundamentals
+    //
+    KernProc_Init();
+
+    //
+    // launch the CPU now
+    //
+    KernArch_LaunchCpuCores();
+
+    //
     // this will never actually happen.  this is here so that the bss padding comes in
     //
     if (0x12345678 == (UINT32)apLoadInfo)
         K2MEM_Copy(&gData, image_padding, 4095);
 
-    K2OSKERN_Debug("Intentional hang\n");
     while (1);
 }
 

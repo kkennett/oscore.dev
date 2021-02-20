@@ -50,6 +50,18 @@ typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernObj KernObj;
+enum _KernObj
+{
+    KernObj_Error = 0,
+
+    KernObj_Process,
+
+    KernObj_Count
+};
+
+/* --------------------------------------------------------------------------------- */
+
 struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
@@ -210,18 +222,19 @@ struct _KERN_DATA
     K2OS_UEFI_LOADINFO      LoadInfo;
 
     K2OSKERN_SEQLOCK        DebugSeqLock;
+    INT32 volatile          mCoresInPanic;
+
+    K2OSKERN_SEQLOCK        ProcListSeqLock;
+    K2LIST_ANCHOR           ProcList;
 
     K2OSKERN_SEQLOCK        PhysMemSeqLock;
     K2TREE_ANCHOR           PhysFreeTree;
     K2LIST_ANCHOR           PhysPageList[KernPhysPageList_Count];
 
-    // arch specific
 #if K2_TARGET_ARCH_IS_ARM
+    // arch specific - used in common phys init code
     UINT32                  mA32VectorPagePhys;
     UINT32                  mA32StartAreaPhys;      // K2OS_A32_APSTART_SPACE_PHYS_PAGECOUNT
-#endif
-#if K2_TARGET_ARCH_IS_INTEL
-    UINT32                  mX32IoApicCount;
 #endif
 };
 
@@ -229,12 +242,12 @@ extern KERN_DATA gData;
 
 /* --------------------------------------------------------------------------------- */
 
+void    K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO const *apLoadInfo);
+
 void    K2_CALLCONV_REGS KernEx_Assert(char const * apFile, int aLineNum, char const * apCondition);
 K2STAT  K2_CALLCONV_REGS KernEx_TrapDismount(K2_EXCEPTION_TRAP *apTrap);
 BOOL    K2_CALLCONV_REGS KernEx_TrapMount(K2_EXCEPTION_TRAP *apTrap);
 void    K2_CALLCONV_REGS KernEx_RaiseException(K2STAT aExceptionCode);
-
-void    K2_CALLCONV_REGS __attribute__((noreturn)) Kern_Main(K2OS_UEFI_LOADINFO const *apLoadInfo);
 
 void    KernArch_InitAtEntry(void);
 UINT32  KernArch_DevIrqToVector(UINT32 aDevIrq);
@@ -243,6 +256,7 @@ void    KernArch_Panic(K2OSKERN_CPUCORE volatile *apThisCore, BOOL aDumpStack);
 UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
 void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
+void    KernArch_LaunchCpuCores(void);
 
 void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 
@@ -251,16 +265,7 @@ UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 
 void    KernPhys_Init(void);
 
-
-#if 0
-/* --------------------------------------------------------------------------------- */
-
-void    KernDbg_PanicIci(K2OSKERN_CPUCORE volatile * apThisCore);
-void    KernArch_SendIci(UINT32 aCurCoreIx, BOOL aSendToSpecific, UINT32 aTargetCpuIx);
-void    KernMap_MakeOneNotPresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags, UINT32 aContent);
-UINT32  KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
-
-#endif
+void    KernProc_Init(void);
 
 /* --------------------------------------------------------------------------------- */
 
