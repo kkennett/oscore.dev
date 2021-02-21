@@ -50,7 +50,8 @@ static char const * sgK2TypeNames[] =
     "EFI_MAP         ",
     "FW_TABLES       ",
     "ARCH_SPEC       ",
-    "BUILTIN         "
+    "BUILTIN         ",
+    "THREADPTRS      ",
 };
 
 static char const * sgEfiTypeNames[K2EFI_MEMTYPE_COUNT] =
@@ -210,7 +211,7 @@ sRemoveTransitionPage(
     //
     // see if we need to unmap the pagetable that held the transition page
     //
-    pPTPageCount = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
+    pPTPageCount = (UINT32 *)K2OS_KVA_PROC1_PAGECOUNT;
     if (0 == --pPTPageCount[transPageAddr / K2_VA32_PAGETABLE_MAP_BYTES])
     {
         //
@@ -459,6 +460,7 @@ sMemTypeToPageList(
 
         case K2OS_EFIMEMTYPE_FW_TABLES:
         case K2OS_EFIMEMTYPE_BUILTIN:
+        case K2OS_EFIMEMTYPE_THREADPTRS:
             return KernPhysPageList_KData;
 
         case K2OS_EFIMEMTYPE_KERNEL_ELF:

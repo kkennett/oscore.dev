@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,17 +28,16 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0x400000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  .bss :  { *(.bss) *(.bss.*) }
-  __data_end = .;
+//
+#include "crt.h"
+
+int __cxa_atexit(__vfpv f, void *a, DLX *apDlx)
+{
+    return 0;
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+
+void __call_dtors(DLX *apDlx)
+{
+
+}
+

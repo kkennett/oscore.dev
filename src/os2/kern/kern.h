@@ -173,10 +173,11 @@ struct _K2OSKERN_OBJ_PROCESS
     UINT32                  mId;
     UINT32                  mTransTableKVA;     // VIRT of root trans table
     UINT32                  mTransTableRegVal;  // PHYS(+) of root trans table
-    UINT32                  mVirtMapKVA;        // VIRT of PTE array for user space
+    UINT32                  mVirtMapKVA;        // VIRT of PTE array
+    K2LIST_LINK             ProcListLink;
 };
 
-#define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1_BASE)
+#define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1)
 
 /* --------------------------------------------------------------------------------- */
 
@@ -257,9 +258,11 @@ UINT32  KernArch_MakePTE(UINT32 aPhysAddr, UINT32 aPageMapAttr);
 void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *apRetPhysAddrPT);
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 void    KernArch_LaunchCpuCores(void);
+UINT32* KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32* apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr);
+void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr);
 
-void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
-UINT32  KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
+void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
+UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);
 
 UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
@@ -270,6 +273,8 @@ void    KernProc_Init(void);
 
 void    KernCpu_Init(void);
 void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThisCore);
+
+void    KernUser_Init(void);
 
 /* --------------------------------------------------------------------------------- */
 

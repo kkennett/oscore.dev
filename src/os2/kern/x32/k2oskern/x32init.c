@@ -113,7 +113,7 @@ KernArch_InitAtEntry(
     //
     // count # of pagetables in use for each translation table base entry
     //
-    pCountPTPages = (UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE;
+    pCountPTPages = (UINT32 *)K2OS_KVA_PROC1_PAGECOUNT;
     K2MEM_Zero(pCountPTPages, K2_VA32_MEMPAGE_BYTES);
     pPDE = (UINT32 *)K2OS_KVA_TRANSTAB_BASE;
     pdeLeft = K2_VA32_PAGETABLES_FOR_4G;
@@ -203,7 +203,7 @@ KernArch_InitAtEntry(
             }
             ixCpu = (UINT32)gpX32Kern_HPET->Address.Address;
             ixCpu &= K2_VA32_PAGEFRAME_MASK;
-            KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_X32_HPET, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
+            KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_X32_HPET, ixCpu, K2OS_MAPTYPE_KERN_DEVICEIO);
         } while (0);
     }
 
@@ -306,7 +306,7 @@ KernArch_InitAtEntry(
         {
             localApicAddress = (UINT32)pOverride->LocalApicAddress;
         }
-        KernMap_MakeOnePresentPage(K2OS_KVA_KERNVAMAP_BASE, K2OS_KVA_X32_LOCAPIC, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
+        KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_X32_LOCAPIC, localApicAddress, K2OS_MAPTYPE_KERN_DEVICEIO);
 
         //
         // init and enable cpu 0 APIC 
@@ -326,7 +326,7 @@ KernArch_InitAtEntry(
                 // map and initialize this IO Apic
                 //
                 KernMap_MakeOnePresentPage(
-                    K2OS_KVA_KERNVAMAP_BASE, 
+                    gpProc1, 
                     K2OS_KVA_X32_IOAPICS + (left * K2_VA32_MEMPAGE_BYTES), 
                     gpX32Kern_MADT_IoApic[left]->IoApicAddress, 
                     K2OS_MAPTYPE_KERN_DEVICEIO);

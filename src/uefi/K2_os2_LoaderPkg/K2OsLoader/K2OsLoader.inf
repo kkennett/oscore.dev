@@ -59,7 +59,7 @@
     DEFINE K2_ELFLIB      =   $(K2_SHARED_LIB_SRC)/k2elf32
 
     DEFINE K2_OS          =   $(K2_ROOT)/src/os2
-    DEFINE K2_VMAPLIB     =   $(K2_OS)/lib/k2vmap32
+    DEFINE K2_VMAPLIB     =   $(K2_OS)/kern/lib/k2vmap32
 
     #
     # ASCII sources

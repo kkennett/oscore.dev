@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,17 +28,39 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0x400000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  .bss :  { *(.bss) *(.bss.*) }
-  __data_end = .;
+//
+#include "x32crt.h"
+
+static
+BOOL
+K2_CALLCONV_REGS
+sX32Crt_ExTrap_Mount(
+    K2_EXCEPTION_TRAP *apTrap
+)
+{
+    return FALSE;
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+
+static
+K2STAT
+K2_CALLCONV_REGS
+sX32Crt_ExTrap_Dismount(
+    K2_EXCEPTION_TRAP *apTrap
+)
+{
+    return apTrap->mTrapResult;
+}
+
+static
+void
+K2_CALLCONV_REGS
+sX32Crt_RaiseException(
+    K2STAT aExceptionCode
+)
+{
+    K2_ASSERT(0);
+}
+
+K2_pf_EXTRAP_MOUNT      K2_ExTrap_Mount =       sX32Crt_ExTrap_Mount;
+K2_pf_EXTRAP_DISMOUNT   K2_ExTrap_Dismount =    sX32Crt_ExTrap_Dismount;
+K2_pf_RAISE_EXCEPTION   K2_RaiseException =     sX32Crt_RaiseException;

@@ -84,7 +84,7 @@ Kern_Main(
     K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
 
     //
-    // early hal init
+    // early hal init - usually debug goop
     //
     K2OSHAL_EarlyInit();
 
@@ -97,6 +97,14 @@ Kern_Main(
     // send out first debug message
     //
     K2OSKERN_Debug("\n\n===========\nK2OS Kernel\n===========\n\n");
+
+    //
+    // set proc1 pointers so that mapping goop will work
+    //
+    gpProc1->mId = 1;
+    gpProc1->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
+    gpProc1->mTransTableRegVal = gData.LoadInfo.mTransBasePhys;
+    gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
 
     //
     // architectural inits
@@ -124,6 +132,11 @@ Kern_Main(
     // set up cpu fundamentals
     //
     KernCpu_Init();
+
+    //
+    // set up user mode so cores have something to run
+    //
+    KernUser_Init();
 
     //
     // launch the CPU now

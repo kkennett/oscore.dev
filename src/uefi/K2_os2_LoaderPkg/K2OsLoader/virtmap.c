@@ -204,23 +204,6 @@ Loader_CreateVirtualMap(
     } while (--ix > 0);
 
     //
-    // ptcount page, map manually
-    //
-    efiStatus = gBS->AllocatePages(AllocateAnyPages, K2OS_EFIMEMTYPE_PAGING, 1, &efiPhysAddr);
-    if (efiStatus != EFI_SUCCESS)
-    {
-        K2Printf(L"*** Allocate page for ptcount page failed with %r\n", efiStatus);
-        return K2STAT_ERROR_OUT_OF_MEMORY;
-    }
-    K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
-    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_PTPAGECOUNT_BASE, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
-    if (K2STAT_IS_ERROR(status))
-    {
-        K2Printf(L"*** K2VMAP32_MapPage for ptcount page failed with status 0x%08X\n", status);
-        return status;
-    }
-
-    //
     // process 1 pages map manually
     //
     efiStatus = gBS->AllocatePages(AllocateAnyPages, 
@@ -233,7 +216,7 @@ Loader_CreateVirtualMap(
         return K2STAT_ERROR_OUT_OF_MEMORY;
     }
 
-    virtAddr = K2OS_KVA_PROC1_BASE;
+    virtAddr = K2OS_KVA_PROC1;
     ix = K2OS_PROC_PAGECOUNT;
     do
     {
@@ -247,6 +230,26 @@ Loader_CreateVirtualMap(
         virtAddr += K2_VA32_MEMPAGE_BYTES;
         efiPhysAddr += K2_VA32_MEMPAGE_BYTES;
     } while (--ix > 0);
+
+    //
+    // threadptrs page map manually
+    //
+    efiStatus = gBS->AllocatePages(AllocateAnyPages, 
+        K2OS_EFIMEMTYPE_THREADPTRS, 
+        1,
+        &efiPhysAddr);
+    if (efiStatus != EFI_SUCCESS)
+    {
+        K2Printf(L"*** Allocate page for threadptrs failed with %r\n", efiStatus);
+        return K2STAT_ERROR_OUT_OF_MEMORY;
+    }
+    K2MEM_Zero((void *)((UINTN)efiPhysAddr), K2_VA32_MEMPAGE_BYTES);
+    status = K2VMAP32_MapPage(&gData.Map, K2OS_KVA_THREADPTRS_BASE, (UINTN)efiPhysAddr, K2OS_MAPTYPE_KERN_DATA);
+    if (K2STAT_IS_ERROR(status))
+    {
+        K2Printf(L"*** K2VMAP32_MapPage for proc0 tokens failed with status 0x%08X\n", status);
+        return status;
+    }
 
     //
     // core memory for cores (4 pages per core)

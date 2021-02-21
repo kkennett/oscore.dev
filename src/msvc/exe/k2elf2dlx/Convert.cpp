@@ -1221,7 +1221,7 @@ static bool sLayoutFile(void)
     fileOffset = K2_ROUNDUP(fileOffset, DLX_SECTOR_BYTES);
     gOut.mpDstInfo->SegInfo[segIx].mFileBytes = fileOffset - gOut.mpDstInfo->SegInfo[segIx].mFileOffset;
 
-    memAddr = 0x40000000;
+    memAddr = 0x400000;
 
     for (segIx = DlxSeg_Info + 1;segIx < DlxSeg_Other; segIx++)
     {

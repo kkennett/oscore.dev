@@ -79,7 +79,8 @@
 #define K2OS_EFIMEMTYPE_FW_TABLES       0x80000008  //  Firmware ACPI and SMBIOS tables
 #define K2OS_EFIMEMTYPE_ARCH_SPEC       0x80000009  //  Architecture Specific reservation
 #define K2OS_EFIMEMTYPE_BUILTIN         0x8000000A  //  Builtin Read Only File System (ROFS)
-#define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_BUILTIN
+#define K2OS_EFIMEMTYPE_THREADPTRS      0x8000000B  //  thread pointers page 
+#define K2OS_EFIMEMTYPE_LAST            K2OS_EFIMEMTYPE_THREADPTRS
 
 //
 // size of physical per-page tracking structure
@@ -90,11 +91,20 @@
 // number of memory pages to hold a process 
 //
 #define K2OS_PROC_PAGECOUNT                         4
+#define K2OS_PROC_PAGES_OFFSET_PROC_ITSELF          0   // process structure itself 
+#define K2OS_PROC_PAGES_OFFSET_TOKEN_TABLE          1   // root token table page 
+#define K2OS_PROC_PAGES_OFFSET_TLS_PAGETABLE        2   // pagetable that maps 0 -> 4MB in this process 
+#define K2OS_PROC_PAGES_OFFSET_PAGECOUNT            3   // process pagecount 
 
 //
 // max memory pages to use for EFI memory map coming from UEFI 
 //
 #define K2OS_EFIMAP_PAGECOUNT                       2
+
+//
+// max # of threads in the system 
+//
+#define K2OS_MAX_THREAD_COUNT                       1024
 
 /* --------------------------------------------------------------------------------- */
 
@@ -211,25 +221,29 @@
 #define K2OS_KVA_PHYSTRACKAREA_SIZE                 (K2_VA32_PAGEFRAMES_FOR_4G * K2OS_PHYSTRACK_BYTES)
 #define K2OS_KVA_PHYSTRACKAREA_END                  (K2OS_KVA_PHYSTRACKAREA_BASE + K2OS_KVA_PHYSTRACKAREA_SIZE)
 
+// 0x81400000 - 0x817FFFFF 
+#define K2OS_KVA_THREAD_TLS_BASE                    K2OS_KVA_PHYSTRACKAREA_END
+#define K2OS_KVA_THREAD_TLS_SIZE                    (K2OS_MAX_THREAD_COUNT * K2_VA32_MEMPAGE_BYTES)
+
 //
 // translation table base must be aligned on 16KB boundary on A32
 //
-// 0x81400000
+// 0x81800000
 #define K2OS_KVA_TRANSTAB_BASE                      K2OS_KVA_PHYSTRACKAREA_END
 
-// 0x81401000
+// 0x81801000 x32 / 0x81804000 a32
 #define K2OS_KVA_EFIMAP_BASE                        (K2OS_KVA_TRANSTAB_BASE + K2_VA32_TRANSTAB_SIZE)
 #define K2OS_KVA_EFIMAP_SIZE                        (K2OS_EFIMAP_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
-// 0x81403000
-#define K2OS_KVA_PTPAGECOUNT_BASE                   (K2OS_KVA_EFIMAP_BASE + K2OS_KVA_EFIMAP_SIZE)
+// 0x81803000 x32 / 0x81806000 a32
+#define K2OS_KVA_PROC1_AREA_BASE                    (K2OS_KVA_EFIMAP_BASE + K2OS_KVA_EFIMAP_SIZE)
+#define K2OS_KVA_PROC1_AREA_SIZE                    (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
-// 0x81404000
-#define K2OS_KVA_PROC1_BASE                         (K2OS_KVA_PTPAGECOUNT_BASE + K2_VA32_MEMPAGE_BYTES)
-#define K2OS_KVA_PROC1_SIZE                         (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
+// 0x81807000 x32 / 0x8180A000 a32
+#define K2OS_KVA_THREADPTRS_BASE                    (K2OS_KVA_PROC1_AREA_BASE + K2OS_KVA_PROC1_AREA_SIZE)
 
-// 0x81408000
-#define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_PROC1_BASE + K2OS_KVA_PROC1_SIZE)
+// 0x81808000 x32 / 0x8180B000 a32
+#define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_THREADPTRS_BASE + K2_VA32_MEMPAGE_BYTES)
 
 /* --------------------------------------------------------------------------------- */
 
@@ -245,6 +259,11 @@
 
 #define K2OS_PHYS32_TO_PHYSTRACK(x)                 (K2OS_KVA_PHYSTRACKAREA_BASE + (((x) >> K2_VA32_MEMPAGE_BYTES_POW2) * K2OS_PHYSTRACK_BYTES))
 #define K2OS_PHYSTRACK_TO_PHYS32(x)                 ((((x) - K2OS_KVA_PHYSTRACKAREA_BASE) / K2OS_PHYSTRACK_BYTES) << K2_VA32_MEMPAGE_BYTES_POW2)
+
+#define K2OS_KVA_PROC1                              (K2OS_KVA_PROC1_AREA_BASE + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PROC_ITSELF))
+#define K2OS_KVA_PROC1_TOKEN_TABLE                  (K2OS_KVA_PROC1_AREA_BASE + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_TOKEN_TABLE))
+#define K2OS_KVA_PROC1_TLS_PAGETABLE                (K2OS_KVA_PROC1_AREA_BASE + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_TLS_PAGETABLE))
+#define K2OS_KVA_PROC1_PAGECOUNT                    (K2OS_KVA_PROC1_AREA_BASE + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT))
 
 /* --------------------------------------------------------------------------------- */
 

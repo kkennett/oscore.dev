@@ -29,22 +29,26 @@
 #   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-
 include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
-TARGET_TYPE = LIB
-K2_KERNEL := TRUE
+TARGET_TYPE = DLX
+TARGET_SPECIFIC_ARCH = X32
 
-SOURCES += main.c
-SOURCES += exception.c
-SOURCES += seqlock.c
-SOURCES += debug.c
-SOURCES += panic.c
-SOURCES += map.c
-SOURCES += phys.c
-SOURCES += proc.c
-SOURCES += user.c 
-SOURCES += cpu.c
+DLX_INF := ../../k2oscrt.inf
+
+SOURCES += x32exception.c
+
+STATIC_LIBS += @shared/lib/k2mem
+STATIC_LIBS += @shared/lib/k2asc
+STATIC_LIBS += @shared/lib/k2list
+STATIC_LIBS += @shared/lib/k2tree
+STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2crc
+STATIC_LIBS += @shared/lib/k2dlxsupp
+STATIC_LIBS += @shared/lib/k2elf32
+
+STATIC_LIBS += @$(K2_OS)/user/crt
 
 include $(K2_ROOT)/src/shared/build/post.make
+
 

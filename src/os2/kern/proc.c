@@ -37,6 +37,9 @@ KernProc_Init(
     void
 )
 {
+    BOOL    ptePresent;
+    UINT32  pte;
+
     K2OSKERN_SeqInit(&gData.ProcListSeqLock);
 
     K2LIST_Init(&gData.ProcList);
@@ -45,8 +48,37 @@ KernProc_Init(
     gpProc1->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc1->Hdr.mRefCount = 0;
     gpProc1->Hdr.Dispose = NULL;
-    gpProc1->mId = 1;
-    gpProc1->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
-    gpProc1->mTransTableRegVal = gData.LoadInfo.mTransBasePhys;
-    gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
+    //
+    // this stuff set up in kernel main at the very beginning
+    //
+    //gpProc1->mId = 1;
+    //gpProc1->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
+    //gpProc1->mTransTableRegVal = gData.LoadInfo.mTransBasePhys;
+    //gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
+
+    K2LIST_AddAtHead(&gData.ProcList, &gpProc1->ProcListLink);
+
+    //
+    // map proc 1 tls pagetable.  find the physaddr for the process page and use it to set up to
+    // map the first 4MB of proc 1's process area.  proc 1 gets to see everybody's TLS storage
+    //
+    KernArch_Translate(
+        gpProc1,
+        K2OS_KVA_PROC1_TLS_PAGETABLE,
+        NULL,
+        &ptePresent,
+        &pte,
+        NULL);
+
+    K2_ASSERT(ptePresent);
+
+    K2OSKERN_Debug("Proc1 tlspage physical at %08X\n", pte & K2_VA32_PAGEFRAME_MASK);
+
+    // tlspage always maps to 0-4MB
+    KernArch_InstallPageTable(gpProc1, 0, pte & K2_VA32_PAGEFRAME_MASK);
+
+    //
+    // make sure threadptrs page is clear
+    //
+    K2MEM_Zero((void *)K2OS_KVA_THREADPTRS_BASE, K2_VA32_MEMPAGE_BYTES);
 }

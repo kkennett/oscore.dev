@@ -172,6 +172,8 @@ int main(int argc, char **argv)
                     }
                 }
 
+                printf("  ENTRY: %08X\n", pElfFile->Header().e_entry);
+
                 printf("  SECTIONS:\n");
                 if ((pElfFile->Header().e_shstrndx > 0) && (pElfFile->Header().e_shstrndx < pElfFile->Header().e_shnum))
                 {

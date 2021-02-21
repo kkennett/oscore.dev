@@ -1,4 +1,4 @@
-/*   
+//   
 //   BSD 3-Clause License
 //   
 //   Copyright (c) 2020, Kurt Kennett
@@ -28,17 +28,52 @@
 //   CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-SECTIONS { 
-  . = 0x400000;
-  .text : { *(.text) *(.text.*) }
-  . = ALIGN(4096);
-  .rodata : { *(.rodata) *(.rodata.*) *(.eh_frame) }
-  __ctors = .;
-  .ctors : { *(.ctors) *(.init_array) *(.init_array.*) }
-  . = ALIGN(4096);
-  .data : { *(.data) *(.data.*) }
-  .bss :  { *(.bss) *(.bss.*) }
-  __data_end = .;
+//
+#include "crt.h"
+
+void *              __dso_handle;
+
+extern DLX_INFO *   gpDlxInfo;
+extern void *       __data_end;
+
+int  __cxa_atexit(__vfpv f, void *a, DLX *apDlx);
+void __call_dtors(DLX *apDlx);
+
+#if K2_TARGET_ARCH_IS_ARM
+
+int __aeabi_atexit(void *object, __vfpv destroyer, void *dso_handle)
+{
+    return __cxa_atexit(destroyer, object, (DLX *)dso_handle);
 }
-__ctors_count = SIZEOF(.ctors) / 4;
+
+#endif
+
+static 
+void 
+K2_CALLCONV_REGS 
+sAssert(char const * apFile, int aLineNum, char const * apCondition)
+{
+    while (1);
+}
+
+K2_pf_ASSERT K2_Assert = sAssert;
+
+DLX *
+K2OS_GetDlxModule(
+    void
+)
+{
+    return (DLX *)__dso_handle;
+}
+
+void
+K2_CALLCONV_REGS
+__k2oscrt_user_entry(
+    void *apArg
+    )
+{
+    gpDlxInfo->mElfCRC++;
+
+    while (1);
+}
+

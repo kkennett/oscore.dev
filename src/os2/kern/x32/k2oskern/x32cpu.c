@@ -289,14 +289,14 @@ KernArch_LaunchCpuCores(
         // 
         // map the AP processors' startup page directory so we can write to it.
         //
-        KernMap_MakeOnePresentPage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_PAGEDIR, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_X32_AP_PAGEDIR, K2OS_X32_APSTART_PAGEDIR_ADDR, K2OS_MAPTYPE_KERN_DATA);
         pPageDir = (X32_PAGEDIR *)K2OS_KVA_X32_AP_PAGEDIR;
         K2MEM_Zero(pPageDir, K2_VA32_MEMPAGE_BYTES);
 
         //
         // map the AP processors' startup page table so we can write to it.
         //
-        KernMap_MakeOnePresentPage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_PAGETABLE, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
+        KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_X32_AP_PAGETABLE, K2OS_X32_APSTART_PAGETABLE_ADDR, K2OS_MAPTYPE_KERN_DATA);
         pPageTable = (X32_PAGETABLE *)K2OS_KVA_X32_AP_PAGETABLE;
         K2MEM_Zero(pPageTable, K2_VA32_MEMPAGE_BYTES);
 
@@ -316,7 +316,7 @@ KernArch_LaunchCpuCores(
         //
         // map the transition page.  AP startup code is hardwired to work at this address
         //
-        KernMap_MakeOnePresentPage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_TRANSITION, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
+        KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_X32_AP_TRANSITION, K2OS_X32_APSTART_TRANSIT_PAGE_ADDR, K2OS_MAPTYPE_KERN_TRANSITION);
 
         //
         // put the transition page into the AP processors' pagetable
@@ -350,13 +350,13 @@ KernArch_LaunchCpuCores(
         //
         // unmap startup stuff now
         //
-        KernMap_BreakOnePage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_PAGEDIR, 0);
+        KernMap_BreakOnePage(gpProc1, K2OS_KVA_X32_AP_PAGEDIR, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_PAGEDIR);
 
-        KernMap_BreakOnePage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_PAGETABLE, 0);
+        KernMap_BreakOnePage(gpProc1, K2OS_KVA_X32_AP_PAGETABLE, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_PAGETABLE);
 
-        KernMap_BreakOnePage(gpProc1->mVirtMapKVA, K2OS_KVA_X32_AP_TRANSITION, 0);
+        KernMap_BreakOnePage(gpProc1, K2OS_KVA_X32_AP_TRANSITION, 0);
         KernArch_InvalidateTlbPageOnThisCore(K2OS_KVA_X32_AP_TRANSITION);
     }
 

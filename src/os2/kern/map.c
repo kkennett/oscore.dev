@@ -56,7 +56,7 @@ sGetPTE(
 
 void    
 KernMap_MakeOnePresentPage(
-    UINT32 aVirtMapBase, 
+    K2OSKERN_OBJ_PROCESS *apProc,
     UINT32 aVirtAddr, 
     UINT32 aPhysAddr, 
     UINT32 aPageMapAttr
@@ -66,9 +66,14 @@ KernMap_MakeOnePresentPage(
     UINT32 * pPageCount;
     UINT32   pteOld;
 
+    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
+    {
+        K2_ASSERT(apProc == gpProc1);
+    }
+
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
-    pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pPTE = sGetPTE(apProc->mVirtMapKVA, aVirtAddr);
 
     pteOld = *pPTE;
 
@@ -78,29 +83,35 @@ KernMap_MakeOnePresentPage(
 
     if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
     {
-        if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-        {
-            pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
-        }
-        else
-        {
-            K2_ASSERT(0);
-        }
+        pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
+
         (*pPageCount)++;
+
         K2_ASSERT((*pPageCount) <= 1024);
     }
 
     K2_CpuWriteBarrier();
 }
 
-UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags)
+UINT32 
+KernMap_BreakOnePage(
+    K2OSKERN_OBJ_PROCESS *apProc,
+    UINT32 aVirtAddr, 
+    UINT32 aNpFlags
+)
 {
     UINT32 *    pPTE;
     UINT32 *    pPageCount;
     UINT32      result;
     UINT32      pteOld;
 
-    pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
+    {
+        K2_ASSERT(apProc == gpProc1);
+    }
+
+    pPTE = sGetPTE(apProc->mVirtMapKVA, aVirtAddr);
+
     pteOld = *pPTE;
 
     K2_ASSERT((pteOld & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) != 0);
@@ -112,21 +123,15 @@ UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFla
         K2_ASSERT(0 == (aNpFlags & K2OSKERN_PTE_PRESENT_BIT));
 
         *pPTE = aNpFlags;
-       
     }
     else
     {
         *pPTE = 0;
 
-        if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-        {
-            pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
-        }
-        else
-        {
-            K2_ASSERT(0);
-        }
+        pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
+
         K2_ASSERT((*pPageCount) > 0);
+
         (*pPageCount)--;
     }
 
