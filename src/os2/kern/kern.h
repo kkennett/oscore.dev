@@ -85,10 +85,10 @@ struct _K2OSKERN_COREMEMORY
 };
 K2_STATIC_ASSERT(sizeof(K2OSKERN_COREMEMORY) == (4 * K2_VA32_MEMPAGE_BYTES));
 
-#define K2OSKERN_COREIX_TO_CPUCORE(x)       ((K2OSKERN_CPUCORE volatile *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
+#define K2OSKERN_COREIX_TO_CPUCORE(x)       ((K2OSKERN_CPUCORE volatile *)(K2OS_KVA_COREMEMORY_BASE + ((x) * (K2_VA32_MEMPAGE_BYTES * 4))))
 #define K2OSKERN_GET_CURRENT_CPUCORE        K2OSKERN_COREIX_TO_CPUCORE(K2OSKERN_GetCpuIndex())
 
-#define K2OSKERN_COREIX_TO_COREMEMORY(x)    ((K2OSKERN_COREMEMORY *)(K2OS_KVA_COREMEMORY_BASE + ((x) * K2_VA32_MEMPAGE_BYTES)))
+#define K2OSKERN_COREIX_TO_COREMEMORY(x)    ((K2OSKERN_COREMEMORY *)(K2OS_KVA_COREMEMORY_BASE + ((x) * (K2_VA32_MEMPAGE_BYTES * 4))))
 #define K2OSKERN_GET_CURRENT_COREMEMORY     K2OSKERN_COREIX_TO_COREPAGE(K2OSKERN_GetCpuIndex())
 
 /* --------------------------------------------------------------------------------- */
@@ -259,6 +259,7 @@ void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 void    KernArch_LaunchCpuCores(void);
 
 void    KernMap_MakeOnePresentPage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
+UINT32  KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags);
 
 UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
@@ -266,6 +267,9 @@ UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 void    KernPhys_Init(void);
 
 void    KernProc_Init(void);
+
+void    KernCpu_Init(void);
+void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThisCore);
 
 /* --------------------------------------------------------------------------------- */
 

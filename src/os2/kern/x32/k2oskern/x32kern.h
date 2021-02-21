@@ -166,6 +166,9 @@ void X32Kern_DumpStackTrace(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aEIP, UINT32 aE
 void X32Kern_DumpUserModeExceptionContext(X32_EXCEPTION_CONTEXT *apContext);
 void X32Kern_DumpKernelModeExceptionContext(X32_EXCEPTION_CONTEXT * apContext);
 
+typedef void (K2_CALLCONV_REGS *pf_X32Kern_CpuLaunchEntryPoint)(UINT32 aCoreIx);
+void K2_CALLCONV_REGS X32Kern_CpuLaunchEntryPoint(UINT32 aCoreIx);
+
 /* --------------------------------------------------------------------------------- */
 
 #endif // __X32KERN_H

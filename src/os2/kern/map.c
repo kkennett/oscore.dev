@@ -92,3 +92,46 @@ KernMap_MakeOnePresentPage(
 
     K2_CpuWriteBarrier();
 }
+
+UINT32 KernMap_BreakOnePage(UINT32 aVirtMapBase, UINT32 aVirtAddr, UINT32 aNpFlags)
+{
+    UINT32 *    pPTE;
+    UINT32 *    pPageCount;
+    UINT32      result;
+    UINT32      pteOld;
+
+    pPTE = sGetPTE(aVirtMapBase, aVirtAddr);
+    pteOld = *pPTE;
+
+    K2_ASSERT((pteOld & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) != 0);
+
+    result = ((*pPTE) & K2_VA32_PAGEFRAME_MASK);
+
+    if (aNpFlags & K2OSKERN_PTE_NP_BIT)
+    {
+        K2_ASSERT(0 == (aNpFlags & K2OSKERN_PTE_PRESENT_BIT));
+
+        *pPTE = aNpFlags;
+       
+    }
+    else
+    {
+        *pPTE = 0;
+
+        if (aVirtAddr >= K2OS_KVA_KERN_BASE)
+        {
+            pPageCount = ((UINT32 *)K2OS_KVA_PTPAGECOUNT_BASE) + (aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES);
+        }
+        else
+        {
+            K2_ASSERT(0);
+        }
+        K2_ASSERT((*pPageCount) > 0);
+        (*pPageCount)--;
+    }
+
+    K2_CpuWriteBarrier();
+
+    return result;
+}
+

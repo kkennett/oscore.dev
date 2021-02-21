@@ -121,6 +121,11 @@ Kern_Main(
     KernProc_Init();
 
     //
+    // set up cpu fundamentals
+    //
+    KernCpu_Init();
+
+    //
     // launch the CPU now
     //
     KernArch_LaunchCpuCores();

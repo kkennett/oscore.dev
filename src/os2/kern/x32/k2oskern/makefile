@@ -44,6 +44,7 @@ LDOPT += --no-omagic --strip-debug -x
 
 SOURCES += x32entryasm.s 
 SOURCES += x32cpu.c 
+SOURCES += x32cpuasm.s
 SOURCES += x32init.c 
 SOURCES += x32gdt.c 
 SOURCES += x32gdtasm.s 
