@@ -46,10 +46,15 @@ KernCpu_Init(
     for (coreIx = 0; coreIx < gData.LoadInfo.mCpuCoreCount; coreIx++)
     {
         pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
+        
         K2MEM_Zero((void *)pCore, sizeof(K2OSKERN_CPUCORE));
+        
         pCore->mCoreIx = coreIx;
-        K2_CpuWriteBarrier();
+
+        K2LIST_Init((K2LIST_ANCHOR *)&pCore->RunList);
     }
+
+    K2_CpuWriteBarrier();
 }
 
 void __attribute__((noreturn)) 

@@ -43,6 +43,7 @@ typedef struct _K2OSKERN_CPUCORE            K2OSKERN_CPUCORE;
 typedef struct _K2OSKERN_COREMEMORY         K2OSKERN_COREMEMORY;
 typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
 typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
+typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
@@ -56,8 +57,67 @@ enum _KernObj
     KernObj_Error = 0,
 
     KernObj_Process,
+    KernObj_Thread,
 
     KernObj_Count
+};
+
+#define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
+#define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
+
+typedef void (*K2OSKERN_pf_ObjDispose)(K2OSKERN_OBJ_HEADER *apObj);
+
+struct _K2OSKERN_OBJ_HEADER
+{
+    UINT32                  mObjType;
+    UINT32                  mObjFlags;
+    INT32 volatile          mRefCount;
+    K2OSKERN_pf_ObjDispose  Dispose;
+    K2TREE_NODE             ObjTreeNode;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+#if K2_TARGET_ARCH_IS_INTEL
+typedef struct _K2OSKERN_THREAD_CONTEXT  K2OSKERN_THREAD_CONTEXT;
+struct _K2OSKERN_THREAD_CONTEXT
+{
+    UINT32      DS;                     // last pushed by int common
+    X32_PUSHA   REGS;                   // pushed by int common - 8 32-bit words
+    UINT32      Exception_Vector;       // pushed by int stub
+    UINT32      Exception_ErrorCode;    // pushed auto by CPU or by int stub
+    UINT32      EIP;                    // pushed auto by CPU  (iret instruction starts restore from here)
+    UINT32      CS;                     // pushed auto by CPU
+    UINT32      EFLAGS;                 // pushed auto by CPU
+    UINT32      ESP;                    // pushed auto by CPU
+    UINT32      SS;                     // pushed first, auto by CPU
+};
+#elif K2_TARGET_ARCH_IS_ARM
+typedef struct _K2OSKERN_THREAD_CONTEXT  K2OSKERN_THREAD_CONTEXT;
+struct _K2OSKERN_THREAD_CONTEXT
+{
+    UINT32      SPSR;
+    UINT32      R[16];
+};
+#else
+#error Unknown Arch
+#endif
+
+struct _K2OSKERN_OBJ_THREAD
+{
+    K2OSKERN_OBJ_HEADER     Hdr;
+
+    K2OSKERN_OBJ_PROCESS *  mpProc;
+
+    UINT32                  mIx;
+
+    UINT32                  mTlsPagePhys;
+
+    K2LIST_LINK             ProcThreadListLink;
+
+    K2OSKERN_THREAD_CONTEXT Context;
+
+    K2LIST_LINK             CpuRunListLink;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -66,14 +126,18 @@ struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
     /* must be first thing in struct */
-    X32_TSS         TSS;
+    X32_TSS                 TSS;
 #endif
 
-    UINT32          mCoreIx;
+    UINT32                  mCoreIx;
 
-    BOOL            mIsExecuting;
+    BOOL                    mIsExecuting;
 
-    UINT32 volatile mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
+    UINT32 volatile         mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
+
+    K2LIST_ANCHOR           RunList;
+
+    K2OSKERN_OBJ_THREAD     IdleThread;
 };
 
 #define K2OSKERN_COREMEMORY_STACKS_BYTES  ((K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_CPUCORE)) + (K2_VA32_MEMPAGE_BYTES * 3))
@@ -151,22 +215,6 @@ K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
-#define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
-
-typedef void (*K2OSKERN_pf_ObjDispose)(K2OSKERN_OBJ_HEADER *apObj);
-
-struct _K2OSKERN_OBJ_HEADER
-{
-    UINT32                  mObjType;
-    UINT32                  mObjFlags;
-    INT32 volatile          mRefCount;
-    K2OSKERN_pf_ObjDispose  Dispose;
-    K2TREE_NODE             ObjTreeNode;
-};
-
-/* --------------------------------------------------------------------------------- */
-
 struct _K2OSKERN_OBJ_PROCESS
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -175,6 +223,9 @@ struct _K2OSKERN_OBJ_PROCESS
     UINT32                  mTransTableRegVal;  // PHYS(+) of root trans table
     UINT32                  mVirtMapKVA;        // VIRT of PTE array
     K2LIST_LINK             ProcListLink;
+
+    K2OSKERN_SEQLOCK        ThreadListSeqLock;
+    K2LIST_ANCHOR           ThreadList;
 };
 
 #define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1)
@@ -231,6 +282,9 @@ struct _KERN_DATA
     K2OSKERN_SEQLOCK        PhysMemSeqLock;
     K2TREE_ANCHOR           PhysFreeTree;
     K2LIST_ANCHOR           PhysPageList[KernPhysPageList_Count];
+
+    UINT32 volatile         mNextThreadSlotIx;
+    UINT32                  mLastThreadSlotIx;
 
 #if K2_TARGET_ARCH_IS_ARM
     // arch specific - used in common phys init code

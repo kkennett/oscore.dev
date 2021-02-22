@@ -37,8 +37,9 @@ KernProc_Init(
     void
 )
 {
-    BOOL    ptePresent;
-    UINT32  pte;
+    BOOL        ptePresent;
+    UINT32      pte;
+    UINT32 *    pThreadPtrs;
 
     K2OSKERN_SeqInit(&gData.ProcListSeqLock);
 
@@ -72,13 +73,26 @@ KernProc_Init(
 
     K2_ASSERT(ptePresent);
 
-    K2OSKERN_Debug("Proc1 tlspage physical at %08X\n", pte & K2_VA32_PAGEFRAME_MASK);
-
     // tlspage always maps to 0-4MB
     KernArch_InstallPageTable(gpProc1, 0, pte & K2_VA32_PAGEFRAME_MASK);
+
+    // kernel also uses this pagetable so it can see all threads' TLS no 
+    // matter what process is active on a cpu 
+    KernArch_InstallPageTable(gpProc1, K2OS_KVA_THREAD_TLS_BASE, pte & K2_VA32_PAGEFRAME_MASK);
 
     //
     // make sure threadptrs page is clear
     //
     K2MEM_Zero((void *)K2OS_KVA_THREADPTRS_BASE, K2_VA32_MEMPAGE_BYTES);
+
+    //
+    // init threadptrs list to a free list.  thread 0 is never used
+    //
+    pThreadPtrs = (UINT32 *)K2OS_KVA_THREADPTRS_BASE;
+    pThreadPtrs[0] = 0; // never used, not valid
+    for (pte = 1; pte < K2OS_MAX_THREAD_COUNT - 1; pte++)
+        pThreadPtrs[pte] = pte + 1;
+    pThreadPtrs[K2OS_MAX_THREAD_COUNT - 1] = 0;
+    gData.mNextThreadSlotIx = 1;
+    gData.mLastThreadSlotIx = K2OS_MAX_THREAD_COUNT;
 }

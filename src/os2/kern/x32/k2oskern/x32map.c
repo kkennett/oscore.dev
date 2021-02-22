@@ -191,7 +191,6 @@ KernArch_InstallPageTable(
         //
         K2_ASSERT(apProc == gpProc1);
         mapAttr = X32_KERN_PAGETABLE_PROTO;
-        K2OSKERN_Debug("Mapping Kernel PageTable for %08X\n", aVirtAddrPtMaps);
     }
     else
     {
@@ -199,7 +198,6 @@ KernArch_InstallPageTable(
         // pagetable maps kernel mode
         //
         mapAttr = X32_USER_PAGETABLE_PROTO;
-        K2OSKERN_Debug("Mapping process %d UserMode PageTable for %08X\n", apProc->mId, aVirtAddrPtMaps);
     }
 
     //
@@ -213,7 +211,6 @@ KernArch_InstallPageTable(
     // because that's where process KVAs live
     //
     virtKernPT = K2_VA32_TO_PT_ADDR(apProc->mVirtMapKVA, aVirtAddrPtMaps);
-    K2OSKERN_Debug("Pagetable virtual address = %08X\n", virtKernPT);
     K2_ASSERT(((*((UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtKernPT))) & K2OSKERN_PTE_PRESENT_BIT) == 0);
     KernMap_MakeOnePresentPage(apProc, virtKernPT, aPhysPageAddr, K2OS_MAPTYPE_KERN_PAGETABLE);
 
@@ -244,7 +241,6 @@ KernArch_InstallPageTable(
 
             K2_ASSERT(((*pPDE) & K2OSKERN_PDE_PRESENT_BIT) == 0);
 
-            K2OSKERN_Debug("Process %d : *%08X = %08X\n", pOtherProc->mId, pPDE, pde);
             *pPDE = pde;
 
             pListLink = pListLink->mpNext;
@@ -259,7 +255,6 @@ KernArch_InstallPageTable(
         //
         pPDE = (((UINT32 *)apProc->mTransTableKVA) + ptIndex);
         K2_ASSERT(((*pPDE) & K2OSKERN_PDE_PRESENT_BIT) == 0);
-        K2OSKERN_Debug("*%08X = %08X\n", pPDE, pde);
         *pPDE = pde;
     }
 }

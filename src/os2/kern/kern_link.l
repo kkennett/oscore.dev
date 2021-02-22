@@ -31,7 +31,7 @@
 */
 PHDRS
 {
-  headers PT_PHDR FILEHDR PHDRS AT (0xFFF00000) ;
+  headers PT_PHDR FILEHDR PHDRS AT (0xFFC00000) ;
   text PT_LOAD ;
   rodata PT_LOAD ;
   data PT_LOAD ;
@@ -39,7 +39,7 @@ PHDRS
 
 SECTIONS
 {
-  . = 0xFFF00000;
+  . = 0xFFC00000;
   . = . + SIZEOF_HEADERS;
   . = ALIGN(4096);
   .text : { *(.text) *(.text.*) } : text

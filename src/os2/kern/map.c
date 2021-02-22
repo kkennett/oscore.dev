@@ -32,28 +32,6 @@
 
 #include "kern.h"
 
-static UINT32 * 
-sGetPTE(
-    UINT32 aVirtMapBase, 
-    UINT32 aVirtAddr
-)
-{
-    UINT32* pPTE;
-
-    if (aVirtAddr >= K2OS_KVA_KERN_BASE)
-    {
-        K2_ASSERT(aVirtMapBase == K2OS_KVA_KERNVAMAP_BASE);
-        pPTE = (UINT32*)K2OS_KVA_TO_PTE_ADDR(aVirtAddr);
-    }
-    else
-    {
-        K2_ASSERT(aVirtMapBase != K2OS_KVA_KERNVAMAP_BASE);
-        pPTE = (UINT32*)K2_VA32_TO_PTE_ADDR(aVirtMapBase, aVirtAddr);
-    }
-
-    return pPTE;
-}
-
 void    
 KernMap_MakeOnePresentPage(
     K2OSKERN_OBJ_PROCESS *apProc,
@@ -73,7 +51,7 @@ KernMap_MakeOnePresentPage(
 
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
 
-    pPTE = sGetPTE(apProc->mVirtMapKVA, aVirtAddr);
+    pPTE = (UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr);
 
     pteOld = *pPTE;
 
@@ -84,6 +62,7 @@ KernMap_MakeOnePresentPage(
     if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
     {
         pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
+        pPageCount += aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
 
         (*pPageCount)++;
 
@@ -110,7 +89,7 @@ KernMap_BreakOnePage(
         K2_ASSERT(apProc == gpProc1);
     }
 
-    pPTE = sGetPTE(apProc->mVirtMapKVA, aVirtAddr);
+    pPTE = (UINT32*)K2_VA32_TO_PTE_ADDR(apProc->mVirtMapKVA, aVirtAddr);
 
     pteOld = *pPTE;
 
@@ -129,9 +108,10 @@ KernMap_BreakOnePage(
         *pPTE = 0;
 
         pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
-
+        pPageCount += aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
+        
         K2_ASSERT((*pPageCount) > 0);
-
+        
         (*pPageCount)--;
     }
 

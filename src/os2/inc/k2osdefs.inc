@@ -128,10 +128,14 @@
 #define K2OS_KVA_COREMEMORY_BASE_HIGH16             0xFFFD
 #define K2OS_KVA_COREMEMORY_BASE_LOW16              0x0000
 
-#define K2OS_KVA_KERNEL_ARENA                       0xFFF00000
-#define K2OS_KVA_KERNEL_ARENA_SIZE                  0x000D0000 // 832kB
+#define K2OS_KVA_KERNEL_ARENA                       0xFFC00000
+#define K2OS_KVA_KERNEL_ARENA_SIZE                  0x003D0000 // 3904 KB
 
-#define K2OS_KVA_FREE_TOP                           K2OS_KVA_KERNEL_ARENA
+// this must be virtually 4MB aligned and pagetable not auto mapper by loader
+#define K2OS_KVA_THREAD_TLS_BASE                    0xFF800000
+#define K2OS_KVA_THREAD_TLS_SIZE                    0x00400000  
+
+#define K2OS_KVA_FREE_TOP                           K2OS_KVA_THREAD_TLS_BASE
 
 /* --------------------------------------------------------------------------------- */
 
@@ -212,7 +216,7 @@
 #define K2OS_KVA_KERN_BASE                          0x80000000             
 #define K2OS_KVA_KERN_SELFMAP_ADDR                  0x80000000  // virtual address of PTE mapping itself
 
-// 0x80000000 - 0x803FFFFF
+// 0x80000000 - 0x803FFFFF -- this must be virtually 4MB aligned 
 #define K2OS_KVA_KERNVAMAP_BASE                     K2OS_KVA_KERN_BASE
 #define K2OS_KVA_KERNVAMAP_SIZE                     (K2_VA32_PAGEFRAMES_FOR_4G * 4)     
 
@@ -221,28 +225,24 @@
 #define K2OS_KVA_PHYSTRACKAREA_SIZE                 (K2_VA32_PAGEFRAMES_FOR_4G * K2OS_PHYSTRACK_BYTES)
 #define K2OS_KVA_PHYSTRACKAREA_END                  (K2OS_KVA_PHYSTRACKAREA_BASE + K2OS_KVA_PHYSTRACKAREA_SIZE)
 
-// 0x81400000 - 0x817FFFFF 
-#define K2OS_KVA_THREAD_TLS_BASE                    K2OS_KVA_PHYSTRACKAREA_END
-#define K2OS_KVA_THREAD_TLS_SIZE                    (K2OS_MAX_THREAD_COUNT * K2_VA32_MEMPAGE_BYTES)
-
 //
 // translation table base must be aligned on 16KB boundary on A32
 //
-// 0x81800000
+// 0x81400000
 #define K2OS_KVA_TRANSTAB_BASE                      K2OS_KVA_PHYSTRACKAREA_END
 
-// 0x81801000 x32 / 0x81804000 a32
+// 0x81401000 x32 / 0x81404000 a32
 #define K2OS_KVA_EFIMAP_BASE                        (K2OS_KVA_TRANSTAB_BASE + K2_VA32_TRANSTAB_SIZE)
 #define K2OS_KVA_EFIMAP_SIZE                        (K2OS_EFIMAP_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
-// 0x81803000 x32 / 0x81806000 a32
+// 0x81403000 x32 / 0x81406000 a32
 #define K2OS_KVA_PROC1_AREA_BASE                    (K2OS_KVA_EFIMAP_BASE + K2OS_KVA_EFIMAP_SIZE)
 #define K2OS_KVA_PROC1_AREA_SIZE                    (K2OS_PROC_PAGECOUNT * K2_VA32_MEMPAGE_BYTES)
 
-// 0x81807000 x32 / 0x8180A000 a32
+// 0x81407000 x32 / 0x8140A000 a32
 #define K2OS_KVA_THREADPTRS_BASE                    (K2OS_KVA_PROC1_AREA_BASE + K2OS_KVA_PROC1_AREA_SIZE)
 
-// 0x81808000 x32 / 0x8180B000 a32
+// 0x81408000 x32 / 0x8140B000 a32
 #define K2OS_KVA_FREE_BOTTOM                        (K2OS_KVA_THREADPTRS_BASE + K2_VA32_MEMPAGE_BYTES)
 
 /* --------------------------------------------------------------------------------- */
