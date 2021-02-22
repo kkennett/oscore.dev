@@ -133,6 +133,11 @@ KernUser_Init(
         // clear out the TLS page at its target user space address
         //
         K2MEM_Zero((void *)tlsPageVirtOffset, K2_VA32_MEMPAGE_BYTES);
+
+        //
+        // set up the idle thread and add it to the run list.  context not set yet
+        //
+        K2LIST_AddAtTail(&pCore->RunList, &pCore->IdleThread.CpuRunListLink);
     }
 
     //
@@ -140,8 +145,10 @@ KernUser_Init(
     //
 
     //
-    //
+    //  set idle threads' entry point and stack pointers in their contexts
     // 
+
+
 }
 
 
