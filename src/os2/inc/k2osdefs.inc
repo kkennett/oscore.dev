@@ -111,7 +111,7 @@
 //
 // Kernel Virtual Address Range (KVA) top down
 //
-#define K2OS_KVA_PUBLICAPI_SIZE                     0x00001000
+#define K2OS_PUBLICAPI_SIZE                         0x00001000
 #define K2OS_KVA_PUBLICAPI_BASE                     0xFFFFF000
 
 #define K2OS_KVA_FACS_SIZE                          0x00001000
@@ -248,6 +248,15 @@
 /* --------------------------------------------------------------------------------- */
 
 //
+// User Virtual Address Range (UVA)
+//
+#define K2OS_UVA_PUBLICAPI_BASE                     0x7FFFF000 
+#define K2OS_UVA_TLSAREA_BASE                       0x00000000 
+#define K2OS_UVA_LOW_BASE                           0x00400000 
+
+/* --------------------------------------------------------------------------------- */
+
+//
 // derived definitions
 //
 
@@ -267,41 +276,62 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OS_MEMPAGE_ATTR_NONE              0
-#define K2OS_MEMPAGE_ATTR_EXEC              PF_X        // elf32, 0x00000001
-#define K2OS_MEMPAGE_ATTR_WRITEABLE         PF_W        // elf32, 0x00000002
-#define K2OS_MEMPAGE_ATTR_READABLE          PF_R        // elf32, 0x00000004
-#define K2OS_MEMPAGE_ATTR_READWRITE         (K2OS_MEMPAGE_ATTR_READABLE | K2OS_MEMPAGE_ATTR_WRITEABLE)
-#define K2OS_MEMPAGE_ATTR_UNCACHED          0x00000008
-#define K2OS_MEMPAGE_ATTR_DEVICEIO          0x00000010
-#define K2OS_MEMPAGE_ATTR_WRITE_THRU        0x00000020
-#define K2OS_MEMPAGE_ATTR_KERNEL            0x00000040
-#define K2OS_MEMPAGE_ATTR_PAGING            0x00000080
-#define K2OS_MEMPAGE_ATTR_TRANSITION        0x00000100
-#define K2OS_MEMPAGE_ATTR_AUX               0x00000200 
-#define K2OS_MEMPAGE_ATTR_SPEC_NP           0x00000400 
-#define K2OS_MEMPAGE_ATTR_MASK              0x00000FFF  // can't be any bigger
+#define K2OS_MEMPAGE_ATTR_NONE                      0
+#define K2OS_MEMPAGE_ATTR_EXEC                      PF_X        // elf32, 0x00000001
+#define K2OS_MEMPAGE_ATTR_WRITEABLE                 PF_W        // elf32, 0x00000002
+#define K2OS_MEMPAGE_ATTR_READABLE                  PF_R        // elf32, 0x00000004
+#define K2OS_MEMPAGE_ATTR_READWRITE                 (K2OS_MEMPAGE_ATTR_READABLE | K2OS_MEMPAGE_ATTR_WRITEABLE)
+#define K2OS_MEMPAGE_ATTR_UNCACHED                  0x00000008
+#define K2OS_MEMPAGE_ATTR_DEVICEIO                  0x00000010
+#define K2OS_MEMPAGE_ATTR_WRITE_THRU                0x00000020
+#define K2OS_MEMPAGE_ATTR_USER                      0x00000040
+#define K2OS_MEMPAGE_ATTR_PAGING                    0x00000080
+#define K2OS_MEMPAGE_ATTR_TRANSITION                0x00000100
+#define K2OS_MEMPAGE_ATTR_AUX                       0x00000200 
+#define K2OS_MEMPAGE_ATTR_SPEC_NP                   0x00000400 
+#define K2OS_MEMPAGE_ATTR_MASK                      0x00000FFF  // can't be any bigger
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OS_MAPTYPE_TEXT                      (K2OS_MEMPAGE_ATTR_EXEC | K2OS_MEMPAGE_ATTR_READABLE)
-#define K2OS_MAPTYPE_READ                      K2OS_MEMPAGE_ATTR_READABLE
-#define K2OS_MAPTYPE_DATA                      (K2OS_MEMPAGE_ATTR_READABLE | K2OS_MEMPAGE_ATTR_WRITEABLE)
-#define K2OS_MAPTYPE_DEVICEIO                  (K2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_DEVICEIO)
-#define K2OS_MAPTYPE_WRITETHRU_CACHED          (K2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_WRITE_THRU)
-#define K2OS_MAPTYPE_UNCACHED                  (K2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_UNCACHED)
+#define iK2OS_MAPTYPE_READ                          K2OS_MEMPAGE_ATTR_READABLE
+#define iK2OS_MAPTYPE_TEXT                          (iK2OS_MAPTYPE_READ | K2OS_MEMPAGE_ATTR_EXEC)
+#define iK2OS_MAPTYPE_DATA                          (iK2OS_MAPTYPE_READ | K2OS_MEMPAGE_ATTR_WRITEABLE)
+#define iK2OS_MAPTYPE_DEVICEIO                      (iK2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_DEVICEIO)
+#define iK2OS_MAPTYPE_WRITETHRU_CACHED              (iK2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_WRITE_THRU)
+#define iK2OS_MAPTYPE_UNCACHED                      (iK2OS_MAPTYPE_DATA | K2OS_MEMPAGE_ATTR_UNCACHED)
 
-#define K2OS_MAPTYPE_KERN_TEXT                 (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_TEXT            )
-#define K2OS_MAPTYPE_KERN_READ                 (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_READ            )
-#define K2OS_MAPTYPE_KERN_DATA                 (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_DATA            )
-#define K2OS_MAPTYPE_KERN_DEVICEIO             (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_DEVICEIO        )
-#define K2OS_MAPTYPE_KERN_WRITETHRU_CACHED     (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_WRITETHRU_CACHED)
-#define K2OS_MAPTYPE_KERN_UNCACHED             (K2OS_MEMPAGE_ATTR_KERNEL | K2OS_MAPTYPE_UNCACHED        )
+#define K2OS_MAPTYPE_KERN_TEXT                      iK2OS_MAPTYPE_READ            
+#define K2OS_MAPTYPE_KERN_READ                      iK2OS_MAPTYPE_TEXT            
+#define K2OS_MAPTYPE_KERN_DATA                      iK2OS_MAPTYPE_DATA            
+#define K2OS_MAPTYPE_KERN_DEVICEIO                  iK2OS_MAPTYPE_DEVICEIO        
+#define K2OS_MAPTYPE_KERN_WRITETHRU_CACHED          iK2OS_MAPTYPE_WRITETHRU_CACHED
+#define K2OS_MAPTYPE_KERN_UNCACHED                  iK2OS_MAPTYPE_UNCACHED        
 
-#define K2OS_MAPTYPE_KERN_TRANSITION           (K2OS_MAPTYPE_KERN_UNCACHED | K2OS_MEMPAGE_ATTR_EXEC | K2OS_MEMPAGE_ATTR_TRANSITION)
-                                                  
-#define K2OS_MAPTYPE_KERN_PAGETABLE            (K2OS_MAPTYPE_KERN_DATA | K2OS_MEMPAGE_ATTR_PAGING)
-#define K2OS_MAPTYPE_KERN_PAGEDIR              K2OS_MAPTYPE_KERN_PAGETABLE
+#define K2OS_MAPTYPE_USER_TEXT                      (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_READ)         
+#define K2OS_MAPTYPE_USER_READ                      (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_TEXT)
+#define K2OS_MAPTYPE_USER_DATA                      (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_DATA)
+#define K2OS_MAPTYPE_USER_DEVICEIO                  (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_DEVICEIO)
+#define K2OS_MAPTYPE_USER_WRITETHRU_CACHED          (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_WRITETHRU_CACHED)
+#define K2OS_MAPTYPE_USER_UNCACHED                  (K2OS_MEMPAGE_ATTR_USER | iK2OS_MAPTYPE_UNCACHED)
+
+#define K2OS_MAPTYPE_KERN_TRANSITION                (K2OS_MAPTYPE_KERN_UNCACHED | K2OS_MEMPAGE_ATTR_EXEC | K2OS_MEMPAGE_ATTR_TRANSITION)
+                                                       
+#define K2OS_MAPTYPE_KERN_PAGETABLE                 (K2OS_MAPTYPE_KERN_DATA | K2OS_MEMPAGE_ATTR_PAGING)
+#define K2OS_MAPTYPE_KERN_PAGEDIR                   K2OS_MAPTYPE_KERN_PAGETABLE
+
+/* --------------------------------------------------------------------------------- */
+
+#define K2OS_PUBLICAPI_OFFSET_MSTIMER64             0xFF8
+#define K2OS_PUBLICAPI_OFFSET_DATETIME              0xFE0
+#define K2OS_PUBLIACPI_OFFSET_SYSCALL               0
+
+#define K2OS_KVA_PUBLICAPI_MSTIMER64                (K2OS_KVA_PUBLICAPI_BASE + K2OS_PUBLICAPI_OFFSET_MSTIMER64)
+#define K2OS_KVA_PUBLICAPI_DATETIME                 (K2OS_KVA_PUBLICAPI_BASE + K2OS_PUBLICAPI_OFFSET_DATETIME)
+#define K2OS_KVA_PUBLICAPI_SYSCALL                  (K2OS_KVA_PUBLICAPI_BASE + K2OS_PUBLIACPI_OFFSET_SYSCALL)
+
+#define K2OS_UVA_PUBLICAPI_MSTIMER64                (K2OS_KUA_PUBLICAPI_BASE + K2OS_PUBLICAPI_OFFSET_MSTIMER64)
+#define K2OS_UVA_PUBLICAPI_DATETIME                 (K2OS_KUA_PUBLICAPI_BASE + K2OS_PUBLICAPI_OFFSET_DATETIME)
+#define K2OS_UVA_PUBLICAPI_SYSCALL                  (K2OS_KUA_PUBLICAPI_BASE + K2OS_PUBLIACPI_OFFSET_SYSCALL)
 
 /* --------------------------------------------------------------------------------- */
 

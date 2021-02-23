@@ -349,7 +349,7 @@ K2VMAP32_RealizeArchMappings(
             ptPhys = (pde & K2VMAP32_PAGEPHYS_MASK);
 
             //
-            // if this pagetable has already been done, then dont do it again
+            // if this pagetable has already been realized, then dont do it again
             // (pagetables may be used more than once!)
             //
             if (ixPDE > 0)
@@ -368,7 +368,7 @@ K2VMAP32_RealizeArchMappings(
             if (pte == 0)
             {
                 //
-                // pagetable has not been done yet
+                // pagetable has not been realized yet
                 //
 
                 pPT = (UINT32 *)ptPhys;
@@ -410,7 +410,7 @@ K2VMAP32_RealizeArchMappings(
                                 pte |= A32_MMU_PTE_REGIONTYPE_CACHED_WRITEBACK;
                             }
 
-                            if (!(mapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
+                            if (mapAttr & K2OS_MEMPAGE_ATTR_USER)
                             {
                                 pte |= A32_PTE_NOT_GLOBAL;
                                 if (mapAttr & K2OS_MEMPAGE_ATTR_WRITEABLE)
@@ -435,7 +435,7 @@ K2VMAP32_RealizeArchMappings(
                             if (mapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
                                 pte |= X32_PTE_WRITETHROUGH;
 
-                            if (!(mapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
+                            if (mapAttr & K2OS_MEMPAGE_ATTR_USER)
                                 pte |= X32_PTE_USER;
                             else
                                 pte |= X32_PTE_GLOBAL;
@@ -451,7 +451,13 @@ K2VMAP32_RealizeArchMappings(
 #if K2_TARGET_ARCH_IS_ARM
             pde = (pde & K2VMAP32_PAGEPHYS_MASK) | A32_TTBE_PAGETABLE_PROTO;
 #else
-            pde = (pde & K2VMAP32_PAGEPHYS_MASK) | X32_KERN_PAGETABLE_PROTO;
+            
+            pde = (pde & K2VMAP32_PAGEPHYS_MASK);
+            if (ixPDE < K2_VA32_PAGETABLES_FOR_2G)
+                pde |= X32_KERN_PAGETABLE_PROTO;
+            else
+                pde |= X32_USER_PAGETABLE_PROTO;
+            // these should be optimized out by the compiler based on the static defs
             if (K2OS_MAPTYPE_KERN_PAGEDIR & K2OS_MEMPAGE_ATTR_UNCACHED)
                 pde |= X32_PDE_CACHEDISABLE;
             if (K2OS_MAPTYPE_KERN_PAGEDIR & K2OS_MEMPAGE_ATTR_WRITE_THRU)

@@ -55,7 +55,7 @@ KernArch_MakePTE(
     if (aPageMapAttr & K2OS_MEMPAGE_ATTR_WRITE_THRU)
         pte |= X32_PTE_WRITETHROUGH;
 
-    if (!(aPageMapAttr & K2OS_MEMPAGE_ATTR_KERNEL))
+    if (aPageMapAttr & K2OS_MEMPAGE_ATTR_USER)
         pte |= X32_PTE_USER;
     else
         pte |= X32_PTE_GLOBAL;
@@ -156,7 +156,7 @@ KernArch_Translate(
             *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_WRITE_THRU;
 
         if (pte & X32_PTE_USER)
-            *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_KERNEL;
+            *apRetMemPageAttr |= K2OS_MEMPAGE_ATTR_USER;
     }
 
     return pPTE;
@@ -195,7 +195,7 @@ KernArch_InstallPageTable(
     else
     {
         //
-        // pagetable maps kernel mode
+        // pagetable maps user mode
         //
         mapAttr = X32_USER_PAGETABLE_PROTO;
     }
@@ -219,9 +219,9 @@ KernArch_InstallPageTable(
     //
     pde = (aPhysPageAddr & K2_VA32_PAGEFRAME_MASK) | mapAttr;
 
+    // these should be optimized out by the compiler as they are not variable comparisons
     if (K2OS_MAPTYPE_KERN_PAGEDIR & K2OS_MEMPAGE_ATTR_UNCACHED)
         pde |= X32_PDE_CACHEDISABLE;
-
     if (K2OS_MAPTYPE_KERN_PAGEDIR & K2OS_MEMPAGE_ATTR_WRITE_THRU)
         pde |= X32_PDE_WRITETHROUGH;
 

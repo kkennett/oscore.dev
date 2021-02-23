@@ -122,7 +122,7 @@ KernUser_Init(
         // map the TLS thread into the global kernel TLS mapping pagetable
         // (which is aliased to K2OS_KVA_PROC1_TLS_PAGETABLE)
         //
-        KernMap_MakeOnePresentPage(gpProc1, tlsPageVirtOffset, pCore->IdleThread.mTlsPagePhys, K2OS_MAPTYPE_DATA);
+        KernMap_MakeOnePresentPage(gpProc1, tlsPageVirtOffset, pCore->IdleThread.mTlsPagePhys, K2OS_MAPTYPE_USER_DATA);
 
         //
         // assert that the kernel mode mapping just had its page appear magically at the right place since
