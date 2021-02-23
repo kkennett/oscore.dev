@@ -185,9 +185,10 @@ X32Kern_CpuLaunch(
     X32_CacheFlushAll();
     K2_CpuFullBarrier();
 
-    //
-    // TBD for usermode - setup SYSENTER on this core
-    //
+    /* set up SYSENTER */
+    X32_MSR_Write32(X32_MSRNUM_SYSENTER_CS, X32_SEGMENT_KERNEL_CODE);
+    X32_MSR_Write32(X32_MSRNUM_SYSENTER_EIP, (UINT32)X32Kern_SysEnter_Entry);
+    X32_MSR_Write32(X32_MSRNUM_SYSENTER_ESP, stackPtr);
 
     pCoreMem->CpuCore.mIsExecuting = TRUE;
     K2_CpuWriteBarrier();

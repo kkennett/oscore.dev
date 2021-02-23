@@ -169,6 +169,8 @@ void X32Kern_DumpKernelModeExceptionContext(X32_EXCEPTION_CONTEXT * apContext);
 typedef void (K2_CALLCONV_REGS *pf_X32Kern_CpuLaunchEntryPoint)(UINT32 aCoreIx);
 void K2_CALLCONV_REGS X32Kern_CpuLaunchEntryPoint(UINT32 aCoreIx);
 
+void K2_CALLCONV_REGS X32Kern_SysEnter_Entry(void);
+
 /* --------------------------------------------------------------------------------- */
 
 #endif // __X32KERN_H

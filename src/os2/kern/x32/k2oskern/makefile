@@ -65,6 +65,8 @@ STATIC_LIBS += @shared/lib/k2list
 STATIC_LIBS += @shared/lib/k2tree
 STATIC_LIBS += @shared/lib/k2atomic
 STATIC_LIBS += @shared/lib/k2crc
+STATIC_LIBS += @shared/lib/k2rofshelp
+STATIC_LIBS += @shared/lib/k2elf32
 
 STATIC_KERNEL_LIBS += @$(K2_OS)/kern
 

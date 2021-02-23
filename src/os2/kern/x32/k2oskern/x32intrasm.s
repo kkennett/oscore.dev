@@ -32,6 +32,36 @@
 
 #include "x32kernasm.inc"
 
+// void K2_CALLCONV_REGS X32Kern_SysEnter_Entry(void);
+BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
+    //
+    // ecx contains the return address in user mode 
+    // edx contains the return stack pointer in user mode 
+    //
+    // CS is kernel code segment 
+    // SS is kernel data segment. ************* DS IS NOT ******************
+    // ESP is bottom of kernel core stack.  
+    // 
+    push X32_SEGMENT_SELECTOR_USER_DATA     // return SS 
+    push %edx                               // return ESP
+    pushf                                   // return EFLAGS (before fixup)
+    push X32_SEGMENT_SELECTOR_USER_CODE     // return CS 
+    push %ecx                               // return EIP 
+    push 0       // error code slot
+    push 0xFF    // vector slot (int 255) 
+    pusha        // registers 
+    push X32_SEGMENT_SELECTOR_USER_DATA     // return DS 
+
+    mov %ax, (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL)
+    mov %ds, %ax
+    mov %es, %ax
+    mov %gs, %ax
+
+.extern X32Kern_InterruptHandler
+    push offset X32Kern_RawInterruptReturn
+    jmp X32Kern_InterruptHandler
+END_X32_PROC(X32Kern_SysEnter_Entry)
+
 BEGIN_X32_PROC(X32Kern_RawInterruptReturn)
    pop %eax 
    mov %ds, %ax

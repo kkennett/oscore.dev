@@ -36,6 +36,7 @@
 #include <k2oshal.h>    // includes k2oskern.h
 #include "kerndef.inc"
 #include <lib/k2rofshelp.h>
+#include <lib/k2elf32.h>
 
 /* --------------------------------------------------------------------------------- */
 
@@ -285,6 +286,8 @@ struct _KERN_DATA
 
     UINT32 volatile         mNextThreadSlotIx;
     UINT32                  mLastThreadSlotIx;
+
+    K2ROFS const *          mpROFS;
 
 #if K2_TARGET_ARCH_IS_ARM
     // arch specific - used in common phys init code

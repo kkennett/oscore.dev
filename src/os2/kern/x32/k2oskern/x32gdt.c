@@ -53,27 +53,17 @@ X32Kern_GDTSetup(
     gX32Kern_GDT[X32_SEGMENT_KERNEL_DATA].mAttrib = 0x92;          
     gX32Kern_GDT[X32_SEGMENT_KERNEL_DATA].mLimitHigh4Attrib4 = 0xCF;
 
-    /* entry 3 - kernel 64KB code segment */
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_CODE].mLimitLow16 = 0xFFFF;
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_CODE].mAttrib = 0x9A;          
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_CODE].mLimitHigh4Attrib4 = 0;
-
-    /* entry 4 - kernel 64KB data segment */
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_DATA].mLimitLow16 = 0xFFFF;
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_DATA].mAttrib = 0x92;          
-    gX32Kern_GDT[X32_SEGMENT_SELECTOR_KERNEL_64K_DATA].mLimitHigh4Attrib4 = 0;
-
-    /* entry 5 - user 4GB flat code segment */
+    /* entry 3 - user 4GB flat code segment */
     gX32Kern_GDT[X32_SEGMENT_USER_CODE].mLimitLow16 = 0xFFFF;
     gX32Kern_GDT[X32_SEGMENT_USER_CODE].mAttrib = 0xFA;          
     gX32Kern_GDT[X32_SEGMENT_USER_CODE].mLimitHigh4Attrib4 = 0xCF;
 
-    /* entry 6 - user 4GB flat data segment */
+    /* entry 4 - user 4GB flat data segment */
     gX32Kern_GDT[X32_SEGMENT_USER_DATA].mLimitLow16 = 0xFFFF;
     gX32Kern_GDT[X32_SEGMENT_USER_DATA].mAttrib = 0xF2;          
     gX32Kern_GDT[X32_SEGMENT_USER_DATA].mLimitHigh4Attrib4 = 0xCF;
 
-    /* entry 7 - kernel mode LDT.  entries in LDT are indexed per-core values */
+    /* entry 5 - kernel mode LDT.  entries in LDT are indexed per-core values */
     addr = (UINT32)&gX32Kern_LDT;
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mLimitLow16 = X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT;
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mAttrib = 0x82;  /* Present, DPL 0, system segment type 2 (LDT desc) */

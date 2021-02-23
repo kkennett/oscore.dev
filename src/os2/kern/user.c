@@ -48,6 +48,11 @@ KernUser_Init(
     K2TREE_NODE *               pTreeNode;
     UINT32                      userVal;
     K2OSKERN_PHYSTRACK_PAGE *   pTrackPage;
+    K2ROFS_FILE const *         pFile;
+    K2ELF32PARSE                parse;
+    K2STAT                      stat;
+    Elf32_Shdr const *          pDlxInfoHdr;
+    DLX_INFO const *            pDlxInfo;
 
     pThreadPtrs = ((UINT32 *)K2OS_KVA_THREADPTRS_BASE);
 
@@ -64,6 +69,10 @@ KernUser_Init(
             coreIdleThreadIx = gData.mNextThreadSlotIx;
             chkOld = K2ATOMIC_CompareExchange(&gData.mNextThreadSlotIx, pThreadPtrs[coreIdleThreadIx], coreIdleThreadIx);
         } while (chkOld != coreIdleThreadIx);
+        K2_ASSERT(coreIdleThreadIx != 0);
+        K2_ASSERT(coreIdleThreadIx < K2OS_MAX_THREAD_COUNT);
+        K2_ASSERT(0 != gData.mNextThreadSlotIx);
+
         pThreadPtrs[coreIdleThreadIx] = 0;
 
         pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
@@ -137,12 +146,53 @@ KernUser_Init(
         //
         // set up the idle thread and add it to the run list.  context not set yet
         //
-        K2LIST_AddAtTail(&pCore->RunList, &pCore->IdleThread.CpuRunListLink);
+        K2LIST_AddAtTail((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pCore->IdleThread.CpuRunListLink);
     }
 
     //
     // "load" k2oscrt.dlx into process 1
     //
+    pFile = K2ROFSHELP_SubFile(gData.mpROFS, K2ROFS_ROOTDIR(gData.mpROFS), "k2oscrt.dlx");
+    K2_ASSERT(NULL != pFile);
+    K2OSKERN_Debug("k2oscrt.dlx is at %08X for %d bytes\n", K2ROFS_FILEDATA(gData.mpROFS, pFile), pFile->mSizeBytes);
+
+    stat = K2ELF32_Parse(K2ROFS_FILEDATA(gData.mpROFS, pFile), pFile->mSizeBytes, &parse);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    K2_ASSERT(0 == (parse.mpRawFileData->e_flags & DLX_EF_KERNEL_ONLY));
+
+    K2_ASSERT(DLX_ET_DLX == parse.mpRawFileData->e_type);
+    K2_ASSERT(DLX_ELFOSABI_K2 == parse.mpRawFileData->e_ident[EI_OSABI]);
+    K2_ASSERT(DLX_ELFOSABIVER_DLX == parse.mpRawFileData->e_ident[EI_ABIVERSION]);
+
+    K2_ASSERT(3 < parse.mpRawFileData->e_shnum);
+
+    K2_ASSERT(DLX_SHN_SHSTR == parse.mpRawFileData->e_shstrndx);
+
+    pDlxInfoHdr = K2ELF32_GetSectionHeader(&parse, DLX_SHN_DLXINFO);
+    K2_ASSERT(NULL != pDlxInfoHdr);
+    K2_ASSERT((DLX_SHF_TYPE_DLXINFO | SHF_ALLOC) == pDlxInfoHdr->sh_flags);
+
+    pDlxInfo = K2ELF32_GetSectionData(&parse, DLX_SHN_DLXINFO);
+    K2_ASSERT(NULL != pDlxInfo);
+
+    K2_ASSERT(0 == pDlxInfo->mImportCount);
+
+    K2OSKERN_Debug("  SEGMENTS:\n");
+    for (coreIx = 0; coreIx < DlxSeg_Count; coreIx++)
+    {
+        K2OSKERN_Debug("    %d: crc %08X file %08X offs %08X link %08X mem %08X\n",
+            coreIx,
+            pDlxInfo->SegInfo[coreIx].mCRC32,
+            pDlxInfo->SegInfo[coreIx].mFileBytes,
+            pDlxInfo->SegInfo[coreIx].mFileOffset,
+            pDlxInfo->SegInfo[coreIx].mLinkAddr,
+            pDlxInfo->SegInfo[coreIx].mMemActualBytes);
+    }
+    K2OSKERN_Debug("  ENTRY: %08X\n", parse.mpRawFileData->e_entry);
+
+
+
 
     //
     //  set idle threads' entry point and stack pointers in their contexts

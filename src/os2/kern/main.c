@@ -84,6 +84,10 @@ Kern_Main(
     K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
 
     //
+    // set the pointer to the built in file system
+    gData.mpROFS = (K2ROFS const *)((K2OS_KVA_KERNEL_ARENA + gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF);
+
+    //
     // early hal init - usually debug goop
     //
     K2OSHAL_EarlyInit();
@@ -97,6 +101,7 @@ Kern_Main(
     // send out first debug message
     //
     K2OSKERN_Debug("\n\n===========\nK2OS Kernel\n===========\n\n");
+    K2OSKERN_Debug("ROFS @ %08X for %d bytes\n", gData.mpROFS, gData.mpROFS->mSectorCount * K2ROFS_SECTOR_BYTES);
 
     //
     // set proc1 pointers so that mapping goop will work
