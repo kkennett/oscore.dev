@@ -69,10 +69,21 @@ K2OS_GetDlxModule(
 void
 K2_CALLCONV_REGS
 __k2oscrt_user_entry(
-    void *apArg
+    UINT32 aCoreIx,
+    UINT32 aArg2
     )
 {
-    gpDlxInfo->mElfCRC++;
+    //
+    // used to pull in gpDlxInfo for linker. that's it.  this comparison
+    // will never be true
+    //
+    if (aCoreIx == 0x01020304)
+        gpDlxInfo++;
+
+    //
+    // actual code goes here
+    //
+
 
     while (1);
 }

@@ -30,51 +30,35 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "x32kern.h"
 
-void 
-KernCpu_Init(
-    void
+void
+KernArch_ResumeThread(
+    K2OSKERN_CPUCORE volatile * apThisCore
 )
 {
-    UINT32                      coreIx;
-    K2OSKERN_CPUCORE volatile * pCore;
+    K2OSKERN_OBJ_THREAD *   pRunThread;
+    UINT32                  stackPtr;
 
-    K2_ASSERT(gData.LoadInfo.mCpuCoreCount > 0);
-    K2_ASSERT(gData.LoadInfo.mCpuCoreCount <= K2OS_MAX_CPU_COUNT);
+    K2_ASSERT(NULL != apThisCore->RunList.mpHead);
+    
+    pRunThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
 
-    for (coreIx = 0; coreIx < gData.LoadInfo.mCpuCoreCount; coreIx++)
-    {
-        pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
-        
-        K2MEM_Zero((void *)pCore, sizeof(K2OSKERN_CPUCORE));
-        
-        pCore->mCoreIx = coreIx;
+    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = (UINT32)pRunThread;
 
-        K2LIST_Init((K2LIST_ANCHOR *)&pCore->RunList);
-    }
-
-    K2_CpuWriteBarrier();
-}
-
-void __attribute__((noreturn)) 
-KernCpu_Exec(
-    K2OSKERN_CPUCORE volatile *apThisCore
-)
-{
-    //
-    // do regular core processing
-    //
-
+    stackPtr = (UINT32)&pRunThread->Context;
 
     //
-    // exec thread at the head of the run list
+    // interrupts must be enabled or something is wrong.
     //
-    KernArch_ResumeThread(apThisCore);
+    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.CS == (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER));
+    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->DS == (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER));
+    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.EFLAGS & X32_EFLAGS_INTENABLE);
 
-    //
-    // never gets here
-    //
-    K2_ASSERT(0);
-    while (1);
+    X32Kern_InterruptReturn(
+        (UINT32)&pRunThread->Context, 
+        (apThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL
+    );
+
+    K2OSKERN_Panic("Switch to Thread returned!\n");
 }

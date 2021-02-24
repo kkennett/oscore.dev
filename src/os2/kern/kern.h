@@ -90,8 +90,8 @@ struct _K2OSKERN_THREAD_CONTEXT
     UINT32      EIP;                    // pushed auto by CPU  (iret instruction starts restore from here)
     UINT32      CS;                     // pushed auto by CPU
     UINT32      EFLAGS;                 // pushed auto by CPU
-    UINT32      ESP;                    // pushed auto by CPU
-    UINT32      SS;                     // pushed first, auto by CPU
+    UINT32      ESP;                    // pushed auto by CPU : only present when CS = USER
+    UINT32      SS;                     // pushed first, auto by CPU : only present when CS = USER
 };
 #elif K2_TARGET_ARCH_IS_ARM
 typedef struct _K2OSKERN_THREAD_CONTEXT  K2OSKERN_THREAD_CONTEXT;
@@ -319,6 +319,7 @@ UINT32* KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT3
 void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr, BOOL aZeroPageAfterMap);
 void    KernArch_UserInit(UINT32 aCrtEntryPoint);
 void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
+void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);

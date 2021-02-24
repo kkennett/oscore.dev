@@ -119,7 +119,7 @@ sDumpCommonExContext(
     K2OSKERN_Debug("ECX     0x%08X\n", apContext->REGS.ECX);
     K2OSKERN_Debug("EDX     0x%08X\n", apContext->REGS.EDX);
     K2OSKERN_Debug("EBX     0x%08X\n", apContext->REGS.EBX);
-    K2OSKERN_Debug("ESP     0x%08X\n", apContext->REGS.ESP_Before_PushA);
+    K2OSKERN_Debug("ESP@psh 0x%08X\n", apContext->REGS.ESP_Before_PushA);
     K2OSKERN_Debug("EBP     0x%08X\n", apContext->REGS.EBP);
     K2OSKERN_Debug("ESI     0x%08X\n", apContext->REGS.ESI);
     K2OSKERN_Debug("EDI     0x%08X\n", apContext->REGS.EDI);

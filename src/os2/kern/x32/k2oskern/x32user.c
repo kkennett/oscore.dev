@@ -37,5 +37,40 @@ KernArch_UserInit(
     UINT32 aCrtEntryPoint
 )
 {
+    //
+    // set up idle thread contexts for each core.  shove their stacks at the end of their
+    // tls pages since proc1 will never use that many TLS
+    //
+    UINT32                      coreIx;
+    UINT32 *                    pThreadPtrs;
+    K2OSKERN_CPUCORE volatile * pCore;
+    K2OSKERN_OBJ_THREAD *       pThread;
+    UINT32                      stackPtr;
 
+    pThreadPtrs = ((UINT32 *)K2OS_KVA_THREADPTRS_BASE);
+
+    for (coreIx = 0; coreIx < gData.LoadInfo.mCpuCoreCount; coreIx++)
+    {
+        pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
+        pThread = (K2OSKERN_OBJ_THREAD *)&pCore->IdleThread;
+        K2_ASSERT(pThreadPtrs[pThread->mIx] == (UINT32)pThread);
+
+        pThread->Context.DS = (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER);
+        pThread->Context.REGS.ECX = pCore->mCoreIx; // first arg to entry point
+        pThread->Context.REGS.EDX = 0; // second arg to entry point
+        pThread->Context.EIP = aCrtEntryPoint;
+        pThread->Context.CS = (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER);
+        pThread->Context.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO | X32_EFLAGS_ZERO;
+        stackPtr = (pThread->mIx * K2_VA32_MEMPAGE_BYTES) + 0xFFC;
+        *((UINT32 *)stackPtr) = 0;
+        stackPtr -= sizeof(UINT32);
+        *((UINT32 *)stackPtr) = 0;
+        K2OSKERN_Debug("thread stack init @ %08X\n", stackPtr);
+        pThread->Context.ESP = stackPtr;
+        pThread->Context.SS = (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER);
+    }
+
+    //
+    // threads are ready to execute in user mode now once the cores are started
+    //
 }

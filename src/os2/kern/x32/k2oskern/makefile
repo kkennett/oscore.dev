@@ -59,6 +59,7 @@ SOURCES += x32stall.c
 SOURCES += x32tss.c 
 SOURCES += x32user.c
 SOURCES += x32cache.c
+SOURCES += x32thread.c
 
 STATIC_LIBS += @shared/lib/k2archx32
 STATIC_LIBS += @shared/lib/k2mem

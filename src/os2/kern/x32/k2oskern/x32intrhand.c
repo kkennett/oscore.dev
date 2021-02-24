@@ -44,15 +44,27 @@ sAbort(
     X32_EXCEPTION_CONTEXT *     apContext
 )
 {
+    BOOL wasKernelMode;
+
     K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
     K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
     K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
-    X32Kern_DumpKernelModeExceptionContext(apContext);
+
+    wasKernelMode = (apContext->KernelMode.CS == (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER)) ? FALSE : TRUE;
+
+    if (!wasKernelMode)
+        X32Kern_DumpUserModeExceptionContext(apContext);
+    else
+        X32Kern_DumpKernelModeExceptionContext(apContext);
     X32Kern_DumpStackTrace(
         gpProc1,
-        apContext->KernelMode.EIP,
+        wasKernelMode ? 
+            apContext->KernelMode.EIP 
+          : apContext->UserMode.EIP,
         apContext->REGS.EBP,
-        ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
+        wasKernelMode ? 
+            ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT 
+          : apContext->UserMode.ESP,
         &sgSymDump[apThisCore->mCoreIx * X32_SYM_NAME_MAX_LEN]
     );
     K2OSKERN_Panic(NULL);
