@@ -101,7 +101,7 @@ Kern_Main(
     // send out first debug message
     //
     K2OSKERN_Debug("\n\n===========\nK2OS Kernel\n===========\n\n");
-    K2OSKERN_Debug("ROFS @ %08X for %d bytes\n", gData.mpROFS, gData.mpROFS->mSectorCount * K2ROFS_SECTOR_BYTES);
+//    K2OSKERN_Debug("ROFS @ %08X for %d bytes\n", gData.mpROFS, gData.mpROFS->mSectorCount * K2ROFS_SECTOR_BYTES);
 
     //
     // set proc1 pointers so that mapping goop will work

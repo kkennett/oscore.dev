@@ -166,7 +166,8 @@ void
 KernArch_InstallPageTable(
     K2OSKERN_OBJ_PROCESS *  apProc, 
     UINT32                  aVirtAddrPtMaps, 
-    UINT32                  aPhysPageAddr
+    UINT32                  aPhysPageAddr,
+    BOOL                    aZeroPageAfterMap
 )
 {
     UINT32                  ptIndex;
@@ -177,6 +178,8 @@ KernArch_InstallPageTable(
     K2LIST_LINK *           pListLink;
     K2OSKERN_OBJ_PROCESS *  pOtherProc;
     UINT32                  mapAttr;
+
+//    K2OSKERN_Debug("Install process %d pageTable for %08X using page %08X\n", apProc->mId, aVirtAddrPtMaps, aPhysPageAddr);
 
     K2_ASSERT(apProc != NULL);
 
@@ -213,6 +216,10 @@ KernArch_InstallPageTable(
     virtKernPT = K2_VA32_TO_PT_ADDR(apProc->mVirtMapKVA, aVirtAddrPtMaps);
     K2_ASSERT(((*((UINT32 *)K2OS_KVA_TO_PTE_ADDR(virtKernPT))) & K2OSKERN_PTE_PRESENT_BIT) == 0);
     KernMap_MakeOnePresentPage(apProc, virtKernPT, aPhysPageAddr, K2OS_MAPTYPE_KERN_PAGETABLE);
+    if (aZeroPageAfterMap)
+    {
+        K2MEM_Zero((void *)virtKernPT, K2_VA32_MEMPAGE_BYTES);
+    }
 
     //
     // now install the PDE that points to this new pagetable

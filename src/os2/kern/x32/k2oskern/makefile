@@ -57,6 +57,8 @@ SOURCES += x32kerndbg.c
 SOURCES += x32map.c 
 SOURCES += x32stall.c
 SOURCES += x32tss.c 
+SOURCES += x32user.c
+SOURCES += x32cache.c
 
 STATIC_LIBS += @shared/lib/k2archx32
 STATIC_LIBS += @shared/lib/k2mem

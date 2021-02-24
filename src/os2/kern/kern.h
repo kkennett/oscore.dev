@@ -316,7 +316,9 @@ void    KernArch_BreakMapTransitionPageTable(UINT32 *apRetVirtAddrPT, UINT32 *ap
 void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 void    KernArch_LaunchCpuCores(void);
 UINT32* KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32* apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr);
-void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr);
+void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr, BOOL aZeroPageAfterMap);
+void    KernArch_UserInit(UINT32 aCrtEntryPoint);
+void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);

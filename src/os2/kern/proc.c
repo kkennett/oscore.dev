@@ -74,11 +74,11 @@ KernProc_Init(
     K2_ASSERT(ptePresent);
 
     // tlspage always maps to 0-4MB
-    KernArch_InstallPageTable(gpProc1, 0, pte & K2_VA32_PAGEFRAME_MASK);
+    KernArch_InstallPageTable(gpProc1, 0, pte & K2_VA32_PAGEFRAME_MASK, FALSE);
 
     // kernel also uses this pagetable so it can see all threads' TLS no 
     // matter what process is active on a cpu 
-    KernArch_InstallPageTable(gpProc1, K2OS_KVA_THREAD_TLS_BASE, pte & K2_VA32_PAGEFRAME_MASK);
+    KernArch_InstallPageTable(gpProc1, K2OS_KVA_THREAD_TLS_BASE, pte & K2_VA32_PAGEFRAME_MASK, FALSE);
 
     //
     // make sure threadptrs page is clear
