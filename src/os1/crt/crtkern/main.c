@@ -32,12 +32,12 @@
 
 #include "crtkern.h"
 
-void *              __dso_handle;
+void *                  __dso_handle;
 
-K2OSKERN_SHARED     gShared;
+K2OSKERN_SHARED         gShared;
 
-extern DLX_INFO *   gpDlxInfo;
-extern void *       __data_end;
+extern DLX_INFO const * const gpDlxInfo;
+extern void *           __data_end;
 
 int  __cxa_atexit(__vfpv f, void *a, DLX * apDlx);
 void __call_dtors(DLX *apDlx);
@@ -158,11 +158,13 @@ k2oscrt_kern_common_entry(
     gShared.FuncTab.Exec();
 
     //
-    // this will never execute as apUEFI will never equal 0xFEEDFOOD
-    // it is here to pull in exports and must be 'reachable' code
+    // this will never execute as apUEFI will never equal 0xFEEDF00D
+    // it is here to pull in exports and must be 'reachable' code.
+    // the *ADDRESS OF* gpDlxInfo is even invalid and trying to use
+    // it in executing code will cause a fault.
     //
     if (apUEFI == (K2OS_UEFI_LOADINFO const *)0xFEEDF00D)
-        gpDlxInfo->mImportCount++;
+        apUEFI = (K2OS_UEFI_LOADINFO const *)gpDlxInfo;
 
     //
     // Exec will never exit

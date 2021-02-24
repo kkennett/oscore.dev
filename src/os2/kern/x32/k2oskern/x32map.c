@@ -249,6 +249,7 @@ KernArch_InstallPageTable(
             K2_ASSERT(((*pPDE) & K2OSKERN_PDE_PRESENT_BIT) == 0);
 
             *pPDE = pde;
+//            K2OSKERN_Debug("%08X PDE mapping %08X = %08X\n", pPDE, aVirtAddrPtMaps, *pPDE);
 
             pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
@@ -263,5 +264,6 @@ KernArch_InstallPageTable(
         pPDE = (((UINT32 *)apProc->mTransTableKVA) + ptIndex);
         K2_ASSERT(((*pPDE) & K2OSKERN_PDE_PRESENT_BIT) == 0);
         *pPDE = pde;
+//        K2OSKERN_Debug("%08X PDE mapping %08X = %08X\n", pPDE, aVirtAddrPtMaps, *pPDE);
     }
 }

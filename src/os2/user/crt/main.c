@@ -31,10 +31,10 @@
 //
 #include "crt.h"
 
-void *              __dso_handle;
+void *                          __dso_handle;
 
-extern DLX_INFO *   gpDlxInfo;
-extern void *       __data_end;
+extern DLX_INFO const * const   gpDlxInfo;
+extern void *                   __data_end;
 
 int  __cxa_atexit(__vfpv f, void *a, DLX *apDlx);
 void __call_dtors(DLX *apDlx);
@@ -74,16 +74,17 @@ __k2oscrt_user_entry(
     )
 {
     //
-    // used to pull in gpDlxInfo for linker. that's it.  this comparison
-    // will never be true
+    // this will never execute as aCoreIx will never equal 0xFEEDF00D
+    // it is here to pull in exports and must be 'reachable' code.
+    // the *ADDRESS OF* gpDlxInfo is even invalid and trying to use
+    // it in executing code will cause a fault.
     //
-    if (aCoreIx == 0x01020304)
-        gpDlxInfo++;
+    if (aCoreIx == 0xFEEDF00D)
+        __dso_handle = (void *)(*((UINT32 *)gpDlxInfo));
 
     //
     // actual code goes here
     //
-
 
     while (1);
 }

@@ -33,7 +33,7 @@
 
 void *              __dso_handle;
 
-extern DLX_INFO *   gpDlxInfo;
+extern DLX_INFO const * const gpDlxInfo;
 extern void *       __data_end;
 
 int  __cxa_atexit(__vfpv f, void *a, DLX *apDlx);

@@ -58,6 +58,7 @@ KernMap_MakeOnePresentPage(
     K2_ASSERT((pteOld & K2OSKERN_PTE_PRESENT_BIT) == 0);
 
     *pPTE = KernArch_MakePTE(aPhysAddr, aPageMapAttr);
+//    K2OSKERN_Debug("%08X MAKE %08X -> pte(%08X)\n", pPTE, aVirtAddr, *pPTE);
 
     if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
     {
@@ -114,6 +115,7 @@ KernMap_BreakOnePage(
         
         (*pPageCount)--;
     }
+//    K2OSKERN_Debug("%08X xxxx %08X -> pte(%08X)\n", pPTE, aVirtAddr, *pPTE);
 
     K2_CpuWriteBarrier();
 
