@@ -32,6 +32,27 @@
 
 #include "x32kernasm.inc"
 
+#if 0
+BEGIN_X32_PROC(whack)
+    int 255
+    ret
+END_X32_PROC(whack)
+
+BEGIN_X32_PROC(whack2)
+    push %edx
+    push %ecx
+    call offset whackadoo
+whackadoo:
+    pop %ecx
+    add %ecx, 8
+    mov %edx, %esp 
+    sysenter
+    pop %ecx 
+    pop %edx
+    ret 
+END_X32_PROC(whack2)
+#endif
+
 // void K2_CALLCONV_REGS X32Kern_SysEnter_Entry(void);
 BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     //

@@ -168,8 +168,10 @@ KernUser_Init(
     // map the public API page into the kernel R/W and into user space R/O
     //
     pte = sGetOnePhysicalPage(NULL);
-    KernMap_MakeOnePresentPage(gpProc1, K2OS_UVA_PUBLICAPI_BASE, pte, K2OS_MAPTYPE_USER_READ);
+    KernMap_MakeOnePresentPage(gpProc1, K2OS_UVA_PUBLICAPI_BASE, pte, K2OS_MAPTYPE_USER_TEXT);
     KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_PUBLICAPI_BASE, pte, K2OS_MAPTYPE_KERN_DATA);
+    K2MEM_Zero((void *)K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
+    KernArch_FlushCache(K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
 
     //
     // "load" k2oscrt.dlx into process 1
