@@ -34,22 +34,18 @@
 
 static UINT8 const sgPublicApiCode[] =
 {
-/* 00 */    0xCD, 0xFF,  // int 255
-/* 02 */    0xC3,        // ret
-/* 03 */    0x90,        // nop
+/* 00 */    0x52,                           // push edx
+/* 01 */    0x51,                           // push ecx
+/* 02 */    0xe8, 0x00, 0x00, 0x00, 0x00,   // call next instruction (relative 0) (push eip)
 
-/* 04 */    0x52,                           // push edx
-/* 05 */    0x51,                           // push ecx
-/* 06 */    0xe8, 0x00, 0x00, 0x00, 0x00,   // call next instruction (relative 0) (push eip)
+/* 07 */    0x59,                           // 1+  pop ecx
+/* 08 */    0x83, 0xC1, 0x08,               // 3+  add ecx, (((8))) - eff addr of instruction after sysenter
+/* 0B */    0x89, 0xE2,                     // 2+  mov edx, esp 
+/* 0D */    0x0F, 0x34,                     // 2=  sysenter
 
-/* 0B */    0x59,                           // 1+  pop ecx
-/* 0C */    0x83, 0xC1, 0x08,               // 3+  add ecx, (((8))) - eff addr of instruction after sysenter
-/* 0F */    0x89, 0xE2,                     // 2+  mov edx, esp 
-/* 11 */    0x0F, 0x34,                     // 2=  sysenter
-
-/* 13 */    0x59,                           // (8) pop ecx
-/* 14 */    0x5A,                           //     pop edx
-/* 15 */    0xC3                            //     ret
+/* 0F */    0x59,                           // (8) pop ecx
+/* 10 */    0x5A,                           //     pop edx
+/* 11 */    0xC3                            //     ret
 };
 
 void

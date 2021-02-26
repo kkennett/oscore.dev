@@ -42,11 +42,9 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
-typedef UINT32(K2_CALLCONV_REGS *pf_SysCallByInt)(void);
-typedef UINT32(K2_CALLCONV_REGS *pf_SysCallBySysEnter)(void);
+typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
 
-#define SYSCALL_BY_INT      ((pf_SysCallByInt)K2OS_UVA_PUBLICAPI_SYSCALL)
-#define SYSCALL_BY_SYSENTER ((pf_SysCallBySysEnter)(K2OS_UVA_PUBLICAPI_SYSCALL + 4))
+#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
 
 //
 //------------------------------------------------------------------------

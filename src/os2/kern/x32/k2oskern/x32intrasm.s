@@ -32,27 +32,6 @@
 
 #include "x32kernasm.inc"
 
-#if 0
-BEGIN_X32_PROC(whack)
-    int 255
-    ret
-END_X32_PROC(whack)
-
-BEGIN_X32_PROC(whack2)
-    push %edx
-    push %ecx
-    call offset whackadoo
-whackadoo:
-    pop %ecx
-    add %ecx, 8
-    mov %edx, %esp 
-    sysenter
-    pop %ecx 
-    pop %edx
-    ret 
-END_X32_PROC(whack2)
-#endif
-
 // void K2_CALLCONV_REGS X32Kern_SysEnter_Entry(void);
 BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     //
@@ -63,24 +42,36 @@ BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     // SS is kernel data segment. ************* DS IS NOT ******************
     // ESP is bottom of kernel core stack.  
     // 
-    push X32_SEGMENT_SELECTOR_USER_DATA     // return SS 
-    push %edx                               // return ESP
-    pushf                                   // return EFLAGS (before fixup)
-    push X32_SEGMENT_SELECTOR_USER_CODE     // return CS 
-    push %ecx                               // return EIP 
-    push 0       // error code slot
-    push 0xFF    // vector slot (int 255) 
-    pusha        // registers 
-    push X32_SEGMENT_SELECTOR_USER_DATA     // return DS 
+    push (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER)   // SS on return to user mode
+    push %edx                                                       // ESP on return to user mode
+    pushf                                                           // EFLAGS on return to user mode (before fixup)
+    push (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER)   // CS on return to user mode
+    push %ecx                                                       // EIP on return to user mode
+    push 0                                                          // error code slot
+    push 0xFF                                                       // vector slot (int 255 is reserved to denote system call) 
+    pusha                                                           // user mode registers (edx/ecx as above, user values on stack)
+    push (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER)   // DS on return to user mode
 
+    //
+    // set other segments to kernel data that SYSENTER did not set 
+    //
     mov %ax, (X32_SEGMENT_SELECTOR_KERNEL_DATA | X32_SELECTOR_RPL_KERNEL)
     mov %ds, %ax
     mov %es, %ax
     mov %gs, %ax
 
-.extern X32Kern_InterruptHandler
+    //
+    // full into kernel now - can see kernel data
+    //
+
+    //
+    // push return address of raw interrupt return so that
+    // returning from X32Kern_InterruptHandler goes back to there
+    // and not here.  then jump rather than call interrupt handler
     push offset X32Kern_RawInterruptReturn
+.extern X32Kern_InterruptHandler
     jmp X32Kern_InterruptHandler
+
 END_X32_PROC(X32Kern_SysEnter_Entry)
 
 BEGIN_X32_PROC(X32Kern_RawInterruptReturn)

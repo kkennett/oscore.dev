@@ -85,7 +85,7 @@ __k2oscrt_user_entry(
     //
     // actual code goes here
     //
-    SYSCALL_BY_SYSENTER();
+    K2OS_SYSCALL(3,3);
 
     while (1);
 }

@@ -93,6 +93,11 @@ X32Kern_InterruptHandler(
         // TBD - sOnException(pThisCore, &aContext);
         sAbort(pThisCore, &aContext);
     }
+    else if (aContext.Exception_Vector == 255)
+    {
+        K2OSKERN_Debug("System Call\n");
+//        sAbort(pThisCore, &aContext);
+    }
     else
     {
         K2OSKERN_Debug("Core %d Context %08X Vector %d\n", pThisCore->mCoreIx, &aContext, aContext.Exception_Vector);
