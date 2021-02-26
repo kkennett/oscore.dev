@@ -170,7 +170,7 @@ X32Kern_CpuLaunch(
     stackPtr -= sizeof(UINT32);
     *((UINT32 *)stackPtr) = 0;
 
-    X32Kern_TSSSetup((X32_TSS *)pTSS, stackPtr);
+    X32Kern_TSSSetup(aThisCpuCoreIndex, (X32_TSS *)pTSS, stackPtr);
 
     /* flush the GDT with the TSS entry changes and valid TSS it points to */
     X32Kern_GDTFlush();
@@ -180,6 +180,9 @@ X32Kern_CpuLaunch(
 
     /* now load the task register. we never change this either after init */
     X32_LoadTR(X32_SEGMENT_SELECTOR_TSS(aThisCpuCoreIndex));
+
+    /* set FS to point to our per-core value holding the current thread on that core */
+    X32_SetFS((aThisCpuCoreIndex * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
 
     /* clean cache so we're ready to init the scheduler */
     X32_CacheFlushAll();

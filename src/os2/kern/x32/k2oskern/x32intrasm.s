@@ -36,9 +36,31 @@
 BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     //
     // eax contains the return ESP in user mode
-    // ecx contains call argument (will change to return EIP)
-    // edx contains call argument (will change to return ESP)
+    // ecx contains call argument (will change to return ESP in fast system call)
+    // edx contains call argument (will change to return EIP in fast system call)
     //
+    cmp %ecx, 0             // ecx is system call number (encoded)
+    jnz notZero             // if it is not zero it is not a fast call 
+    mov %ecx, %eax          // set return stack pointer
+    mov %edx, 0x7FFFF004    // set fixed return code address 
+
+    //
+    // for indexing into per-core data array. edx is unused argument so we can use it here 
+    //
+    mov %eax, %ss:[K2OS_KVA_X32_LOCAPIC + X32_LOCAPIC_OFFSET_ID]
+    shr %eax, 21    // 24 would be to bit pos 0, but we want it at bit pos 3 = multiplied by 8 
+    and %eax, 0x38  // 111000 - 8 processors and knock out the lowest 3 bits 
+    add %eax, (X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL)
+    mov %fs, %ax 
+
+    //
+    // set system call result to per-core thread index value 
+    //
+    mov %eax, %fs:[0] 
+
+    sysexit                 // fast return to user mode
+
+notZero:
     // CS is kernel code segment 
     // SS is kernel data segment. ************* DS IS NOT ******************
     // ESP is bottom of kernel core stack.  
@@ -93,11 +115,9 @@ BEGIN_X32_PROC(X32Kern_RawInterruptReturn)
    iret
 END_X32_PROC(X32Kern_RawInterruptReturn)
 
-//void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aESP, UINT32 aFSSel);
+//void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aContextAddr);
 BEGIN_X32_PROC(X32Kern_InterruptReturn)
     mov %esp, %ecx
-    mov %eax, %edx
-    mov %fs, %ax
     jmp X32Kern_RawInterruptReturn
 END_X32_PROC(X32Kern_InterruptReturn)
 

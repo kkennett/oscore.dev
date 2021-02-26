@@ -32,6 +32,15 @@
 #include <k2asmx32.inc>
 
 /*-------------------------------------------------------------------------------*/
+//void K2_CALLCONV_REGS X32_SetFS(UINT32 aSelector);
+BEGIN_X32_PROC(X32_SetFS)
+   mov %eax, %ecx
+   mov %fs, %ax
+   ret
+END_X32_PROC(X32_SetFS)
+/*-------------------------------------------------------------------------------*/
+
+/*-------------------------------------------------------------------------------*/
 //UINT32 K2_CALLCONV_REGS X32_GetFSData(UINT32 aOffset);
 BEGIN_X32_PROC(X32_GetFSData)
    mov %eax, %fs:[%ecx]

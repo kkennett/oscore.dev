@@ -149,7 +149,7 @@ extern UINT32                               gX32Kern_IoApicCount;
 void X32Kern_GDTSetup(void);
 void X32Kern_GDTFlush(void);
 void X32Kern_IDTSetup(void);
-void X32Kern_TSSSetup(X32_TSS *apTSS, UINT32 aESP0);
+void X32Kern_TSSSetup(UINT32 aThisCpuCoreIndex, X32_TSS *apTSS, UINT32 aESP0);
 
 void X32Kern_PICInit(void);
 void X32Kern_APICInit(UINT32 aCpuIx);
@@ -158,7 +158,7 @@ void X32Kern_ConfigDevIrq(K2OSKERN_IRQ_CONFIG const *apConfig);
 void X32Kern_MaskDevIrq(UINT8 aIrqIx);
 void X32Kern_UnmaskDevIrq(UINT8 aIrqIx);
 void X32Kern_EOI(UINT32 aVector);
-void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aESP, UINT32 aFSSel);
+void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aContextAddr);
 
 void X32Kern_InitStall(void);
 

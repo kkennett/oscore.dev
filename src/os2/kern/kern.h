@@ -121,6 +121,14 @@ struct _K2OSKERN_OBJ_THREAD
     K2LIST_LINK             CpuRunListLink;
 };
 
+#if K2_TARGET_ARCH_IS_ARM
+#define K2OSKERN_CURRENT_THREAD  ((K2OSKERN_OBJ_THREAD *)A32_ReadTPIDRPRW())
+#elif K2_TARGET_ARCH_IS_INTEL
+#define K2OSKERN_CURRENT_THREAD  ((K2OSKERN_OBJ_THREAD *)X32_GetFSData(0))
+#else
+#error !!!Unsupported Architecture
+#endif
+
 /* --------------------------------------------------------------------------------- */
 
 struct _K2OSKERN_CPUCORE

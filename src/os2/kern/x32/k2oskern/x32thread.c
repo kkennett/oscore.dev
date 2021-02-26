@@ -44,7 +44,7 @@ KernArch_ResumeThread(
     
     pRunThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
 
-    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = (UINT32)pRunThread;
+    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = pRunThread->mIx;
 
     stackPtr = (UINT32)&pRunThread->Context;
 
@@ -55,10 +55,7 @@ KernArch_ResumeThread(
     K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->DS == (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER));
     K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.EFLAGS & X32_EFLAGS_INTENABLE);
 
-    X32Kern_InterruptReturn(
-        (UINT32)&pRunThread->Context, 
-        (apThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL
-    );
+    X32Kern_InterruptReturn((UINT32)&pRunThread->Context);
 
     K2OSKERN_Panic("Switch to Thread returned!\n");
 }

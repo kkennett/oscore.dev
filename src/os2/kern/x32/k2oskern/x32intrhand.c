@@ -88,6 +88,11 @@ X32Kern_InterruptHandler(
     }
     sgInIntr[pThisCore->mCoreIx] = TRUE;
 
+    //
+    // re-set the fs in case somebody in user land changed it
+    //
+    X32_SetFS((pThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
+
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
         // TBD - sOnException(pThisCore, &aContext);
@@ -100,13 +105,16 @@ X32Kern_InterruptHandler(
         //
         // return result in EAX and on stack buffer if necessary
         //
-        if (aContext.REGS.ECX==1)
+        if (0 != aContext.REGS.ECX)
+        {
+            K2OSKERN_Debug("\n\n\nINTENTIONAL ABORT!\n\n");
             sAbort(pThisCore, &aContext);
+        }
         else
         {
             // set return result from syscall 
             X32Kern_DumpUserModeExceptionContext(&aContext);
-            aContext.REGS.EAX=1;
+            aContext.REGS.EAX = 1;
         }
     }
     else
