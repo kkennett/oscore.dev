@@ -95,8 +95,19 @@ X32Kern_InterruptHandler(
     }
     else if (aContext.Exception_Vector == 255)
     {
-        K2OSKERN_Debug("System Call\n");
-//        sAbort(pThisCore, &aContext);
+        K2OSKERN_Debug("System Call (%08X, %08X)\n", aContext.REGS.ECX, aContext.REGS.EDX);
+        aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
+        //
+        // return result in EAX and on stack buffer if necessary
+        //
+        if (aContext.REGS.ECX==1)
+            sAbort(pThisCore, &aContext);
+        else
+        {
+            // set return result from syscall 
+            X32Kern_DumpUserModeExceptionContext(&aContext);
+            aContext.REGS.EAX=1;
+        }
     }
     else
     {

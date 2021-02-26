@@ -52,10 +52,16 @@ K2OSKERN_Panic(
     K2OSKERN_SeqLock(&gData.DebugSeqLock);
 
     K2_VASTART(vList, apFormat);
-    K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, "\n\nPANIC:\n", NULL);
-
-    K2_VASTART(vList, apFormat);
-    K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, vList);
+    if (NULL != apFormat)
+    {
+        K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, "\n\nPANIC:\n", NULL);
+        K2_VASTART(vList, apFormat);
+        K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, vList);
+    }
+    else
+    {
+        K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, "\n\n----PANIC----\n", NULL);
+    }
 
     KernArch_Panic(K2OSKERN_GET_CURRENT_CPUCORE, TRUE);
 

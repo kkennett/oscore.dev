@@ -35,22 +35,29 @@
 // void K2_CALLCONV_REGS X32Kern_SysEnter_Entry(void);
 BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     //
-    // ecx contains the return address in user mode 
-    // edx contains the return stack pointer in user mode 
+    // eax contains the return ESP in user mode
+    // ecx contains call argument (will change to return EIP)
+    // edx contains call argument (will change to return ESP)
     //
     // CS is kernel code segment 
     // SS is kernel data segment. ************* DS IS NOT ******************
     // ESP is bottom of kernel core stack.  
     // 
     push (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER)   // SS on return to user mode
-    push %edx                                                       // ESP on return to user mode
+    push %eax                                                       // ESP on return to user mode
     pushf                                                           // EFLAGS on return to user mode (before fixup)
     push (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER)   // CS on return to user mode
-    push %ecx                                                       // EIP on return to user mode
+    push 0x7FFFF004                                                 // EIP on return to user mode
     push 0                                                          // error code slot
     push 0xFF                                                       // vector slot (int 255 is reserved to denote system call) 
-    pusha                                                           // user mode registers (edx/ecx as above, user values on stack)
+    pusha                                                           // all user mode registers
     push (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER)   // DS on return to user mode
+
+    //
+    // fix up kernel mode ebp now that user mode ebp is save above
+    // 
+    mov %ebp, %esp  
+    add %ebp, X32_SIZEOF_USER_EXCEPTION_CONTEXT
 
     //
     // set other segments to kernel data that SYSENTER did not set 

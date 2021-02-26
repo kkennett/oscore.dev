@@ -67,29 +67,19 @@ X32Kern_DumpStackTrace(
     sEmitSymbolName(apProc, aEIP, apBuffer);
     K2OSKERN_Debug("\n");
 
-    K2OSKERN_Debug("%08X ", aEBP);
-    if (aEBP == 0)
-    {
-        K2OSKERN_Debug("\n");
-        return;
-    }
-    pBackPtr = (UINT32 *)aEBP;
-    K2OSKERN_Debug("%08X ", pBackPtr[1]);
-    sEmitSymbolName(apProc, pBackPtr[1], apBuffer);
-    K2OSKERN_Debug("\n");
-
+    pBackPtr = &aEBP;
     do {
         pBackPtr = (UINT32 *)pBackPtr[0];
         K2OSKERN_Debug("%08X ", pBackPtr);
         if (pBackPtr == NULL)
         {
-            K2OSKERN_Debug("\n");
+            K2OSKERN_Debug("--X\n");
             return;
         }
         K2OSKERN_Debug("%08X ", pBackPtr[1]);
         if (pBackPtr[1] == 0)
         {
-            K2OSKERN_Debug("\n");
+            K2OSKERN_Debug("--X\n");
             break;
         }
         sEmitSymbolName(apProc, pBackPtr[1], apBuffer);
