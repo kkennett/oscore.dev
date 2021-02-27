@@ -38,8 +38,8 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
 static K2OSKERN_OBJ_INTR *  sgpIntrObjByIrqIx[X32_NUM_IDT_ENTRIES] = { 0, };
 
-static void 
-sAbort(
+void 
+X32_ExceptionPanic(
     K2OSKERN_CPUCORE volatile * apThisCore,
     X32_EXCEPTION_CONTEXT *     apContext
 )
@@ -97,7 +97,7 @@ X32Kern_InterruptHandler(
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
         // TBD - sOnException(pThisCore, &aContext);
-        sAbort(pThisCore, &aContext);
+        X32_ExceptionPanic(pThisCore, &aContext);
     }
     else if (aContext.Exception_Vector == 255)
     {
@@ -105,7 +105,7 @@ X32Kern_InterruptHandler(
         
         aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
 
-        if (1 == aContext.REGS.ECX)
+        if (1 != aContext.REGS.ECX)
         {
             pCurrentThread = K2OSKERN_CURRENT_THREAD;
             K2OSKERN_Debug("pCurrentThread = %08X\n", pCurrentThread);
@@ -115,7 +115,7 @@ X32Kern_InterruptHandler(
         else
         {
             K2OSKERN_Debug("\n\n\nINTENTIONAL ABORT!\n\n");
-            sAbort(pThisCore, &aContext);
+            X32_ExceptionPanic(pThisCore, &aContext);
         }
     }
     else
@@ -130,7 +130,7 @@ X32Kern_InterruptHandler(
             srcCore = aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE;
             // TBD - OnIci(srcCore);
             K2OSKERN_Debug("Ici from core %d\n", srcCore);
-            sAbort(pThisCore, &aContext);
+            X32_ExceptionPanic(pThisCore, &aContext);
         }
         else
         {

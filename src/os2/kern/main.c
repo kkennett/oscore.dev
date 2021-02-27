@@ -85,6 +85,7 @@ Kern_Main(
 
     //
     // set the pointer to the built in file system
+    //
     gData.mpROFS = (K2ROFS const *)((K2OS_KVA_KERNEL_ARENA + gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF);
 
     //
@@ -95,7 +96,7 @@ Kern_Main(
     //
     // init for debug messages
     //
-    K2OSKERN_SeqInit(&gData.DebugSeqLock);
+    KernDbg_EarlyInit();
 
     //
     // send out first debug message

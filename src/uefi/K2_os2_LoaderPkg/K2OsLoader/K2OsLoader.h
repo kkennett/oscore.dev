@@ -56,6 +56,7 @@
 #include <k2osbase.h>
 #include <lib/k2vmap32.h>
 #include <lib/k2elf32.h>
+#include <lib/k2sort.h>
 
 #if K2_TARGET_ARCH_IS_ARM
 #include <Library/ArmLib.h>

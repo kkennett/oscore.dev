@@ -32,6 +32,10 @@
 
 #include "kern.h"
 
+static UINT32               sgSymCount = 0;
+static Elf32_Sym const *    sgpSym = NULL;
+static char const *         sgpSymNames = NULL;
+
 static
 void
 sEmitter(
@@ -77,7 +81,7 @@ K2OSKERN_Debug(
     return result;
 }
 
-UINT32 
+void
 KernDbg_FindClosestSymbol(
     K2OSKERN_OBJ_PROCESS *  apCurProc, 
     UINT32                  aAddr, 
@@ -85,5 +89,131 @@ KernDbg_FindClosestSymbol(
     UINT32                  aRetSymNameBufLen
 )
 {
-    return 0;
+    UINT32 b, e, m, v;
+
+    if ((NULL == apRetSymName) ||
+        (0 == aRetSymNameBufLen))
+        return;
+
+    if (aAddr >= K2OS_KVA_KERN_BASE)
+    {
+        if ((0 == sgSymCount) ||
+            (aAddr < sgpSym[0].st_value))
+        {
+            if (aRetSymNameBufLen > 0)
+                *apRetSymName = 0;
+            return;
+        }
+
+        //
+        // address comes at or after first symbol in table
+        //
+        b = 0;
+        e = sgSymCount;
+        do
+        {
+            m = (b + e) / 2;
+            v = sgpSym[m].st_value;
+            if (v == aAddr)
+                break;
+            if (v > aAddr)
+                e = m;
+            else
+                b = m + 1;
+        } while (b < e);
+        if (aAddr < v)
+        {
+            // whoa back up.  which we can do since we know
+            // that the address comes at or after the first symbol in the table
+            v = sgpSym[--m].st_value;
+        }
+        K2ASC_PrintfLen(apRetSymName, aRetSymNameBufLen,
+            "%s+0x%X",
+            sgpSymNames + sgpSym[m].st_name, 
+            aAddr - v);
+    }
+    else
+    {
+
+    }
+}
+
+void
+KernDbg_EarlyInit(
+    void
+)
+{
+    K2STAT stat;
+    K2ELF32PARSE parse;
+    UINT32 numSec;
+    UINT32 ix;
+    UINT32 strSecIx;
+    Elf32_Shdr const *pSecHdr;
+
+    K2OSKERN_SeqInit(&gData.DebugSeqLock);
+
+    stat = K2ELF32_Parse((UINT8 const *)K2OS_KVA_KERNEL_ARENA, gData.LoadInfo.mKernSizeBytes, &parse);
+    K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    numSec = parse.mpRawFileData->e_shnum;
+    K2_ASSERT(1 < numSec);
+    for (ix = 0; ix < numSec; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (pSecHdr->sh_type == SHT_SYMTAB)
+            break;
+    }
+    if (ix < numSec)
+    {
+        //
+        // we found a symbol table
+        //
+        if (numSec > pSecHdr->sh_link)
+        {
+            strSecIx = pSecHdr->sh_link;
+            pSecHdr = K2ELF32_GetSectionHeader(&parse, strSecIx);
+            if (pSecHdr->sh_type == SHT_STRTAB)
+            {
+                //
+                // and it has a valid string table link
+                //
+                sgpSymNames = K2ELF32_GetSectionData(&parse, strSecIx);
+                pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+                sgSymCount = pSecHdr->sh_size / pSecHdr->sh_entsize;
+                sgpSym = (Elf32_Sym const *)K2ELF32_GetSectionData(&parse, ix);
+
+                //
+                // ignore symbols below kernel arena
+                //
+                while (K2OS_KVA_KERNEL_ARENA > sgpSym->st_value)
+                {
+                    sgpSym++;
+                    if (--sgSymCount == 0)
+                        break;
+                }
+
+                //
+                // ignore symbols after kernel arena
+                //
+                while (0 < sgSymCount)
+                {
+                    if (K2OS_KVA_KERNEL_ARENA_END > sgpSym[sgSymCount - 1].st_value)
+                        break;
+                    sgSymCount--;
+                }
+            }
+            else
+            {
+                K2OSKERN_Debug("***Found kernel symbol table, but string table index points to wrong section\n");
+            }
+        }
+        else
+        {
+            K2OSKERN_Debug("***Found kernel symbol table, but string table index is invalid\n");
+        }
+    }
+    else
+    {
+        K2OSKERN_Debug("***No Kernel Symbol Table Found\n");
+    }
 }

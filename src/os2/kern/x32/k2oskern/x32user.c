@@ -90,5 +90,4 @@ KernArch_UserInit(
     // threads should be able to make a system call now
     //
 
-
 }

@@ -57,6 +57,7 @@
     DEFINE K2_ASCIILIB    =   $(K2_SHARED_LIB_SRC)/k2asc
     DEFINE K2_CRCLIB      =   $(K2_SHARED_LIB_SRC)/k2crc
     DEFINE K2_ELFLIB      =   $(K2_SHARED_LIB_SRC)/k2elf32
+    DEFINE K2_SORTLIB     =   $(K2_SHARED_LIB_SRC)/k2sort
 
     DEFINE K2_OS          =   $(K2_ROOT)/src/os2
     DEFINE K2_VMAPLIB     =   $(K2_OS)/kern/lib/k2vmap32
@@ -87,11 +88,21 @@
     $(K2_MEMLIB)\memverify16.c
     $(K2_MEMLIB)\memverify32.c
     $(K2_MEMLIB)\memverify64.c
+    $(K2_MEMLIB)\memswap.c
+    $(K2_MEMLIB)\memswap8.c
+    $(K2_MEMLIB)\memswap16.c
+    $(K2_MEMLIB)\memswap32.c
+    $(K2_MEMLIB)\memswap64.c
 
     #
     # ELFFILE sources
     #
     $(K2_ELFLIB)\parse32.c
+
+    #
+    # SORT sources 
+    #
+    $(K2_SORTLIB)\qsort.c
 
     #
     # VMAP32 sources

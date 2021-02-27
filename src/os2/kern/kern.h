@@ -338,7 +338,8 @@ void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);
 
-UINT32  KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
+void    KernDbg_EarlyInit(void);
+void    KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 
 void    KernPhys_Init(void);

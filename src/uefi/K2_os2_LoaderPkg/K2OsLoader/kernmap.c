@@ -54,6 +54,21 @@ example:
 
 #endif
 
+static int 
+sSymCompare(void const *aPtr1, void const *aPtr2)
+{
+    UINT32 v1;
+    UINT32 v2;
+
+    v1 = ((Elf32_Sym const *)aPtr1)->st_value;
+    v2 = ((Elf32_Sym const *)aPtr2)->st_value;
+    if (v1 < v2)
+        return -1;
+    if (v1 == v2)
+        return 0;
+    return 1;
+}
+
 EFI_STATUS  
 Loader_MapKernelArena(
     void
@@ -94,6 +109,21 @@ Loader_MapKernelArena(
 
     pSecStr = (char const *)K2ELF32_GetSectionData(&parse, parse.mpRawFileData->e_shstrndx);
     numSecHdr = parse.mpRawFileData->e_shnum;
+
+    //
+    // find and sort the symbol table in place to help out the kernel debugging
+    //
+    for (ix = 0; ix < numSecHdr; ix++)
+    {
+        pSecHdr = K2ELF32_GetSectionHeader(&parse, ix);
+        if (pSecHdr->sh_type != SHT_SYMTAB)
+            continue;
+        break;
+    }
+    if (ix != numSecHdr)
+    {
+        K2SORT_Quick((void *)K2ELF32_GetSectionData(&parse, ix), pSecHdr->sh_size / pSecHdr->sh_entsize, sizeof(Elf32_Sym), sSymCompare);
+    }
 
     //
     // find text section

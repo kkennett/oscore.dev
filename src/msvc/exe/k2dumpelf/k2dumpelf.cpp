@@ -31,6 +31,7 @@
 //
 #include <lib/k2win32.h>
 #include <lib/k2elf32.h>
+#include <lib/k2sort.h>
 
 static
 void
@@ -45,6 +46,21 @@ myAssert(
 }
 
 extern "C" K2_pf_ASSERT K2_Assert = myAssert;
+
+static int 
+sSymCompare(void const *aPtr1, void const *aPtr2)
+{
+    UINT32 v1;
+    UINT32 v2;
+
+    v1 = ((Elf32_Sym const *)aPtr1)->st_value;
+    v2 = ((Elf32_Sym const *)aPtr2)->st_value;
+    if (v1 < v2)
+        return -1;
+    if (v1 == v2)
+        return 0;
+    return 1;
+}
 
 int main(int argc, char **argv)
 {
@@ -185,6 +201,29 @@ int main(int argc, char **argv)
                     printf("    %02d %5d addr %08X size %08X off %08X %s\n", ix, secHdr.sh_type, 
                         secHdr.sh_addr, secHdr.sh_size, secHdr.sh_offset,
                         pNames + secHdr.sh_name);
+
+                    if (secHdr.sh_type == SHT_SYMTAB)
+                    {
+                        K2Elf32SymbolSection const &symSec = (K2Elf32SymbolSection const &)pElfFile->Section(ix);
+
+                        printf("      %d SYMBOLS\n", symSec.EntryCount());
+
+                        Elf32_Sym *pSyms = new Elf32_Sym[symSec.EntryCount()];
+                        CopyMemory(pSyms, symSec.RawData(), symSec.EntryCount() * sizeof(Elf32_Sym));
+
+                        K2SORT_Quick(pSyms, symSec.EntryCount(), sizeof(Elf32_Sym), sSymCompare);
+
+
+                        UINT32 jx;
+                        for (jx = 0; jx < symSec.EntryCount(); jx++)
+                        {
+                            printf("        %08X %s\n",
+                                pSyms[jx].st_value,
+                                (char const *)(symSec.StringSection().RawData() + pSyms[jx].st_name)
+                            );
+                        }
+                    }
+
                     if (!(secHdr.sh_flags & SHF_ALLOC))
                         continue;
 

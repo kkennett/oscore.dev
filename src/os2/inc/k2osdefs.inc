@@ -130,6 +130,7 @@
 
 #define K2OS_KVA_KERNEL_ARENA                       0xFFC00000
 #define K2OS_KVA_KERNEL_ARENA_SIZE                  0x003D0000 // 3904 KB
+#define K2OS_KVA_KERNEL_ARENA_END                   (K2OS_KVA_KERNEL_ARENA + K2OS_KVA_KERNEL_ARENA_SIZE)
 
 // this must be virtually 4MB aligned and pagetable not auto mapper by loader
 #define K2OS_KVA_THREAD_TLS_BASE                    0xFF800000
