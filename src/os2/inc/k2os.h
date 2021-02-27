@@ -42,6 +42,8 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
+#define K2OS_SYSCALL_ID_GET_THREAD_IX   0
+
 typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
 
 #define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))

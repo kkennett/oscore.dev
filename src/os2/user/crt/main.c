@@ -73,6 +73,9 @@ __k2oscrt_user_entry(
     UINT32 aArg2
     )
 {
+    UINT32      threadIx;
+    UINT32 *    pTls;
+
     //
     // this will never execute as aCoreIx will never equal 0xFEEDF00D
     // it is here to pull in exports and must be 'reachable' code.
@@ -85,7 +88,13 @@ __k2oscrt_user_entry(
     //
     // actual code goes here
     //
-    K2OS_SYSCALL(K2OS_SYSCALL(0,0),2);
+    threadIx = K2OS_SYSCALL(K2OS_SYSCALL_ID_GET_THREAD_IX, 0);
+
+    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (threadIx * K2_VA32_MEMPAGE_BYTES));
+
+    pTls[2] = 0x01020304;
+
+    K2OS_SYSCALL(1,0);
 
     while (1);
 }

@@ -108,6 +108,8 @@ KernUser_Init(
         pCore->IdleThread.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
         pCore->IdleThread.mpProc = gpProc1;
         pCore->IdleThread.mIx = coreIdleThreadIx;
+        pCore->IdleThread.mpTlsPage = (UINT32 *)
+                (K2OS_KVA_THREAD_TLS_BASE + (coreIdleThreadIx * K2_VA32_MEMPAGE_BYTES));
 
         K2LIST_AddAtTail(&gpProc1->ThreadList, (K2LIST_LINK *)&pCore->IdleThread.ProcThreadListLink);
 

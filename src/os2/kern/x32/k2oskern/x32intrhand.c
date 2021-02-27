@@ -78,6 +78,7 @@ X32Kern_InterruptHandler(
     K2OSKERN_CPUCORE volatile * pThisCore;
     UINT32                      devIrq;
     UINT32                      srcCore;
+    K2OSKERN_OBJ_THREAD *       pCurrentThread;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
 
@@ -101,20 +102,20 @@ X32Kern_InterruptHandler(
     else if (aContext.Exception_Vector == 255)
     {
         K2OSKERN_Debug("System Call (%08X, %08X)\n", aContext.REGS.ECX, aContext.REGS.EDX);
+        
         aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
-        //
-        // return result in EAX and on stack buffer if necessary
-        //
-        if (0 != aContext.REGS.ECX)
+
+        if (1 == aContext.REGS.ECX)
         {
-            K2OSKERN_Debug("\n\n\nINTENTIONAL ABORT!\n\n");
-            sAbort(pThisCore, &aContext);
+            pCurrentThread = K2OSKERN_CURRENT_THREAD;
+            K2OSKERN_Debug("pCurrentThread = %08X\n", pCurrentThread);
+            K2_ASSERT(0x80000000 < (UINT32)pCurrentThread);
+            K2OSKERN_Debug("pTls[2] = %08X\n", pCurrentThread->mpTlsPage[2]);
         }
         else
         {
-            // set return result from syscall 
-            X32Kern_DumpUserModeExceptionContext(&aContext);
-            aContext.REGS.EAX = 1;
+            K2OSKERN_Debug("\n\n\nINTENTIONAL ABORT!\n\n");
+            sAbort(pThisCore, &aContext);
         }
     }
     else

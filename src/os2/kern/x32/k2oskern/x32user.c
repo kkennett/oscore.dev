@@ -72,7 +72,6 @@ KernArch_UserInit(
         *((UINT32 *)stackPtr) = 0;
         stackPtr -= sizeof(UINT32);
         *((UINT32 *)stackPtr) = 0;
-        K2OSKERN_Debug("thread stack init @ %08X\n", stackPtr);
         pThread->Context.ESP = stackPtr;
         pThread->Context.SS = (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER);
     }

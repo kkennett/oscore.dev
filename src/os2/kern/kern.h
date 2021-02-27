@@ -113,6 +113,7 @@ struct _K2OSKERN_OBJ_THREAD
     UINT32                  mIx;
 
     UINT32                  mTlsPagePhys;
+    UINT32 *                mpTlsPage;
 
     K2LIST_LINK             ProcThreadListLink;
 
@@ -122,12 +123,17 @@ struct _K2OSKERN_OBJ_THREAD
 };
 
 #if K2_TARGET_ARCH_IS_ARM
-#define K2OSKERN_CURRENT_THREAD  ((K2OSKERN_OBJ_THREAD *)A32_ReadTPIDRPRW())
+#define K2OSKERN_CURRENT_THREAD_INDEX A32_ReadTPIDRPRW()
 #elif K2_TARGET_ARCH_IS_INTEL
-#define K2OSKERN_CURRENT_THREAD  ((K2OSKERN_OBJ_THREAD *)X32_GetFSData(0))
+#define K2OSKERN_CURRENT_THREAD_INDEX X32_GetFSData(0)
 #else
 #error !!!Unsupported Architecture
 #endif
+
+#define K2OSKERN_CURRENT_THREAD \
+    ((K2OSKERN_OBJ_THREAD *)    \
+        (*((UINT32 *)(K2OS_KVA_THREADPTRS_BASE + \
+            (sizeof(UINT32) * K2OSKERN_CURRENT_THREAD_INDEX)))))
 
 /* --------------------------------------------------------------------------------- */
 
