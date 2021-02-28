@@ -39,9 +39,10 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 static K2OSKERN_OBJ_INTR *  sgpIntrObjByIrqIx[X32_NUM_IDT_ENTRIES] = { 0, };
 
 void 
-X32_ExceptionPanic(
+X32Kern_Intr_OnException(
     K2OSKERN_CPUCORE volatile * apThisCore,
-    X32_EXCEPTION_CONTEXT *     apContext
+    X32_EXCEPTION_CONTEXT *     apContext,
+    K2OSKERN_OBJ_THREAD *       apCurrentThread
 )
 {
     BOOL wasKernelMode;
@@ -70,21 +71,64 @@ X32_ExceptionPanic(
     K2OSKERN_Panic(NULL);
 }
 
+void 
+X32Kern_Intr_OnSystemCall(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    X32_EXCEPTION_CONTEXT *     apContext,
+    K2OSKERN_OBJ_THREAD *       apCallingThread
+)
+{
+    K2OSKERN_Debug("Core %d System Call %d from thread @ %08X(%d)\n",
+        apThisCore->mCoreIx,
+        apContext->REGS.ECX,
+        apCallingThread,
+        apCallingThread->mIx
+    );
+}
+
+void 
+X32Kern_Intr_OnIci(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    X32_EXCEPTION_CONTEXT *     apContext,
+    UINT32                      aSrcCoreIx
+)
+{
+    K2OSKERN_Debug("Core %d recv ICI from Core %d\n", apThisCore->mCoreIx, aSrcCoreIx);
+}
+
+BOOL 
+X32Kern_Intr_OnIrq(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    X32_EXCEPTION_CONTEXT *     apContext,
+    UINT32                      aDevIrqNum
+)
+{
+    if (sgpIntrObjByIrqIx[aDevIrqNum] != NULL)
+    {
+        K2OSKERN_Debug("VECTOR %d -> IRQ %d on core %d\n", apContext->Exception_Vector, aDevIrqNum, apThisCore->mCoreIx);
+        return sgpIntrObjByIrqIx[aDevIrqNum]->mfHandler(sgpIntrObjByIrqIx[aDevIrqNum]->mpHandlerContext);
+    }
+
+    K2OSKERN_Debug("****Unhandled Interrupt VECTOR %d (IRQ %d). Treated as spurious and masked\n", 
+        apContext->Exception_Vector, aDevIrqNum);
+    X32Kern_MaskDevIrq(aDevIrqNum);
+    return TRUE;
+}
+
 void
 X32Kern_InterruptHandler(
     X32_EXCEPTION_CONTEXT aContext
     )
 {
     K2OSKERN_CPUCORE volatile * pThisCore;
-    UINT32                      devIrq;
-    UINT32                      srcCore;
     K2OSKERN_OBJ_THREAD *       pCurrentThread;
+    BOOL                        spuriousIrq;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
 
     if (sgInIntr[pThisCore->mCoreIx])
     {
-        K2OSKERN_Panic("Recursive exception or interrupt\n");
+        K2OSKERN_Panic("Recursive entry to interrupt handler\n");
         while (1);
     }
     sgInIntr[pThisCore->mCoreIx] = TRUE;
@@ -94,70 +138,56 @@ X32Kern_InterruptHandler(
     //
     X32_SetFS((pThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
 
+    //
+    // now we can retrieve the current thread (if there is one)
+    //
+    pCurrentThread = K2OSKERN_GetThisCoreCurrentThread();
+
+    //
+    // and if there is one save its context
+    //
+    if (NULL != pCurrentThread)
+    {
+        if (aContext.Exception_Vector == 255)
+        {
+            // fix up EFLAGS since it was captured by SYSENTER after kernel was entered
+            aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
+        }
+        K2MEM_Copy(&pCurrentThread->Context, &aContext, X32KERN_SIZEOF_USERMODE_EXCEPTION_CONTEXT);
+    }
+
+    //
+    // now we can figure out what to do
+    //
+    spuriousIrq = FALSE;
+
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
-        // TBD - sOnException(pThisCore, &aContext);
-        X32_ExceptionPanic(pThisCore, &aContext);
+        X32Kern_Intr_OnException(pThisCore, &aContext, pCurrentThread);
     }
     else if (aContext.Exception_Vector == 255)
     {
-        K2OSKERN_Debug("System Call (%08X, %08X)\n", aContext.REGS.ECX, aContext.REGS.EDX);
-        
-        aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
-
-        if (1 != aContext.REGS.ECX)
-        {
-            pCurrentThread = K2OSKERN_CURRENT_THREAD;
-            K2OSKERN_Debug("pCurrentThread = %08X\n", pCurrentThread);
-            K2_ASSERT(0x80000000 < (UINT32)pCurrentThread);
-            K2OSKERN_Debug("pTls[2] = %08X\n", pCurrentThread->mpTlsPage[2]);
-        }
-        else
-        {
-            K2OSKERN_Debug("\n\n\nINTENTIONAL ABORT!\n\n");
-            X32_ExceptionPanic(pThisCore, &aContext);
-        }
+        X32Kern_Intr_OnSystemCall(pThisCore, &aContext, pCurrentThread);
     }
     else
     {
-        K2OSKERN_Debug("Core %d Context %08X Vector %d\n", pThisCore->mCoreIx, &aContext, aContext.Exception_Vector);
         if (aContext.Exception_Vector >= X32KERN_VECTOR_ICI_BASE)
         {
-            //
-            // ICI from another core
-            //
             K2_ASSERT(aContext.Exception_Vector <= X32KERN_VECTOR_ICI_LAST);
-            srcCore = aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE;
-            // TBD - OnIci(srcCore);
-            K2OSKERN_Debug("Ici from core %d\n", srcCore);
-            X32_ExceptionPanic(pThisCore, &aContext);
+            X32Kern_Intr_OnIci(pThisCore, &aContext, aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE);
         }
         else
         {
-            //
-            // LVT or external interrupt
-            //
-            devIrq = KernArch_VectorToDevIrq(aContext.Exception_Vector);
-            K2_ASSERT(devIrq < X32_DEVIRQ_MAX_COUNT);
-            if (sgpIntrObjByIrqIx[devIrq] != NULL)
-            {
-                K2OSKERN_Debug("VECTOR %d -> IRQ %d on core %d\n", aContext.Exception_Vector, devIrq, pThisCore->mCoreIx);
-                sgpIntrObjByIrqIx[devIrq]->mfHandler(sgpIntrObjByIrqIx[devIrq]->mpHandlerContext);
-                // TBD - signal interrupt object 
-            }
-            else
-            {
-                K2OSKERN_Debug("****Unhandled Interrupt VECTOR %d (IRQ %d). Masked\n", aContext.Exception_Vector, devIrq);
-                X32Kern_MaskDevIrq(devIrq);
-            }
+            K2_ASSERT(KernArch_VectorToDevIrq(aContext.Exception_Vector) < X32_DEVIRQ_MAX_COUNT);
+            spuriousIrq = X32Kern_Intr_OnIrq(pThisCore, &aContext, KernArch_VectorToDevIrq(aContext.Exception_Vector));
         }
-        //
-        // end of interrupt
-        //
         X32Kern_EOI(aContext.Exception_Vector);
     }
 
     sgInIntr[pThisCore->mCoreIx] = FALSE;
+
+    if (!spuriousIrq)
+        KernCpu_Exec(pThisCore);
 }
 
 void 

@@ -116,6 +116,7 @@ typedef struct _X32_EXCEPTION_CONTEXT X32_EXCEPTION_CONTEXT;
 #define X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT     (sizeof(X32_EXCEPTION_CONTEXT)-(2*4))
 
 K2_STATIC_ASSERT(X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT == X32_SIZEOF_KERNEL_EXCEPTION_CONTEXT);
+K2_STATIC_ASSERT(X32KERN_SIZEOF_USERMODE_EXCEPTION_CONTEXT == sizeof(K2OSKERN_THREAD_CONTEXT));
 
 /* --------------------------------------------------------------------------------- */
 
@@ -159,6 +160,7 @@ void X32Kern_MaskDevIrq(UINT8 aIrqIx);
 void X32Kern_UnmaskDevIrq(UINT8 aIrqIx);
 void X32Kern_EOI(UINT32 aVector);
 void K2_CALLCONV_REGS X32Kern_InterruptReturn(UINT32 aContextAddr);
+void K2_CALLCONV_REGS X32Kern_IntrIdle(UINT32 aCoreStackBottom);
 
 void X32Kern_InitStall(void);
 

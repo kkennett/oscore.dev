@@ -62,19 +62,62 @@ KernCpu_Exec(
     K2OSKERN_CPUCORE volatile *apThisCore
 )
 {
+    K2OSKERN_OBJ_THREAD *   pNextThread;
+    BOOL                    wasIdle;
+
+    wasIdle = apThisCore->mIsIdle;
+    apThisCore->mIsIdle = FALSE;
+
+    if (wasIdle)
+    {
+        K2OSKERN_Debug("Core %d exit idle\n", apThisCore->mCoreIx);
+    }
+    K2OSKERN_Debug("Core %d Exec\n", apThisCore->mCoreIx);
+
+    // 
+    // run next thread or go idle
     //
-    // do regular core processing
-    //
+    do
+    {
+        //
+        // service ICIs, syscalls, etc
+        //
 
 
-    //
-    // exec thread at the head of the run list
-    //
-    KernArch_ResumeThread(apThisCore);
+        pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
+        if (pNextThread == &apThisCore->IdleThread)
+        {
+            if (1 == apThisCore->RunList.mNodeCount)
+            {
+                //
+                // next thread is idle thread and there is only one thread on the list
+                // so this core needs to go idle
+                //
+                apThisCore->mIsIdle = TRUE;
+                K2OSKERN_Debug("Core %d enter idle\n", apThisCore->mCoreIx);
+                K2_CpuWriteBarrier();
+                KernArch_CpuIdle(apThisCore);
+                K2OSKERN_Panic("KernArch_CpuIdle() returned\n");
+            }
+            else
+            {
+                //
+                // reschedule here, move idle thread to end of run list
+                //
+                K2_ASSERT(0);
+                K2OSKERN_Panic("Implement Reschedule\n");
+            }
+        }
+        else
+        {
+            KernArch_ResumeThread(apThisCore);
+            K2OSKERN_Panic("KernArch_ResumeThread() returned\n");
+        }
+
+    } while (1);
 
     //
-    // never gets here
+    // should never get here
     //
-    K2_ASSERT(0);
-    while (1);
+    K2OSKERN_Panic("CPU exec broke\n");
 }

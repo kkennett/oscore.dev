@@ -44,6 +44,9 @@ KernArch_ResumeThread(
     
     pRunThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
 
+    // idle thread should never actually run
+    K2_ASSERT(pRunThread != &apThisCore->IdleThread);
+
     gX32Kern_PerCoreFS[apThisCore->mCoreIx] = pRunThread->mIx;
 
     stackPtr = (UINT32)&pRunThread->Context;

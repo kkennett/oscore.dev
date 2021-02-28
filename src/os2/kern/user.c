@@ -205,20 +205,25 @@ KernUser_Init(
     K2_ASSERT(0 == pDlxInfo->mImportCount);
 
     K2_ASSERT(K2OS_UVA_LOW_BASE == pDlxInfo->SegInfo[DlxSeg_Text].mLinkAddr);
-    chkOld = pDlxInfo->SegInfo[DlxSeg_Text].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Text].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+
+    coreIx = (pDlxInfo->SegInfo[DlxSeg_Text].mMemActualBytes + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK;
+    gData.UserCrtInfo.mTextPagesCount = coreIx / K2_VA32_MEMPAGE_BYTES;
+    chkOld = pDlxInfo->SegInfo[DlxSeg_Text].mLinkAddr + coreIx;
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Read].mLinkAddr);
-    gData.UserCrtInfo.mTextPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
 
-    chkOld = pDlxInfo->SegInfo[DlxSeg_Read].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Read].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    coreIx = (pDlxInfo->SegInfo[DlxSeg_Read].mMemActualBytes + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK;
+    gData.UserCrtInfo.mReadPagesCount = coreIx / K2_VA32_MEMPAGE_BYTES;
+    chkOld = pDlxInfo->SegInfo[DlxSeg_Read].mLinkAddr + coreIx;
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Data].mLinkAddr);
-    gData.UserCrtInfo.mReadPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
 
-    chkOld = pDlxInfo->SegInfo[DlxSeg_Data].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Data].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    coreIx = (pDlxInfo->SegInfo[DlxSeg_Data].mMemActualBytes + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK;
+    gData.UserCrtInfo.mDataPagesCount = coreIx / K2_VA32_MEMPAGE_BYTES;
+    chkOld = pDlxInfo->SegInfo[DlxSeg_Data].mLinkAddr + coreIx;
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Sym].mLinkAddr);
-    gData.UserCrtInfo.mDataPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
 
-    chkOld = pDlxInfo->SegInfo[DlxSeg_Sym].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Sym].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
-    gData.UserCrtInfo.mSymPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
+    coreIx = (pDlxInfo->SegInfo[DlxSeg_Sym].mMemActualBytes + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK;
+    gData.UserCrtInfo.mSymPagesCount = coreIx / K2_VA32_MEMPAGE_BYTES;
+    chkOld = pDlxInfo->SegInfo[DlxSeg_Sym].mLinkAddr + coreIx;
 
     //
     // going to map from K2OS_UVA_LOW_BASE tp chkOld - map pagetables for this area

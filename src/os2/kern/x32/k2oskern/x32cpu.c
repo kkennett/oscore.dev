@@ -371,3 +371,16 @@ KernArch_LaunchCpuCores(
     K2_ASSERT(0);
     while (1);
 }
+
+void
+KernArch_CpuIdle(
+    K2OSKERN_CPUCORE volatile *apThisCore
+)
+{
+    K2_ASSERT(FALSE != apThisCore->mIsIdle);
+    X32_LoadCR3(gpProc1->mTransTableRegVal);
+    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = 0;
+    K2_CpuWriteBarrier();
+    X32Kern_IntrIdle(apThisCore->TSS.mESP0);
+}
+

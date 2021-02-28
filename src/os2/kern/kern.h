@@ -130,10 +130,18 @@ struct _K2OSKERN_OBJ_THREAD
 #error !!!Unsupported Architecture
 #endif
 
-#define K2OSKERN_CURRENT_THREAD \
-    ((K2OSKERN_OBJ_THREAD *)    \
-        (*((UINT32 *)(K2OS_KVA_THREADPTRS_BASE + \
-            (sizeof(UINT32) * K2OSKERN_CURRENT_THREAD_INDEX)))))
+static inline K2OSKERN_OBJ_THREAD *
+K2OSKERN_GetThisCoreCurrentThread(
+    void
+)
+{
+    register UINT32 threadIx = K2OSKERN_CURRENT_THREAD_INDEX;
+    return (threadIx == 0) ?
+        NULL :
+        ((K2OSKERN_OBJ_THREAD *)
+            (*((UINT32 *)(K2OS_KVA_THREADPTRS_BASE +
+                (sizeof(UINT32) * threadIx)))));
+}
 
 /* --------------------------------------------------------------------------------- */
 
@@ -147,6 +155,7 @@ struct _K2OSKERN_CPUCORE
     UINT32                  mCoreIx;
 
     BOOL                    mIsExecuting;
+    BOOL                    mIsIdle;
 
     UINT32 volatile         mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
 
@@ -264,7 +273,11 @@ struct _K2OSKERN_IRQ_CONFIG
 };
 typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
 
-typedef UINT32 (*K2OSKERN_pf_IntrHandler)(void *apContext);
+//
+// handler returns TRUE if the interrupt was spurious and
+// whatever the cpu was doing should be quickly resumed
+//
+typedef BOOL (*K2OSKERN_pf_IntrHandler)(void *apContext);
 
 struct _K2OSKERN_OBJ_INTR
 {
@@ -353,6 +366,7 @@ void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr
 void    KernArch_UserInit(void);
 void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
 void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
+void    KernArch_CpuIdle(K2OSKERN_CPUCORE volatile *apThisCore);
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);

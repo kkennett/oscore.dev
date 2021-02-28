@@ -103,6 +103,19 @@ notZero:
 
 END_X32_PROC(X32Kern_SysEnter_Entry)
 
+//void K2_CALLCONV_REGS X32Kern_IntrIdle(UINT32 aCoreStackBottom);
+BEGIN_X32_PROC(X32Kern_IntrIdle)
+    mov %esp, %ecx 
+    sti 
+CpuIdleLoop:
+    hlt
+    //
+    // should never get here since we should interrupt out of this. 
+    // but if we do for some reason we should jump back to do it again
+    //
+    jmp CpuIdleLoop 
+END_X32_PROC(X32Kern_IntrIdle)
+
 BEGIN_X32_PROC(X32Kern_RawInterruptReturn)
    pop %eax 
    mov %ds, %ax
