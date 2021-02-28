@@ -41,7 +41,7 @@ static UINT8 const sgPublicApiCode[] =
 
 void
 KernArch_UserInit(
-    UINT32 aCrtEntryPoint
+    void
 )
 {
     //
@@ -65,7 +65,7 @@ KernArch_UserInit(
         pThread->Context.DS = (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER);
         pThread->Context.REGS.ECX = pCore->mCoreIx; // first arg to entry point
         pThread->Context.REGS.EDX = 0; // second arg to entry point
-        pThread->Context.EIP = aCrtEntryPoint;
+        pThread->Context.EIP = gData.UserCrtInfo.mEntrypoint;
         pThread->Context.CS = (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER);
         pThread->Context.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO | X32_EFLAGS_ZERO;
         stackPtr = (pThread->mIx * K2_VA32_MEMPAGE_BYTES) + 0xFFC;

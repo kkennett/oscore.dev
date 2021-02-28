@@ -207,11 +207,18 @@ KernUser_Init(
     K2_ASSERT(K2OS_UVA_LOW_BASE == pDlxInfo->SegInfo[DlxSeg_Text].mLinkAddr);
     chkOld = pDlxInfo->SegInfo[DlxSeg_Text].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Text].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Read].mLinkAddr);
+    gData.UserCrtInfo.mTextPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
+
     chkOld = pDlxInfo->SegInfo[DlxSeg_Read].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Read].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Data].mLinkAddr);
+    gData.UserCrtInfo.mReadPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
+
     chkOld = pDlxInfo->SegInfo[DlxSeg_Data].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Data].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
     K2_ASSERT(chkOld == pDlxInfo->SegInfo[DlxSeg_Sym].mLinkAddr);
+    gData.UserCrtInfo.mDataPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
+
     chkOld = pDlxInfo->SegInfo[DlxSeg_Sym].mLinkAddr + K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Sym].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    gData.UserCrtInfo.mSymPagesCount = chkOld / K2_VA32_MEMPAGE_BYTES;
 
     //
     // going to map from K2OS_UVA_LOW_BASE tp chkOld - map pagetables for this area
@@ -219,12 +226,14 @@ KernUser_Init(
 //    K2OSKERN_Debug("k2oscrt.dlx taking up %08X->%08X in user space\n", K2OS_UVA_LOW_BASE, chkOld);
     chkOld -= K2OS_UVA_LOW_BASE;
     coreIdleThreadIx = chkOld;
+    gData.UserCrtInfo.mPageTablesCount = 0;
     coreIx = K2OS_UVA_LOW_BASE;
     do
     {
         pte = sGetOnePhysicalPage(&gpProc1->Hdr);
         KernArch_InstallPageTable(gpProc1, coreIx, pte, TRUE);
-        if (chkOld < K2_VA32_PAGETABLE_MAP_BYTES)
+        gData.UserCrtInfo.mPageTablesCount++;
+        if (chkOld <= K2_VA32_PAGETABLE_MAP_BYTES)
             break;
         coreIx += K2_VA32_PAGETABLE_MAP_BYTES;
         chkOld -= K2_VA32_PAGETABLE_MAP_BYTES;
@@ -266,7 +275,7 @@ KernUser_Init(
     // break and re-make the proper mapping for text, read, sym segments
     //
     chkOld = K2OS_UVA_LOW_BASE;
-    coreIx = K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Text].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    coreIx = gData.UserCrtInfo.mTextPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
         pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
@@ -278,7 +287,7 @@ KernUser_Init(
         coreIx -= K2_VA32_MEMPAGE_BYTES;
     } while (coreIx > 0);
 
-    coreIx = K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Read].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    coreIx = gData.UserCrtInfo.mReadPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
         pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
@@ -290,10 +299,12 @@ KernUser_Init(
         coreIx -= K2_VA32_MEMPAGE_BYTES;
     } while (coreIx > 0);
 
-    coreIx = K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Data].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
-    chkOld += coreIx;
+    gData.UserCrtInfo.mDataPagesVirtAddr = chkOld;
+    gData.UserCrtInfo.mpDataSrc = ((UINT8 const *)parse.mpRawFileData) + pDlxInfo->SegInfo[DlxSeg_Data].mFileOffset;
+    gData.UserCrtInfo.mDataSrcBytes = pDlxInfo->SegInfo[DlxSeg_Data].mFileBytes;
+    chkOld += gData.UserCrtInfo.mDataPagesCount * K2_VA32_MEMPAGE_BYTES;
 
-    coreIx = K2_ROUNDUP(pDlxInfo->SegInfo[DlxSeg_Sym].mMemActualBytes, K2_VA32_MEMPAGE_BYTES);
+    coreIx = gData.UserCrtInfo.mSymPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
         pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
@@ -323,7 +334,8 @@ KernUser_Init(
     //
     //  fill in public api page, and set idle threads' entry points and stack pointers in their contexts
     // 
-    KernArch_UserInit(parse.mpRawFileData->e_entry);
+    gData.UserCrtInfo.mEntrypoint = parse.mpRawFileData->e_entry;
+    KernArch_UserInit();
 }
 
 

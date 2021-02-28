@@ -280,6 +280,20 @@ struct _K2OSKERN_OBJ_INTR
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _KERN_USERCRT_INFO KERN_USERCRT_INFO;
+struct _KERN_USERCRT_INFO
+{
+    UINT32          mPageTablesCount;
+    UINT32          mTextPagesCount;
+    UINT32          mReadPagesCount;
+    UINT32          mDataPagesVirtAddr;
+    UINT32          mDataPagesCount;
+    UINT32          mSymPagesCount;
+    UINT8 const *   mpDataSrc;
+    UINT32          mDataSrcBytes;
+    UINT32          mEntrypoint;
+};
+
 typedef struct _KERN_DATA KERN_DATA;
 struct _KERN_DATA
 {
@@ -302,6 +316,11 @@ struct _KERN_DATA
     UINT32                  mLastThreadSlotIx;
 
     K2ROFS const *          mpROFS;
+
+    //
+    // init data for each process' user crt segment
+    //
+    KERN_USERCRT_INFO       UserCrtInfo;
 
 #if K2_TARGET_ARCH_IS_ARM
     // arch specific - used in common phys init code
@@ -331,7 +350,7 @@ void    KernArch_InvalidateTlbPageOnThisCore(UINT32 aVirtAddr);
 void    KernArch_LaunchCpuCores(void);
 UINT32* KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32* apRetPDE, BOOL *apRetPtPresent, UINT32 *apRetPte, UINT32 *apRetMemPageAttr);
 void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr, BOOL aZeroPageAfterMap);
-void    KernArch_UserInit(UINT32 aCrtEntryPoint);
+void    KernArch_UserInit(void);
 void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
 void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
 
