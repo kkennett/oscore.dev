@@ -78,6 +78,7 @@ X32Kern_Intr_OnSystemCall(
     K2OSKERN_OBJ_THREAD *       apCallingThread
 )
 {
+    K2_ASSERT(NULL != apCallingThread);
     K2OSKERN_Debug("Core %d System Call %d from thread @ %08X(%d)\n",
         apThisCore->mCoreIx,
         apContext->REGS.ECX,
