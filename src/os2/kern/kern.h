@@ -248,6 +248,7 @@ struct _K2OSKERN_OBJ_PROCESS
     UINT32                  mVirtMapKVA;        // VIRT of PTE array
     K2LIST_LINK             ProcListLink;
 
+    K2OSKERN_OBJ_THREAD     InitialThread;
     K2OSKERN_SEQLOCK        ThreadListSeqLock;
     K2LIST_ANCHOR           ThreadList;
 };

@@ -82,8 +82,6 @@ KernCpu_Exec(
         //
         // service ICIs, syscalls, etc
         //
-
-
         pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
         if (pNextThread == &apThisCore->IdleThread)
         {

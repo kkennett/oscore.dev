@@ -68,110 +68,131 @@ KernUser_Init(
 )
 {
     UINT32                      coreIx;
-    UINT32                      coreIdleThreadIx;
+    UINT32                      crtVirtBytes;
     UINT32                      chkOld;
-    UINT32 *                    pThreadPtrs;
-    UINT32                      tlsPageVirtOffset;
-    BOOL                        ptePresent;
-    UINT32                      pte;
+    UINT32                      pagePhys;
     K2OSKERN_CPUCORE volatile * pCore;
     K2ROFS_FILE const *         pFile;
     K2ELF32PARSE                parse;
     K2STAT                      stat;
     Elf32_Shdr const *          pDlxInfoHdr;
     DLX_INFO const *            pDlxInfo;
+    K2OSKERN_OBJ_THREAD *       pFirstThread;
+    UINT32                      firstThreadIx;
+    UINT32 *                    pThreadPtrs;
+    UINT32                      tlsPageVirtOffset;
+    BOOL                        ptePresent;
+    UINT32                      pte;
 
     pThreadPtrs = ((UINT32 *)K2OS_KVA_THREADPTRS_BASE);
 
     //
-    // create idle threads, one for each existing core
+    // create 'fake' idle threads, one for each existing core.  these don't have valid indexes
     //
     for (coreIx = 0; coreIx < gData.LoadInfo.mCpuCoreCount; coreIx++)
     {
-        //
-        // pull the next thread index off the threads index free list
-        //
-        do
-        {
-            coreIdleThreadIx = gData.mNextThreadSlotIx;
-            chkOld = K2ATOMIC_CompareExchange(&gData.mNextThreadSlotIx, pThreadPtrs[coreIdleThreadIx], coreIdleThreadIx);
-        } while (chkOld != coreIdleThreadIx);
-        K2_ASSERT(coreIdleThreadIx != 0);
-        K2_ASSERT(coreIdleThreadIx < K2OS_MAX_THREAD_COUNT);
-        K2_ASSERT(0 != gData.mNextThreadSlotIx);
-
-        pThreadPtrs[coreIdleThreadIx] = 0;
-
         pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
 
         pCore->IdleThread.Hdr.mObjType = KernObj_Thread;
         pCore->IdleThread.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
         pCore->IdleThread.mpProc = gpProc1;
-        pCore->IdleThread.mIx = coreIdleThreadIx;
-        pCore->IdleThread.mpTlsPage = (UINT32 *)
-                (K2OS_KVA_THREAD_TLS_BASE + (coreIdleThreadIx * K2_VA32_MEMPAGE_BYTES));
+        pCore->IdleThread.mIx = (UINT32)-1;
+        pCore->IdleThread.mpTlsPage = NULL;
 
         K2LIST_AddAtTail(&gpProc1->ThreadList, (K2LIST_LINK *)&pCore->IdleThread.ProcThreadListLink);
 
         //
-        // set the thread pointer in the thread pointers page to the new thread
+        // idle threads don't get a TLS page because they can actually never
+        // execute any code.
         //
-        pThreadPtrs[coreIdleThreadIx] = (UINT32)&pCore->IdleThread;
 
         //
-        // allocate a physical page for the idle thread's TLS area and stack
-        // this page is never freed so we can use it for the stack without caring about it
-        //
-        pCore->IdleThread.mTlsPagePhys = sGetOnePhysicalPage((K2OSKERN_OBJ_HEADER *)&pCore->IdleThread.Hdr);
-        ;
-        //
-        // virt offset in the process' user space is the page index from zero
-        //
-        tlsPageVirtOffset = K2_VA32_MEMPAGE_BYTES * coreIdleThreadIx;
-
-        //
-        // map the TLS thread into the global kernel TLS mapping pagetable
-        // (which is aliased to K2OS_KVA_PROC1_TLS_PAGETABLE)
-        //
-        KernMap_MakeOnePresentPage(gpProc1, tlsPageVirtOffset, pCore->IdleThread.mTlsPagePhys, K2OS_MAPTYPE_USER_DATA);
-
-        //
-        // assert that the kernel mode mapping just had its page appear magically at the right place since
-        // they share a pagetable mapping the TLS area
-        //
-        KernArch_Translate(
-            gpProc1,
-            K2OS_KVA_THREAD_TLS_BASE + tlsPageVirtOffset,
-            NULL,
-            &ptePresent,
-            &pte,
-            NULL);
-        K2_ASSERT(ptePresent);
-        K2_ASSERT((pte & K2_VA32_PAGEFRAME_MASK) == pCore->IdleThread.mTlsPagePhys);
-
-        //
-        // clear out the TLS page at its target user space address
-        //
-        K2MEM_Zero((void *)tlsPageVirtOffset, K2_VA32_MEMPAGE_BYTES);
-
-        //
-        // set up the idle thread and add it to the run list.  context not set yet
+        // add idle thread to core's run list.  it never leaves that list
         //
         K2LIST_AddAtTail((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pCore->IdleThread.CpuRunListLink);
     }
 
     //
+    // create the initial thread for process 1
+    //
+    pFirstThread = &gpProc1->InitialThread;
+
+    //
+    // pull the next thread index off the threads index free list
+    //
+    do
+    {
+        firstThreadIx = gData.mNextThreadSlotIx;
+        chkOld = K2ATOMIC_CompareExchange(&gData.mNextThreadSlotIx, pThreadPtrs[firstThreadIx], firstThreadIx);
+    } while (chkOld != firstThreadIx);
+    K2_ASSERT(firstThreadIx != 0);
+    K2_ASSERT(firstThreadIx < K2OS_MAX_THREAD_COUNT);
+    K2_ASSERT(0 != gData.mNextThreadSlotIx);
+
+    pThreadPtrs[firstThreadIx] = (UINT32)pFirstThread;
+
+    pFirstThread->Hdr.mObjType = KernObj_Thread;
+    pFirstThread->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
+    pFirstThread->mpProc = gpProc1;
+    pFirstThread->mIx = firstThreadIx;
+    pFirstThread->mpTlsPage = (UINT32 *)
+            (K2OS_KVA_THREAD_TLS_BASE + (firstThreadIx * K2_VA32_MEMPAGE_BYTES));
+
+    K2LIST_AddAtTail(&gpProc1->ThreadList, (K2LIST_LINK *)&pFirstThread->ProcThreadListLink);
+
+    //
+    // allocate a physical page for the first thread's TLS area
+    //
+    pFirstThread->mTlsPagePhys = sGetOnePhysicalPage((K2OSKERN_OBJ_HEADER *)&pFirstThread->Hdr);
+
+    //
+    // virt offset in the process' user space is the page index from zero
+    //
+    tlsPageVirtOffset = K2_VA32_MEMPAGE_BYTES * firstThreadIx;
+
+    //
+    // map the TLS thread into the global kernel TLS mapping pagetable
+    // (which is aliased to K2OS_KVA_PROC1_TLS_PAGETABLE)
+    //
+    KernMap_MakeOnePresentPage(gpProc1, tlsPageVirtOffset, pFirstThread->mTlsPagePhys, K2OS_MAPTYPE_USER_DATA);
+
+    //
+    // assert that the kernel mode mapping just had its page appear magically at the right place since
+    // they share a pagetable mapping the TLS area
+    //
+    KernArch_Translate(
+        gpProc1,
+        K2OS_KVA_THREAD_TLS_BASE + tlsPageVirtOffset,
+        NULL,
+        &ptePresent,
+        &pte,
+        NULL);
+    K2_ASSERT(ptePresent);
+    K2_ASSERT((pte & K2_VA32_PAGEFRAME_MASK) == pFirstThread->mTlsPagePhys);
+
+    //
+    // clear out the TLS page at its target user space address
+    //
+    K2MEM_Zero((void *)tlsPageVirtOffset, K2_VA32_MEMPAGE_BYTES);
+
+    //
+    // add first thread to core 0 list at the head
+    //
+    pCore = K2OSKERN_COREIX_TO_CPUCORE(0);
+    K2LIST_AddAtHead((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pFirstThread->CpuRunListLink);
+
+    //
     // map the pagetable for the public API page in the user space
     //
-    pte = sGetOnePhysicalPage(NULL);
-    KernArch_InstallPageTable(gpProc1, K2OS_UVA_PUBLICAPI_PAGETABLE_BASE, pte, TRUE);
+    pagePhys = sGetOnePhysicalPage(NULL);
+    KernArch_InstallPageTable(gpProc1, K2OS_UVA_PUBLICAPI_PAGETABLE_BASE, pagePhys, TRUE);
 
     //
     // map the public API page into the kernel R/W and into user space R/O
     //
-    pte = sGetOnePhysicalPage(NULL);
-    KernMap_MakeOnePresentPage(gpProc1, K2OS_UVA_PUBLICAPI_BASE, pte, K2OS_MAPTYPE_USER_TEXT);
-    KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_PUBLICAPI_BASE, pte, K2OS_MAPTYPE_KERN_DATA);
+    pagePhys = sGetOnePhysicalPage(NULL);
+    KernMap_MakeOnePresentPage(gpProc1, K2OS_UVA_PUBLICAPI_BASE, pagePhys, K2OS_MAPTYPE_USER_TEXT);
+    KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_PUBLICAPI_BASE, pagePhys, K2OS_MAPTYPE_KERN_DATA);
     K2MEM_Zero((void *)K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
     KernArch_FlushCache(K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
 
@@ -230,13 +251,13 @@ KernUser_Init(
     //
 //    K2OSKERN_Debug("k2oscrt.dlx taking up %08X->%08X in user space\n", K2OS_UVA_LOW_BASE, chkOld);
     chkOld -= K2OS_UVA_LOW_BASE;
-    coreIdleThreadIx = chkOld;
+    crtVirtBytes = chkOld;
     gData.UserCrtInfo.mPageTablesCount = 0;
     coreIx = K2OS_UVA_LOW_BASE;
     do
     {
-        pte = sGetOnePhysicalPage(&gpProc1->Hdr);
-        KernArch_InstallPageTable(gpProc1, coreIx, pte, TRUE);
+        pagePhys = sGetOnePhysicalPage(&gpProc1->Hdr);
+        KernArch_InstallPageTable(gpProc1, coreIx, pagePhys, TRUE);
         gData.UserCrtInfo.mPageTablesCount++;
         if (chkOld <= K2_VA32_PAGETABLE_MAP_BYTES)
             break;
@@ -248,12 +269,12 @@ KernUser_Init(
     // alloc the physical pages for all the segments and map them as R/W data
     //
     chkOld = K2OS_UVA_LOW_BASE;
-    coreIx = coreIdleThreadIx;
+    coreIx = crtVirtBytes;
     do
     {
-        pte = sGetOnePhysicalPage(&gpProc1->Hdr);
-//        K2OSKERN_Debug("MAKE %08X->%08X USER_DATA, ZERO\n", chkOld, pte);
-        KernMap_MakeOnePresentPage(gpProc1, chkOld, pte, K2OS_MAPTYPE_USER_DATA);   // user PT, so kern mapping doesn't work in x32
+        pagePhys = sGetOnePhysicalPage(&gpProc1->Hdr);
+//        K2OSKERN_Debug("MAKE %08X->%08X USER_DATA, ZERO\n", chkOld, pagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_DATA);   // user PT, so kern mapping doesn't work in x32
         K2MEM_Zero((void *)chkOld, K2_VA32_MEMPAGE_BYTES);
         chkOld += K2_VA32_MEMPAGE_BYTES;
         coreIx -= K2_VA32_MEMPAGE_BYTES;
@@ -273,8 +294,8 @@ KernUser_Init(
             ((UINT8 *)parse.mpRawFileData) + pDlxInfo->SegInfo[coreIx].mFileOffset,
             pDlxInfo->SegInfo[coreIx].mFileBytes);
     }
-//    K2OSKERN_Debug("Flush(%08X, %08X)\n", K2OS_UVA_LOW_BASE, coreIdleThreadIx);
-    KernArch_FlushCache(K2OS_UVA_LOW_BASE, coreIdleThreadIx);
+//    K2OSKERN_Debug("Flush(%08X, %08X)\n", K2OS_UVA_LOW_BASE, crtVirtBytes);
+    KernArch_FlushCache(K2OS_UVA_LOW_BASE, crtVirtBytes);
 
     //
     // break and re-make the proper mapping for text, read, sym segments
@@ -283,11 +304,11 @@ KernUser_Init(
     coreIx = gData.UserCrtInfo.mTextPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
-        pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
-//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pte);
+        pagePhys = KernMap_BreakOnePage(gpProc1, chkOld, 0);
+//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pagePhys);
         KernArch_InvalidateTlbPageOnThisCore(chkOld);
-//        K2OSKERN_Debug("MAKE %08X->%08X USER_TEXT\n", chkOld, pte);
-        KernMap_MakeOnePresentPage(gpProc1, chkOld, pte, K2OS_MAPTYPE_USER_TEXT);
+//        K2OSKERN_Debug("MAKE %08X->%08X USER_TEXT\n", chkOld, pagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_TEXT);
         chkOld += K2_VA32_MEMPAGE_BYTES;
         coreIx -= K2_VA32_MEMPAGE_BYTES;
     } while (coreIx > 0);
@@ -295,11 +316,11 @@ KernUser_Init(
     coreIx = gData.UserCrtInfo.mReadPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
-        pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
-//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pte);
+        pagePhys = KernMap_BreakOnePage(gpProc1, chkOld, 0);
+//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pagePhys);
         KernArch_InvalidateTlbPageOnThisCore(chkOld);
-//        K2OSKERN_Debug("MAKE %08X->%08X USER_READ\n", chkOld, pte);
-        KernMap_MakeOnePresentPage(gpProc1, chkOld, pte, K2OS_MAPTYPE_USER_READ);
+//        K2OSKERN_Debug("MAKE %08X->%08X USER_READ\n", chkOld, pagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_READ);
         chkOld += K2_VA32_MEMPAGE_BYTES;
         coreIx -= K2_VA32_MEMPAGE_BYTES;
     } while (coreIx > 0);
@@ -312,11 +333,11 @@ KernUser_Init(
     coreIx = gData.UserCrtInfo.mSymPagesCount * K2_VA32_MEMPAGE_BYTES;
     do
     {
-        pte = KernMap_BreakOnePage(gpProc1, chkOld, 0);
-//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pte);
+        pagePhys = KernMap_BreakOnePage(gpProc1, chkOld, 0);
+//        K2OSKERN_Debug("BRAK %08X (was %08X), INVALIDATE\n", chkOld, pagePhys);
         KernArch_InvalidateTlbPageOnThisCore(chkOld);
-//        K2OSKERN_Debug("MAKE %08X->%08X USER_READ\n", chkOld, pte);
-        KernMap_MakeOnePresentPage(gpProc1, chkOld, pte, K2OS_MAPTYPE_USER_READ);
+//        K2OSKERN_Debug("MAKE %08X->%08X USER_READ\n", chkOld, pagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_READ);
         chkOld += K2_VA32_MEMPAGE_BYTES;
         coreIx -= K2_VA32_MEMPAGE_BYTES;
     } while (coreIx > 0);
