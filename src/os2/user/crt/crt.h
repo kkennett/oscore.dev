@@ -33,6 +33,7 @@
 #define __CRT_H
 
 #include <k2os.h>
+#include <lib/k2bit.h>
 
 typedef void(*__vfpv)(void *);
 

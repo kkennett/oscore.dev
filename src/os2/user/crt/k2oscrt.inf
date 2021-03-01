@@ -143,6 +143,20 @@ K2MEM_Compare32
 K2MEM_Compare64
 K2MEM_Compare
 
+# 
+# TLS
+#
+K2OS_Tls_AllocSlot
+K2OS_Tls_FreeSlot
+K2OS_Tls_SetValue
+K2OS_Tls_GetValue
+
+#
+# THREADS
+#
+K2OS_Thread_GetLastStatus
+K2OS_Thread_SetLastStatus
+
 
 #########################################################
 [Data]

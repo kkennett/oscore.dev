@@ -29,50 +29,32 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OS_H
-#define __K2OS_H
+#include "crt.h"
 
-#include "k2osbase.h"
-
-#if __cplusplus
-extern "C" {
-#endif
-
-//
-//------------------------------------------------------------------------
-//
-
-#define K2OS_SYSCALL_ID_GET_THREAD_IX   0
-
-typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
-
-#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
-
-//
-//------------------------------------------------------------------------
-//
-
-K2STAT K2OS_Thread_GetLastStatus(void);
-K2STAT K2OS_Thread_SetLastStatus(K2STAT aStatus);
-
-//
-//------------------------------------------------------------------------
-//
-
-#define K2OS_MAX_NUM_TLS_SLOTS  32
-
-K2STAT K2OS_TlsAlloc(UINT32 *apRetNewIndex);
-K2STAT K2OS_TlsFree(UINT32 aSlotIndex);
-K2STAT K2OS_SetTlsValue(UINT32 aSlotIndex, UINT32 aValue);
-K2STAT K2OS_GetTlsValue(UINT32 aSlotIndex, UINT32 *apRetValue);
-
-//
-//------------------------------------------------------------------------
-//
-
-
-#if __cplusplus
+K2STAT
+K2OS_Thread_GetLastStatus(
+    void
+)
+{
+    UINT32 *pTls;
+    
+    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (K2OS_SYSCALL(K2OS_SYSCALL_ID_GET_THREAD_IX, 0) * K2_VA32_MEMPAGE_BYTES));
+    
+    return (K2STAT)(pTls[0]);
 }
-#endif
 
-#endif // __K2OS_H
+K2STAT
+K2OS_Thread_SetLastStatus(
+    K2STAT aStatus
+)
+{
+    UINT32 *pTls;
+    UINT32  result;
+
+    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (K2OS_SYSCALL(K2OS_SYSCALL_ID_GET_THREAD_IX, 0) * K2_VA32_MEMPAGE_BYTES));
+    
+    result = (K2STAT)(pTls[0]);
+    pTls[0] = (UINT32)aStatus;
+
+    return result;
+}

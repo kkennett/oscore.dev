@@ -46,6 +46,7 @@ STATIC_LIBS += @shared/lib/k2atomic
 STATIC_LIBS += @shared/lib/k2crc
 STATIC_LIBS += @shared/lib/k2dlxsupp
 STATIC_LIBS += @shared/lib/k2elf32
+STATIC_LIBS += @shared/lib/k2bit
 
 STATIC_LIBS += @$(K2_OS)/user/crt
 
