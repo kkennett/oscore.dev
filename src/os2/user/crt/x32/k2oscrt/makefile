@@ -38,12 +38,19 @@ DLX_INF := ../../k2oscrt.inf
 
 SOURCES += x32exception.c
 
+#
+# functions are exported from these libraries for general use 
+#
 STATIC_LIBS += @shared/lib/k2mem
 STATIC_LIBS += @shared/lib/k2asc
 STATIC_LIBS += @shared/lib/k2list
-STATIC_LIBS += @shared/lib/k2tree
 STATIC_LIBS += @shared/lib/k2atomic
+STATIC_LIBS += @shared/lib/k2tree
 STATIC_LIBS += @shared/lib/k2crc
+
+#
+# these are other libraries with pieces consumed here but 
+# not exported
 STATIC_LIBS += @shared/lib/k2dlxsupp
 STATIC_LIBS += @shared/lib/k2elf32
 STATIC_LIBS += @shared/lib/k2bit
