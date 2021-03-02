@@ -393,33 +393,41 @@ sChangeAddresses(
             // symbol targets section in this file
             pTrgSecHdr = &pSecHdrArray[pSym->st_shndx];
 
-            symOffset = pSym->st_value - pTrgSecHdr->sh_addr;
-
-            if ((pTrgSecHdr->sh_flags & DLX_SHF_TYPE_MASK) == DLX_SHF_TYPE_IMPORTS)
+            // test if target section is already where it should be
+            // and leave it alone unless it is an imports section
+            if ((pTrgSecHdr->sh_addr != apSector->mSecAddr[pSym->st_shndx + sectionCount]) &&
+                ((pTrgSecHdr->sh_flags & DLX_SHF_TYPE_MASK) != DLX_SHF_TYPE_IMPORTS))
             {
-                // this is an imported symbol
-                // the target section header has:
-                //   sh_link = pointer to DATA of EXPORTS section in DLX being imported from
-                if (pTrgSecHdr->sh_entsize != 0)
+                // target section is at a different address at link time
+                // so things have to change.
+                symOffset = pSym->st_value - pTrgSecHdr->sh_addr;
+
+                if ((pTrgSecHdr->sh_flags & DLX_SHF_TYPE_MASK) == DLX_SHF_TYPE_IMPORTS)
                 {
-                    // fast link by offset
-                    pRef = (DLX_EXPORT_REF *)(pTrgSecHdr->sh_link + symOffset);
-                    pSym->st_value = pRef->mAddr;
+                    // this is an imported symbol
+                    // the target section header has:
+                    //   sh_link = pointer to DATA of EXPORTS section in DLX being imported from
+                    if (pTrgSecHdr->sh_entsize != 0)
+                    {
+                        // fast link by offset
+                        pRef = (DLX_EXPORT_REF *)(pTrgSecHdr->sh_link + symOffset);
+                        pSym->st_value = pRef->mAddr;
+                    }
+                    else
+                    {
+                        // slow link by lookup
+                        status = iK2DLXSUPP_FindExport(
+                            (DLX_EXPORTS_SECTION *)pTrgSecHdr->sh_link,
+                            pSymStr + pSym->st_name,
+                            &pSym->st_value);
+                        if (K2STAT_IS_ERROR(status))
+                            return status;
+                    }
                 }
                 else
                 {
-                    // slow link by lookup
-                    status = iK2DLXSUPP_FindExport(
-                        (DLX_EXPORTS_SECTION *)pTrgSecHdr->sh_link,
-                        pSymStr + pSym->st_name,
-                        &pSym->st_value);
-                    if (K2STAT_IS_ERROR(status))
-                        return status;
+                    pSym->st_value = apSector->mSecAddr[pSym->st_shndx + sectionCount] + symOffset;
                 }
-            }
-            else
-            {
-                pSym->st_value = apSector->mSecAddr[pSym->st_shndx + sectionCount] + symOffset;
             }
         }
     }
@@ -441,11 +449,19 @@ sChangeAddresses(
                 entryAddr += apSector->mSecAddr[secIx + sectionCount];
 
                 apSector->Module.mEntrypoint = (UINT32)entryAddr;
-                apSector->Module.mpElf->e_entry = entryAddr;
+
+                // test before set in case address mpElf is read only
+                if (apSector->Module.mpElf->e_entry != entryAddr)
+                    apSector->Module.mpElf->e_entry = entryAddr;
                 symIx = 1;
             }
         }
-        pTrgSecHdr->sh_addr = apSector->mSecAddr[secIx + sectionCount];
+        if (pTrgSecHdr->sh_addr != apSector->mSecAddr[secIx + sectionCount])
+        {
+            // only set after check in case trgsechdr is actually read-only
+            // and module is being 'linked' in place
+            pTrgSecHdr->sh_addr = apSector->mSecAddr[secIx + sectionCount];
+        }
     }
 
     //
@@ -465,9 +481,10 @@ sProcessReloc(
     )
 {
     Elf32_Shdr *    pSecHdrArray;
-    Elf32_Shdr *    pRelSecHdr;
-    Elf32_Shdr *    pSymSecHdr;
-    Elf32_Shdr *    pTrgSecHdr;
+    Elf32_Shdr *    pRelSecHdr;     // relocations
+    Elf32_Shdr *    pSymSecHdr;     // symbol table for relocatilns
+    Elf32_Shdr *    pTrgSecHdr;     // section being changed 
+    Elf32_Shdr *    pSrcSecHdr;     // per-relocation source section containing symbol
     UINT32          secIx;
     UINT32          sectionCount;
     UINT32          relIx;
@@ -530,16 +547,22 @@ sProcessReloc(
                 if ((pSym->st_shndx != 0) &&
                     (pSym->st_shndx < sectionCount))
                 {
-                    // unlink and update relocation to just hold offset into rel target section
-                    if (!aLink)
-                        pRel->r_offset -= pTrgSecHdr->sh_addr;
-                    status = linkFunc(
-                        pTrgData + pRel->r_offset, 
-                        pTrgSecHdr->sh_addr + pRel->r_offset,
-                        ELF32_R_TYPE(pRel->r_info),
-                        pSym->st_value);
-                    if (K2STAT_IS_ERROR(status))
-                        return status;
+                    pSrcSecHdr = &pSecHdrArray[pSym->st_shndx];
+                    if (pSrcSecHdr->sh_addr != apSector->mSecAddr[pSym->st_shndx + sectionCount])
+                    {
+                        // section symbol is in has been moved at link time
+
+                        // if unlink, update relocation to just hold offset into rel target section
+                        if (!aLink)
+                            pRel->r_offset -= pTrgSecHdr->sh_addr;
+                        status = linkFunc(
+                            pTrgData + pRel->r_offset,
+                            pTrgSecHdr->sh_addr + pRel->r_offset,
+                            ELF32_R_TYPE(pRel->r_info),
+                            pSym->st_value);
+                        if (K2STAT_IS_ERROR(status))
+                            return status;
+                    }
                 }
             }
             pRel = (Elf32_Rel *)(((UINT8 *)pRel) + relEntBytes);
@@ -725,7 +748,7 @@ iK2DLXSUPP_Link(
     if (K2STAT_IS_ERROR(status))
         return status;
 
-    if (pSector->Module.mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS)
+    if (pSector->Module.mFlags & K2DLXSUPP_MODFLAG_KEEP_SYMBOLS)
         sPopulateSymTrees(pSector);
 
     return K2STAT_OK;

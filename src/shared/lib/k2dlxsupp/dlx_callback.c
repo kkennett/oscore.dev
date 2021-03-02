@@ -54,9 +54,9 @@ iK2DLXSUPP_DoCallback(
     if ((apDlx->mEntrypoint != 0) && (callEntrypoint))
     {
         entryPoint = (DLX_pf_ENTRYPOINT)apDlx->mEntrypoint;
-        gpK2DLXSUPP_Vars->mAcqDisabled = TRUE;
+        gpK2DLXSUPP_Vars->mFlags |= K2DLXSUPP_VARFLAG_ACQ_DISABLED;
         status = K2_EXTRAP(&trap, entryPoint(apDlx, aIsLoad ? DLX_ENTRY_REASON_LOAD : DLX_ENTRY_REASON_UNLOAD));
-        gpK2DLXSUPP_Vars->mAcqDisabled = FALSE;
+        gpK2DLXSUPP_Vars->mFlags &= ~K2DLXSUPP_VARFLAG_ACQ_DISABLED;
         if (gpK2DLXSUPP_Vars->Host.PostCallback != NULL)
             status = gpK2DLXSUPP_Vars->Host.PostCallback(apAcqContext, apDlx->mHostFile, status, apDlx);
         return status;

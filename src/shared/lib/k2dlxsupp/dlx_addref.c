@@ -57,7 +57,7 @@ iK2DLXSUPP_FindAndAddRef(
         if (pLink == (K2LIST_LINK *)apDlx)
         {
             pDlx = K2_GET_CONTAINER(DLX, pLink, ListLink);
-            if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
+            if (0 == (pDlx->mFlags & K2DLXSUPP_MODFLAG_PERMANENT))
             {
                 if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
                     gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);

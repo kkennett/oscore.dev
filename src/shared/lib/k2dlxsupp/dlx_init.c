@@ -106,10 +106,10 @@ sDumpOneDlx(DLX *apDlx)
 
     printf("%08X %d \"%.*s\"\n", (UINT32)apDlx, apDlx->mIntNameLen, apDlx->mIntNameLen, apDlx->mpIntName);
     printf("  p%08X n%08X\n", (UINT32)apDlx->ListLink.mpPrev, (UINT32)apDlx->ListLink.mpNext);
-    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED ? "FULLY LOADED" : "IN LOAD");
-    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT ? "PERMANENT" : "TRANSIENT");
+    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_MODFLAG_FULLY_LOADED ? "FULLY LOADED" : "IN LOAD");
+    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_MODFLAG_PERMANENT ? "PERMANENT" : "TRANSIENT");
     printf("  REFS        %08X\n", apDlx->mRefs);
-    printf("  ENTRY       0x%08X (%s CALLED)\n", (UINT32)apDlx->mEntrypoint, apDlx->mFlags & K2DLXSUPP_FLAG_ENTRY_CALLED ? "" : "NOT");
+    printf("  ENTRY       0x%08X (%s CALLED)\n", (UINT32)apDlx->mEntrypoint, apDlx->mFlags & K2DLXSUPP_MODFLAG_ENTRY_CALLED ? "" : "NOT");
     printf("  HOSTFILE    0x%08X\n", (UINT32)apDlx->mHostFile);
     printf("  CURSECTOR   %d\n", apDlx->mCurSector);
     printf("  SECTORCOUNT %d\n", apDlx->mSectorCount);
@@ -225,7 +225,8 @@ K2DLXSUPP_Init(
     void *          apMemoryPage,
     K2DLXSUPP_HOST *apSupp,
     BOOL            aKeepSym,
-    BOOL            aReInit
+    BOOL            aReInit,
+    BOOL            aLinkInPlaceOnly
     )
 {
     K2LIST_LINK *   pListLink;
@@ -237,7 +238,17 @@ K2DLXSUPP_Init(
 
     gpK2DLXSUPP_Vars = (K2DLXSUPP_VARS *)apMemoryPage;
     if (!aReInit)
+    {
         K2MEM_Zero(apMemoryPage, K2_VA32_MEMPAGE_BYTES);
+    }
+    if (aKeepSym)
+    {
+        gpK2DLXSUPP_Vars->mFlags |= K2DLXSUPP_VARFLAG_KEEP_SYMBOLS;
+    }
+    if (aLinkInPlaceOnly)
+    {
+        gpK2DLXSUPP_Vars->mFlags |= K2DLXSUPP_VARFLAG_LINK_IN_PLACE;
+    }
 
     if (apSupp != NULL)
     {
@@ -250,10 +261,6 @@ K2DLXSUPP_Init(
         gpK2DLXSUPP_Vars->Host.mHostSizeBytes = sizeof(K2DLXSUPP_HOST);
     }
 
-    gpK2DLXSUPP_Vars->mAcqDisabled = FALSE;
-
-    gpK2DLXSUPP_Vars->mKeepSym = aKeepSym;
-
     if (!aReInit)
     {
         K2LIST_Init(&gpK2DLXSUPP_Vars->LoadedList);
@@ -261,8 +268,6 @@ K2DLXSUPP_Init(
     }
     else
     {
-        gpK2DLXSUPP_Vars->mHandedOff = FALSE;
-
         //
         // symbol trees in nodes need to be adjusted
         // to have thier comparison function addresses updated

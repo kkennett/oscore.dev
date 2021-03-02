@@ -109,15 +109,18 @@ struct _K2DLX_SYMTREE_NODE
     char *      mpSymName;
 };
 
+#define K2DLXSUPP_VARFLAG_ACQ_DISABLED     1
+#define K2DLXSUPP_VARFLAG_KEEP_SYMBOLS     2
+#define K2DLXSUPP_VARFLAG_HANDED_OFF       4
+#define K2DLXSUPP_VARFLAG_LINK_IN_PLACE    8
+
 typedef struct _K2DLXSUPP_VARS K2DLXSUPP_VARS;
 struct _K2DLXSUPP_VARS
 {
     K2DLXSUPP_HOST  Host;
     K2LIST_ANCHOR   LoadedList;
     K2LIST_ANCHOR   AcqList;
-    BOOL            mAcqDisabled;
-    BOOL            mKeepSym;
-    BOOL            mHandedOff;
+    UINT32          mFlags;
 };
 
 void
