@@ -117,8 +117,9 @@ sReInitDlx(
     stat = K2DLXSUPP_Init(
         pLoaderPage,
         &sgDlxHost,
-        TRUE,
-        TRUE);
+        TRUE,   // keep symbols
+        TRUE,   // reinit
+        FALSE); // link in place only
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     return stat;
@@ -146,6 +147,7 @@ __k2oscrt_user_entry(
     // must be the first thing that k2oscrt does
     //
     *((UINT32 *)sgDlxInitMem) = (UINT32)K2DLXSUPP_Init;
+    *(((UINT32 *)sgDlxInitMem) + 1) = (UINT32)DLX_Acquire;
     K2OS_SYSCALL(K2OS_SYSCALL_ID_CRT_INIT, (UINT32)sgDlxInitMem);
 
     //
