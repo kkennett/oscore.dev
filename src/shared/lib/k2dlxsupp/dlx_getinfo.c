@@ -55,7 +55,7 @@ K2DLXSUPP_GetInfo(
         return K2STAT_ERROR_BAD_ARGUMENT;
     }
 
-    if (!(gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_HANDED_OFF))
+    if (!gpK2DLXSUPP_Vars->mHandedOff)
     {
         if (NULL == iK2DLXSUPP_FindAndAddRef(apDlx))
         {
@@ -75,7 +75,7 @@ K2DLXSUPP_GetInfo(
     if (appRetFileName != NULL)
         *appRetFileName = apDlx->mpInfo->mFileName;
 
-    if (!(gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_HANDED_OFF))
+    if (!gpK2DLXSUPP_Vars->mHandedOff)
     {
         if (apRetSegInfo != NULL)
             K2MEM_Copy(apRetSegInfo, apDlx->mpInfo->SegInfo, sizeof(DLX_SEGMENT_INFO) * DlxSeg_Count);

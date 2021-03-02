@@ -92,7 +92,7 @@ sPrepModule(
         apAcqContext,
         apDlx->mHostFile, 
         pInfo, left, 
-        (apDlx->mFlags & K2DLXSUPP_MODFLAG_KEEP_SYMBOLS) ? TRUE : FALSE,
+        (apDlx->mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS) ? TRUE : FALSE,
         &apDlx->SegAlloc);
     if (K2STAT_IS_ERROR(status))
         return K2DLXSUPP_ERRORPOINT(status);
@@ -191,7 +191,7 @@ sPrep(
     pDlx = &pPage->ModuleSector.Module;
     pDlx->mHostFile = openResult.mHostFile;
     pDlx->mSectorCount = openResult.mFileSectorCount;
-    pDlx->mFlags = (gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_KEEP_SYMBOLS) ? K2DLXSUPP_MODFLAG_KEEP_SYMBOLS : 0;
+    pDlx->mFlags = gpK2DLXSUPP_Vars->mKeepSym ? K2DLXSUPP_FLAG_KEEP_SYMBOLS : 0;
     pDlx->mLinkAddr = openResult.mModulePageLinkAddr;
 
     for (secIx = 0;secIx < 3;secIx++)
@@ -491,7 +491,7 @@ sLoadModule(
     DLX *           pSubModule;
     K2STAT          status;
 
-    K2_ASSERT(!(apDlx->mFlags & K2DLXSUPP_MODFLAG_FULLY_LOADED));
+    K2_ASSERT(!(apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED));
 
     pInfo = apDlx->mpInfo;
 
@@ -503,7 +503,7 @@ sLoadModule(
         {
             pImport = (DLX_IMPORT *)pWork;
             pSubModule = (DLX *)pImport->mReserved;
-            if (!(pSubModule->mFlags & K2DLXSUPP_MODFLAG_FULLY_LOADED))
+            if (!(pSubModule->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED))
             {
                 status = sLoadModule(apAcqContext, pSubModule);
                 if (K2STAT_IS_ERROR(status))
@@ -534,7 +534,7 @@ sLoadModule(
     {
         K2LIST_Remove(&gpK2DLXSUPP_Vars->AcqList, &apDlx->ListLink);
         K2LIST_AddAtTail(&gpK2DLXSUPP_Vars->LoadedList, &apDlx->ListLink);
-        apDlx->mFlags |= K2DLXSUPP_MODFLAG_FULLY_LOADED;
+        apDlx->mFlags |= K2DLXSUPP_FLAG_FULLY_LOADED;
     }
 
     return status;
@@ -579,7 +579,7 @@ sAcquire(
         //
         // already fully loaded dlx
         //
-        if (0 == (pDlx->mFlags & K2DLXSUPP_MODFLAG_PERMANENT))
+        if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
         {
             if (apMatchId == NULL)
             {
@@ -611,7 +611,7 @@ sAcquire(
         pDlx = sFindModuleOnList(&gpK2DLXSUPP_Vars->AcqList, apName, aNameLen, apMatchId);
         if (pDlx != NULL)
         {
-            if (0 == (pDlx->mFlags & K2DLXSUPP_MODFLAG_PERMANENT))
+            if (0 == (pDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT))
             {
                 if (gpK2DLXSUPP_Vars->Host.RefChange != NULL)
                     gpK2DLXSUPP_Vars->Host.RefChange(pDlx->mHostFile, pDlx, 1);
@@ -705,7 +705,7 @@ DLX_Acquire(
         }
     }
 
-    if (gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_ACQ_DISABLED)
+    if (gpK2DLXSUPP_Vars->mAcqDisabled)
     {
         if (gpK2DLXSUPP_Vars->Host.CritSec != NULL)
             gpK2DLXSUPP_Vars->Host.CritSec(FALSE);

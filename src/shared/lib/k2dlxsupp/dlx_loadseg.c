@@ -70,21 +70,11 @@ iK2DLXSUPP_LoadSegments(
             if ((apDlx->mCurSector * DLX_SECTOR_BYTES) != pInfo->SegInfo[segIx].mFileOffset)
                 return K2DLXSUPP_ERRORPOINT(K2STAT_DLX_ERROR_FILE_CORRUPTED);
 
-            if (0 == (gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_LINK_IN_PLACE))
-            {
-                status = gpK2DLXSUPP_Vars->Host.ReadSectors(
-                    apAcqContext,
-                    apDlx->mHostFile,
-                    (void *)apDlx->SegAlloc.Segment[segIx].mDataAddr,
-                    count);
-            }
-            else
-            {
-                status = gpK2DLXSUPP_Vars->Host.SkipSectors(
-                    apAcqContext,
-                    apDlx->mHostFile,
-                    count);
-            }
+            status = gpK2DLXSUPP_Vars->Host.ReadSectors(
+                apAcqContext,
+                apDlx->mHostFile, 
+                (void *)apDlx->SegAlloc.Segment[segIx].mDataAddr, 
+                count);
 
             if (K2STAT_IS_ERROR(status))
                 return K2DLXSUPP_ERRORPOINT(status);

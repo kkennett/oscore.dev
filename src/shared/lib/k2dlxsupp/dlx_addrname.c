@@ -87,7 +87,7 @@ DLX_AddrToName(
 
     baseAddr = 0;
 
-    if (apDlx->mFlags & K2DLXSUPP_MODFLAG_KEEP_SYMBOLS)
+    if (apDlx->mFlags & K2DLXSUPP_FLAG_KEEP_SYMBOLS)
     {
         // find the closest matching symbol in the segment and set baseAddr and pBaseName
         pAnchor = &apDlx->SymTree[segIx - DlxSeg_Text];

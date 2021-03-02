@@ -109,7 +109,7 @@ sHandoffOneDlxSector(
         }
 
         apSector->Module.mRefs = (UINT32)-1;
-        apSector->Module.mFlags |= K2DLXSUPP_MODFLAG_PERMANENT;
+        apSector->Module.mFlags |= K2DLXSUPP_FLAG_PERMANENT;
         apSector->Module.mHostFile = 0;
         apSector->Module.mCurSector = 0;
         apSector->Module.mSectorCount = 0;
@@ -150,7 +150,7 @@ K2DLXSUPP_Handoff(
     BOOL            foundEntryDLX;
     K2STAT          status;
 
-    if (gpK2DLXSUPP_Vars->mFlags & K2DLXSUPP_VARFLAG_HANDED_OFF)
+    if (gpK2DLXSUPP_Vars->mHandedOff)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_API_ORDER);
 
     if ((appEntryDlx == NULL) ||
@@ -200,7 +200,7 @@ K2DLXSUPP_Handoff(
 
     } while (pLink != NULL);
 
-    gpK2DLXSUPP_Vars->mFlags |= K2DLXSUPP_VARFLAG_HANDED_OFF;
+    gpK2DLXSUPP_Vars->mHandedOff = TRUE;
 
     return 0;
 }
