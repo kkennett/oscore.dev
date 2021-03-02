@@ -67,93 +67,32 @@ K2OS_GetDlxModule(
     return (DLX *)__dso_handle;
 }
 
-static UINT8 sgDlxInitMem[K2_VA32_MEMPAGE_BYTES * 3];
-
-#if 0
-typedef K2STAT (*pfK2DLXSUPP_CritSec)(BOOL aEnter);
-typedef void   (*pfK2DLXSUPP_AtReInit)(DLX *apDlx, UINT32 aModulePageLinkAddr, K2DLXSUPP_HOST_FILE *apInOutHostFile);
-typedef K2STAT (*pfK2DLXSUPP_AcqAlreadyLoaded)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile);
-typedef K2STAT (*pfK2DLXSUPP_Open)(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult);
-typedef K2STAT (*pfK2DLXSUPP_ReadSectors)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount);
-typedef K2STAT (*pfK2DLXSUPP_Prepare)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc);
-typedef BOOL   (*pfK2DLXSUPP_PreCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx);
-typedef K2STAT (*pfK2DLXSUPP_PostCallback)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx);
-typedef K2STAT (*pfK2DLXSUPP_Finalize)(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc);
-typedef K2STAT (*pfK2DLXSUPP_RefChange)(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange);
-typedef K2STAT (*pfK2DLXSUPP_Purge)(K2DLXSUPP_HOST_FILE aHostFile);
-typedef K2STAT (*pfK2DLXSUPP_ErrorPoint)(char const *apFile, int aLine, K2STAT aStatus);
-
-typedef struct _K2DLXSUPP_HOST ;
-struct _K2DLXSUPP_HOST
-{
-    UINT32                        mHostSizeBytes;
-
-    pfK2DLXSUPP_CritSec           CritSec;
-    pfK2DLXSUPP_AcqAlreadyLoaded  AcqAlreadyLoaded;
-    pfK2DLXSUPP_Open              Open;
-    pfK2DLXSUPP_AtReInit          AtReInit;
-    pfK2DLXSUPP_ReadSectors       ReadSectors;
-    pfK2DLXSUPP_Prepare           Prepare;
-    pfK2DLXSUPP_PreCallback       PreCallback;
-    pfK2DLXSUPP_PostCallback      PostCallback;
-    pfK2DLXSUPP_Finalize          Finalize;
-    pfK2DLXSUPP_RefChange         RefChange;
-    pfK2DLXSUPP_Purge             Purge;
-    pfK2DLXSUPP_ErrorPoint        ErrorPoint;
-};
-#endif
-static K2DLXSUPP_HOST sgDlxHost;
-
-static K2STAT 
-sReInitDlx(
-    void
-)
-{
-    K2STAT stat;
-    UINT8 *pLoaderPage;
-
-    pLoaderPage = (UINT8 *)((((UINT32)sgDlxInitMem) + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK);
-
-    stat = K2DLXSUPP_Init(
-        pLoaderPage,
-        &sgDlxHost,
-        TRUE,
-        TRUE);
-    K2_ASSERT(!K2STAT_IS_ERROR(stat));
-
-    return stat;
-
-}
-
-
 void
 K2_CALLCONV_REGS
 __k2oscrt_user_entry(
-    UINT32 aCoreIx,
-    UINT32 aArg2
+    K2ROFS const *  apROFS,
+    UINT32          aUnused
     )
 {
     //
-    // this will never execute as aCoreIx will never equal 0xFEEDF00D
+    // this will never execute as aUnused will never equal 0xFEEDF00D
     // it is here to pull in exports and must be 'reachable' code.
     // the *ADDRESS OF* gpDlxInfo is even invalid and trying to use
     // it in executing code will cause a fault.
     //
-    if (aCoreIx == 0xFEEDF00D)
+    if (aUnused == 0xFEEDF00D)
         __dso_handle = (void *)(*((UINT32 *)gpDlxInfo));
-
-    //
-    // must be the first thing that k2oscrt does
-    //
-    *((UINT32 *)sgDlxInitMem) = (UINT32)K2DLXSUPP_Init;
-    K2OS_SYSCALL(K2OS_SYSCALL_ID_CRT_INIT, (UINT32)sgDlxInitMem);
 
     //
     // actual code goes here
     //
     K2OS_Thread_SetLastStatus(K2STAT_NO_ERROR);
 
-    sReInitDlx();
+    //
+    // syscall with ROFS address
+    //
+    K2OS_SYSCALL(1, (UINT32)apROFS);
+
 
     while (1);
 }

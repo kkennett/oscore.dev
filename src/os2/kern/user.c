@@ -182,7 +182,7 @@ KernUser_Init(
     K2LIST_AddAtHead((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pFirstThread->CpuRunListLink);
 
     //
-    // map the pagetable for the public API page in the user space
+    // map the pagetable for the public API page and the ROFS in the user address space
     //
     pagePhys = sGetOnePhysicalPage(NULL);
     KernArch_InstallPageTable(gpProc1, K2OS_UVA_PUBLICAPI_PAGETABLE_BASE, pagePhys, TRUE);
@@ -195,6 +195,26 @@ KernUser_Init(
     KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_PUBLICAPI_BASE, pagePhys, K2OS_MAPTYPE_KERN_DATA);
     K2MEM_Zero((void *)K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
     KernArch_FlushCache(K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
+
+    //
+    // ROFS in kernel is already mapped.
+    // map ROFS into proc 1 as read-only data right underneath the public api page.
+    // the address of the ROFS is the first argument to the k2oscrt inital thread
+    //
+    coreIx = gData.mpROFS->mSectorCount;
+    coreIx *= K2ROFS_SECTOR_BYTES;
+    coreIx = K2_ROUNDUP(coreIx, K2_VA32_MEMPAGE_BYTES);
+    K2_ASSERT(coreIx <= (K2_VA32_PAGETABLE_MAP_BYTES - K2_VA32_MEMPAGE_BYTES));
+    chkOld = K2OS_UVA_PUBLICAPI_BASE - coreIx;
+    pagePhys = gData.LoadInfo.mBuiltinRofsPhys;
+    do
+    {
+//        K2OSKERN_Debug("MAKE %08X->%08X USER_READ (ROFS)\n", chkOld, pagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_READ);
+        chkOld += K2_VA32_MEMPAGE_BYTES;
+        pagePhys += K2_VA32_MEMPAGE_BYTES;
+        coreIx -= K2_VA32_MEMPAGE_BYTES;
+    } while (coreIx > 0);
 
     //
     // "load" k2oscrt.dlx into process 1

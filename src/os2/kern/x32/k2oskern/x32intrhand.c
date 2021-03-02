@@ -85,6 +85,7 @@ X32Kern_Intr_OnSystemCall(
         apCallingThread,
         apCallingThread->mIx
     );
+    K2OSKERN_Debug("Call Arg = %08X\n", apContext->REGS.EDX);
 }
 
 void 

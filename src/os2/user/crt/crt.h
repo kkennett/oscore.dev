@@ -37,6 +37,7 @@
 #include <lib/k2dlxsupp.h>
 #include <lib/k2elf32.h>
 #include <lib/k2bit.h>
+#include <lib/k2rofshelp.h>
 
 typedef void(*__vfpv)(void *);
 

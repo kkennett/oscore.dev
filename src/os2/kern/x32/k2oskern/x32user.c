@@ -50,12 +50,19 @@ KernArch_UserInit(
     //
     K2OSKERN_OBJ_THREAD *   pFirstThread;
     UINT32                  stackPtr;
+    UINT32                  rofsAddr;
 
     pFirstThread = &gpProc1->InitialThread;
     K2_ASSERT(*(((UINT32 *)K2OS_KVA_THREADPTRS_BASE) + pFirstThread->mIx) == (UINT32)pFirstThread);
 
     pFirstThread->Context.DS = (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER);
-    pFirstThread->Context.REGS.ECX = 0; // first arg to entry point
+
+    rofsAddr = gData.mpROFS->mSectorCount;
+    rofsAddr *= K2ROFS_SECTOR_BYTES;
+    rofsAddr = K2_ROUNDUP(rofsAddr, K2_VA32_MEMPAGE_BYTES);
+    rofsAddr = K2OS_UVA_PUBLICAPI_BASE - rofsAddr;
+
+    pFirstThread->Context.REGS.ECX = rofsAddr; // first arg to entry point
     pFirstThread->Context.REGS.EDX = 0; // second arg to entry point
     pFirstThread->Context.EIP = gData.UserCrtInfo.mEntrypoint;
     pFirstThread->Context.CS = (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER);
