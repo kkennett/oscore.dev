@@ -62,3 +62,21 @@ K2OS_Debug_Break(
 {
     K2OS_SYSCALL(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
 }
+
+UINT32 
+CrtDbg_Printf(
+    char const *apFormat, 
+    ...
+)
+{
+    char    outBuf[96];
+    VALIST  vaList;
+    UINT32  result;
+    
+    K2_VASTART(vaList, apFormat);
+    result = K2ASC_PrintfVarLen(outBuf, 95, apFormat, vaList);
+    K2_VAEND(vaList);
+    outBuf[95] = 0;
+    K2OS_Debug_OutputString(outBuf);
+    return result;
+}

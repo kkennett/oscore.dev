@@ -41,6 +41,8 @@
 
 typedef void(*__vfpv)(void *);
 
+UINT32 CrtDbg_Printf(char const *apFormat, ...);
+
 void CrtDlx_Init(K2ROFS const * apROFS);
 
 #endif // __CRT_H

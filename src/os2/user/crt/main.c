@@ -53,6 +53,7 @@ void
 K2_CALLCONV_REGS 
 sAssert(char const * apFile, int aLineNum, char const * apCondition)
 {
+    CrtDbg_Printf("ASSERT %s:%d (%s)\n", apFile, aLineNum, apCondition);
     *((UINT32 *)0) = 0;
     while (1);
 }
@@ -91,14 +92,14 @@ __k2oscrt_user_entry(
     //
     // syscall with ROFS address
     //
-    K2OS_Debug_OutputString("User Mode!\n");
+    CrtDbg_Printf("User Mode!\n");
 
     //
     // init dynamic loader and self-init this module
     //
     CrtDlx_Init(apROFS);
 
-    K2OS_Debug_OutputString("Death Spin\n");
+    CrtDbg_Printf("Death Spin\n");
     while (1);
 }
 

@@ -45,54 +45,109 @@ CrtDlx_CritSec(
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_AcqAlreadyLoaded(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile)
+K2STAT 
+CrtDlx_AcqAlreadyLoaded(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_Open(void *apAcqContext, char const * apFileSpec, char const *apNamePart, UINT32 aNamePartLen, K2DLXSUPP_OPENRESULT *apRetResult)
+K2STAT 
+CrtDlx_Open(
+    void *                  apAcqContext, 
+    char const *            apFileSpec, 
+    char const *            apNamePart, 
+    UINT32                  aNamePartLen, 
+    K2DLXSUPP_OPENRESULT *  apRetResult
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_ReadSectors(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, void *apBuffer, UINT32 aSectorCount)
+K2STAT 
+CrtDlx_ReadSectors(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    void *              apBuffer, 
+    UINT32              aSectorCount
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_Prepare(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, DLX_INFO *apInfo, UINT32 aInfoSize, BOOL aKeepSymbols, K2DLXSUPP_SEGALLOC *apRetAlloc)
+K2STAT 
+CrtDlx_Prepare(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    DLX_INFO *          apInfo, 
+    UINT32              aInfoSize, 
+    BOOL                aKeepSymbols, 
+    K2DLXSUPP_SEGALLOC *apRetAlloc
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-BOOL   CrtDlx_PreCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, BOOL aIsLoad, DLX *apDlx)
+BOOL 
+CrtDlx_PreCallback(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    BOOL                aIsLoad, 
+    DLX *               apDlx
+)
 {
     return FALSE;
 }
 
-K2STAT CrtDlx_PostCallback(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2STAT aUserStatus, DLX *apDlx)
+K2STAT 
+CrtDlx_PostCallback(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    K2STAT              aUserStatus, 
+    DLX *               apDlx
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_Finalize(void *apAcqContext, K2DLXSUPP_HOST_FILE aHostFile, K2DLXSUPP_SEGALLOC *apUpdateAlloc)
+K2STAT 
+CrtDlx_Finalize(
+    void *              apAcqContext, 
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    K2DLXSUPP_SEGALLOC *apUpdateAlloc
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_RefChange(K2DLXSUPP_HOST_FILE aHostFile, DLX *apDlx, INT32 aRefChange)
+K2STAT 
+CrtDlx_RefChange(
+    K2DLXSUPP_HOST_FILE aHostFile, 
+    DLX *               apDlx, 
+    INT32               aRefChange
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_Purge(K2DLXSUPP_HOST_FILE aHostFile)
+K2STAT 
+CrtDlx_Purge(
+    K2DLXSUPP_HOST_FILE aHostFile
+)
 {
     return K2STAT_ERROR_NOT_IMPL;
 }
 
-K2STAT CrtDlx_ErrorPoint(char const *apFile, int aLine, K2STAT aStatus)
+K2STAT 
+CrtDlx_ErrorPoint(
+    char const *    apFile, 
+    int             aLine, 
+    K2STAT          aStatus
+)
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    return aStatus;
 }
 
 void 
