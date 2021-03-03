@@ -31,74 +31,34 @@
 //
 #include "crt.h"
 
-void *                          __dso_handle;
-
-extern DLX_INFO const * const   gpDlxInfo;
-extern void *                   __data_end;
-
-int  __cxa_atexit(__vfpv f, void *a, DLX *apDlx);
-void __call_dtors(DLX *apDlx);
-
-#if K2_TARGET_ARCH_IS_ARM
-
-int __aeabi_atexit(void *object, __vfpv destroyer, void *dso_handle)
-{
-    return __cxa_atexit(destroyer, object, (DLX *)dso_handle);
-}
-
-#endif
-
-static 
-void 
-K2_CALLCONV_REGS 
-sAssert(char const * apFile, int aLineNum, char const * apCondition)
-{
-    *((UINT32 *)0) = 0;
-    while (1);
-}
-
-K2_pf_ASSERT K2_Assert = sAssert;
-
-DLX *
-K2OS_GetDlxModule(
-    void
+UINT32 
+K2OS_Debug_OutputString(
+    char const *apStr
 )
 {
-    return (DLX *)__dso_handle;
+    char const *pChk;
+
+    if (NULL == apStr)
+        return 0;
+
+    //
+    // fault in user mode if string is not null terminated
+    //
+    pChk = apStr;
+    do
+    {
+        if (0 == *pChk)
+            break;
+        pChk++;
+    } while (1);
+
+    return K2OS_SYSCALL(K2OS_SYSCALL_ID_OUTPUT_DEBUG, (UINT32)apStr);
 }
 
 void
-K2_CALLCONV_REGS
-__k2oscrt_user_entry(
-    K2ROFS const *  apROFS,
-    UINT32          aUnused
-    )
+K2OS_Debug_Break(
+    void
+)
 {
-    //
-    // this will never execute as aUnused will never equal 0xFEEDF00D
-    // it is here to pull in exports and must be 'reachable' code.
-    // the *ADDRESS OF* gpDlxInfo is even invalid and trying to use
-    // it in executing code will cause a fault.
-    //
-    if (aUnused == 0xFEEDF00D)
-        __dso_handle = (void *)(*((UINT32 *)gpDlxInfo));
-
-    //
-    // actual code goes here
-    //
-    K2OS_Thread_SetLastStatus(K2STAT_NO_ERROR);
-
-    //
-    // syscall with ROFS address
-    //
-    K2OS_Debug_OutputString("User Mode!\n");
-
-    //
-    // init dynamic loader and self-init this module
-    //
-    CrtDlx_Init(apROFS);
-
-    K2OS_Debug_OutputString("Death Spin\n");
-    while (1);
+    K2OS_SYSCALL(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
 }
-

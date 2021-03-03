@@ -275,8 +275,9 @@ struct _K2OSKERN_IRQ_CONFIG
 typedef struct _K2OSKERN_IRQ_CONFIG K2OSKERN_IRQ_CONFIG;
 
 //
-// handler returns TRUE if the interrupt was spurious and
-// whatever the cpu was doing should be quickly resumed
+// handler returns TRUE if the kernel should check the core
+// for activity.  otherwise returns FALSE to return to the
+// interrupted activity (thread or idle)
 //
 typedef BOOL (*K2OSKERN_pf_IntrHandler)(void *apContext);
 

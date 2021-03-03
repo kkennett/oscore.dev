@@ -105,12 +105,21 @@ struct _K2DLXSUPP_HOST
 
 typedef BOOL (*pfK2DLXSUPP_ConvertLoadPtr)(UINT32 * apAddr);
 
+typedef struct _K2DLXSUPP_PRELOAD K2DLXSUPP_PRELOAD;
+struct _K2DLXSUPP_PRELOAD
+{
+    void *          mpDlxPage;
+    UINT8 const *   mpDlxFileData;
+    UINT32          mDlxFileSizeBytes;
+};
+
 K2STAT
 K2DLXSUPP_Init(
-    void *              apMemoryPage,
-    K2DLXSUPP_HOST *    apHost,
-    BOOL                aKeepSym,
-    BOOL                aReInit
+    void *                      apMemoryPage,
+    K2DLXSUPP_HOST *            apHost,
+    BOOL                        aKeepSym,
+    BOOL                        aReInit,
+    K2DLXSUPP_PRELOAD const *   apPreload  // can only be non-NULL if aReInit is FALSE
     );
 
 K2STAT

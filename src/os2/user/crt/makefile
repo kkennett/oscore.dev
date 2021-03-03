@@ -37,9 +37,7 @@ SOURCES += atexit.c
 SOURCES += main.c
 SOURCES += tls.c
 SOURCES += thread.c
+SOURCES += debug.c
+SOURCES += dlxsupp.c
 
 include $(K2_ROOT)/src/shared/build/post.make
-
-
-
-

@@ -41,4 +41,6 @@
 
 typedef void(*__vfpv)(void *);
 
+void CrtDlx_Init(K2ROFS const * apROFS);
+
 #endif // __CRT_H

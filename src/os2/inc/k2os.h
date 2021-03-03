@@ -43,11 +43,19 @@ extern "C" {
 //
 
 #define K2OS_SYSCALL_ID_GET_THREAD_IX   0
-#define K2OS_SYSCALL_ID_CRT_INIT        1
+#define K2OS_SYSCALL_ID_OUTPUT_DEBUG    1
+#define K2OS_SYSCALL_ID_DEBUG_BREAK     2
 
 typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
 
 #define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
+
+//
+//------------------------------------------------------------------------
+//
+
+UINT32 K2OS_Debug_OutputString(char const *apStr);
+void   K2OS_Debug_Break(void);
 
 //
 //------------------------------------------------------------------------
@@ -62,10 +70,12 @@ K2STAT K2OS_Thread_SetLastStatus(K2STAT aStatus);
 
 #define K2OS_MAX_NUM_TLS_SLOTS  32
 
-K2STAT K2OS_TlsAlloc(UINT32 *apRetNewIndex);
-K2STAT K2OS_TlsFree(UINT32 aSlotIndex);
-K2STAT K2OS_SetTlsValue(UINT32 aSlotIndex, UINT32 aValue);
-K2STAT K2OS_GetTlsValue(UINT32 aSlotIndex, UINT32 *apRetValue);
+K2STAT K2OS_Tls_AllocSlot(UINT32 *apRetNewIndex);
+K2STAT K2OS_Tls_FreeSlot(UINT32 aSlotIndex);
+K2STAT K2OS_Tls_SetValue(UINT32 aSlotIndex, UINT32 aValue);
+K2STAT K2OS_Tls_GetValue(UINT32 aSlotIndex, UINT32 *apRetValue);
+
+
 
 //
 //------------------------------------------------------------------------
