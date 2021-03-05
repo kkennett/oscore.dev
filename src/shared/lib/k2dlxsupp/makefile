@@ -48,5 +48,6 @@ SOURCES += dlx_link.c
 SOURCES += dlx_loadseg.c
 SOURCES += dlx_release.c
 SOURCES += dlx_ident.c
+SOURCES += dlx_preload.c
 
 include $(K2_ROOT)/src/shared/build/post.make

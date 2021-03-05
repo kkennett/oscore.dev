@@ -54,6 +54,9 @@
     <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_release.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_preload.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\shared\lib\k2dlxsupp\idlx.h">

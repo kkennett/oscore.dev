@@ -172,6 +172,11 @@ iK2DLXSUPP_CompareUINT32(
     K2TREE_NODE *   apDlx
     );
 
+void
+iK2DLXSUPP_Preload(
+    K2DLXSUPP_PRELOAD const *   apPreload
+);
+
 #if K2_FLAG_NODEBUG
 #define K2DLXSUPP_ERRORPOINT(x)   x
 #else

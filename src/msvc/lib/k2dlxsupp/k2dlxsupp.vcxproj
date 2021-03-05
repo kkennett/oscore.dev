@@ -102,6 +102,7 @@
     <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_init.c" />
     <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_link.c" />
     <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_loadseg.c" />
+    <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_preload.c" />
     <ClCompile Include="..\..\..\shared\lib\k2dlxsupp\dlx_release.c" />
   </ItemGroup>
   <ItemGroup>

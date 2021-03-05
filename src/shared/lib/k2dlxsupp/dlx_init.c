@@ -30,17 +30,29 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 #ifdef _MSC_VER
-#define ENABLE_DUMP 1
+#define ENABLE_DUMP 0
+#define USE_STDIO   1
 #else
 #define ENABLE_DUMP 0
+#define USE_STDIO   0
 #endif
 
 #if ENABLE_DUMP
+#if USE_STDIO
 #include <stdio.h>
+#define     DUMPF   printf
 #endif
+#endif
+
 #include "idlx.h"
 
 #if ENABLE_DUMP
+
+#if !USE_STDIO
+UINT32 CrtDbg_Printf(char const *apFormat, ...);
+#define     DUMPF   CrtDbg_Printf        
+#endif
+
 static char const * const sgpSegName[DlxSeg_Count] =
 {
     "DLXINFO",
@@ -54,7 +66,7 @@ static char const * const sgpSegName[DlxSeg_Count] =
 
 static void sPrintGuid(K2_GUID128 const *apGuid)
 {
-    printf("{%08X-%04X-%04X-%04X-%02X%02X%02X%02X%02X%02X}",
+    DUMPF("{%08X-%04X-%04X-%04X-%02X%02X%02X%02X%02X%02X}",
         apGuid->mData1, apGuid->mData2, apGuid->mData3,
         (((UINT16)(apGuid->mData4[0])) << 8) | ((UINT16)(apGuid->mData4[1])),
         apGuid->mData4[2], apGuid->mData4[3], apGuid->mData4[4],
@@ -75,7 +87,7 @@ sDumpSymTree(
     do
     {
         pSymTreeNode = K2_GET_CONTAINER(K2DLX_SYMTREE_NODE, pTreeNode, TreeNode);
-        printf("       %08X %s\n", pSymTreeNode->TreeNode.mUserVal, pSymTreeNode->mpSymName);
+        DUMPF("       %08X %s\n", pSymTreeNode->TreeNode.mUserVal, pSymTreeNode->mpSymName);
         pTreeNode = K2TREE_NextNode(apAnchor, pTreeNode);
     } while (pTreeNode != NULL);
 }
@@ -86,10 +98,10 @@ sDumpExports(DLX_EXPORTS_SECTION *apSec)
 {
     UINT32 ix;
 
-    printf("      COUNT  %d\n", apSec->mCount);
-    printf("      CRCAPI %08X\n", apSec->mCRC32);
+    DUMPF("      COUNT  %d\n", apSec->mCount);
+    DUMPF("      CRCAPI %08X\n", apSec->mCRC32);
     for (ix = 0;ix < apSec->mCount;ix++)
-        printf("      %3d: %08X %s\n", ix, apSec->Export[ix].mAddr, ((char *)apSec) + apSec->Export[ix].mNameOffset);
+        DUMPF("      %3d: %08X %s\n", ix, apSec->Export[ix].mAddr, ((char *)apSec) + apSec->Export[ix].mNameOffset);
 }
 
 static
@@ -104,24 +116,24 @@ sDumpOneDlx(DLX *apDlx)
     DLX_EXPORTS_SECTION *   pExp;
     DLX_IMPORT *            pImport;
 
-    printf("%08X %d \"%.*s\"\n", (UINT32)apDlx, apDlx->mIntNameLen, apDlx->mIntNameLen, apDlx->mpIntName);
-    printf("  p%08X n%08X\n", (UINT32)apDlx->ListLink.mpPrev, (UINT32)apDlx->ListLink.mpNext);
-    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED ? "FULLY LOADED" : "IN LOAD");
-    printf("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT ? "PERMANENT" : "TRANSIENT");
-    printf("  REFS        %08X\n", apDlx->mRefs);
-    printf("  ENTRY       0x%08X (%s CALLED)\n", (UINT32)apDlx->mEntrypoint, apDlx->mFlags & K2DLXSUPP_FLAG_ENTRY_CALLED ? "" : "NOT");
-    printf("  HOSTFILE    0x%08X\n", (UINT32)apDlx->mHostFile);
-    printf("  CURSECTOR   %d\n", apDlx->mCurSector);
-    printf("  SECTORCOUNT %d\n", apDlx->mSectorCount);
-    printf("  RELSECS     %d\n", apDlx->mRelocSectionCount);
-    printf("  HDRBYTES    %d\n", apDlx->mHdrBytes);
-    printf("  EXPCODELOAD 0x%08X\n", (UINT32)apDlx->mpExpCodeDataAddr);
-    printf("  EXPREADLOAD 0x%08X\n", (UINT32)apDlx->mpExpReadDataAddr);
-    printf("  EXPDATALOAD 0x%08X\n", (UINT32)apDlx->mpExpDataDataAddr);
-    printf("  SEGMENTS:\n");
+    DUMPF("%08X %d \"%.*s\"\n", (UINT32)apDlx, apDlx->mIntNameLen, apDlx->mIntNameLen, apDlx->mpIntName);
+    DUMPF("  p%08X n%08X\n", (UINT32)apDlx->ListLink.mpPrev, (UINT32)apDlx->ListLink.mpNext);
+    DUMPF("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_FULLY_LOADED ? "FULLY LOADED" : "IN LOAD");
+    DUMPF("  %s\n", apDlx->mFlags & K2DLXSUPP_FLAG_PERMANENT ? "PERMANENT" : "TRANSIENT");
+    DUMPF("  REFS        %08X\n", apDlx->mRefs);
+    DUMPF("  ENTRY       0x%08X (%s CALLED)\n", (UINT32)apDlx->mEntrypoint, apDlx->mFlags & K2DLXSUPP_FLAG_ENTRY_CALLED ? "" : "NOT");
+    DUMPF("  HOSTFILE    0x%08X\n", (UINT32)apDlx->mHostFile);
+    DUMPF("  CURSECTOR   %d\n", apDlx->mCurSector);
+    DUMPF("  SECTORCOUNT %d\n", apDlx->mSectorCount);
+    DUMPF("  RELSECS     %d\n", apDlx->mRelocSectionCount);
+    DUMPF("  HDRBYTES    %d\n", apDlx->mHdrBytes);
+    DUMPF("  EXPCODELOAD 0x%08X\n", (UINT32)apDlx->mpExpCodeDataAddr);
+    DUMPF("  EXPREADLOAD 0x%08X\n", (UINT32)apDlx->mpExpReadDataAddr);
+    DUMPF("  EXPDATALOAD 0x%08X\n", (UINT32)apDlx->mpExpDataDataAddr);
+    DUMPF("  SEGMENTS:\n");
     for (ix = 0; ix < DlxSeg_Count; ix++)
     {
-        printf("    %d: %08X --------<%s>\n",
+        DUMPF("    %d: %08X --------<%s>\n",
             ix,
             apDlx->SegAlloc.Segment[ix].mLinkAddr,
             sgpSegName[ix]);
@@ -133,38 +145,38 @@ sDumpOneDlx(DLX *apDlx)
     }
     
     pInfo = apDlx->mpInfo;
-    printf("  INFO @ 0x%08X:\n", (UINT32)pInfo);
-    printf("    ELFCRC   0x%08X\n", pInfo->mElfCRC);
-    printf("    ID       "); sPrintGuid(&pInfo->ID); printf("\n");
-    printf("    STACK    %08X\n", pInfo->mEntryStackReq);
-    printf("    SEGMENTS:\n");
+    DUMPF("  INFO @ 0x%08X:\n", (UINT32)pInfo);
+    DUMPF("    ELFCRC   0x%08X\n", pInfo->mElfCRC);
+    DUMPF("    ID       "); sPrintGuid(&pInfo->ID); DUMPF("\n");
+    DUMPF("    STACK    %08X\n", pInfo->mEntryStackReq);
+    DUMPF("    SEGMENTS:\n");
     for (ix = 0; ix < DlxSeg_Count; ix++)
     {
-        printf("      %d: @ %08X for %08X <%s>\n",
+        DUMPF("      %d: @ %08X for %08X <%s>\n",
             ix,
             pInfo->SegInfo[ix].mLinkAddr,
             pInfo->SegInfo[ix].mMemActualBytes,
             sgpSegName[ix]);
     }
     pExp = pInfo->mpExpCode;
-    printf("    EXP CODE 0x%08X\n", (UINT32)pExp);
+    DUMPF("    EXP CODE 0x%08X\n", (UINT32)pExp);
     if (pExp != NULL)
         sDumpExports(pExp);
     pExp = pInfo->mpExpRead;
-    printf("    EXP READ 0x%08X\n", (UINT32)pExp);
+    DUMPF("    EXP READ 0x%08X\n", (UINT32)pExp);
     if (pExp != NULL)
         sDumpExports(pExp);
     pExp = pInfo->mpExpData;
-    printf("    EXP DATA 0x%08X\n", (UINT32)pExp);
+    DUMPF("    EXP DATA 0x%08X\n", (UINT32)pExp);
     if (pExp != NULL)
         sDumpExports(pExp);
 
-    printf("    %d IMPORTS\n", pInfo->mImportCount);
+    DUMPF("    %d IMPORTS\n", pInfo->mImportCount);
     pImport = (DLX_IMPORT *)(((UINT8 *)pInfo) + (sizeof(DLX_INFO) - sizeof(UINT32) + apDlx->mIntNameFieldLen));
     for (ix = 0;ix < pInfo->mImportCount;ix++)
     {
         pImportFrom = (DLX *)pImport->mReserved;
-        printf("      %d: %08X %.*s\n", ix, (UINT32)pImportFrom, pImportFrom->mIntNameLen, pImportFrom->mpIntName);
+        DUMPF("      %d: %08X %.*s\n", ix, (UINT32)pImportFrom, pImportFrom->mIntNameLen, pImportFrom->mpIntName);
         pImport = (DLX_IMPORT *)(((UINT8 *)pImport) + pImport->mSizeBytes);
     }
 
@@ -172,18 +184,17 @@ sDumpOneDlx(DLX *apDlx)
 
     pSecHdr = apDlx->mpSecHdr;
 
-    printf("  ELF @ %08X; SECHDRS 0x%08X\n", (UINT32)pElf, (UINT32)pSecHdr);
-    printf("    %s MODE\n", (pElf->e_flags & DLX_EF_KERNEL_ONLY) ? "KERNEL" : "ANY");
-    printf("    %d SECTIONS\n", pElf->e_shnum);
+    DUMPF("  ELF @ %08X; SECHDRS 0x%08X\n", (UINT32)pElf, (UINT32)pSecHdr);
+    DUMPF("    %s MODE\n", (pElf->e_flags & DLX_EF_KERNEL_ONLY) ? "KERNEL" : "ANY");
+    DUMPF("    %d SECTIONS\n", pElf->e_shnum);
     for (ix = 1;ix < pElf->e_shnum;ix++)
     {
-        printf("      %2d: @%08X type %2d flags %08X size %08X %s\n",
+        DUMPF("      %2d: @%08X type %2d flags %08X size %08X\n",
             ix,
             pSecHdr[ix].sh_addr,
             pSecHdr[ix].sh_type,
             pSecHdr[ix].sh_flags,
-            pSecHdr[ix].sh_size,
-            ((char *)pSecHdr[2].sh_addr) + pSecHdr[ix].sh_name);
+            pSecHdr[ix].sh_size);
     }
 }
 
@@ -193,15 +204,15 @@ sDumpDLX(void)
 {
     K2LIST_LINK *pLink;
 
-    printf("AT REINIT, DLX LIST:\n");
-    printf("--------------------\n");
+    DUMPF("DLX LIST:\n");
+    DUMPF("--------------------\n");
     pLink = gpK2DLXSUPP_Vars->LoadedList.mpHead;
     while (pLink != NULL)
     {
         sDumpOneDlx(K2_GET_CONTAINER(DLX, pLink, ListLink));
         pLink = pLink->mpNext;
     }
-    printf("--------------------\n");
+    DUMPF("--------------------\n");
 }
 #endif
 
@@ -236,6 +247,11 @@ K2DLXSUPP_Init(
     if (apMemoryPage == NULL)
         return K2DLXSUPP_ERRORPOINT(K2STAT_ERROR_BAD_ARGUMENT);
 
+    if (aReInit)
+    {
+        K2_ASSERT(NULL == apPreload);
+    }
+
     gpK2DLXSUPP_Vars = (K2DLXSUPP_VARS *)apMemoryPage;
     if (!aReInit)
         K2MEM_Zero(apMemoryPage, K2_VA32_MEMPAGE_BYTES);
@@ -259,6 +275,13 @@ K2DLXSUPP_Init(
     {
         K2LIST_Init(&gpK2DLXSUPP_Vars->LoadedList);
         K2LIST_Init(&gpK2DLXSUPP_Vars->AcqList);
+        if (NULL != apPreload)
+        {
+            iK2DLXSUPP_Preload(apPreload);
+#if ENABLE_DUMP
+            sDumpDLX();
+#endif
+        }
     }
     else
     {
