@@ -98,6 +98,11 @@ X32Kern_Intr_OnSystemCall(
         return FALSE;
     }
 
+    if (apContext->REGS.ECX == K2OS_SYSCALL_ID_CRT_INITDLX)
+    {
+        apCallingThread->mpProc->mpUserDlxList = (K2LIST_ANCHOR *)apContext->REGS.EDX;
+    }
+
     //
     // return true to run exec.  otherwise will return to interrupted activity
     //

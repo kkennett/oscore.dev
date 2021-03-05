@@ -108,6 +108,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\shared\inc\lib\k2dlxsupp.h" />
     <ClInclude Include="..\..\..\shared\inc\spec\dlx.h" />
+    <ClInclude Include="..\..\..\shared\lib\k2dlxsupp\dlx_struct.h" />
     <ClInclude Include="..\..\..\shared\lib\k2dlxsupp\idlx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

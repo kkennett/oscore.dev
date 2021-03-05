@@ -112,15 +112,16 @@ struct _K2DLXSUPP_PRELOAD
     UINT8 const *   mpDlxFileData;
     UINT32          mDlxFileSizeBytes;
     UINT32          mDlxBase;
+    K2LIST_ANCHOR * mpListAnchorOut;
 };
 
 K2STAT
 K2DLXSUPP_Init(
-    void *                      apMemoryPage,
-    K2DLXSUPP_HOST *            apHost,
-    BOOL                        aKeepSym,
-    BOOL                        aReInit,
-    K2DLXSUPP_PRELOAD const *   apPreload  // can only be non-NULL if aReInit is FALSE
+    void *              apMemoryPage,
+    K2DLXSUPP_HOST *    apHost,
+    BOOL                aKeepSym,
+    BOOL                aReInit,
+    K2DLXSUPP_PRELOAD * apPreload  // can only be non-NULL if aReInit is FALSE
     );
 
 K2STAT

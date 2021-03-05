@@ -170,6 +170,7 @@ CrtDlx_Init(
     preloadSelf.mpDlxFileData = K2ROFS_FILEDATA(sgpROFS, pFile);
     preloadSelf.mDlxFileSizeBytes = pFile->mSizeBytes;
     preloadSelf.mDlxBase = K2OS_UVA_LOW_BASE;
+    preloadSelf.mpListAnchorOut = NULL;
 
     K2MEM_Zero(&sgDlxHost, sizeof(sgDlxHost));
     sgDlxHost.mHostSizeBytes = sizeof(sgDlxHost);
@@ -187,4 +188,9 @@ CrtDlx_Init(
 
     stat = K2DLXSUPP_Init(sgpLoaderPage, &sgDlxHost, TRUE, FALSE, &preloadSelf);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    //
+    // tell the kernel where everything is for us for debugging purposes
+    //
+    K2OS_SYSCALL(K2OS_SYSCALL_ID_CRT_INITDLX, (UINT32)preloadSelf.mpListAnchorOut);
 }

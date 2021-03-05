@@ -68,5 +68,8 @@
     <ClInclude Include="..\..\..\shared\inc\spec\dlx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\..\shared\lib\k2dlxsupp\dlx_struct.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

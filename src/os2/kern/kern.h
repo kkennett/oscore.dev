@@ -251,6 +251,8 @@ struct _K2OSKERN_OBJ_PROCESS
     K2OSKERN_OBJ_THREAD     InitialThread;
     K2OSKERN_SEQLOCK        ThreadListSeqLock;
     K2LIST_ANCHOR           ThreadList;
+
+    K2LIST_ANCHOR *         mpUserDlxList;   // points into user space k2oscrt.dlx data segment
 };
 
 #define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1)

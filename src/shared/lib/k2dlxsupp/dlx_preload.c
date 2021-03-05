@@ -161,7 +161,7 @@ sExecPreload(
 
 void
 iK2DLXSUPP_Preload(
-    K2DLXSUPP_PRELOAD const *   apPreload
+    K2DLXSUPP_PRELOAD * apPreload
 )
 {
     K2STAT                  status;
@@ -393,4 +393,6 @@ iK2DLXSUPP_Preload(
     K2LIST_AddAtTail(&gpK2DLXSUPP_Vars->AcqList, &pDlx->ListLink);
 
     sExecPreload(pDlx, pData, fileOffset);
+
+    apPreload->mpListAnchorOut = &gpK2DLXSUPP_Vars->LoadedList;
 }

@@ -29,62 +29,68 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OS_H
-#define __K2OS_H
+#ifndef __DLX_STRUCT_H
+#define __DLX_STRUCT_H
 
-#include "k2osbase.h"
+/* --------------------------------------------------------------------------------- */
 
-#if __cplusplus
+#include <k2systype.h>
+
+#include <lib/k2list.h>
+#include <lib/k2elf32.h>
+#include <lib/k2tree.h>
+#include <lib/k2dlxsupp.h>
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
-//
-//------------------------------------------------------------------------
-//
+struct _DLX
+{
+    K2LIST_LINK                 ListLink;  // must be first thing in node
 
-#define K2OS_SYSCALL_ID_GET_THREAD_IX   0
-#define K2OS_SYSCALL_ID_OUTPUT_DEBUG    1
-#define K2OS_SYSCALL_ID_DEBUG_BREAK     2
-#define K2OS_SYSCALL_ID_CRT_INITDLX     3
+    UINT32                      mLinkAddr;
 
-typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
+    UINT32                      mRefs;
 
-#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
+    UINT32                      mFlags;
+    UINT32                      mEntrypoint;
 
-//
-//------------------------------------------------------------------------
-//
+    char const *                mpIntName;
+    UINT32                      mIntNameLen;
+    UINT32                      mIntNameFieldLen;
 
-UINT32 K2OS_Debug_OutputString(char const *apStr);
-void   K2OS_Debug_Break(void);
+    void *                      mHostFile;
+    UINT32                      mCurSector;
+    UINT32                      mSectorCount;
 
-//
-//------------------------------------------------------------------------
-//
+    UINT32                      mHdrBytes;
+    UINT32                      mRelocSectionCount;
+    K2DLXSUPP_SEGALLOC          SegAlloc;
+    Elf32_Ehdr *                mpElf;
+    Elf32_Shdr *                mpSecHdr;
 
-K2STAT K2OS_Thread_GetLastStatus(void);
-K2STAT K2OS_Thread_SetLastStatus(K2STAT aStatus);
+    DLX_INFO *                  mpInfo;         // the mpExpXXX inside this gets updated during link
 
-//
-//------------------------------------------------------------------------
-//
+    DLX_EXPORTS_SECTION *       mpExpCodeDataAddr;      // data addr of exports (Not link addr)
+    DLX_EXPORTS_SECTION *       mpExpReadDataAddr;
+    DLX_EXPORTS_SECTION *       mpExpDataDataAddr;
 
-#define K2OS_MAX_NUM_TLS_SLOTS  32
+    K2TREE_ANCHOR               SymTree[3];
+};
 
-K2STAT K2OS_Tls_AllocSlot(UINT32 *apRetNewIndex);
-K2STAT K2OS_Tls_FreeSlot(UINT32 aSlotIndex);
-K2STAT K2OS_Tls_SetValue(UINT32 aSlotIndex, UINT32 aValue);
-K2STAT K2OS_Tls_GetValue(UINT32 aSlotIndex, UINT32 *apRetValue);
+typedef struct _K2DLX_SYMTREE_NODE K2DLX_SYMTREE_NODE;
+struct _K2DLX_SYMTREE_NODE
+{
+    K2TREE_NODE TreeNode;
+    char *      mpSymName;
+};
 
-
-
-//
-//------------------------------------------------------------------------
-//
-
-
-#if __cplusplus
-}
+#ifdef __cplusplus
+};  // extern "C"
 #endif
 
-#endif // __K2OS_H
+/* --------------------------------------------------------------------------------- */
+
+#endif  // __DLX_STRUCT_H
+

@@ -44,43 +44,11 @@
 #include <lib/k2tree.h>
 #include <lib/k2dlxsupp.h>
 
+#include "dlx_struct.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-struct _DLX
-{
-    K2LIST_LINK                 ListLink;  // must be first thing in node
-
-    UINT32                      mLinkAddr;
-
-    UINT32                      mRefs;
-
-    UINT32                      mFlags;
-    UINT32                      mEntrypoint;
-
-    char const *                mpIntName;
-    UINT32                      mIntNameLen;
-    UINT32                      mIntNameFieldLen;
-
-    void *                      mHostFile;
-    UINT32                      mCurSector;
-    UINT32                      mSectorCount;
-
-    UINT32                      mHdrBytes;
-    UINT32                      mRelocSectionCount;
-    K2DLXSUPP_SEGALLOC          SegAlloc;
-    Elf32_Ehdr *                mpElf;
-    Elf32_Shdr *                mpSecHdr;
-
-    DLX_INFO *                  mpInfo;         // the mpExpXXX inside this gets updated during link
-
-    DLX_EXPORTS_SECTION *       mpExpCodeDataAddr;      // data addr of exports (Not link addr)
-    DLX_EXPORTS_SECTION *       mpExpReadDataAddr;
-    DLX_EXPORTS_SECTION *       mpExpDataDataAddr;
-
-    K2TREE_ANCHOR               SymTree[3];
-};
 
 #define K2DLX_MAX_SECTION_COUNT (((DLX_SECTOR_BYTES - sizeof(DLX)) + (sizeof(UINT32) - 1)) / sizeof(UINT32))
 
@@ -101,13 +69,6 @@ struct _K2DLX_PAGE
     UINT8           mHdrSectorsBuffer[K2DLX_PAGE_HDRSECTORS_BYTES];
 };
 K2_STATIC_ASSERT(sizeof(K2DLX_PAGE) == K2_VA32_MEMPAGE_BYTES);
-
-typedef struct _K2DLX_SYMTREE_NODE K2DLX_SYMTREE_NODE;
-struct _K2DLX_SYMTREE_NODE
-{
-    K2TREE_NODE TreeNode;
-    char *      mpSymName;
-};
 
 typedef struct _K2DLXSUPP_VARS K2DLXSUPP_VARS;
 struct _K2DLXSUPP_VARS
@@ -174,7 +135,7 @@ iK2DLXSUPP_CompareUINT32(
 
 void
 iK2DLXSUPP_Preload(
-    K2DLXSUPP_PRELOAD const *   apPreload
+    K2DLXSUPP_PRELOAD * apPreload
 );
 
 #if K2_FLAG_NODEBUG
