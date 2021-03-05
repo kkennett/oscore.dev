@@ -35,6 +35,7 @@
 /* --------------------------------------------------------------------------------- */
 
 #include <k2systype.h>
+#include <lib/k2list.h>
 
 #ifdef __cplusplus
 extern "C" {
