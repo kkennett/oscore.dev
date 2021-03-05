@@ -169,6 +169,7 @@ CrtDlx_Init(
     preloadSelf.mpDlxPage = sgpLoaderPage + K2_VA32_MEMPAGE_BYTES;
     preloadSelf.mpDlxFileData = K2ROFS_FILEDATA(sgpROFS, pFile);
     preloadSelf.mDlxFileSizeBytes = pFile->mSizeBytes;
+    preloadSelf.mDlxBase = K2OS_UVA_LOW_BASE;
 
     K2MEM_Zero(&sgDlxHost, sizeof(sgDlxHost));
     sgDlxHost.mHostSizeBytes = sizeof(sgDlxHost);

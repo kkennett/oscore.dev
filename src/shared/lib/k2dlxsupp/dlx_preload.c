@@ -35,7 +35,8 @@ static void
 sPrepPreload(
     DLX *           apDlx,
     UINT8 const *   apData,
-    UINT32          aFileOffset
+    UINT32          aFileOffset,
+    UINT32          aBaseAddr
 )
 {
     DLX_INFO *      pInfo;
@@ -63,8 +64,8 @@ sPrepPreload(
     pInfo->SegInfo[DlxSeg_Info].mCRC32 = crc;
 
     // set up apDlx->SegAlloc
-
-    apDlx->SegAlloc.Segment[DlxSeg_Text].mDataAddr = apDlx->SegAlloc.Segment[DlxSeg_Text].mLinkAddr = 0x00400000;
+    K2_ASSERT(aBaseAddr == pInfo->SegInfo[DlxSeg_Text].mLinkAddr);
+    apDlx->SegAlloc.Segment[DlxSeg_Text].mDataAddr = apDlx->SegAlloc.Segment[DlxSeg_Text].mLinkAddr = aBaseAddr;
     segBytes = (pInfo->SegInfo[DlxSeg_Text].mMemActualBytes + (K2_VA32_MEMPAGE_BYTES - 1)) & K2_VA32_PAGEFRAME_MASK;
     linkAddr = pInfo->SegInfo[DlxSeg_Text].mLinkAddr + segBytes;
     K2_ASSERT(linkAddr == pInfo->SegInfo[DlxSeg_Read].mLinkAddr);
@@ -387,7 +388,7 @@ iK2DLXSUPP_Preload(
 
     // all dlx info should be available now to let us get resources
     // and load dependencies
-    sPrepPreload(pDlx, pData, fileOffset);
+    sPrepPreload(pDlx, pData, fileOffset, apPreload->mDlxBase);
 
     K2LIST_AddAtTail(&gpK2DLXSUPP_Vars->AcqList, &pDlx->ListLink);
 

@@ -111,6 +111,7 @@ struct _K2DLXSUPP_PRELOAD
     void *          mpDlxPage;
     UINT8 const *   mpDlxFileData;
     UINT32          mDlxFileSizeBytes;
+    UINT32          mDlxBase;
 };
 
 K2STAT
