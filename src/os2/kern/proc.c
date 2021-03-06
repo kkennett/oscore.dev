@@ -48,7 +48,7 @@ KernProc_Init(
     gpProc1->Hdr.mObjType = KernObj_Process;
     gpProc1->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
     gpProc1->Hdr.mRefCount = 0;
-    gpProc1->Hdr.Dispose = NULL;
+    gpProc1->Hdr.mfCleanup = NULL;
     //
     // this stuff set up in kernel main at the very beginning
     //
@@ -56,6 +56,8 @@ KernProc_Init(
     //gpProc1->mTransTableKVA = K2OS_KVA_TRANSTAB_BASE;
     //gpProc1->mTransTableRegVal = gData.LoadInfo.mTransBasePhys;
     //gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
+
+    KernObj_Add(&gpProc1->Hdr);
 
     K2LIST_AddAtHead(&gData.ProcList, &gpProc1->ProcListLink);
 

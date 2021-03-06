@@ -99,6 +99,8 @@ KernUser_Init(
         pCore->IdleThread.mIx = (UINT32)-1;
         pCore->IdleThread.mpTlsPage = NULL;
 
+        KernObj_Add((K2OSKERN_OBJ_HEADER *)&pCore->IdleThread.Hdr);
+
         K2LIST_AddAtTail(&gpProc1->ThreadList, (K2LIST_LINK *)&pCore->IdleThread.ProcThreadListLink);
 
         //
@@ -137,6 +139,8 @@ KernUser_Init(
     pFirstThread->mIx = firstThreadIx;
     pFirstThread->mpTlsPage = (UINT32 *)
             (K2OS_KVA_THREAD_TLS_BASE + (firstThreadIx * K2_VA32_MEMPAGE_BYTES));
+
+    KernObj_Add(&pFirstThread->Hdr);
 
     K2LIST_AddAtTail(&gpProc1->ThreadList, (K2LIST_LINK *)&pFirstThread->ProcThreadListLink);
 

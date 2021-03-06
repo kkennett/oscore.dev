@@ -67,14 +67,18 @@ enum _KernObj
 #define K2OSKERN_OBJ_FLAG_PERMANENT     0x80000000
 #define K2OSKERN_OBJ_FLAG_EMBEDDED      0x40000000
 
-typedef void (*K2OSKERN_pf_ObjDispose)(K2OSKERN_OBJ_HEADER *apObj);
+typedef void (*K2OSKERN_pf_ObjCleanup)(K2OSKERN_OBJ_HEADER *apObj);
 
 struct _K2OSKERN_OBJ_HEADER
 {
     UINT32                  mObjType;
     UINT32                  mObjFlags;
-    INT32 volatile          mRefCount;
-    K2OSKERN_pf_ObjDispose  Dispose;
+    union
+    {
+        INT32 volatile                  mRefCount;
+        K2OSKERN_OBJ_HEADER * volatile  mpNextCleanup;
+    };
+    K2OSKERN_pf_ObjCleanup  mfCleanup;
     K2TREE_NODE             ObjTreeNode;
 };
 
@@ -370,6 +374,11 @@ struct _KERN_DATA
 
     K2ROFS const *          mpROFS;
 
+    K2OSKERN_SEQLOCK        ObjTreeSeqLock;
+    K2TREE_ANCHOR           ObjTree;
+    K2OSKERN_OBJ_HEADER * volatile mpFreedObjChain;
+    // K2OSKERN_OBJ_SIGNAL  FreedObjSignal;
+
     //
     // init data for each process' user crt segment
     //
@@ -436,6 +445,11 @@ void    KernUser_Init(void);
 BOOL    KernIntr_OnIci(K2OSKERN_CPUCORE volatile * apThisCore, UINT32 aSrcCoreIx);
 BOOL    KernIntr_OnIrq(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_INTR *apIntr);
 BOOL    KernIntr_OnSystemCall(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCallingThread, UINT32 *apRetFastResult);
+
+void    KernObj_Init(void);
+void    KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr);
+UINT32  KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr);
+UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
 
 /* --------------------------------------------------------------------------------- */
 

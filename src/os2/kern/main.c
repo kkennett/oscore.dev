@@ -84,6 +84,11 @@ Kern_Main(
     K2MEM_Copy(&gData.LoadInfo, apLoadInfo, sizeof(K2OS_UEFI_LOADINFO));
 
     //
+    // object tree inits
+    //
+    KernObj_Init();
+
+    //
     // set the pointer to the built in file system
     //
     gData.mpROFS = (K2ROFS const *)((K2OS_KVA_KERNEL_ARENA + gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF);
