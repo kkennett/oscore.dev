@@ -38,42 +38,36 @@ static BOOL sgInIntr[K2OS_MAX_CPU_COUNT] = { 0, };
 
 static K2OSKERN_OBJ_INTR * sgpIntrObjByIrqIx[X32_NUM_IDT_ENTRIES] = { 0, };
 
-BOOL 
+void
 X32Kern_Intr_OnException(
     K2OSKERN_CPUCORE volatile * apThisCore,
-    X32_EXCEPTION_CONTEXT *     apContext,
-    K2OSKERN_OBJ_THREAD *       apCurrentThread
+    X32_EXCEPTION_CONTEXT *     apContext
 )
 {
-    BOOL wasKernelMode;
-
-    K2OSKERN_Debug("Core %d, Exception Context @ %08X\n", apThisCore->mCoreIx, apContext);
-    K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
-    K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
-
-    wasKernelMode = (apContext->KernelMode.CS == (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER)) ? FALSE : TRUE;
-
-    if (!wasKernelMode)
-        X32Kern_DumpUserModeExceptionContext(apContext);
-    else
-        X32Kern_DumpKernelModeExceptionContext(apContext);
-    X32Kern_DumpStackTrace(
-        gpProc1,
-        wasKernelMode ? 
-            apContext->KernelMode.EIP 
-          : apContext->UserMode.EIP,
-        apContext->REGS.EBP,
-        wasKernelMode ? 
-            ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT 
-          : apContext->UserMode.ESP,
-        &sgSymDump[apThisCore->mCoreIx * X32_SYM_NAME_MAX_LEN]
-    );
-    K2OSKERN_Panic(NULL);
 
     //
     // return true to run exec.  otherwise will return to interrupted activity
     //
-    return TRUE;
+    if ((X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER) == apContext->KernelMode.CS)
+        return;
+
+    // 
+    // kernel mode exception = panic
+    //
+
+    K2OSKERN_Debug("Core %d, Exception in kernel mode. Context @ %08X\n", apThisCore->mCoreIx, apContext);
+    K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
+    K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
+
+    X32Kern_DumpKernelModeExceptionContext(apContext);
+    X32Kern_DumpStackTrace(
+        gpProc1,
+        apContext->KernelMode.EIP,
+        apContext->REGS.EBP,
+        ((UINT32)apContext) + X32KERN_SIZEOF_KERNELMODE_EXCEPTION_CONTEXT,
+        &sgSymDump[apThisCore->mCoreIx * X32_SYM_NAME_MAX_LEN]
+    );
+    K2OSKERN_Panic(NULL);
 }
 
 BOOL 
@@ -83,62 +77,23 @@ X32Kern_Intr_OnSystemCall(
     K2OSKERN_OBJ_THREAD *       apCallingThread
 )
 {
-    K2OSKERN_Debug("Core %d System Call %d from thread @ %08X(%d)\n",
-        apThisCore->mCoreIx,
-        apContext->REGS.ECX,
-        apCallingThread,
-        apCallingThread->mIx
-    );
-
-    K2OSKERN_Debug("Call Arg = %08X\n", apContext->REGS.EDX);
-
-    if (apContext->REGS.ECX == K2OS_SYSCALL_ID_OUTPUT_DEBUG)
-    {
-        K2OSKERN_Debug("USER>%s", apContext->REGS.EDX);
-        return FALSE;
-    }
-
-    if (apContext->REGS.ECX == K2OS_SYSCALL_ID_CRT_INITDLX)
-    {
-        apCallingThread->mpProc->mpUserDlxList = (K2LIST_ANCHOR *)apContext->REGS.EDX;
-    }
-
-    //
-    // return true to run exec.  otherwise will return to interrupted activity
-    //
-    return TRUE;
-}
-
-BOOL
-X32Kern_Intr_OnIci(
-    K2OSKERN_CPUCORE volatile * apThisCore,
-    X32_EXCEPTION_CONTEXT *     apContext,
-    UINT32                      aSrcCoreIx
-)
-{
-    K2OSKERN_Debug("Core %d recv ICI from Core %d\n", apThisCore->mCoreIx, aSrcCoreIx);
-
-    //
-    // return true to run exec.  otherwise will return to interrupted activity
-    //
-    return TRUE;
+    apCallingThread->mSysCall_Arg1 = apContext->REGS.ECX;
+    apCallingThread->mSysCall_Arg2 = apContext->REGS.EDX;
+    return KernIntr_OnSystemCall(apThisCore, apCallingThread, &apContext->REGS.EAX);
 }
 
 BOOL 
 X32Kern_Intr_OnIrq(
     K2OSKERN_CPUCORE volatile * apThisCore,
-    X32_EXCEPTION_CONTEXT *     apContext,
     UINT32                      aDevIrqNum
 )
 {
     if (sgpIntrObjByIrqIx[aDevIrqNum] != NULL)
     {
-        K2OSKERN_Debug("VECTOR %d -> IRQ %d on core %d\n", apContext->Exception_Vector, aDevIrqNum, apThisCore->mCoreIx);
-        return sgpIntrObjByIrqIx[aDevIrqNum]->mfHandler(sgpIntrObjByIrqIx[aDevIrqNum]->mpHandlerContext);
+        return KernIntr_OnIrq(apThisCore, sgpIntrObjByIrqIx[aDevIrqNum]);
     }
 
-    K2OSKERN_Debug("****Unhandled Interrupt VECTOR %d (IRQ %d). Treated as spurious and masked\n", 
-        apContext->Exception_Vector, aDevIrqNum);
+    K2OSKERN_Debug("****Unhandled Irq VECTOR %d. Treated as spurious and masked\n", aDevIrqNum);
     X32Kern_MaskDevIrq(aDevIrqNum);
 
     //
@@ -154,7 +109,7 @@ X32Kern_InterruptHandler(
 {
     K2OSKERN_CPUCORE volatile * pThisCore;
     K2OSKERN_OBJ_THREAD *       pCurrentThread;
-    BOOL                        runExec;
+    KernCpuExecReason           reason;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
 
@@ -178,49 +133,49 @@ X32Kern_InterruptHandler(
     //
     // now we can figure out what to do
     //
+    reason = KernCpuExecReason_Invalid;
     if (aContext.Exception_Vector < X32KERN_DEVVECTOR_BASE)
     {
-        K2_ASSERT(NULL != pCurrentThread);
-        runExec = X32Kern_Intr_OnException(pThisCore, &aContext, pCurrentThread);
+        X32Kern_Intr_OnException(pThisCore, &aContext);
+        reason = KernCpuExecReason_Exception;
     }
     else if (aContext.Exception_Vector == 255)
     {
         K2_ASSERT(NULL != pCurrentThread);
-        runExec = X32Kern_Intr_OnSystemCall(pThisCore, &aContext, pCurrentThread);
+        // fix up EFLAGS since it was captured by SYSENTER after kernel was entered
+        aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
+        if (X32Kern_Intr_OnSystemCall(pThisCore, &aContext, pCurrentThread))
+            reason = KernCpuExecReason_SystemCall;
     }
     else
     {
         if (aContext.Exception_Vector >= X32KERN_VECTOR_ICI_BASE)
         {
             K2_ASSERT(aContext.Exception_Vector <= X32KERN_VECTOR_ICI_LAST);
-            runExec = X32Kern_Intr_OnIci(pThisCore, &aContext, aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE);
+            if (KernIntr_OnIci(pThisCore, aContext.Exception_Vector - X32KERN_VECTOR_ICI_BASE))
+                reason = KernCpuExecReason_Ici;
         }
         else
         {
             K2_ASSERT(KernArch_VectorToDevIrq(aContext.Exception_Vector) < X32_DEVIRQ_MAX_COUNT);
-            runExec = X32Kern_Intr_OnIrq(pThisCore, &aContext, KernArch_VectorToDevIrq(aContext.Exception_Vector));
+            if (X32Kern_Intr_OnIrq(pThisCore, KernArch_VectorToDevIrq(aContext.Exception_Vector)))
+                reason = KernCpuExecReason_Irq;
         }
         X32Kern_EOI(aContext.Exception_Vector);
     }
 
     sgInIntr[pThisCore->mCoreIx] = FALSE;
 
-    if (runExec)
+    if (KernCpuExecReason_Invalid != reason)
     {
         // save context to thread if there is one
         if (NULL != pCurrentThread)
         {
-            if (aContext.Exception_Vector == 255)
-            {
-                // fix up EFLAGS since it was captured by SYSENTER after kernel was entered
-                aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
-            }
-
             K2MEM_Copy(&pCurrentThread->Context, &aContext, X32KERN_SIZEOF_USERMODE_EXCEPTION_CONTEXT);
         }
 
         // this will never return
-        KernCpu_Exec(pThisCore);
+        KernCpu_Exec(pThisCore, reason);
 
         K2OSKERN_Panic("KernCpu_Exec returned\n");
     }

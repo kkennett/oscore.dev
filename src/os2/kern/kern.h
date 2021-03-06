@@ -37,6 +37,7 @@
 #include "kerndef.inc"
 #include <lib/k2rofshelp.h>
 #include <lib/k2elf32.h>
+#include "../../shared/lib/k2dlxsupp/dlx_struct.h"
 
 /* --------------------------------------------------------------------------------- */
 
@@ -119,6 +120,9 @@ struct _K2OSKERN_OBJ_THREAD
 
     K2OSKERN_THREAD_CONTEXT Context;
 
+    UINT32                  mSysCall_Arg1;
+    UINT32                  mSysCall_Arg2;
+
     K2LIST_LINK             CpuRunListLink;
 };
 
@@ -145,6 +149,24 @@ K2OSKERN_GetThisCoreCurrentThread(
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernIciCode KernIciCode;
+enum _KernIciCode
+{
+    KernIciCode_None,       // 0
+    KernIciCode_WakeUp,     // 1
+
+
+    KernIciCode_Count       // 2
+};
+
+typedef struct _K2OSKERN_OUT_ICI K2OSKERN_OUT_ICI;
+struct _K2OSKERN_OUT_ICI
+{
+    UINT32          mTargetCoreMask;
+    KernIciCode     mCode;
+    K2LIST_LINK     ListLink;
+};
+
 struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
@@ -158,6 +180,7 @@ struct _K2OSKERN_CPUCORE
     BOOL                    mIsIdle;
 
     UINT32 volatile         mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
+    K2LIST_ANCHOR           IciOutList;
 
     K2LIST_ANCHOR           RunList;
 
@@ -297,6 +320,19 @@ struct _K2OSKERN_OBJ_INTR
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernCpuExecReason KernCpuExecReason;
+enum _KernCpuExecReason
+{
+    KernCpuExecReason_Invalid,      // 0
+    KernCpuExecReason_CoreStart,    // 1
+    KernCpuExecReason_Exception,    // 2
+    KernCpuExecReason_Ici,          // 3
+    KernCpuExecReason_Irq,          // 4
+    KernCpuExecReason_SystemCall,   // 5
+
+    KernCpuExecReason_Count         // 6
+};
+
 typedef struct _KERN_USERCRT_INFO KERN_USERCRT_INFO;
 struct _KERN_USERCRT_INFO
 {
@@ -371,6 +407,9 @@ void    KernArch_UserInit(void);
 void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
 void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
 void    KernArch_CpuIdle(K2OSKERN_CPUCORE volatile *apThisCore);
+BOOL    KernArch_PollIrq(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread);
+void    KernArch_SendIci(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetMask);
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);
@@ -384,9 +423,19 @@ void    KernPhys_Init(void);
 void    KernProc_Init(void);
 
 void    KernCpu_Init(void);
-void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThisCore);
+void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThisCore, KernCpuExecReason aReason);
+BOOL    KernCpu_ProcessIcis(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernCpu_Reschedule(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernCpu_LatchIciToSend(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OUT_ICI *apIciOut);
+
+void    KernThread_Exception(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
 
 void    KernUser_Init(void);
+
+BOOL    KernIntr_OnIci(K2OSKERN_CPUCORE volatile * apThisCore, UINT32 aSrcCoreIx);
+BOOL    KernIntr_OnIrq(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_INTR *apIntr);
+BOOL    KernIntr_OnSystemCall(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCallingThread, UINT32 *apRetFastResult);
 
 /* --------------------------------------------------------------------------------- */
 

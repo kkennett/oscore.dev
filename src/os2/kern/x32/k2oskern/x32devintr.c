@@ -551,3 +551,20 @@ X32Kern_EOI(
     }
 }
 
+BOOL
+KernArch_PollIrq(
+    K2OSKERN_CPUCORE volatile * apThisCore
+)
+{
+    // Call X32Kern_Intr_OnIrq for any detected pending irq interrupt
+    return FALSE;
+}
+
+void
+KernArch_SendIci(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aTargetMask
+)
+{
+    K2_ASSERT(0);
+}

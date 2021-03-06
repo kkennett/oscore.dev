@@ -202,7 +202,7 @@ X32Kern_CpuLaunch(
         K2_CpuWriteBarrier();
     }
 
-    KernCpu_Exec(&pCoreMem->CpuCore);
+    KernCpu_Exec(&pCoreMem->CpuCore, KernCpuExecReason_CoreStart);
 
     //
     // should never return 

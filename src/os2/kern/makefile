@@ -45,6 +45,8 @@ SOURCES += phys.c
 SOURCES += proc.c
 SOURCES += user.c 
 SOURCES += cpu.c
+SOURCES += intr.c
+SOURCES += thread.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

@@ -30,43 +30,63 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "x32kern.h"
+#include "kern.h"
 
-void
-KernArch_ResumeThread(
-    K2OSKERN_CPUCORE volatile * apThisCore
+BOOL
+KernIntr_OnIci(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aSrcCoreIx
 )
 {
-    K2OSKERN_OBJ_THREAD *   pRunThread;
-    UINT32                  stackPtr;
-
-    K2_ASSERT(NULL != apThisCore->RunList.mpHead);
-    
-    pRunThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
-
-    // idle thread should never actually run
-    K2_ASSERT(pRunThread != &apThisCore->IdleThread);
-
-    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = pRunThread->mIx;
-
-    stackPtr = (UINT32)&pRunThread->Context;
-
+    K2OSKERN_Debug("Core %d recv ICI from Core %d\n", apThisCore->mCoreIx, aSrcCoreIx);
     //
-    // interrupts must be enabled or something is wrong.
+    // return true to run exec.  otherwise will return to interrupted activity
     //
-    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.CS == (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER));
-    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->DS == (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER));
-    K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.EFLAGS & X32_EFLAGS_INTENABLE);
-
-    X32Kern_InterruptReturn((UINT32)&pRunThread->Context);
-
-    K2OSKERN_Panic("Switch to Thread returned!\n");
+    return TRUE;
 }
 
-void 
-KernArch_DumpThreadContext(
-    K2OSKERN_OBJ_THREAD *apThread
+BOOL 
+KernIntr_OnIrq(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_INTR *         apIntr
 )
 {
-    K2_ASSERT(0);
+    K2OSKERN_Debug("Core %d recv IRQ %d\n", apThisCore->mCoreIx, apIntr->IrqConfig.mSourceIrq);
+
+    //
+    // return true to run exec.  otherwise will return to interrupted activity
+    //
+
+    return TRUE;
+}
+
+BOOL 
+KernIntr_OnSystemCall(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apCallingThread,
+    UINT32 *                    apRetFastResult
+)
+{
+    //
+    // thread state not saved to its context
+    // this is an opportunity to do a fast return/resume if the system call
+    // operation is something super simple we don't need to save context for
+    //
+
+    if (K2OS_SYSCALL_ID_OUTPUT_DEBUG == apCallingThread->mSysCall_Arg1)
+    {
+        K2OSKERN_Debug("%s", (char const *)apCallingThread->mSysCall_Arg2);
+        return FALSE;
+    }
+
+    if (K2OS_SYSCALL_ID_CRT_INITDLX == apCallingThread->mSysCall_Arg1)
+    {
+        apCallingThread->mpProc->mpUserDlxList = (K2LIST_ANCHOR *)apCallingThread->mSysCall_Arg2;
+        return FALSE;
+    }
+
+    //
+    // return true to run exec.  otherwise will return to interrupted activity
+    //
+    return TRUE;
 }

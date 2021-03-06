@@ -52,18 +52,181 @@ KernCpu_Init(
         pCore->mCoreIx = coreIx;
 
         K2LIST_Init((K2LIST_ANCHOR *)&pCore->RunList);
+
+        K2LIST_Init((K2LIST_ANCHOR *)&pCore->IciOutList);
     }
 
     K2_CpuWriteBarrier();
 }
 
+static UINT32
+sTryToSendIcis(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aTargetCpuMask,
+    KernIciCode                 aCodeToSend
+)
+{
+    UINT32  coreIx;
+    UINT32  workMask;
+    UINT32  doneMask;
+    UINT32  workBit;
+    UINT32 volatile *pTarget;
+    K2OSKERN_CPUCORE volatile * pOtherCore;
+
+    doneMask = 0;
+    workMask = aTargetCpuMask;
+    workBit = 1;
+    coreIx = 0;
+    do
+    {
+        if (workMask & workBit)
+        {
+            pOtherCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
+            pTarget = &pOtherCore->mIciFromOtherCore[apThisCore->mCoreIx];
+            // this is my slot on the other core, nobody else can set this but me
+            // the other core will clear it when it has processed the ici
+            if (0 == *pTarget)
+            {
+                *pTarget = (UINT32)aCodeToSend;
+                K2_CpuWriteBarrier();
+                doneMask |= workBit;
+            }
+            workMask &= ~workBit;
+        }
+        ++coreIx;
+        workBit <<= 1;
+    } while (workMask != 0);
+
+    if (0 != doneMask)
+    {
+        //
+        // issue the ICI(s) to wake up the other core(s) now
+        //
+        KernArch_SendIci(apThisCore, doneMask);
+    }
+
+    return doneMask;
+}
+
+void
+KernCpu_ProcessOneIci(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aSrcCore,
+    UINT32                      aCode
+)
+{
+    //
+    // apThisCore->mIciFromOtherCore[aSrcCore] already set to KernIciCode_None
+    //
+
+    K2_ASSERT(0);
+}
+
+BOOL
+KernCpu_ProcessIcis(
+    K2OSKERN_CPUCORE volatile * apThisCore
+)
+{
+    UINT32              otherCoreIx;
+    UINT32              iciCount;
+    KernIciCode         iciCode;
+    K2LIST_LINK *       pListLink;
+    K2OSKERN_OUT_ICI *  pIciOut;
+    UINT32              maskDone;
+
+    if (1 == gData.LoadInfo.mCpuCoreCount)
+        return FALSE;
+
+    iciCount = 0;
+
+    //
+    // process incoming ICIs
+    //
+    for (otherCoreIx = 0; otherCoreIx < gData.LoadInfo.mCpuCoreCount; otherCoreIx++)
+    {
+        iciCode = (KernIciCode)apThisCore->mIciFromOtherCore[otherCoreIx];
+        if (KernIciCode_None != iciCode)
+        {
+            apThisCore->mIciFromOtherCore[otherCoreIx] = KernIciCode_None;
+            K2_CpuWriteBarrier();
+            KernCpu_ProcessOneIci(apThisCore, otherCoreIx, iciCode);
+            iciCount++;
+        }
+    }
+
+    // 
+    // try to process outgoing ICIs (may be backed up)
+    //
+    pListLink = apThisCore->IciOutList.mpHead;
+    if (NULL != pListLink)
+    {
+        ++iciCount;
+
+        do
+        {
+            pIciOut = K2_GET_CONTAINER(K2OSKERN_OUT_ICI, pListLink, ListLink);
+            pListLink = pListLink->mpNext;
+
+            //
+            // this returns the mask of the cpus we successfully sent the ici to
+            //
+            maskDone = sTryToSendIcis(apThisCore, pIciOut->mTargetCoreMask, pIciOut->mCode);
+
+            if (maskDone == pIciOut->mTargetCoreMask)
+            {
+                //
+                // all done with this one
+                //
+                K2LIST_Remove((K2LIST_ANCHOR *)&apThisCore->IciOutList, &pIciOut->ListLink);
+                pIciOut->mTargetCoreMask = 0;
+                K2_CpuWriteBarrier();
+            }
+            else
+            {
+                //
+                // did not finish this one. will go around again
+                //
+                if (0 != maskDone)
+                    pIciOut->mTargetCoreMask &= ~maskDone;
+            }
+
+        } while (NULL != pListLink);
+    }
+
+    //
+    // returning TRUE will make Exec call this again
+    //
+    return (iciCount > 0) ? TRUE : FALSE;
+}
+
+void
+KernCpu_LatchIciToSend(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OUT_ICI *          apIciOut
+)
+{
+    K2_ASSERT(0 != apIciOut->mTargetCoreMask);
+    K2_ASSERT(0 != apIciOut->mCode);
+    K2LIST_AddAtTail((K2LIST_ANCHOR *)&apThisCore->IciOutList, &apIciOut->ListLink);
+}
+
+void
+KernCpu_Reschedule(
+    K2OSKERN_CPUCORE volatile * apThisCore
+)
+{
+    K2_ASSERT(0);
+}
+
 void __attribute__((noreturn)) 
 KernCpu_Exec(
-    K2OSKERN_CPUCORE volatile *apThisCore
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    KernCpuExecReason           aReason
 )
 {
     K2OSKERN_OBJ_THREAD *   pNextThread;
     BOOL                    wasIdle;
+    UINT32                  activity;
 
     wasIdle = apThisCore->mIsIdle;
     apThisCore->mIsIdle = FALSE;
@@ -72,15 +235,32 @@ KernCpu_Exec(
     {
         K2OSKERN_Debug("Core %d exit idle\n", apThisCore->mCoreIx);
     }
-    K2OSKERN_Debug("Core %d Exec\n", apThisCore->mCoreIx);
+
+    if ((aReason == KernCpuExecReason_Exception) ||
+        (aReason == KernCpuExecReason_SystemCall))
+    {
+        if (aReason == KernCpuExecReason_Exception)
+            KernThread_Exception(apThisCore);
+        else
+            KernThread_SystemCall(apThisCore);
+    }
 
     // 
     // run next thread or go idle
     //
     do
     {
+        do
+        {
+            activity = 0;
+            if (KernCpu_ProcessIcis(apThisCore))
+                ++activity;
+            if (KernArch_PollIrq(apThisCore))
+                ++activity;
+        } while (0 != activity);
+
         //
-        // service ICIs, syscalls, etc
+        // resume next activity
         //
         pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
         if (pNextThread == &apThisCore->IdleThread)
@@ -102,8 +282,7 @@ KernCpu_Exec(
                 //
                 // reschedule here, move idle thread to end of run list
                 //
-                K2_ASSERT(0);
-                K2OSKERN_Panic("Implement Reschedule\n");
+                KernCpu_Reschedule(apThisCore);
             }
         }
         else
