@@ -47,6 +47,7 @@ typedef struct _K2OSKERN_OBJ_HEADER         K2OSKERN_OBJ_HEADER;
 typedef struct _K2OSKERN_OBJ_PROCESS        K2OSKERN_OBJ_PROCESS;
 typedef struct _K2OSKERN_OBJ_THREAD         K2OSKERN_OBJ_THREAD;
 typedef struct _K2OSKERN_OBJ_INTR           K2OSKERN_OBJ_INTR;
+typedef struct _K2OSKERN_OBJ_NOTIFY         K2OSKERN_OBJ_NOTIFY;
 
 typedef struct _K2OSKERN_PHYSTRACK_PAGE     K2OSKERN_PHYSTRACK_PAGE;
 typedef struct _K2OSKERN_PHYSTRACK_FREE     K2OSKERN_PHYSTRACK_FREE;
@@ -84,6 +85,16 @@ struct _K2OSKERN_OBJ_HEADER
 
 /* --------------------------------------------------------------------------------- */
 
+typedef enum _KernThreadState KernThreadState;
+enum _KernThreadState
+{
+    KernThreadState_None = 0,
+    KernThreadState_Init,
+    KernThreadState_OnCoreRunList,
+    KernThreadState_WaitingOnNotify,
+    KernThreadState_Migrating
+};
+
 #if K2_TARGET_ARCH_IS_INTEL
 typedef struct _K2OSKERN_THREAD_CONTEXT  K2OSKERN_THREAD_CONTEXT;
 struct _K2OSKERN_THREAD_CONTEXT
@@ -116,6 +127,7 @@ struct _K2OSKERN_OBJ_THREAD
     K2OSKERN_OBJ_PROCESS *  mpProc;
 
     UINT32                  mIx;
+    KernThreadState         mState;
 
     UINT32                  mTlsPagePhys;
     UINT32 *                mpTlsPage;
@@ -126,8 +138,14 @@ struct _K2OSKERN_OBJ_THREAD
 
     UINT32                  mSysCall_Arg1;
     UINT32                  mSysCall_Arg2;
+    UINT32                  mSysCall_Result;
+    K2STAT                  mSysCall_Status;
 
-    K2LIST_LINK             CpuRunListLink;
+    K2OSKERN_CPUCORE volatile * mpCurrentCore;
+    K2LIST_LINK                 CpuRunListLink;
+    K2OSKERN_CPUCORE volatile * mpLastRunCore;
+
+    K2LIST_LINK             NotifyWaitListLink;
 };
 
 #if K2_TARGET_ARCH_IS_ARM
@@ -263,6 +281,28 @@ struct _K2OSKERN_PHYSTRACK_FREE
 K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == K2OS_PHYSTRACK_BYTES);
 K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2OS_PHYSTRACK_UEFI));
 K2_STATIC_ASSERT(sizeof(K2OSKERN_PHYSTRACK_FREE) == sizeof(K2TREE_NODE));
+
+/* --------------------------------------------------------------------------------- */
+
+typedef enum _KernNotifyState KernNotifyState;
+enum _KernNotifyState
+{
+    KernNotifyState_Idle,
+    KernNotifyState_Waiting,
+    KernNotifyState_Active
+};
+
+struct _K2OSKERN_OBJ_NOTIFY
+{
+    K2OSKERN_OBJ_HEADER Hdr;
+    K2OSKERN_SEQLOCK    Lock;
+    struct
+    {
+        UINT32          mDataWord;
+        KernNotifyState mState;
+        K2LIST_ANCHOR   WaitingThreadList;
+    } Locked;
+};
 
 /* --------------------------------------------------------------------------------- */
 
@@ -436,9 +476,13 @@ void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThis
 BOOL    KernCpu_ProcessIcis(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernCpu_Reschedule(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernCpu_LatchIciToSend(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OUT_ICI *apIciOut);
+void    KernCpu_MigrateThread(UINT32 aTargetCoreIx, K2OSKERN_OBJ_THREAD *apThread);
+void    KernCpu_SetNextThread(K2OSKERN_CPUCORE volatile *apThisCore);
 
 void    KernThread_Exception(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+void    KernThread_SysCall_WaitForNotify(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCurThread, BOOL aNonBlocking);
 
 void    KernUser_Init(void);
 
@@ -450,6 +494,9 @@ void    KernObj_Init(void);
 void    KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
+
+void    KernNotify_Init(K2OSKERN_OBJ_NOTIFY *apNotify);
+UINT32  KernNotify_Signal(K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
 
 /* --------------------------------------------------------------------------------- */
 

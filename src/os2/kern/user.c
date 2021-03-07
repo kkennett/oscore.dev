@@ -111,6 +111,8 @@ KernUser_Init(
         //
         // add idle thread to core's run list.  it never leaves that list
         //
+        pCore->IdleThread.mpCurrentCore = pCore;
+        pCore->IdleThread.mState = KernThreadState_OnCoreRunList;
         K2LIST_AddAtTail((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pCore->IdleThread.CpuRunListLink);
     }
 
@@ -183,6 +185,8 @@ KernUser_Init(
     // add first thread to core 0 list at the head
     //
     pCore = K2OSKERN_COREIX_TO_CPUCORE(0);
+    pFirstThread->mpCurrentCore = pCore;
+    pFirstThread->mState = KernThreadState_OnCoreRunList;
     K2LIST_AddAtHead((K2LIST_ANCHOR *)&pCore->RunList, (K2LIST_LINK *)&pFirstThread->CpuRunListLink);
 
     //

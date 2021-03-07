@@ -42,10 +42,13 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
-#define K2OS_SYSCALL_ID_GET_THREAD_IX   0
-#define K2OS_SYSCALL_ID_OUTPUT_DEBUG    1
-#define K2OS_SYSCALL_ID_DEBUG_BREAK     2
-#define K2OS_SYSCALL_ID_CRT_INITDLX     3
+#define K2OS_SYSCALL_ID_GET_THREAD_IX       0
+#define K2OS_SYSCALL_ID_OUTPUT_DEBUG        1
+#define K2OS_SYSCALL_ID_DEBUG_BREAK         2
+#define K2OS_SYSCALL_ID_CRT_INITDLX         3
+#define K2OS_SYSCALL_ID_SIGNAL_NOTIFY       4
+#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY     5
+#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB  6
 
 typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
 

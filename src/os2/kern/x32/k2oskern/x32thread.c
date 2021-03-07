@@ -51,6 +51,8 @@ KernArch_ResumeThread(
 
     stackPtr = (UINT32)&pRunThread->Context;
 
+    pRunThread->mpLastRunCore = apThisCore;
+
     //
     // interrupts must be enabled or something is wrong.
     //

@@ -263,6 +263,7 @@ KernCpu_Exec(
         // resume next activity
         //
         pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
+        K2_ASSERT(KernThreadState_OnCoreRunList == pNextThread->mState);
         if (pNextThread == &apThisCore->IdleThread)
         {
             if (1 == apThisCore->RunList.mNodeCount)
@@ -298,3 +299,73 @@ KernCpu_Exec(
     //
     K2OSKERN_Panic("CPU exec broke\n");
 }
+
+void
+KernCpu_MigrateThread(
+    UINT32                  aTargetCoreIx,
+    K2OSKERN_OBJ_THREAD *   apThread
+)
+{
+    K2_ASSERT(0);
+#if 0
+    SKCpu *pTarget;
+    SKCpu *pThisCpu = GetCurrentCpu();
+
+    if (((DWORD)-1) == aTargetCpu)
+    {
+        //
+        // choose target cpu
+        //
+        aTargetCpu = ((DWORD)rand()) % mCpuCount;
+    }
+    pTarget = &mpCpus[aTargetCpu];
+
+    K2_ASSERT(NULL == apThread->mpCurrentCpu);
+    K2_ASSERT(apThread->mState == SKThreadState_Migrating);
+
+    if (pThisCpu == pTarget)
+    {
+        // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
+        // before it executes
+        apThread->mState = SKThreadState_OnRunList;
+        apThread->mpCurrentCpu = pThisCpu;
+        K2LIST_AddAtTail(&pThisCpu->RunningThreadList, &apThread->CpuThreadListLink);
+    }
+    else
+    {
+        SKThread * pLast;
+        SKThread * pOld;
+        do
+        {
+            pLast = pTarget->mpMigratedHead;
+            K2_CpuWriteBarrier();
+            apThread->mpCpuMigratedNext = pLast;
+            K2_CpuReadBarrier();
+            pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
+        } while (pOld != pLast);
+
+        pThisCpu->NB_SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+    }
+#endif
+}
+
+void
+KernCpu_SetNextThread(
+    K2OSKERN_CPUCORE volatile * apThisCore
+)
+{
+    K2_ASSERT(0);
+#if 0
+    SKThread *pThread = K2_GET_CONTAINER(SKThread, RunningThreadList.mpHead, CpuThreadListLink);
+    K2_ASSERT(pThread != mpCurrentThread);
+    K2_ASSERT(pThread->mState == SKThreadState_OnRunList);
+    K2_ASSERT(pThread->mpCurrentCpu == this);
+    if (pThread == mpIdleThread)
+        mSchedTimeout.QuadPart = 0;
+    else
+        mpSystem->MsToCpuTime(pThread->mQuantum, &mSchedTimeout);
+    mpCurrentThread = pThread;
+    mThreadChanged = TRUE;
+#endif
+}
+
