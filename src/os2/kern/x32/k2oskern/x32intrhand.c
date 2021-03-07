@@ -123,7 +123,8 @@ X32Kern_InterruptHandler(
     //
     // re-set the fs in case somebody in user land changed it
     //
-    X32_SetFS((pThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
+    //X32_SetFS((pThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
+    X32_SetFS((pThisCore->mCoreIx * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_USER);
 
     //
     // now we can retrieve the current thread (if there is one)

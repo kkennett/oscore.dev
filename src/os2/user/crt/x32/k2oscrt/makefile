@@ -37,6 +37,7 @@ TARGET_SPECIFIC_ARCH = X32
 DLX_INF := ../../k2oscrt.inf
 
 SOURCES += x32exception.c
+SOURCES += getfsdata.s
 
 #
 # functions are exported from these libraries for general use 

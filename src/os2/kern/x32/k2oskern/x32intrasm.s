@@ -39,8 +39,8 @@ BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
     // ecx contains call argument (will change to return ESP in fast system call)
     // edx contains call argument (will change to return EIP in fast system call)
     //
-    cmp %ecx, 0             // ecx is system call number (encoded)
-    jnz notZero             // if it is not zero it is not a fast call 
+    cmp %ecx, 0xFF          // ecx is system call number (encoded)
+    jnz notFF             // if it is not zero it is not a fast call 
     mov %ecx, %eax          // set return stack pointer
     mov %edx, 0x7FFFF004    // set fixed return code address 
 
@@ -60,7 +60,7 @@ BEGIN_X32_PROC(X32Kern_SysEnter_Entry)
 
     sysexit                 // fast return to user mode
 
-notZero:
+notFF:
     // CS is kernel code segment 
     // SS is kernel data segment. ************* DS IS NOT ******************
     // ESP is bottom of kernel core stack.  

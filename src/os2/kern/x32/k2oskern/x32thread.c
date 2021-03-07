@@ -47,7 +47,7 @@ KernArch_ResumeThread(
     // idle thread should never actually run
     K2_ASSERT(pRunThread != &apThisCore->IdleThread);
 
-    gX32Kern_PerCoreFS[apThisCore->mCoreIx] = pRunThread->mIx;
+    gpX32Kern_PerCoreFS[apThisCore->mCoreIx] = pRunThread->mIx;
 
     stackPtr = (UINT32)&pRunThread->Context;
 

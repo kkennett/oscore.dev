@@ -29,32 +29,14 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "crt.h"
+#include <k2asmx32.inc>
 
-K2STAT
-K2OS_Thread_GetLastStatus(
-    void
-)
-{
-    UINT32 *pTls;
-    
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    
-    return (K2STAT)(pTls[0]);
-}
+/*-------------------------------------------------------------------------------*/
+//UINT32 K2_CALLCONV_REGS X32_GetThreadIndex
+BEGIN_X32_PROC(X32_GetThreadIndex)
+   mov %eax, %fs:[0]
+   ret
+END_X32_PROC(X32_GetThreadIndex)
+/*-------------------------------------------------------------------------------*/
 
-K2STAT
-K2OS_Thread_SetLastStatus(
-    K2STAT aStatus
-)
-{
-    UINT32 *pTls;
-    UINT32  result;
-
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    
-    result = (K2STAT)(pTls[0]);
-    pTls[0] = (UINT32)aStatus;
-
-    return result;
-}
+    .end

@@ -102,7 +102,7 @@ K2OS_Tls_SetValue(
     if (0 == (sgSlotBitfield & (1 << aSlotIndex)))
         return K2STAT_ERROR_NOT_IN_USE;
 
-    thisThreadIndex = K2OS_SYSCALL(K2OS_SYSCALL_ID_GET_THREAD_IX, 0);
+    thisThreadIndex = CRT_GET_CURRENT_THREAD_INDEX;
 
     pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (thisThreadIndex * K2_VA32_MEMPAGE_BYTES));
 
@@ -126,7 +126,7 @@ K2OS_Tls_GetValue(
     if (0 == (sgSlotBitfield & (1 << aSlotIndex)))
         return K2STAT_ERROR_NOT_IN_USE;
 
-    thisThreadIndex = K2OS_SYSCALL(K2OS_SYSCALL_ID_GET_THREAD_IX, 0);
+    thisThreadIndex = CRT_GET_CURRENT_THREAD_INDEX;
 
     pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (thisThreadIndex * K2_VA32_MEMPAGE_BYTES));
 

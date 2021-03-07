@@ -92,7 +92,7 @@ __k2oscrt_user_entry(
     //
     // syscall with ROFS address
     //
-    CrtDbg_Printf("User Mode!\n");
+    CrtDbg_Printf("User Mode Thread %d!\n", CRT_GET_CURRENT_THREAD_INDEX);
 
     //
     // init dynamic loader and self-init this module

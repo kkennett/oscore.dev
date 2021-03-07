@@ -39,6 +39,16 @@
 #include <lib/k2bit.h>
 #include <lib/k2rofshelp.h>
 
+
+#if K2_TARGET_ARCH_IS_ARM
+#define CRT_GET_CURRENT_THREAD_INDEX A32_ReadTPIDRURO()
+#elif K2_TARGET_ARCH_IS_INTEL
+UINT32 K2_CALLCONV_REGS X32_GetThreadIndex(void);
+#define CRT_GET_CURRENT_THREAD_INDEX X32_GetThreadIndex()
+#else
+#error !!!Unsupported Architecture
+#endif
+
 typedef void(*__vfpv)(void *);
 
 UINT32 CrtDbg_Printf(char const *apFormat, ...);

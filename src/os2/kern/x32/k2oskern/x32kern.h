@@ -124,10 +124,11 @@ extern X32_GDTENTRY __attribute__((aligned(16))) gX32Kern_GDT[X32_NUM_SEGMENTS];
 extern X32_xDTPTR   __attribute__((aligned(16))) gX32Kern_GDTPTR;
 extern X32_IDTENTRY __attribute__((aligned(16))) gX32Kern_IDT[X32_NUM_IDT_ENTRIES];
 extern X32_xDTPTR   __attribute__((aligned(16))) gX32Kern_IDTPTR;
-extern X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_LDT[K2OS_MAX_CPU_COUNT];
+extern X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_KernLDT[K2OS_MAX_CPU_COUNT];
+extern X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_UserLDT[K2OS_MAX_CPU_COUNT];
 
-extern UINT32 volatile gX32Kern_PerCoreFS[K2OS_MAX_CPU_COUNT];
-extern UINT32 gX32Kern_KernelPageDirPhysAddr;
+extern UINT32 volatile *    gpX32Kern_PerCoreFS;
+extern UINT32               gX32Kern_KernelPageDirPhysAddr;
 
 extern UINT64 *                             gpX32Kern_AcpiTablePtrs;
 extern UINT32                               gX32Kern_AcpiTableCount;

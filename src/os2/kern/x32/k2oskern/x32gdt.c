@@ -41,7 +41,8 @@ X32Kern_GDTSetup(
     UINT32 coreIx;
 
     K2MEM_Zero(gX32Kern_GDT, X32_SIZEOF_GDTENTRY * X32_NUM_SEGMENTS);
-    K2MEM_Zero(gX32Kern_LDT, X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT);
+    K2MEM_Zero(gX32Kern_KernLDT, X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT);
+    K2MEM_Zero(gX32Kern_UserLDT, X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT);
     
     /* entry 1 - kernel 4GB flat code segment */
     gX32Kern_GDT[X32_SEGMENT_KERNEL_CODE].mLimitLow16 = 0xFFFF;
@@ -64,20 +65,36 @@ X32Kern_GDTSetup(
     gX32Kern_GDT[X32_SEGMENT_USER_DATA].mLimitHigh4Attrib4 = 0xCF;
 
     /* entry 5 - kernel mode LDT.  entries in LDT are indexed per-core values */
-    addr = (UINT32)&gX32Kern_LDT;
+    addr = (UINT32)&gX32Kern_KernLDT;
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mLimitLow16 = X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT;
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mAttrib = 0x82;  /* Present, DPL 0, system segment type 2 (LDT desc) */
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mBaseLow16 = (UINT16)(addr & 0xFFFF);
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mBaseMid8 = (UINT8)((addr >> 16) & 0xFF);
     gX32Kern_GDT[X32_SEGMENT_KERNEL_LDT].mBaseHigh8 = (UINT8)((addr >> 24) & 0xFF);
-    addr = (UINT32)&gX32Kern_PerCoreFS[0];
+    addr = (UINT32)K2OS_KVA_PUBLICAPI_PERCORE_DATA;
     for(coreIx=0; coreIx < K2OS_MAX_CPU_COUNT; coreIx++)
     {
-        gX32Kern_LDT[coreIx].mLimitLow16 = sizeof(UINT32);
-        gX32Kern_LDT[coreIx].mBaseLow16 = (UINT16)(addr & 0xFFFF);
-        gX32Kern_LDT[coreIx].mBaseMid8 = (UINT8)((addr >> 16) & 0xFF);
-        gX32Kern_LDT[coreIx].mAttrib = 0x92; // present DPL 0, nonsystem, writeable
-        gX32Kern_LDT[coreIx].mBaseHigh8 = (UINT8)((addr >> 24) & 0xFF);
+        gX32Kern_KernLDT[coreIx].mLimitLow16 = sizeof(UINT32);
+        gX32Kern_KernLDT[coreIx].mBaseLow16 = (UINT16)(addr & 0xFFFF);
+        gX32Kern_KernLDT[coreIx].mBaseMid8 = (UINT8)((addr >> 16) & 0xFF);
+        gX32Kern_KernLDT[coreIx].mAttrib = 0x92; // present DPL 0, nonsystem, writeable
+        gX32Kern_KernLDT[coreIx].mBaseHigh8 = (UINT8)((addr >> 24) & 0xFF);
+        addr += sizeof(UINT32);
+    }
+    addr = (UINT32)&gX32Kern_UserLDT;
+    gX32Kern_GDT[X32_SEGMENT_USER_LDT].mLimitLow16 = X32_SIZEOF_GDTENTRY * K2OS_MAX_CPU_COUNT;
+    gX32Kern_GDT[X32_SEGMENT_USER_LDT].mAttrib = 0xE2;  /* Present, DPL 3, system segment type 2 (LDT desc) */
+    gX32Kern_GDT[X32_SEGMENT_USER_LDT].mBaseLow16 = (UINT16)(addr & 0xFFFF);
+    gX32Kern_GDT[X32_SEGMENT_USER_LDT].mBaseMid8 = (UINT8)((addr >> 16) & 0xFF);
+    gX32Kern_GDT[X32_SEGMENT_USER_LDT].mBaseHigh8 = (UINT8)((addr >> 24) & 0xFF);
+    addr = (UINT32)K2OS_UVA_PUBLICAPI_PERCORE_DATA;
+    for(coreIx=0; coreIx < K2OS_MAX_CPU_COUNT; coreIx++)
+    {
+        gX32Kern_UserLDT[coreIx].mLimitLow16 = sizeof(UINT32);
+        gX32Kern_UserLDT[coreIx].mBaseLow16 = (UINT16)(addr & 0xFFFF);
+        gX32Kern_UserLDT[coreIx].mBaseMid8 = (UINT8)((addr >> 16) & 0xFF);
+        gX32Kern_UserLDT[coreIx].mAttrib = 0xF0; // present DPL 3, nonsystem, read-only
+        gX32Kern_UserLDT[coreIx].mBaseHigh8 = (UINT8)((addr >> 24) & 0xFF);
         addr += sizeof(UINT32);
     }
 
