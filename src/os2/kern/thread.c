@@ -33,6 +33,26 @@
 #include "kern.h"
 
 void 
+KernThread_CleanupOne(
+    K2OSKERN_OBJ_HEADER *apObj
+)
+{
+    K2_ASSERT(0);
+}
+
+void    
+KernThread_InitOne(
+    K2OSKERN_OBJ_THREAD *apThread
+)
+{
+    K2MEM_Zero(apThread, sizeof(K2OSKERN_OBJ_THREAD));
+    apThread->Hdr.mObjType = KernObj_Thread;
+    apThread->mState = KernThreadState_Init;
+    apThread->mAffinityMask = (1 << gData.LoadInfo.mCpuCoreCount) - 1;
+    apThread->Hdr.mfCleanup = KernThread_CleanupOne;
+}
+
+void 
 KernThread_Exception(
     K2OSKERN_CPUCORE volatile *apThisCore
 )
@@ -103,7 +123,7 @@ KernThread_SysCall_SignalNotify(
         //
         // this may release threads to run on this core or other cores
         //
-        apCurThread->mSysCall_Result = KernNotify_Signal(pNotify, apCurThread->mSysCall_Arg2);
+        apCurThread->mSysCall_Result = KernNotify_Signal(apThisCore, pNotify, apCurThread->mSysCall_Arg2);
         apCurThread->mSysCall_Status = K2STAT_NO_ERROR;
     }
 }
@@ -160,7 +180,7 @@ KernThread_SysCall_WaitForNotify(
             apCurThread->mpCurrentCore = NULL;
             apCurThread->mState = KernThreadState_WaitingOnNotify;
             K2LIST_AddAtTail(&pNotify->Locked.WaitingThreadList, &apCurThread->NotifyWaitListLink);
-            KernCpu_SetNextThread(apThisCore);
+            apThisCore->mThreadChanged = TRUE;
         }
     }
 

@@ -32,6 +32,34 @@
 
 #include "kern.h"
 
+void 
+KernProc_CleanupOne(
+    K2OSKERN_OBJ_HEADER *apObj
+)
+{
+    K2_ASSERT(0);
+}
+
+static void
+sInitOne(
+    K2OSKERN_OBJ_PROCESS *apProc
+)
+{
+    apProc->Hdr.mObjType = KernObj_Process;
+    apProc->Hdr.mfCleanup = KernProc_CleanupOne;
+    K2OSKERN_SeqInit(&apProc->ThreadListSeqLock);
+    K2LIST_Init(&apProc->ThreadList);
+}
+
+void
+KernProc_InitOne(
+    K2OSKERN_OBJ_PROCESS *apProc
+)
+{
+    K2MEM_Zero(&apProc, sizeof(K2OSKERN_OBJ_PROCESS));
+    sInitOne(apProc);
+}
+
 void
 KernProc_Init(
     void
@@ -45,10 +73,9 @@ KernProc_Init(
 
     K2LIST_Init(&gData.ProcList);
 
-    gpProc1->Hdr.mObjType = KernObj_Process;
+    sInitOne(gpProc1);
+
     gpProc1->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT;
-    gpProc1->Hdr.mRefCount = 0;
-    gpProc1->Hdr.mfCleanup = NULL;
     //
     // this stuff set up in kernel main at the very beginning
     //
@@ -58,7 +85,6 @@ KernProc_Init(
     //gpProc1->mVirtMapKVA = K2OS_KVA_KERNVAMAP_BASE;
 
     KernObj_Add(&gpProc1->Hdr);
-
     K2LIST_AddAtHead(&gData.ProcList, &gpProc1->ProcListLink);
 
     //

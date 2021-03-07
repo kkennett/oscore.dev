@@ -33,10 +33,21 @@
 #include "kern.h"
 
 void
-KernNotify_Init(
+KernNotify_CleanupOne(
+    K2OSKERN_OBJ_HEADER *apObj
+)
+{
+    K2_ASSERT(0);
+}
+
+void
+KernNotify_InitOne(
     K2OSKERN_OBJ_NOTIFY *apNotify
 )
 {
+    K2MEM_Zero(&apNotify, sizeof(K2OSKERN_OBJ_NOTIFY));
+    apNotify->Hdr.mObjType = KernObj_Notify;
+    apNotify->Hdr.mfCleanup = KernNotify_CleanupOne;
     K2OSKERN_SeqInit(&apNotify->Lock);
     apNotify->Locked.mState = KernNotifyState_Idle;
     K2LIST_Init(&apNotify->Locked.WaitingThreadList);
@@ -45,8 +56,9 @@ KernNotify_Init(
 
 UINT32
 KernNotify_Signal(
-    K2OSKERN_OBJ_NOTIFY *   apNotify,
-    UINT32                  aSignalBits
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_NOTIFY *       apNotify,
+    UINT32                      aSignalBits
 )
 {
     K2OSKERN_OBJ_THREAD *   pReleasedThread;
@@ -98,7 +110,7 @@ KernNotify_Signal(
         pReleasedThread->mSysCall_Result = result;
         pReleasedThread->mSysCall_Status = K2STAT_THREAD_WAITED;
         pReleasedThread->mState = KernThreadState_Migrating;
-        KernCpu_MigrateThread((UINT32)-1, pReleasedThread);
+        KernCpu_MigrateThread(apThisCore, KernSched_PickCoreForThread(pReleasedThread), pReleasedThread);
     }
 
     return result;

@@ -61,6 +61,7 @@ enum _KernObj
 
     KernObj_Process,
     KernObj_Thread,
+    KernObj_Notify,
 
     KernObj_Count
 };
@@ -81,6 +82,25 @@ struct _K2OSKERN_OBJ_HEADER
     };
     K2OSKERN_pf_ObjCleanup  mfCleanup;
     K2TREE_NODE             ObjTreeNode;
+};
+
+/* --------------------------------------------------------------------------------- */
+
+typedef enum _KernIciCode KernIciCode;
+enum _KernIciCode
+{
+    KernIciCode_None,               // 0
+    KernIciCode_Migrated_Thread,    // 1
+
+    KernIciCode_Count               // 2
+};
+
+typedef struct _K2OSKERN_OUT_ICI K2OSKERN_OUT_ICI;
+struct _K2OSKERN_OUT_ICI
+{
+    UINT32          mTargetCoreMask;
+    KernIciCode     mCode;
+    K2LIST_LINK     ListLink;
 };
 
 /* --------------------------------------------------------------------------------- */
@@ -134,6 +154,8 @@ struct _K2OSKERN_OBJ_THREAD
 
     K2LIST_LINK             ProcThreadListLink;
 
+    UINT32                  mAffinityMask;
+
     K2OSKERN_THREAD_CONTEXT Context;
 
     UINT32                  mSysCall_Arg1;
@@ -144,6 +166,8 @@ struct _K2OSKERN_OBJ_THREAD
     K2OSKERN_CPUCORE volatile * mpCurrentCore;
     K2LIST_LINK                 CpuRunListLink;
     K2OSKERN_CPUCORE volatile * mpLastRunCore;
+    K2OSKERN_OBJ_THREAD *       mpMigratedNext;
+    K2OSKERN_OUT_ICI            MigrateIci;
 
     K2LIST_LINK             NotifyWaitListLink;
 };
@@ -171,42 +195,25 @@ K2OSKERN_GetThisCoreCurrentThread(
 
 /* --------------------------------------------------------------------------------- */
 
-typedef enum _KernIciCode KernIciCode;
-enum _KernIciCode
-{
-    KernIciCode_None,       // 0
-    KernIciCode_WakeUp,     // 1
-
-
-    KernIciCode_Count       // 2
-};
-
-typedef struct _K2OSKERN_OUT_ICI K2OSKERN_OUT_ICI;
-struct _K2OSKERN_OUT_ICI
-{
-    UINT32          mTargetCoreMask;
-    KernIciCode     mCode;
-    K2LIST_LINK     ListLink;
-};
-
 struct _K2OSKERN_CPUCORE
 {
 #if K2_TARGET_ARCH_IS_INTEL
     /* must be first thing in struct */
-    X32_TSS                 TSS;
+    X32_TSS                         TSS;
 #endif
 
-    UINT32                  mCoreIx;
+    UINT32                          mCoreIx;
 
-    BOOL                    mIsExecuting;
-    BOOL                    mIsIdle;
+    BOOL                            mIsExecuting;
+    BOOL                            mIsIdle;
 
-    UINT32 volatile         mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
-    K2LIST_ANCHOR           IciOutList;
+    UINT32 volatile                 mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
+    K2LIST_ANCHOR                   IciOutList;
 
-    K2LIST_ANCHOR           RunList;
-
-    K2OSKERN_OBJ_THREAD     IdleThread;
+    K2LIST_ANCHOR                   RunList;
+    K2OSKERN_OBJ_THREAD             IdleThread;
+    BOOL                            mThreadChanged;
+    K2OSKERN_OBJ_THREAD * volatile  mpMigratedHead;
 };
 
 #define K2OSKERN_COREMEMORY_STACKS_BYTES  ((K2_VA32_MEMPAGE_BYTES - sizeof(K2OSKERN_CPUCORE)) + (K2_VA32_MEMPAGE_BYTES * 3))
@@ -470,15 +477,18 @@ UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 void    KernPhys_Init(void);
 
 void    KernProc_Init(void);
+void    KernProc_InitOne(K2OSKERN_OBJ_PROCESS *apProc);
+
+UINT32  KernSched_PickCoreForThread(K2OSKERN_OBJ_THREAD *apThread);
 
 void    KernCpu_Init(void);
 void    __attribute__((noreturn)) KernCpu_Exec(K2OSKERN_CPUCORE volatile *apThisCore, KernCpuExecReason aReason);
 BOOL    KernCpu_ProcessIcis(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernCpu_Reschedule(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernCpu_LatchIciToSend(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OUT_ICI *apIciOut);
-void    KernCpu_MigrateThread(UINT32 aTargetCoreIx, K2OSKERN_OBJ_THREAD *apThread);
-void    KernCpu_SetNextThread(K2OSKERN_CPUCORE volatile *apThisCore);
+void    KernCpu_MigrateThread(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetCoreIx, K2OSKERN_OBJ_THREAD *apThread);
 
+void    KernThread_InitOne(K2OSKERN_OBJ_THREAD *apThread);
 void    KernThread_Exception(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
@@ -495,8 +505,8 @@ void    KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
 
-void    KernNotify_Init(K2OSKERN_OBJ_NOTIFY *apNotify);
-UINT32  KernNotify_Signal(K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
+void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify);
+UINT32  KernNotify_Signal(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
 
 /* --------------------------------------------------------------------------------- */
 

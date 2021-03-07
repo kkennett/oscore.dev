@@ -264,6 +264,7 @@ KernCpu_Exec(
         //
         pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
         K2_ASSERT(KernThreadState_OnCoreRunList == pNextThread->mState);
+        apThisCore->mThreadChanged = FALSE;
         if (pNextThread == &apThisCore->IdleThread)
         {
             if (1 == apThisCore->RunList.mNodeCount)
@@ -302,70 +303,53 @@ KernCpu_Exec(
 
 void
 KernCpu_MigrateThread(
-    UINT32                  aTargetCoreIx,
-    K2OSKERN_OBJ_THREAD *   apThread
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aTargetCoreIx,
+    K2OSKERN_OBJ_THREAD *       apThread
 )
 {
-    K2_ASSERT(0);
-#if 0
-    SKCpu *pTarget;
-    SKCpu *pThisCpu = GetCurrentCpu();
+    K2OSKERN_CPUCORE volatile  *pTargetCore;
+    K2OSKERN_OBJ_THREAD *       pLast;
+    K2OSKERN_OBJ_THREAD *       pOld;
 
-    if (((DWORD)-1) == aTargetCpu)
-    {
-        //
-        // choose target cpu
-        //
-        aTargetCpu = ((DWORD)rand()) % mCpuCount;
-    }
-    pTarget = &mpCpus[aTargetCpu];
+    K2_ASSERT(aTargetCoreIx < gData.LoadInfo.mCpuCoreCount);
+    pTargetCore = K2OSKERN_COREIX_TO_CPUCORE(aTargetCoreIx);
 
-    K2_ASSERT(NULL == apThread->mpCurrentCpu);
-    K2_ASSERT(apThread->mState == SKThreadState_Migrating);
+    K2_ASSERT(NULL == apThread->mpCurrentCore);
+    K2_ASSERT(apThread->mState == KernThreadState_Migrating);
 
-    if (pThisCpu == pTarget)
+    apThread->mpCurrentCore = pTargetCore;
+
+    if (apThisCore == pTargetCore)
     {
         // adding this at the end will place it after the idle thread, which guarantees a reschedule calc
         // before it executes
-        apThread->mState = SKThreadState_OnRunList;
-        apThread->mpCurrentCpu = pThisCpu;
-        K2LIST_AddAtTail(&pThisCpu->RunningThreadList, &apThread->CpuThreadListLink);
+        apThread->mState = KernThreadState_OnCoreRunList;
+        K2LIST_AddAtTail((K2LIST_ANCHOR *)&apThisCore->RunList, &apThread->CpuRunListLink);
     }
     else
     {
-        SKThread * pLast;
-        SKThread * pOld;
+        //
+        // state stays as migrating
+        //
+
         do
         {
-            pLast = pTarget->mpMigratedHead;
+            pLast = pTargetCore->mpMigratedHead;
             K2_CpuWriteBarrier();
-            apThread->mpCpuMigratedNext = pLast;
+            apThread->mpMigratedNext = pLast;
             K2_CpuReadBarrier();
-            pOld = (SKThread *)InterlockedCompareExchangePointer((PVOID volatile *)&pTarget->mpMigratedHead, apThread, (PVOID)pLast);
+            pOld = (K2OSKERN_OBJ_THREAD *)
+                K2ATOMIC_CompareExchange(
+                    (UINT32 volatile *)&pTargetCore->mpMigratedHead, 
+                    (UINT32)apThread, 
+                    (UINT32)pLast
+                );
         } while (pOld != pLast);
 
-        pThisCpu->NB_SendIci(pTarget->mCpuIndex, SKICI_CODE_MIGRATED_THREAD);
+        apThread->MigrateIci.mCode = KernIciCode_Migrated_Thread;
+        apThread->MigrateIci.mTargetCoreMask = (1 << pTargetCore->mCoreIx);
+        KernCpu_LatchIciToSend(apThisCore, &apThread->MigrateIci);
     }
-#endif
-}
-
-void
-KernCpu_SetNextThread(
-    K2OSKERN_CPUCORE volatile * apThisCore
-)
-{
-    K2_ASSERT(0);
-#if 0
-    SKThread *pThread = K2_GET_CONTAINER(SKThread, RunningThreadList.mpHead, CpuThreadListLink);
-    K2_ASSERT(pThread != mpCurrentThread);
-    K2_ASSERT(pThread->mState == SKThreadState_OnRunList);
-    K2_ASSERT(pThread->mpCurrentCpu == this);
-    if (pThread == mpIdleThread)
-        mSchedTimeout.QuadPart = 0;
-    else
-        mpSystem->MsToCpuTime(pThread->mQuantum, &mSchedTimeout);
-    mpCurrentThread = pThread;
-    mThreadChanged = TRUE;
-#endif
 }
 

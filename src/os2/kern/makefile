@@ -49,6 +49,7 @@ SOURCES += intr.c
 SOURCES += thread.c
 SOURCES += object.c
 SOURCES += notify.c
+SOURCES += sched.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

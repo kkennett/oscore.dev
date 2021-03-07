@@ -93,11 +93,9 @@ KernUser_Init(
     {
         pCore = K2OSKERN_COREIX_TO_CPUCORE(coreIx);
 
-        pCore->IdleThread.Hdr.mObjType = KernObj_Thread;
+        KernThread_InitOne((K2OSKERN_OBJ_THREAD *)&pCore->IdleThread);
         pCore->IdleThread.Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
         pCore->IdleThread.mpProc = gpProc1;
-        pCore->IdleThread.mIx = (UINT32)-1;
-        pCore->IdleThread.mpTlsPage = NULL;
 
         KernObj_Add((K2OSKERN_OBJ_HEADER *)&pCore->IdleThread.Hdr);
 
@@ -135,7 +133,7 @@ KernUser_Init(
 
     pThreadPtrs[firstThreadIx] = (UINT32)pFirstThread;
 
-    pFirstThread->Hdr.mObjType = KernObj_Thread;
+    KernThread_InitOne(pFirstThread);
     pFirstThread->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
     pFirstThread->mpProc = gpProc1;
     pFirstThread->mIx = firstThreadIx;
