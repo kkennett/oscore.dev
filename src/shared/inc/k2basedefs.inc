@@ -235,16 +235,14 @@
 #define X32_SEGMENT_KERNEL_DATA                 0x02    // must be right after KERNEL_CODE (for SYSENTER/SYSEXIT)
 #define X32_SEGMENT_USER_CODE                   0x03    // must be right after KERNEL_DATA (for SYSENTER/SYSEXIT)
 #define X32_SEGMENT_USER_DATA                   0x04    // must be right after USER_CODE   (for SYSENTER/SYSEXIT)
-#define X32_SEGMENT_KERNEL_LDT                  0x05
-#define X32_SEGMENT_USER_LDT                    0x06
-#define X32_SEGMENT_TSS0                        0x07
+#define X32_SEGMENT_USER_LDT                    0x05
+#define X32_SEGMENT_TSS0                        0x06
 #define X32_NUM_SEGMENTS                        (X32_SEGMENT_TSS0 + X32_MAX_CPU_COUNT)
 
 #define X32_SEGMENT_SELECTOR_KERNEL_CODE        (X32_SEGMENT_KERNEL_CODE     * X32_SIZEOF_GDTENTRY)
 #define X32_SEGMENT_SELECTOR_KERNEL_DATA        (X32_SEGMENT_KERNEL_DATA     * X32_SIZEOF_GDTENTRY)
 #define X32_SEGMENT_SELECTOR_USER_CODE          (X32_SEGMENT_USER_CODE       * X32_SIZEOF_GDTENTRY)
 #define X32_SEGMENT_SELECTOR_USER_DATA          (X32_SEGMENT_USER_DATA       * X32_SIZEOF_GDTENTRY)
-#define X32_SEGMENT_SELECTOR_KERNEL_LDT         (X32_SEGMENT_KERNEL_LDT      * X32_SIZEOF_GDTENTRY)
 #define X32_SEGMENT_SELECTOR_USER_LDT           (X32_SEGMENT_USER_LDT        * X32_SIZEOF_GDTENTRY)
 #define X32_SEGMENT_SELECTOR_TSS(ix)            ((X32_SEGMENT_TSS0 + (ix))   * X32_SIZEOF_GDTENTRY)
 

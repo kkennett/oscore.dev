@@ -176,14 +176,12 @@ X32Kern_CpuLaunch(
     X32Kern_GDTFlush();
 
     /* load the kernel LDT.  This never changes after init */
-//    X32_LoadLDT(X32_SEGMENT_SELECTOR_KERNEL_LDT | X32_SELECTOR_RPL_KERNEL);
     X32_LoadLDT(X32_SEGMENT_SELECTOR_USER_LDT | X32_SELECTOR_RPL_USER);
 
     /* now load the task register. we never change this either after init */
     X32_LoadTR(X32_SEGMENT_SELECTOR_TSS(aThisCpuCoreIndex));
 
     /* set FS to point to our per-core value holding the current thread on that core */
-//    X32_SetFS((aThisCpuCoreIndex * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_KERNEL);
     X32_SetFS((aThisCpuCoreIndex * X32_SIZEOF_GDTENTRY) | X32_SELECTOR_TI_LDT | X32_SELECTOR_RPL_USER);
 
     /* clean cache so we're ready to init the scheduler */

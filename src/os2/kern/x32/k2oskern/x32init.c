@@ -36,7 +36,6 @@ X32_GDTENTRY __attribute__((aligned(16))) gX32Kern_GDT[X32_NUM_SEGMENTS];
 X32_xDTPTR   __attribute__((aligned(16))) gX32Kern_GDTPTR;
 X32_IDTENTRY __attribute__((aligned(16))) gX32Kern_IDT[X32_NUM_IDT_ENTRIES];
 X32_xDTPTR   __attribute__((aligned(16))) gX32Kern_IDTPTR;
-X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_KernLDT[K2OS_MAX_CPU_COUNT];
 X32_LDTENTRY __attribute__((aligned(16))) gX32Kern_UserLDT[K2OS_MAX_CPU_COUNT];
 
 K2_STATIC_ASSERT((X32_DEVIRQ_MAX_COUNT + X32KERN_DEVVECTOR_BASE) < X32_NUM_IDT_ENTRIES);
