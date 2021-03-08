@@ -178,6 +178,8 @@ KernArch_InstallPageTable(
     K2LIST_LINK *           pListLink;
     K2OSKERN_OBJ_PROCESS *  pOtherProc;
     UINT32                  mapAttr;
+    UINT32 *                pScanPte;
+    UINT32                  pteLeft;
 
 //    K2OSKERN_Debug("Install process %d pageTable for %08X using page %08X\n", apProc->mId, aVirtAddrPtMaps, aPhysPageAddr);
 
@@ -219,6 +221,17 @@ KernArch_InstallPageTable(
     if (aZeroPageAfterMap)
     {
         K2MEM_Zero((void *)virtKernPT, K2_VA32_MEMPAGE_BYTES);
+    }
+    else
+    {
+        pScanPte = (UINT32 *)virtKernPT;
+        pteLeft = K2_VA32_ENTRIES_PER_PAGETABLE;
+        do
+        {
+            if (0 != *pScanPte)
+                pPageCount[ptIndex]++;
+            pScanPte++;
+        } while (--pteLeft);
     }
 
     //

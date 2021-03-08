@@ -81,6 +81,10 @@ struct _K2OS_USER_THREAD_PAGE
     UINT32  mSysCall_Arg6;
     UINT32  mSysCall_Arg7;
     K2STAT  mLastStatus;
+
+    UINT32  mMirror_HeldPtPageCount;
+    UINT32  mMirror_HeldPageCount;
+    BOOL    mMirror_HeldContig;
 };
 
 K2STAT K2OS_Thread_GetLastStatus(void);

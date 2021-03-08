@@ -756,3 +756,50 @@ KernPhys_Init(
     sA32Init_PhysExtra();
 #endif
 }
+
+void 
+KernPhys_RenderPtMap(
+    K2OSKERN_OBJ_PROCESS *  apProc,
+    UINT8 *                 apRetMap
+)
+{
+    UINT32      bit;
+    UINT32      v;
+    UINT32      endBit;
+    UINT32 *    pPageCount;
+
+    if (1 == apProc->mId)
+    {
+        endBit = K2_VA32_PAGETABLES_FOR_4G;
+    }
+    else
+    {
+        endBit = K2_VA32_PAGETABLES_FOR_2G;
+    }
+
+    pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
+
+    K2OSKERN_SeqLock(&gData.PhysMemSeqLock);
+
+    bit = 0;
+    do
+    {
+        do
+        {
+            v = (bit & 7);
+            if (0 != pPageCount[bit])
+            {
+                K2_ASSERT(0 != (*(((UINT32 *)apProc->mTransTableKVA) + bit)));
+                (*apRetMap) |= (1 << v);
+            }
+            else
+            {
+                K2_ASSERT(0 == (*(((UINT32 *)apProc->mTransTableKVA) + bit)));
+            }
+            bit++;
+        } while (7 != v);
+        apRetMap++;
+    } while (bit < endBit);
+
+    K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock);
+}

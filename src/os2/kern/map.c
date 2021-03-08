@@ -43,10 +43,17 @@ KernMap_MakeOnePresentPage(
     UINT32 * pPTE;
     UINT32 * pPageCount;
     UINT32   pteOld;
+    UINT32   ptIndex;
+
+    ptIndex = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
         K2_ASSERT(apProc == gpProc1);
+        //
+        // not allowed to map directly to mirrored pagetable
+        //
+        K2_ASSERT(ptIndex != (K2OS_KVA_THREAD_TLS_BASE / K2_VA32_PAGETABLE_MAP_BYTES));
     }
 
     aPageMapAttr &= K2OS_MEMPAGE_ATTR_MASK;
@@ -63,11 +70,17 @@ KernMap_MakeOnePresentPage(
     if (0 == (pteOld & K2OSKERN_PTE_NP_BIT))
     {
         pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
-        pPageCount += aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
+        pPageCount[ptIndex]++;
+        K2_ASSERT(pPageCount[ptIndex] <= 1024);
 
-        (*pPageCount)++;
-
-        K2_ASSERT((*pPageCount) <= 1024);
+        //
+        // check for specifically mirrored pagetable
+        //
+        if (ptIndex == 0)
+        {
+            pPageCount[K2OS_KVA_THREAD_TLS_BASE / K2_VA32_PAGETABLE_MAP_BYTES]++;
+            K2_ASSERT(pPageCount[K2OS_KVA_THREAD_TLS_BASE / K2_VA32_PAGETABLE_MAP_BYTES] <= 1024);
+        }
     }
 
     K2_CpuWriteBarrier();
@@ -80,10 +93,13 @@ KernMap_BreakOnePage(
     UINT32 aNpFlags
 )
 {
-    UINT32 *    pPTE;
-    UINT32 *    pPageCount;
-    UINT32      result;
-    UINT32      pteOld;
+    UINT32 * pPTE;
+    UINT32 * pPageCount;
+    UINT32   result;
+    UINT32   pteOld;
+    UINT32   ptIndex;
+
+    ptIndex = aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
 
     if (aVirtAddr >= K2OS_KVA_KERN_BASE)
     {
@@ -109,11 +125,17 @@ KernMap_BreakOnePage(
         *pPTE = 0;
 
         pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
-        pPageCount += aVirtAddr / K2_VA32_PAGETABLE_MAP_BYTES;
-        
-        K2_ASSERT((*pPageCount) > 0);
-        
-        (*pPageCount)--;
+        K2_ASSERT(pPageCount[ptIndex] > 0);
+        pPageCount[ptIndex]--;
+
+        //
+        // check for specifically mirrored pagetable
+        //
+        if (ptIndex == 0)
+        {
+            K2_ASSERT(pPageCount[K2OS_KVA_THREAD_TLS_BASE / K2_VA32_PAGETABLE_MAP_BYTES] > 0);
+            pPageCount[K2OS_KVA_THREAD_TLS_BASE / K2_VA32_PAGETABLE_MAP_BYTES]--;
+        }
     }
 //    K2OSKERN_Debug("%08X xxxx %08X -> pte(%08X)\n", pPTE, aVirtAddr, *pPTE);
 

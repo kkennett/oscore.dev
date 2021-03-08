@@ -41,6 +41,8 @@
 #define K2OS_SYSCALL_ID_SIGNAL_NOTIFY       3
 #define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY     4
 #define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB  5
+#define K2OS_SYSCALL_ID_ALLOC_PHYS          6
+#define K2OS_SYSCALL_ID_RENDER_PTMAP        7
 
 /* --------------------------------------------------------------------------------- */
 

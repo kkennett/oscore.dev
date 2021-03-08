@@ -62,8 +62,8 @@ KernArch_UserInit(
     rofsAddr = K2_ROUNDUP(rofsAddr, K2_VA32_MEMPAGE_BYTES);
     rofsAddr = K2OS_UVA_PUBLICAPI_BASE - rofsAddr;
 
-    pFirstThread->Context.REGS.ECX = rofsAddr; // first arg to entry point
-    pFirstThread->Context.REGS.EDX = 0; // second arg to entry point
+    pFirstThread->Context.REGS.ECX = rofsAddr;                  // first arg to entry point
+    pFirstThread->Context.REGS.EDX = pFirstThread->mpProc->mId; // second arg to entry point
     pFirstThread->Context.EIP = gData.UserCrtInfo.mEntrypoint;
     pFirstThread->Context.CS = (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER);
     pFirstThread->Context.EFLAGS = X32_EFLAGS_INTENABLE | X32_EFLAGS_SBO | X32_EFLAGS_ZERO;

@@ -50,6 +50,8 @@ KernThread_InitOne(
     apThread->mState = KernThreadState_Init;
     apThread->mAffinityMask = (1 << gData.LoadInfo.mCpuCoreCount) - 1;
     apThread->Hdr.mfCleanup = KernThread_CleanupOne;
+    K2LIST_Init(&apThread->HelpPtPageList);
+    K2LIST_Init(&apThread->HeldPageList);
 }
 
 void 
@@ -96,6 +98,10 @@ KernThread_SystemCall(
         KernThread_SysCall_WaitForNotify(apThisCore, pCurThread,
             (K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB == pCurThread->mSysCall_Id) ? TRUE : FALSE
             );
+        break;
+
+    case K2OS_SYSCALL_ID_RENDER_PTMAP:
+        KernPhys_RenderPtMap(pCurThread->mpProc, (UINT8 *)pCurThread->mSysCall_Arg0);
         break;
 
     default:

@@ -171,6 +171,10 @@ struct _K2OSKERN_OBJ_THREAD
     K2OSKERN_OBJ_THREAD *       mpMigratedNext;
     K2OSKERN_OUT_ICI            MigrateIci;
 
+    K2LIST_ANCHOR           HelpPtPageList;
+    K2LIST_ANCHOR           HeldPageList;
+    BOOL                    mHeldContig;
+
     K2LIST_LINK             NotifyWaitListLink;
 };
 
@@ -477,6 +481,7 @@ void    KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 
 void    KernPhys_Init(void);
+void    KernPhys_RenderPtMap(K2OSKERN_OBJ_PROCESS *apProc, UINT8 *apRetMap);
 
 void    KernProc_Init(void);
 void    KernProc_InitOne(K2OSKERN_OBJ_PROCESS *apProc);

@@ -31,82 +31,43 @@
 //
 #include "crt.h"
 
-UINT32                          gProcessId;
-void *                          __dso_handle;
+static UINT8    sgMem_PtMap[128]; // first 64 bytes are user space, second 64 bytes are kernel space
+static UINT32   sgMem_LowBar;
+static UINT32   sgMem_HighBar;
 
-extern DLX_INFO const * const   gpDlxInfo;
-extern void *                   __data_end;
-
-int  __cxa_atexit(__vfpv f, void *a, DLX *apDlx);
-void __call_dtors(DLX *apDlx);
-
-#if K2_TARGET_ARCH_IS_ARM
-
-int __aeabi_atexit(void *object, __vfpv destroyer, void *dso_handle)
-{
-    return __cxa_atexit(destroyer, object, (DLX *)dso_handle);
-}
-
-#endif
-
-static 
-void 
-K2_CALLCONV_REGS 
-sAssert(char const * apFile, int aLineNum, char const * apCondition)
-{
-    CrtDbg_Printf("ASSERT %s:%d (%s)\n", apFile, aLineNum, apCondition);
-    *((UINT32 *)0) = 0;
-    while (1);
-}
-
-K2_pf_ASSERT K2_Assert = sAssert;
-
-DLX *
-K2OS_GetDlxModule(
-    void
+K2STAT  
+CrtMem_AllocPhysToThread(
+    UINT32 aPageCount,
+    UINT32 aDisposition
 )
 {
-    return (DLX *)__dso_handle;
+    return CrtThread_SysCall2(K2OS_SYSCALL_ID_ALLOC_PHYS, aPageCount, aDisposition);
 }
 
 void
-K2_CALLCONV_REGS
-__k2oscrt_user_entry(
-    K2ROFS const *  apROFS,
-    UINT32          aProcessId
-    )
+CrtMem_Init(
+    void
+)
 {
-    //
-    // this will never execute as aProcessId will never equal 0xFEEDF00D
-    // it is here to pull in exports and must be 'reachable' code.
-    // the *ADDRESS OF* gpDlxInfo is even invalid and trying to use
-    // it in executing code will cause a fault.
-    //
-    if (aProcessId == 0xFEEDF00D)
-        __dso_handle = (void *)(*((UINT32 *)gpDlxInfo));
+    CrtThread_SysCall1(K2OS_SYSCALL_ID_RENDER_PTMAP, (UINT32)sgMem_PtMap);
 
-    //
-    // baseline inits
-    //
-    gProcessId = aProcessId;
-    K2OS_Thread_SetLastStatus(K2STAT_NO_ERROR);
+    sgMem_HighBar = K2OS_UVA_PUBLICAPI_PAGETABLE_BASE;
+    sgMem_LowBar = gCrtMemEnd;
 
-    //
-    // syscall with ROFS address
-    //
-    CrtDbg_Printf("User Mode Thread %d!\n", CRT_GET_CURRENT_THREAD_INDEX);
+    if (1 == gProcessId)
+    {
+        //
+        // ptmap includes kernel range
+        //
 
-    //
-    // init dynamic loader and self-init this module
-    //
-    CrtDlx_Init(apROFS);
+    }
+    else
+    {
+        //
+        // ptmap only includes user rage
+        //
 
-    //
-    // init memory tracking
-    //
-    CrtMem_Init();
 
-    CrtDbg_Printf("Death Spin\n");
-    while (1);
+    }
 }
 

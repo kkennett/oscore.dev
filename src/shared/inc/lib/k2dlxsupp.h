@@ -114,6 +114,7 @@ struct _K2DLXSUPP_PRELOAD
     UINT32          mDlxFileSizeBytes;
     UINT32          mDlxBase;
     K2LIST_ANCHOR * mpListAnchorOut;
+    UINT32          mDlxMemEndOut;
 };
 
 K2STAT

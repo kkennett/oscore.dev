@@ -75,8 +75,14 @@ UINT32 CrtThread_SysCall8(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, 
 
 typedef void(*__vfpv)(void *);
 
-UINT32 CrtDbg_Printf(char const *apFormat, ...);
+extern UINT32 gProcessId;
+extern UINT32 gCrtMemEnd;
 
-void CrtDlx_Init(K2ROFS const * apROFS);
+UINT32  CrtDbg_Printf(char const *apFormat, ...);
+
+void    CrtDlx_Init(K2ROFS const * apROFS);
+
+void    CrtMem_Init(void);
+K2STAT  CrtMem_AllocPhysToThread(UINT32 aPageCount, UINT32 aDisposition);
 
 #endif // __CRT_H

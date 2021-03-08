@@ -39,5 +39,6 @@ SOURCES += tls.c
 SOURCES += thread.c
 SOURCES += debug.c
 SOURCES += dlxsupp.c
+SOURCES += mem.c 
 
 include $(K2_ROOT)/src/shared/build/post.make

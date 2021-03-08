@@ -36,6 +36,7 @@ static UINT8 *          sgpLoaderPage;
 static K2DLXSUPP_HOST   sgDlxHost;
 static K2ROFS const *   sgpROFS;
 
+UINT32 gCrtMemEnd;
 
 K2STAT 
 CrtDlx_CritSec(
@@ -171,6 +172,7 @@ CrtDlx_Init(
     preloadSelf.mDlxFileSizeBytes = pFile->mSizeBytes;
     preloadSelf.mDlxBase = K2OS_UVA_LOW_BASE;
     preloadSelf.mpListAnchorOut = NULL;
+    preloadSelf.mDlxMemEndOut = 0;
 
     K2MEM_Zero(&sgDlxHost, sizeof(sgDlxHost));
     sgDlxHost.mHostSizeBytes = sizeof(sgDlxHost);
@@ -188,6 +190,8 @@ CrtDlx_Init(
 
     stat = K2DLXSUPP_Init(sgpLoaderPage, &sgDlxHost, TRUE, FALSE, &preloadSelf);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
+
+    gCrtMemEnd = preloadSelf.mDlxMemEndOut;
 
     //
     // tell the kernel where everything is for us for debugging purposes
