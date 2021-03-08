@@ -205,23 +205,25 @@ int main(int argc, char **argv)
                     if (secHdr.sh_type == SHT_SYMTAB)
                     {
                         K2Elf32SymbolSection const &symSec = (K2Elf32SymbolSection const &)pElfFile->Section(ix);
-
                         printf("      %d SYMBOLS\n", symSec.EntryCount());
 
-                        Elf32_Sym *pSyms = new Elf32_Sym[symSec.EntryCount()];
-                        CopyMemory(pSyms, symSec.RawData(), symSec.EntryCount() * sizeof(Elf32_Sym));
+                        UINT8 * pSyms = (UINT8 *)malloc(symSec.Header().sh_entsize * symSec.EntryCount());
 
-                        K2SORT_Quick(pSyms, symSec.EntryCount(), sizeof(Elf32_Sym), sSymCompare);
+                        CopyMemory(pSyms, symSec.RawData(), symSec.EntryCount() * symSec.Header().sh_entsize);
 
+                        K2SORT_Quick(pSyms, symSec.EntryCount(), symSec.Header().sh_entsize, sSymCompare);
 
                         UINT32 jx;
                         for (jx = 0; jx < symSec.EntryCount(); jx++)
                         {
+                            Elf32_Sym *pSym = (Elf32_Sym *)(pSyms + (jx * symSec.Header().sh_entsize));
                             printf("        %08X %s\n",
-                                pSyms[jx].st_value,
-                                (char const *)(symSec.StringSection().RawData() + pSyms[jx].st_name)
+                                pSym->st_value,
+                                (char const *)(symSec.StringSection().RawData() + pSym->st_name)
                             );
                         }
+
+                        free(pSyms);
                     }
 
                     if (!(secHdr.sh_flags & SHF_ALLOC))

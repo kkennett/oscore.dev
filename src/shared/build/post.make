@@ -249,13 +249,22 @@ CRTSTUB_OBJ :=
 
 else
 
+ifeq ($(K2_OS),os1)
+
 LDENTRY := -e __K2OS_dlx_crt
 CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_OS)/crtstub/crtstub.o
-
 ifneq ($(K2_KERNEL),)
 IMPORT_KERNEL_LIBS += @$(K2_OS)/crt/crtkern/$(K2_ARCH)/k2oscrt
 else
 IMPORT_LIBS += @$(K2_OS)/crt/crtuser/$(K2_ARCH)/k2oscrt
+endif
+
+else
+
+LDENTRY := -e __K2OS_dlx_crt
+CRTSTUB_OBJ := $(K2_TARGET_BASE)/obj/$(K2_BUILD_SPEC)/$(K2_OS)/user/crtstub/crtstub.o
+IMPORT_LIBS += @$(K2_OS)/user/crt/$(K2_ARCH)/k2oscrt
+
 endif
 
 endif
@@ -327,7 +336,7 @@ $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF) $(B
 	@echo -------- Create Exports for DLX from ELF $@ --------
 	@$(EXPORT_CMD)
 	@echo -------- Linking ELF for DLX $@ --------
-	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF_O) $(DLX_IMPORT_LIBRARIES) -)
+	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF_O) $(DLX_IMPORT_LIBRARIES) -)
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------

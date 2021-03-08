@@ -156,6 +156,19 @@ K2OS_Tls_GetValue
 #
 K2OS_Thread_GetLastStatus
 K2OS_Thread_SetLastStatus
+#K2OS_Thread_WaitForNotify
+#K2OS_Thread_TestForNotify
+
+#
+# NOTIFY
+#
+#K2OS_Notify_Signal
+
+#
+# DEBUG
+#
+K2OS_Debug_OutputString
+K2OS_Debug_Break
 
 
 #########################################################
@@ -167,4 +180,5 @@ K2_Assert
 K2_ExTrap_Mount
 K2_ExTrap_Dismount
 K2_RaiseException
+
 
