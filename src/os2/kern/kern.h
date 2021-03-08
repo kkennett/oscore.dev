@@ -38,6 +38,7 @@
 #include <lib/k2rofshelp.h>
 #include <lib/k2elf32.h>
 #include "../../shared/lib/k2dlxsupp/dlx_struct.h"
+#include "syscallid.h"
 
 /* --------------------------------------------------------------------------------- */
 

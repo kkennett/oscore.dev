@@ -29,71 +29,19 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#ifndef __K2OS_H
-#define __K2OS_H
 
-#include "k2osbase.h"
+#ifndef __SYSCALLID_H
+#define __SYSCALLID_H
 
-#if __cplusplus
-extern "C" {
-#endif
+/* --------------------------------------------------------------------------------- */
 
-//
-//------------------------------------------------------------------------
-//
+#define K2OS_SYSCALL_ID_OUTPUT_DEBUG        0
+#define K2OS_SYSCALL_ID_DEBUG_BREAK         1
+#define K2OS_SYSCALL_ID_CRT_INITDLX         2
+#define K2OS_SYSCALL_ID_SIGNAL_NOTIFY       3
+#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY     4
+#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB  5
 
-typedef UINT32 K2OS_TOKEN;
+/* --------------------------------------------------------------------------------- */
 
-//
-//------------------------------------------------------------------------
-//
-
-UINT32 K2OS_Debug_OutputString(char const *apStr);
-void   K2OS_Debug_Break(void);
-
-//
-//------------------------------------------------------------------------
-//
-
-#define K2OS_NUM_TLS_SLOTS              64
-#define K2OS_EXTRA_SYSCALL_ARG_COUNT    8
-
-typedef struct _K2OS_USER_THREAD_PAGE K2OS_USER_THREAD_PAGE;
-struct _K2OS_USER_THREAD_PAGE
-{
-    UINT32  mTlsValue[K2OS_NUM_TLS_SLOTS];
-    UINT32  mExtraSysCallArgs[K2OS_EXTRA_SYSCALL_ARG_COUNT];
-    UINT32  mSysCallResult;
-    K2STAT  mLastStatus;
-};
-
-K2STAT K2OS_Thread_GetLastStatus(void);
-K2STAT K2OS_Thread_SetLastStatus(K2STAT aStatus);
-K2STAT K2OS_Thread_WaitForNotify(K2OS_TOKEN aTokNotify);
-K2STAT K2OS_Thread_TestForNotify(K2OS_TOKEN aTokNotify);
-
-//
-//------------------------------------------------------------------------
-//
-
-K2STAT K2OS_Notify_Signal(K2OS_TOKEN aTokNotify, UINT32 aSignalBits);
-
-//
-//------------------------------------------------------------------------
-//
-
-K2STAT K2OS_Tls_AllocSlot(UINT32 *apRetNewIndex);
-K2STAT K2OS_Tls_FreeSlot(UINT32 aSlotIndex);
-K2STAT K2OS_Tls_SetValue(UINT32 aSlotIndex, UINT32 aValue);
-K2STAT K2OS_Tls_GetValue(UINT32 aSlotIndex, UINT32 *apRetValue);
-
-//
-//------------------------------------------------------------------------
-//
-
-
-#if __cplusplus
-}
-#endif
-
-#endif // __K2OS_H
+#endif // __SYSCALLID_H

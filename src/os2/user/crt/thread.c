@@ -36,11 +36,11 @@ K2OS_Thread_GetLastStatus(
     void
 )
 {
-    UINT32 *pTls;
-    
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    
-    return (K2STAT)(pTls[0]);
+    K2OS_USER_THREAD_PAGE * pThreadPage;
+
+    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
+
+    return pThreadPage->mLastStatus;
 }
 
 K2STAT
@@ -48,13 +48,14 @@ K2OS_Thread_SetLastStatus(
     K2STAT aStatus
 )
 {
-    UINT32 *pTls;
-    UINT32  result;
+    K2OS_USER_THREAD_PAGE * pThreadPage;
+    UINT32                  result;
 
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    
-    result = (K2STAT)(pTls[0]);
-    pTls[0] = (UINT32)aStatus;
+    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
+
+    result = pThreadPage->mLastStatus;
+    pThreadPage->mLastStatus = aStatus;
 
     return result;
 }
+

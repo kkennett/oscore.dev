@@ -31,23 +31,22 @@
 //
 #include "crt.h"
 
-// slot 0 is thread last error slot
-static UINT32 volatile sgSlotBitfield = 1;  
+static UINT64 volatile sgSlotBitfield = 0;  
 
 K2STAT 
 K2OS_Tls_AllocSlot(
     UINT32 *apRetNewIndex
 )
 {
-    UINT32 oldVal;
-    UINT32 nextBit;
-    UINT32 alt;
+    UINT64 oldVal;
+    UINT64 nextBit;
+    UINT64 alt;
 
     do
     {
         oldVal = sgSlotBitfield;
         K2_CpuReadBarrier();
-        if (0xFFFFFFFF == oldVal)
+        if (0xFFFFFFFFFFFFFFFFull == oldVal)
             return K2STAT_ERROR_OUT_OF_RESOURCES;
 
         //
@@ -57,9 +56,9 @@ K2OS_Tls_AllocSlot(
         alt = nextBit - 1;
         nextBit = oldVal | ((nextBit | alt) ^ alt);
 
-    } while (oldVal != K2ATOMIC_CompareExchange(&sgSlotBitfield, nextBit, oldVal));
+    } while (oldVal != K2ATOMIC_CompareExchange64(&sgSlotBitfield, nextBit, oldVal));
 
-    K2BIT_GetLowestPos32(alt, apRetNewIndex);
+    K2BIT_GetLowestPos64(alt, apRetNewIndex);
 
     return K2STAT_NO_ERROR;
 }
@@ -69,20 +68,20 @@ K2OS_Tls_FreeSlot(
     UINT32 aSlotIndex
 )
 {
-    UINT32 oldVal;
-    UINT32 newVal;
+    UINT64 oldVal;
+    UINT64 newVal;
 
-    if (K2OS_MAX_NUM_TLS_SLOTS <= aSlotIndex)
+    if (K2OS_NUM_TLS_SLOTS <= aSlotIndex)
         return K2STAT_ERROR_OUT_OF_BOUNDS;
 
     do
     {
         oldVal = sgSlotBitfield;
         K2_CpuReadBarrier();
-        if (0 == (oldVal & (1 << aSlotIndex)))
+        if (0 == (oldVal & (1ull << aSlotIndex)))
             return K2STAT_ERROR_NOT_IN_USE;
-        newVal = oldVal & ~(1 << aSlotIndex);
-    } while (oldVal != K2ATOMIC_CompareExchange(&sgSlotBitfield, newVal, oldVal));
+        newVal = oldVal & ~(1ull << aSlotIndex);
+    } while (oldVal != K2ATOMIC_CompareExchange64(&sgSlotBitfield, newVal, oldVal));
 
     return K2STAT_NO_ERROR;
 }
@@ -93,20 +92,17 @@ K2OS_Tls_SetValue(
     UINT32 aValue
 )
 {
-    UINT32  thisThreadIndex;
-    UINT32 *pTls;
+    K2OS_USER_THREAD_PAGE * pThreadPage;
 
-    if (K2OS_MAX_NUM_TLS_SLOTS <= aSlotIndex)
+    if (K2OS_NUM_TLS_SLOTS <= aSlotIndex)
         return K2STAT_ERROR_OUT_OF_BOUNDS;
 
-    if (0 == (sgSlotBitfield & (1 << aSlotIndex)))
+    if (0 == (sgSlotBitfield & (1ull << aSlotIndex)))
         return K2STAT_ERROR_NOT_IN_USE;
 
-    thisThreadIndex = CRT_GET_CURRENT_THREAD_INDEX;
+    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
 
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (thisThreadIndex * K2_VA32_MEMPAGE_BYTES));
-
-    pTls[aSlotIndex] = aValue;
+    pThreadPage->mTlsValue[aSlotIndex] = aValue;
 
     return K2STAT_NO_ERROR;
 }
@@ -117,20 +113,17 @@ K2OS_Tls_GetValue(
     UINT32 *apRetValue
 )
 {
-    UINT32  thisThreadIndex;
-    UINT32 *pTls;
+    K2OS_USER_THREAD_PAGE * pThreadPage;
 
-    if (K2OS_MAX_NUM_TLS_SLOTS <= aSlotIndex)
+    if (K2OS_NUM_TLS_SLOTS <= aSlotIndex)
         return K2STAT_ERROR_OUT_OF_BOUNDS;
 
-    if (0 == (sgSlotBitfield & (1 << aSlotIndex)))
+    if (0 == (sgSlotBitfield & (1ull << aSlotIndex)))
         return K2STAT_ERROR_NOT_IN_USE;
 
-    thisThreadIndex = CRT_GET_CURRENT_THREAD_INDEX;
+    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
 
-    pTls = (UINT32 *)(K2OS_UVA_TLSAREA_BASE + (thisThreadIndex * K2_VA32_MEMPAGE_BYTES));
-
-    *apRetValue = pTls[aSlotIndex];
+    *apRetValue = pThreadPage->mTlsValue[aSlotIndex];
 
     return K2STAT_NO_ERROR;
 }

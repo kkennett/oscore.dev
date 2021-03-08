@@ -38,7 +38,7 @@
 #include <lib/k2elf32.h>
 #include <lib/k2bit.h>
 #include <lib/k2rofshelp.h>
-
+#include "..\..\kern\syscallid.h"
 
 #if K2_TARGET_ARCH_IS_ARM
 #define CRT_GET_CURRENT_THREAD_INDEX A32_ReadTPIDRURO()
@@ -48,6 +48,10 @@ UINT32 K2_CALLCONV_REGS X32_GetThreadIndex(void);
 #else
 #error !!!Unsupported Architecture
 #endif
+
+typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
+
+#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
 
 typedef void(*__vfpv)(void *);
 
