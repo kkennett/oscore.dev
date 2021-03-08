@@ -137,7 +137,7 @@ KernUser_Init(
     pFirstThread->Hdr.mObjFlags = K2OSKERN_OBJ_FLAG_PERMANENT | K2OSKERN_OBJ_FLAG_EMBEDDED;
     pFirstThread->mpProc = gpProc1;
     pFirstThread->mIx = firstThreadIx;
-    pFirstThread->mpTlsPage = (UINT32 *)
+    pFirstThread->mpKernRwViewOfUserThreadPage = (K2OS_USER_THREAD_PAGE *)
             (K2OS_KVA_THREAD_TLS_BASE + (firstThreadIx * K2_VA32_MEMPAGE_BYTES));
 
     KernObj_Add(&pFirstThread->Hdr);

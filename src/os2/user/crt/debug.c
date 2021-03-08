@@ -52,7 +52,7 @@ K2OS_Debug_OutputString(
         pChk++;
     } while (1);
 
-    return K2OS_SYSCALL(K2OS_SYSCALL_ID_OUTPUT_DEBUG, (UINT32)apStr);
+    return CrtThread_SysCall1(K2OS_SYSCALL_ID_OUTPUT_DEBUG, (UINT32)apStr);
 }
 
 void
@@ -60,7 +60,7 @@ K2OS_Debug_Break(
     void
 )
 {
-    K2OS_SYSCALL(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
+    CrtThread_SysCall1(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
 }
 
 UINT32 

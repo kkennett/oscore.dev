@@ -192,5 +192,5 @@ CrtDlx_Init(
     //
     // tell the kernel where everything is for us for debugging purposes
     //
-    K2OS_SYSCALL(K2OS_SYSCALL_ID_CRT_INITDLX, (UINT32)preloadSelf.mpListAnchorOut);
+    CrtThread_SysCall1(K2OS_SYSCALL_ID_CRT_INITDLX, (UINT32)preloadSelf.mpListAnchorOut);
 }

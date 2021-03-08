@@ -77,8 +77,8 @@ X32Kern_Intr_OnSystemCall(
     K2OSKERN_OBJ_THREAD *       apCallingThread
 )
 {
-    apCallingThread->mSysCall_Arg1 = apContext->REGS.ECX;
-    apCallingThread->mSysCall_Arg2 = apContext->REGS.EDX;
+    apCallingThread->mSysCall_Id = apContext->REGS.ECX;
+    apCallingThread->mSysCall_Arg0 = apContext->REGS.EDX;
     return KernIntr_OnSystemCall(apThisCore, apCallingThread, &apContext->REGS.EAX);
 }
 

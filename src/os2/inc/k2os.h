@@ -48,6 +48,16 @@ typedef UINT32 K2OS_TOKEN;
 //------------------------------------------------------------------------
 //
 
+static inline UINT64 K2OS_ReadTickCount(void)
+{
+    return *((UINT64 volatile *)K2OS_UVA_PUBLICAPI_MSTIMER64);
+}
+
+//
+//------------------------------------------------------------------------
+//
+
+
 UINT32 K2OS_Debug_OutputString(char const *apStr);
 void   K2OS_Debug_Break(void);
 
@@ -56,14 +66,20 @@ void   K2OS_Debug_Break(void);
 //
 
 #define K2OS_NUM_TLS_SLOTS              64
-#define K2OS_EXTRA_SYSCALL_ARG_COUNT    8
 
 typedef struct _K2OS_USER_THREAD_PAGE K2OS_USER_THREAD_PAGE;
 struct _K2OS_USER_THREAD_PAGE
 {
     UINT32  mTlsValue[K2OS_NUM_TLS_SLOTS];
-    UINT32  mExtraSysCallArgs[K2OS_EXTRA_SYSCALL_ARG_COUNT];
-    UINT32  mSysCallResult;
+#if !K2_TARGET_ARCH_IS_ARM
+    UINT32  mSysCall_Arg1;  // r2 on ARM
+    UINT32  mSysCall_Arg2;  // r3 on ARM
+#endif
+    UINT32  mSysCall_Arg3;
+    UINT32  mSysCall_Arg4;
+    UINT32  mSysCall_Arg5;
+    UINT32  mSysCall_Arg6;
+    UINT32  mSysCall_Arg7;
     K2STAT  mLastStatus;
 };
 

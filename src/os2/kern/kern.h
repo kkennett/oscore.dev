@@ -151,7 +151,7 @@ struct _K2OSKERN_OBJ_THREAD
     KernThreadState         mState;
 
     UINT32                  mTlsPagePhys;
-    UINT32 *                mpTlsPage;
+    K2OS_USER_THREAD_PAGE * mpKernRwViewOfUserThreadPage;
 
     K2LIST_LINK             ProcThreadListLink;
 
@@ -159,10 +159,11 @@ struct _K2OSKERN_OBJ_THREAD
 
     K2OSKERN_THREAD_CONTEXT Context;
 
-    UINT32                  mSysCall_Arg1;
-    UINT32                  mSysCall_Arg2;
+    BOOL                    mInSysCall;
+    UINT32                  mSysCall_Id;
+    UINT32                  mSysCall_Arg0;
     UINT32                  mSysCall_Result;
-    K2STAT                  mSysCall_Status;
+    // rest of stuff is in the thread page
 
     K2OSKERN_CPUCORE volatile * mpCurrentCore;
     K2LIST_LINK                 CpuRunListLink;

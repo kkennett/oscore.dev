@@ -53,6 +53,12 @@ KernArch_ResumeThread(
 
     pRunThread->mpLastRunCore = apThisCore;
 
+    if (pRunThread->mInSysCall)
+    {
+        pRunThread->Context.REGS.EAX = pRunThread->mSysCall_Result;
+        pRunThread->mInSysCall = FALSE;
+    }
+
     //
     // interrupts must be enabled or something is wrong.
     //

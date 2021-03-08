@@ -42,16 +42,36 @@
 
 #if K2_TARGET_ARCH_IS_ARM
 #define CRT_GET_CURRENT_THREAD_INDEX A32_ReadTPIDRURO()
+
+typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aId, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3);
+#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
+
+#define CrtThread_SysCall1(x,y)     K2OS_SYSCALL((x),(y))
+#define CrtThread_SysCall2(x,y,z)   K2OS_SYSCALL((x),(y),(z))
+#define CrtThread_SysCall3(x,y,z,w) K2OS_SYSCALL((x),(y),(z),(w))
+
 #elif K2_TARGET_ARCH_IS_INTEL
+
 UINT32 K2_CALLCONV_REGS X32_GetThreadIndex(void);
 #define CRT_GET_CURRENT_THREAD_INDEX X32_GetThreadIndex()
+
+typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aId, UINT32 aArg0);
+#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
+
+#define CrtThread_SysCall1(x,y) K2OS_SYSCALL((x),(y))
+
+UINT32 CrtThread_SysCall2(UINT32 aId, UINT32 aArg0, UINT32 aArg1);
+UINT32 CrtThread_SysCall3(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2);
+
 #else
 #error !!!Unsupported Architecture
 #endif
 
-typedef UINT32 (K2_CALLCONV_REGS *K2OS_pf_SysCall)(UINT32 aArg1, UINT32 aArg2);
-
-#define K2OS_SYSCALL ((K2OS_pf_SysCall)(K2OS_UVA_PUBLICAPI_SYSCALL))
+UINT32 CrtThread_SysCall4(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3);
+UINT32 CrtThread_SysCall5(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3, UINT32 aArg4);
+UINT32 CrtThread_SysCall6(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3, UINT32 aArg4, UINT32 aArg5);
+UINT32 CrtThread_SysCall7(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3, UINT32 aArg4, UINT32 aArg5, UINT32 aArg6);
+UINT32 CrtThread_SysCall8(UINT32 aId, UINT32 aArg0, UINT32 aArg1, UINT32 aArg2, UINT32 aArg3, UINT32 aArg4, UINT32 aArg5, UINT32 aArg6, UINT32 aArg7);
 
 typedef void(*__vfpv)(void *);
 

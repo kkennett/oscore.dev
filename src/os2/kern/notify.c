@@ -61,6 +61,7 @@ KernNotify_Signal(
     UINT32                      aSignalBits
 )
 {
+    K2OS_USER_THREAD_PAGE * pThreadPage;
     K2OSKERN_OBJ_THREAD *   pReleasedThread;
     UINT32                  result;
 
@@ -107,8 +108,9 @@ KernNotify_Signal(
 
     if (NULL != pReleasedThread)
     {
+        pThreadPage = pReleasedThread->mpKernRwViewOfUserThreadPage;
         pReleasedThread->mSysCall_Result = result;
-        pReleasedThread->mSysCall_Status = K2STAT_THREAD_WAITED;
+        pThreadPage->mLastStatus = K2STAT_THREAD_WAITED;
         pReleasedThread->mState = KernThreadState_Migrating;
         KernCpu_MigrateThread(apThisCore, KernSched_PickCoreForThread(pReleasedThread), pReleasedThread);
     }

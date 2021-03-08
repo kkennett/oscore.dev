@@ -73,20 +73,22 @@ KernIntr_OnSystemCall(
     // operation is something super simple we don't need to save context for
     //
 
-    if (K2OS_SYSCALL_ID_OUTPUT_DEBUG == apCallingThread->mSysCall_Arg1)
+    if (K2OS_SYSCALL_ID_OUTPUT_DEBUG == apCallingThread->mSysCall_Id)
     {
-        K2OSKERN_Debug("%s", (char const *)apCallingThread->mSysCall_Arg2);
+        *apRetFastResult = K2OSKERN_Debug("%s", (char const *)apCallingThread->mSysCall_Arg0);
         return FALSE;
     }
 
-    if (K2OS_SYSCALL_ID_CRT_INITDLX == apCallingThread->mSysCall_Arg1)
+    if (K2OS_SYSCALL_ID_CRT_INITDLX == apCallingThread->mSysCall_Id)
     {
-        apCallingThread->mpProc->mpUserDlxList = (K2LIST_ANCHOR *)apCallingThread->mSysCall_Arg2;
+        apCallingThread->mpProc->mpUserDlxList = (K2LIST_ANCHOR *)apCallingThread->mSysCall_Arg0;
+        *apRetFastResult = 1;
         return FALSE;
     }
 
     //
     // return true to run exec.  otherwise will return to interrupted activity
     //
+    apCallingThread->mInSysCall = TRUE;
     return TRUE;
 }
