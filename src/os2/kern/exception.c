@@ -66,6 +66,6 @@ KernEx_RaiseException(
     K2STAT aExceptionCode
 )
 {
-    K2OSKERN_Panic("***KERNEL EXCEPTION: %08X\n", aExceptionCode);
+    K2OSKERN_Panic("***EXCEPTION: %08X\n", aExceptionCode);
     while (1);
 }

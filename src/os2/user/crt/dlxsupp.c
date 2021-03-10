@@ -35,6 +35,7 @@ static UINT8            sgPageBuf[3 * K2_VA32_MEMPAGE_BYTES];
 static UINT8 *          sgpLoaderPage;
 static K2DLXSUPP_HOST   sgDlxHost;
 static K2ROFS const *   sgpROFS;
+static K2OS_CRITSEC     sgDlxSec;
 
 UINT32 gCrtMemEnd;
 
@@ -43,7 +44,13 @@ CrtDlx_CritSec(
     BOOL aEnter
 )
 {
-    return K2STAT_ERROR_NOT_IMPL;
+    BOOL result;
+    if (aEnter)
+        result = K2OS_CritSec_Enter(&sgDlxSec);
+    else
+        result = K2OS_CritSec_Leave(&sgDlxSec);
+    K2_ASSERT(result);
+    return K2STAT_NO_ERROR;
 }
 
 K2STAT 
@@ -160,6 +167,10 @@ CrtDlx_Init(
     K2STAT              stat;
     K2DLXSUPP_PRELOAD   preloadSelf;
     K2ROFS_FILE const * pFile;
+    BOOL                ok;
+
+    ok = K2OS_CritSec_Init(&sgDlxSec);
+    K2_ASSERT(ok);
 
     sgpROFS = apROFS;
 

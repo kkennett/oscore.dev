@@ -37,7 +37,8 @@
 
 /* --------------------------------------------------------------------------------- */
 
-#define K2OS_MAX_CPU_COUNT  8
+#define K2OS_MAX_CPU_COUNT      8
+#define K2OS_CACHELINE_BYTES    64
 
 //
 // must exactly match K2OS_UEFI_LOADINFO in k2osbase.h

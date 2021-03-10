@@ -29,24 +29,70 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include "crt.h"
 
-#ifndef __SYSCALLID_H
-#define __SYSCALLID_H
+typedef struct _IntCritSec IntCritSec;
+struct _IntCritSec
+{
+    UINT32      mLockOwner;
+    K2OS_TOKEN  mTokNotify;
+};
 
-/* --------------------------------------------------------------------------------- */
+BOOL 
+K2OS_CritSec_Init(
+    K2OS_CRITSEC *apSec
+)
+{
+    IntCritSec *pSec;
+    pSec = (IntCritSec *)((((UINT32)apSec) + (K2OS_CACHELINE_BYTES - 1)) & (~(K2OS_CACHELINE_BYTES - 1)));
 
-#define K2OS_SYSCALL_ID_OUTPUT_DEBUG        0
-#define K2OS_SYSCALL_ID_DEBUG_BREAK         1
-#define K2OS_SYSCALL_ID_CRT_INITDLX         2
-#define K2OS_SYSCALL_ID_SIGNAL_NOTIFY       3
-#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY     4
-#define K2OS_SYSCALL_ID_TEST_NOTIFY         5
-#define K2OS_SYSCALL_ID_ALLOC_PHYS          6
-#define K2OS_SYSCALL_ID_RENDER_PTMAP        7
-#define K2OS_SYSCALL_ID_RAISE_EXCEPTION     8
-#define K2OS_SYSCALL_ID_NOTIFY_CREATE       9
-#define K2OS_SYSCALL_ID_TOKEN_DESTROY       10
+    pSec->mLockOwner = 0;
+    pSec->mTokNotify = K2OS_Notify_Create(0);
+    if (NULL == pSec->mTokNotify)
+        return FALSE;
 
-/* --------------------------------------------------------------------------------- */
+    return TRUE;
+}
 
-#endif // __SYSCALLID_H
+BOOL   
+K2OS_CritSec_TryEnter(
+    K2OS_CRITSEC *apSec
+)
+{
+    return FALSE;
+}
+
+BOOL 
+K2OS_CritSec_Enter(
+    K2OS_CRITSEC *apSec
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+BOOL 
+K2OS_CritSec_Leave(
+    K2OS_CRITSEC *apSec
+)
+{
+    return K2STAT_ERROR_NOT_IMPL;
+}
+
+BOOL 
+K2OS_CritSec_Done(
+    K2OS_CRITSEC *apSec
+)
+{
+    K2STAT      stat;
+    IntCritSec *pSec;
+    pSec = (IntCritSec *)((((UINT32)apSec) + (K2OS_CACHELINE_BYTES - 1)) & (~(K2OS_CACHELINE_BYTES - 1)));
+
+    stat = K2OS_Token_Destroy(pSec->mTokNotify);
+    if (!K2STAT_IS_ERROR(stat))
+    {
+        K2MEM_Zero(apSec, sizeof(K2OS_CRITSEC));
+    }
+    
+    return stat;
+}
+

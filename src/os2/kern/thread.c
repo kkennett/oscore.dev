@@ -94,14 +94,26 @@ KernThread_SystemCall(
         break;
 
     case K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY:
-    case K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB:
+    case K2OS_SYSCALL_ID_TEST_NOTIFY:
         KernThread_SysCall_WaitForNotify(apThisCore, pCurThread,
-            (K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY_NB == pCurThread->mSysCall_Id) ? TRUE : FALSE
+            (K2OS_SYSCALL_ID_TEST_NOTIFY == pCurThread->mSysCall_Id) ? TRUE : FALSE
             );
         break;
 
     case K2OS_SYSCALL_ID_RENDER_PTMAP:
         KernPhys_RenderPtMap(pCurThread->mpProc, (UINT8 *)pCurThread->mSysCall_Arg0);
+        break;
+
+    case K2OS_SYSCALL_ID_RAISE_EXCEPTION:
+        KernEx_RaiseException(pCurThread->mSysCall_Arg0);
+        break;
+
+    case K2OS_SYSCALL_ID_NOTIFY_CREATE:
+        K2_ASSERT(0);
+        break;
+
+    case K2OS_SYSCALL_ID_TOKEN_DESTROY:
+        K2_ASSERT(0);
         break;
 
     default:

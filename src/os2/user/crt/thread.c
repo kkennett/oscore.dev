@@ -215,3 +215,19 @@ CrtThread_SysCall8(
     return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
 #endif
 }
+
+BOOL
+K2OS_Thread_WaitForNotify(
+    K2OS_TOKEN aTokNotify
+)
+{
+    return CrtThread_SysCall1(K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT32)aTokNotify);
+}
+
+BOOL   
+K2OS_Thread_TestForNotify(
+    K2OS_TOKEN aTokNotify
+)
+{
+    return CrtThread_SysCall1(K2OS_SYSCALL_ID_TEST_NOTIFY, (UINT32)aTokNotify);
+}

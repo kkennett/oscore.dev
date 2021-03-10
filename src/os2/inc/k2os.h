@@ -42,7 +42,7 @@ extern "C" {
 //------------------------------------------------------------------------
 //
 
-typedef UINT32 K2OS_TOKEN;
+typedef void * K2OS_TOKEN;
 
 //
 //------------------------------------------------------------------------
@@ -57,9 +57,20 @@ static inline UINT64 K2OS_ReadTickCount(void)
 //------------------------------------------------------------------------
 //
 
-
 UINT32 K2OS_Debug_OutputString(char const *apStr);
 void   K2OS_Debug_Break(void);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL   K2OS_Token_Destroy(K2OS_TOKEN aToken);
+
+//
+//------------------------------------------------------------------------
+//
+
+void   K2OS_RaiseException(K2STAT aExceptionCode);
 
 //
 //------------------------------------------------------------------------
@@ -87,25 +98,42 @@ struct _K2OS_USER_THREAD_PAGE
     BOOL    mMirror_HeldContig;
 };
 
-K2STAT K2OS_Thread_GetLastStatus(void);
-K2STAT K2OS_Thread_SetLastStatus(K2STAT aStatus);
-K2STAT K2OS_Thread_WaitForNotify(K2OS_TOKEN aTokNotify);
-K2STAT K2OS_Thread_TestForNotify(K2OS_TOKEN aTokNotify);
+K2STAT  K2OS_Thread_GetLastStatus(void);
+K2STAT  K2OS_Thread_SetLastStatus(K2STAT aStatus);
+BOOL    K2OS_Thread_WaitForNotify(K2OS_TOKEN aTokNotify);
+BOOL    K2OS_Thread_TestForNotify(K2OS_TOKEN aTokNotify);
 
 //
 //------------------------------------------------------------------------
 //
 
-K2STAT K2OS_Notify_Signal(K2OS_TOKEN aTokNotify, UINT32 aSignalBits);
+typedef struct _K2OS_CRITSEC K2OS_CRITSEC;
+struct _K2OS_CRITSEC
+{
+    UINT8 mOpaque[K2OS_CACHELINE_BYTES * 2];
+};
+
+BOOL K2OS_CritSec_Init(K2OS_CRITSEC *apSec);
+BOOL K2OS_CritSec_TryEnter(K2OS_CRITSEC *apSec);
+BOOL K2OS_CritSec_Enter(K2OS_CRITSEC *apSec);
+BOOL K2OS_CritSec_Leave(K2OS_CRITSEC *apSec);
+BOOL K2OS_CritSec_Done(K2OS_CRITSEC *apSec);
 
 //
 //------------------------------------------------------------------------
 //
 
-K2STAT K2OS_Tls_AllocSlot(UINT32 *apRetNewIndex);
-K2STAT K2OS_Tls_FreeSlot(UINT32 aSlotIndex);
-K2STAT K2OS_Tls_SetValue(UINT32 aSlotIndex, UINT32 aValue);
-K2STAT K2OS_Tls_GetValue(UINT32 aSlotIndex, UINT32 *apRetValue);
+K2OS_TOKEN K2OS_Notify_Create(UINT32 aInitBits);
+BOOL       K2OS_Notify_Signal(K2OS_TOKEN aTokNotify, UINT32 aSignalBits);
+
+//
+//------------------------------------------------------------------------
+//
+
+BOOL K2OS_Tls_AllocSlot(UINT32 *apRetNewIndex);
+BOOL K2OS_Tls_FreeSlot(UINT32 aSlotIndex);
+BOOL K2OS_Tls_SetValue(UINT32 aSlotIndex, UINT32 aValue);
+BOOL K2OS_Tls_GetValue(UINT32 aSlotIndex, UINT32 *apRetValue);
 
 //
 //------------------------------------------------------------------------

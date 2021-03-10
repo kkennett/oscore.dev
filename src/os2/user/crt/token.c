@@ -29,24 +29,12 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
+#include "crt.h"
 
-#ifndef __SYSCALLID_H
-#define __SYSCALLID_H
-
-/* --------------------------------------------------------------------------------- */
-
-#define K2OS_SYSCALL_ID_OUTPUT_DEBUG        0
-#define K2OS_SYSCALL_ID_DEBUG_BREAK         1
-#define K2OS_SYSCALL_ID_CRT_INITDLX         2
-#define K2OS_SYSCALL_ID_SIGNAL_NOTIFY       3
-#define K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY     4
-#define K2OS_SYSCALL_ID_TEST_NOTIFY         5
-#define K2OS_SYSCALL_ID_ALLOC_PHYS          6
-#define K2OS_SYSCALL_ID_RENDER_PTMAP        7
-#define K2OS_SYSCALL_ID_RAISE_EXCEPTION     8
-#define K2OS_SYSCALL_ID_NOTIFY_CREATE       9
-#define K2OS_SYSCALL_ID_TOKEN_DESTROY       10
-
-/* --------------------------------------------------------------------------------- */
-
-#endif // __SYSCALLID_H
+BOOL
+K2OS_Token_Destroy(
+    K2OS_TOKEN aToken
+)
+{
+    return CrtThread_SysCall1(K2OS_SYSCALL_ID_TOKEN_DESTROY, (UINT32)aToken);
+}

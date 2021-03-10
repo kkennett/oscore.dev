@@ -40,5 +40,9 @@ SOURCES += thread.c
 SOURCES += debug.c
 SOURCES += dlxsupp.c
 SOURCES += mem.c 
+SOURCES += exception.c 
+SOURCES += critsec.c 
+SOURCES += notify.c 
+SOURCES += token.c 
 
 include $(K2_ROOT)/src/shared/build/post.make
