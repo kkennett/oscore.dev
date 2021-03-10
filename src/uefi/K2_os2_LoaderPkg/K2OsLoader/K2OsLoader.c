@@ -408,8 +408,8 @@ K2OsLoaderEntryPoint (
     K2MEM_Zero(&gData, sizeof(gData));
 
     gData.mLoaderImageHandle = ImageHandle;
-    gData.mKernArenaLow = K2OS_KVA_FREE_BOTTOM;
-    gData.mKernArenaHigh = K2OS_KVA_FREE_TOP;
+    gData.LoadInfo.mKernArenaLow = K2OS_KVA_FREE_BOTTOM;
+    gData.LoadInfo.mKernArenaHigh = K2OS_KVA_FREE_TOP;
     gData.LoadInfo.mpEFIST = (K2EFI_SYSTEM_TABLE *)gST;
 
     efiStatus = Loader_InitArch();
@@ -491,8 +491,8 @@ K2OsLoaderEntryPoint (
                 }
 
 #if 1
-                gData.LoadInfo.mDebugPageVirt = gData.mKernArenaLow;
-                gData.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
+                gData.LoadInfo.mDebugPageVirt = gData.LoadInfo.mKernArenaLow;
+                gData.LoadInfo.mKernArenaLow += K2_VA32_MEMPAGE_BYTES;
 #if K2_TARGET_ARCH_IS_ARM
                 k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x02020000, K2OS_MAPTYPE_KERN_DEVICEIO);   // IMX6 UART 1
 //                                        k2Stat = K2VMAP32_MapPage(&gData.Map, gData.LoadInfo.mDebugPageVirt, 0x021E8000, K2OS_MAPTYPE_KERN_DEVICEIO);     // IMX6 UART 2

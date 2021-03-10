@@ -515,6 +515,8 @@ UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
 void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify);
 UINT32  KernNotify_Signal(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
 
+void    KernVirt_Init(void);
+
 /* --------------------------------------------------------------------------------- */
 
 #endif // __KERN_H

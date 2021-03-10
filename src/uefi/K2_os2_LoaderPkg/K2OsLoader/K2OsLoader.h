@@ -76,8 +76,6 @@ struct _LOADER_DATA
 	EFI_ACPI_2_0_ROOT_SYSTEM_DESCRIPTION_POINTER  * mpAcpi;
     UINT32                                          mKernElfPhys;
     UINT32                                          mRofsBytes;
-    UINT32                                          mKernArenaLow;
-    UINT32                                          mKernArenaHigh;
     UINT32                                          mPreRuntimeHigh;
 };
 

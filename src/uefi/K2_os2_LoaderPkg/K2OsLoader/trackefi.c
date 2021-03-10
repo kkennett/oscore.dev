@@ -62,9 +62,9 @@ sSetupToTrackOneDescriptor(
         // make space for this runtime region in the virtual map
         // shoving it into the top of the map
         //
-        virtTrackLastPage = gData.mKernArenaHigh - K2_VA32_MEMPAGE_BYTES;
-        virtTrackWorkPage = gData.mKernArenaHigh - areaSize;
-        gData.mKernArenaHigh = virtTrackWorkPage;
+        virtTrackLastPage = gData.LoadInfo.mKernArenaHigh - K2_VA32_MEMPAGE_BYTES;
+        virtTrackWorkPage = gData.LoadInfo.mKernArenaHigh - areaSize;
+        gData.LoadInfo.mKernArenaHigh = virtTrackWorkPage;
 //        K2Printf(L" %08X-%08X", virtTrackWorkPage, virtTrackWorkPage + areaSize - 1);
         efiPhysAddr = apDesc->PhysicalStart;
         if (apDesc->Type == EfiRuntimeServicesCode)
@@ -307,7 +307,7 @@ Loader_AssignRuntimeVirtual(
     // every allocation between arenahigh and preruntimehigh must be
     // an EFI runtime allocation.  stuff above that is other junk
     //
-    virtWork = gData.mKernArenaHigh;
+    virtWork = gData.LoadInfo.mKernArenaHigh;
     virtEnd = gData.mPreRuntimeHigh;
     entCount = gData.LoadInfo.mEfiMapSize / gData.LoadInfo.mEfiMemDescSize;
 
@@ -431,7 +431,7 @@ Loader_TrackEfiMap(
     //
     // track lowest high address prior to runtime virtual alloc, which happens last
     //
-    gData.mPreRuntimeHigh = gData.mKernArenaHigh;
+    gData.mPreRuntimeHigh = gData.LoadInfo.mKernArenaHigh;
 
     //
     // first pass just discovers all present physical ranges
@@ -478,7 +478,7 @@ Loader_TrackEfiMap(
             return status;
         }
         virtAddr += K2_VA32_PAGETABLE_MAP_BYTES;
-    } while (virtAddr < gData.mKernArenaLow);
+    } while (virtAddr < gData.LoadInfo.mKernArenaLow);
 
     //
     // find a transition page now

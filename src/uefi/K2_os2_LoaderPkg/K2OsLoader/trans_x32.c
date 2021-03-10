@@ -56,7 +56,7 @@ static UINT8 const sTransitionCode[] =
     0x81, 0xc1, 0x00, 0x08, 0x00, 0x00,     // add ecx,0x800
 
     // get the translation table base register value
-    0x8b, 0x41, 0x18,                       // mov eax,DWORD PTR[ecx + 0x18]     0x18 is K2_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS
+    0x8b, 0x41, 0x20,                       // mov eax,DWORD PTR[ecx + 0x20]     0x20 is K2_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS
     0x0f, 0x22, 0xd8,                       // mov cr3,eax
 
     // enable paging and kernel RO page write protect in CR0

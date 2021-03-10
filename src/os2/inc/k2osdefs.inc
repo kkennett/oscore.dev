@@ -48,20 +48,22 @@
 #define K2OS_UEFI_LOADINFO_OFFSET_EFIST                         0x0008
 #define K2OS_UEFI_LOADINFO_OFFSET_KERN_SIZE_BYTES               0x000C 
 #define K2OS_UEFI_LOADINFO_OFFSET_KERN_ENTRY_POINT              0x0010      // encoded in code bytes in uefi loader. careful
-#define K2OS_UEFI_LOADINFO_OFFSET_BUILTIN_ROFS_PHYS             0x0014
-#define K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS                0x0018      // encoded in code bytes in uefi loader. careful
-#define K2OS_UEFI_LOADINFO_OFFSET_ZEROPAGE_PHYS                 0x001C
-#define K2OS_UEFI_LOADINFO_OFFSET_TRANS_PAGE_ADDR               0x0020
-#define K2OS_UEFI_LOADINFO_OFFSET_DEBUG_PAGE_VIRT               0x0024
-#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_SIZE                   0x0028
-#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_DESC_SIZE              0x002C 
-#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_DESC_VER               0x0030
-#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGES_PHYS              0x0034
-#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGES_VIRT              0x0038
-#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGE_COUNT              0x003C
-#define K2OS_UEFI_LOADINFO_OFFSET_FWFACS_PHYS                   0x0040
-#define K2OS_UEFI_LOADINFO_OFFSET_XFWFACS_PHYS                  0x0044
-#define K2OS_UEFI_LOADINFO_SIZE_BYTES                           0x0048
+#define K2OS_UEFI_LOADINFO_OFFSET_KERN_ARENA_LOW                0x0014
+#define K2OS_UEFI_LOADINFO_OFFSET_KERN_ARENA_HIGH               0x0018
+#define K2OS_UEFI_LOADINFO_OFFSET_BUILTIN_ROFS_PHYS             0x001C
+#define K2OS_UEFI_LOADINFO_OFFSET_TRANSBASE_PHYS                0x0020      // encoded in code bytes in uefi loader. careful
+#define K2OS_UEFI_LOADINFO_OFFSET_ZEROPAGE_PHYS                 0x0024
+#define K2OS_UEFI_LOADINFO_OFFSET_TRANS_PAGE_ADDR               0x0028
+#define K2OS_UEFI_LOADINFO_OFFSET_DEBUG_PAGE_VIRT               0x002C
+#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_SIZE                   0x0030
+#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_DESC_SIZE              0x0034 
+#define K2OS_UEFI_LOADINFO_OFFSET_EFIMAP_DESC_VER               0x0038
+#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGES_PHYS              0x003C
+#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGES_VIRT              0x0040
+#define K2OS_UEFI_LOADINFO_OFFSET_FWTAB_PAGE_COUNT              0x0044
+#define K2OS_UEFI_LOADINFO_OFFSET_FWFACS_PHYS                   0x0048
+#define K2OS_UEFI_LOADINFO_OFFSET_XFWFACS_PHYS                  0x004C
+#define K2OS_UEFI_LOADINFO_SIZE_BYTES                           0x0050
 
 //
 // UEFI 2.5 Spec Page 152, EFI_BOOT_SERVICES.AllocatePages
@@ -129,9 +131,9 @@
 #define K2OS_KVA_COREMEMORY_BASE_HIGH16             0xFFFD
 #define K2OS_KVA_COREMEMORY_BASE_LOW16              0x0000
 
-#define K2OS_KVA_KERNEL_ARENA                       0xFFC00000
-#define K2OS_KVA_KERNEL_ARENA_SIZE                  0x003D0000 // 3904 KB
-#define K2OS_KVA_KERNEL_ARENA_END                   (K2OS_KVA_KERNEL_ARENA + K2OS_KVA_KERNEL_ARENA_SIZE)
+#define K2OS_KVA_KERNEL_PREALLOC                    0xFFC00000
+#define K2OS_KVA_KERNEL_PREALLOC_SIZE               0x003D0000 // 3904 KB
+#define K2OS_KVA_KERNEL_PREALLOC_END                (K2OS_KVA_KERNEL_PREALLOC + K2OS_KVA_KERNEL_PREALLOC_SIZE)
 
 // this must be virtually 4MB aligned and pagetable not auto mapper by loader
 #define K2OS_KVA_THREAD_TLS_BASE                    0xFF800000

@@ -152,7 +152,7 @@ KernDbg_EarlyInit(
 
     K2OSKERN_SeqInit(&gData.DebugSeqLock);
 
-    stat = K2ELF32_Parse((UINT8 const *)K2OS_KVA_KERNEL_ARENA, gData.LoadInfo.mKernSizeBytes, &parse);
+    stat = K2ELF32_Parse((UINT8 const *)K2OS_KVA_KERNEL_PREALLOC, gData.LoadInfo.mKernSizeBytes, &parse);
     K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
     numSec = parse.mpRawFileData->e_shnum;
@@ -185,7 +185,7 @@ KernDbg_EarlyInit(
                 //
                 // ignore symbols below kernel arena
                 //
-                while (K2OS_KVA_KERNEL_ARENA > sgpSym->st_value)
+                while (K2OS_KVA_KERNEL_PREALLOC > sgpSym->st_value)
                 {
                     sgpSym++;
                     if (--sgSymCount == 0)
@@ -197,7 +197,7 @@ KernDbg_EarlyInit(
                 //
                 while (0 < sgSymCount)
                 {
-                    if (K2OS_KVA_KERNEL_ARENA_END > sgpSym[sgSymCount - 1].st_value)
+                    if (K2OS_KVA_KERNEL_PREALLOC_END > sgpSym[sgSymCount - 1].st_value)
                         break;
                     sgSymCount--;
                 }

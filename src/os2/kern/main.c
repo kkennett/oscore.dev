@@ -91,7 +91,7 @@ Kern_Main(
     //
     // set the pointer to the built in file system
     //
-    gData.mpROFS = (K2ROFS const *)((K2OS_KVA_KERNEL_ARENA + gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF);
+    gData.mpROFS = (K2ROFS const *)((K2OS_KVA_KERNEL_PREALLOC + gData.LoadInfo.mKernSizeBytes + 0xFFF) & ~0xFFF);
 
     //
     // early hal init - usually debug goop
@@ -126,6 +126,11 @@ Kern_Main(
     // physical memory inits
     //
     KernPhys_Init();
+
+    //
+    // virtual memory inits
+    //
+    KernVirt_Init();
 
     //
     // call C++ constructors now if there are any

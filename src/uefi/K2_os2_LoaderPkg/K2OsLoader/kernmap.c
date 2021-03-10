@@ -96,7 +96,7 @@ Loader_MapKernelArena(
     UINT32              dataEnd;
 
 //    K2Printf(L"Kernel phys is %08X\n", gData.mKernElfPhys);
-//    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_ARENA);
+//    K2Printf(L"Kernel virt is %08X\n", K2OS_KVA_KERNEL_PREALLOC);
 //    K2Printf(L"Kernel size is %08X\n", gData.LoadInfo.mKernSizeBytes);
     stat = K2ELF32_Parse((UINT8 const *)gData.mKernElfPhys, gData.LoadInfo.mKernSizeBytes, &parse);
     if (K2STAT_IS_ERROR(stat))
@@ -146,7 +146,7 @@ Loader_MapKernelArena(
     }
 
     physAddr = gData.mKernElfPhys;
-    virtAddr = K2OS_KVA_KERNEL_ARENA;
+    virtAddr = K2OS_KVA_KERNEL_PREALLOC;
 
     ix = pSecHdr->sh_offset / K2_VA32_MEMPAGE_BYTES;
 //    K2Printf(L"Mapping %d pages r/o for elf header at start of image\n", ix);

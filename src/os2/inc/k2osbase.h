@@ -89,6 +89,8 @@ struct _K2OS_UEFI_LOADINFO
     K2EFI_SYSTEM_TABLE *    mpEFIST;
     UINT32                  mKernSizeBytes;
     K2OSKERN_EntryPoint     mKernEntryPoint;
+    UINT32                  mKernArenaLow;
+    UINT32                  mKernArenaHigh;
     UINT32                  mBuiltinRofsPhys;
     UINT32                  mTransBasePhys;
     UINT32                  mZeroPagePhys;
