@@ -148,6 +148,7 @@ CrtDlx_ErrorPoint(
     K2STAT          aStatus
 )
 {
+    CrtDbg_Printf("ERROR %s:%d (%08X)\n", apFile, aLine, aStatus);
     return aStatus;
 }
 

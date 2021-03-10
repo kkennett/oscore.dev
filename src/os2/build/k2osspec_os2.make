@@ -53,6 +53,7 @@ default: $(K2_TARGET_FULL_SPEC)
 
 STOCK_IMAGE_KERN += @$(K2_OS)/kern/$(K2_ARCH)/k2oskern 
 BUILTIN_DLX += @$(K2_OS)/user/crt/$(K2_ARCH)/k2oscrt
+BUILTIN_DLX += @$(K2_OS)/user/root 
 
 ONE_K2_STOCK_KERNEL = stock_$(basename $(1))
 EXPAND_ONE_STOCK_KERNEL = $(if $(findstring @,$(kern)), $(call ONE_K2_STOCK_KERNEL,$(subst @,,$(kern))),$(kern))

@@ -33,9 +33,9 @@ include $(K2_ROOT)/src/$(K2_OS)/build/k2ospre.make
 
 TARGET_TYPE = DLX
 
-DLX_INF := loader.inf
+DLX_INF := root.inf
 
-SOURCES += main.c
+SOURCES += dlx_entry.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

@@ -336,7 +336,7 @@ $(K2_TARGET_ELFFULL_SPEC): $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF) $(B
 	@echo -------- Create Exports for DLX from ELF $@ --------
 	@$(EXPORT_CMD)
 	@echo -------- Linking ELF for DLX $@ --------
-	ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF_O) $(DLX_IMPORT_LIBRARIES) -)
+	@ld $(LDOPT) $(LDENTRY) -o $@ -( $(LIBGCC_PATH) $(OBJECTS) $(LIBRARIES) $(CRTSTUB_OBJ) $(DLX_INF_O) $(DLX_IMPORT_LIBRARIES) -)
 
 $(K2_TARGET_FULL_SPEC): $(K2_TARGET_ELFFULL_SPEC)
 	@echo -------- Creating DLX from ELF for $@ --------

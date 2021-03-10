@@ -29,7 +29,7 @@
 //   OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-#include "loader.h"
+#include "root.h"
 
 K2STAT K2_CALLCONV_REGS
 dlx_entry(
@@ -38,7 +38,8 @@ dlx_entry(
     )
 {
 
-    K2OS_Debug_OutputString("loader\n");
-    while (1);
+    K2OS_Debug_OutputString("root\n");
+
+    return K2STAT_NO_ERROR;
 }
 
