@@ -52,7 +52,7 @@ K2OS_Debug_OutputString(
         pChk++;
     } while (1);
 
-    return CrtThread_SysCall1(K2OS_SYSCALL_ID_OUTPUT_DEBUG, (UINT32)apStr);
+    return CrtKern_SysCall1(K2OS_SYSCALL_ID_OUTPUT_DEBUG, (UINT32)apStr);
 }
 
 void
@@ -60,7 +60,7 @@ K2OS_Debug_Break(
     void
 )
 {
-    CrtThread_SysCall1(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
+    CrtKern_SysCall1(K2OS_SYSCALL_ID_DEBUG_BREAK, 0);
 }
 
 UINT32 
@@ -69,12 +69,12 @@ CrtDbg_Printf(
     ...
 )
 {
-    char    outBuf[96];
+    char    outBuf[128];
     VALIST  vaList;
     UINT32  result;
     
     K2_VASTART(vaList, apFormat);
-    result = K2ASC_PrintfVarLen(outBuf, 95, apFormat, vaList);
+    result = K2ASC_PrintfVarLen(outBuf, 127, apFormat, vaList);
     K2_VAEND(vaList);
     outBuf[95] = 0;
     K2OS_Debug_OutputString(outBuf);

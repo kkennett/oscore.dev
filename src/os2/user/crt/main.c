@@ -90,11 +90,14 @@ __k2oscrt_user_entry(
     //
     gProcessId = aProcessId;
     K2OS_Thread_SetLastStatus(K2STAT_NO_ERROR);
-
-    //
-    // syscall with ROFS address
-    //
-    CrtDbg_Printf("User Mode Thread %d!\n", CRT_GET_CURRENT_THREAD_INDEX);
+    if (gProcessId == 1)
+    {
+        //
+        // only happens once in the system
+        //
+        CrtKern_InitProc1();
+    }
+    CrtToken_Init();
 
     //
     // init dynamic loader and self-init this module

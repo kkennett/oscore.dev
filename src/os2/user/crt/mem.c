@@ -41,7 +41,7 @@ CrtMem_AllocPhysToThread(
     UINT32 aDisposition
 )
 {
-    return CrtThread_SysCall2(K2OS_SYSCALL_ID_ALLOC_PHYS, aPageCount, aDisposition);
+    return CrtKern_SysCall2(K2OS_SYSCALL_ID_ALLOC_PHYS, aPageCount, aDisposition);
 }
 
 void
@@ -49,7 +49,7 @@ CrtMem_Init(
     void
 )
 {
-    CrtThread_SysCall1(K2OS_SYSCALL_ID_RENDER_PTMAP, (UINT32)sgMem_PtMap);
+    CrtKern_SysCall1(K2OS_SYSCALL_ID_RENDER_PTMAP, (UINT32)sgMem_PtMap);
 
     sgMem_HighBar = K2OS_UVA_PUBLICAPI_PAGETABLE_BASE;
     sgMem_LowBar = gCrtMemEnd;

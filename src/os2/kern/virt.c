@@ -36,34 +36,29 @@
 
 ...
 |XXX-USED-XXX|  
-+------------+  <<- sgTop - used and mapped above this
++------------+  <<- gData.UserCrtInitInfo.mKernVirtTop - used and mapped above this
 |            |
 +------------+
 |            |  (unused but mappable virtual page frames)
 ...             
 |            |
-+------------+  <<- sgTopPt, pagetable map boundary (4MB)
++------------+  <<- gData.UserCrtInitInfo.mKernVirtTopPt, pagetable map boundary (4MB)
 |            |
 |            |
 ...             (unused and unmappable virtual page frames)
 |            |
 |            |
-+------------+  <<- sgBotPt, pagetable map boundary (4MB)
++------------+  <<- gData.UserCrtInitInfo.mKernVirtBotPt, pagetable map boundary (4MB)
 |            |
 ...             
 |            |  (unused but mappable virtual page frames)
 +------------+
 |            |
-+------------+  <<- sgBot - used and mapped below this
++------------+  <<- gData.UserCrtInitInfo.mKernVirtBot - used and mapped below this
 |XXX-USED-XXX|  
 ...
 
 */
-
-UINT32  sgTop;       // top-down address of where first byte after last free page ENDS
-UINT32  sgTopPt;     // top-down address of where first page after last free pagetable ENDS
-UINT32  sgBot;       // bottom-up address of where first byte after last free page STARTS
-UINT32  sgBotPt;     // bottom-up address of where first byte after last free pagetable STARTS
 
 void
 KernVirt_Init(
@@ -73,35 +68,34 @@ KernVirt_Init(
     UINT32  chk;
     UINT32 *pPTE;
 
-    sgTop = gData.LoadInfo.mKernArenaHigh;
-    sgBot = gData.LoadInfo.mKernArenaLow;
+    gData.UserCrtInitInfo.mKernVirtTop = gData.LoadInfo.mKernArenaHigh;
+    gData.UserCrtInitInfo.mKernVirtBot = gData.LoadInfo.mKernArenaLow;
 
     //
     // verify bottom-up remaining page range is really free (no pages mapped)
     //
-    if (0 != (sgBot & (K2_VA32_PAGETABLE_MAP_BYTES - 1)))
+    if (0 != (gData.UserCrtInitInfo.mKernVirtBot & (K2_VA32_PAGETABLE_MAP_BYTES - 1)))
     {
-        chk = sgBot;
+        chk = gData.UserCrtInitInfo.mKernVirtBot;
         pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(chk);
         do
         {
             // verify this page is not mapped
-
             K2_ASSERT(0 == ((*pPTE) & K2OSKERN_PTE_PRESENT_BIT));
             pPTE++;
             chk += K2_VA32_MEMPAGE_BYTES;
         } while (0 != (chk & (K2_VA32_PAGETABLE_MAP_BYTES - 1)));
-        sgBotPt = chk;
+        gData.UserCrtInitInfo.mKernVirtBotPt = chk;
     }
     else
-        sgBotPt = sgBot;
+        gData.UserCrtInitInfo.mKernVirtBotPt = gData.UserCrtInitInfo.mKernVirtBot;
 
     //
     // verify top-down remaining page range is really free (no pages mapped)
     //
-    if (0 != (sgTop & (K2_VA32_PAGETABLE_MAP_BYTES - 1)))
+    if (0 != (gData.UserCrtInitInfo.mKernVirtTop & (K2_VA32_PAGETABLE_MAP_BYTES - 1)))
     {
-        chk = sgTop;
+        chk = gData.UserCrtInitInfo.mKernVirtTop;
         pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(chk);
         do
         {
@@ -110,23 +104,23 @@ KernVirt_Init(
             pPTE--;
             K2_ASSERT(0 == ((*pPTE) & K2OSKERN_PTE_PRESENT_BIT));
         } while (0 != (chk & (K2_VA32_PAGETABLE_MAP_BYTES - 1)));
-        sgTopPt = chk;
+        gData.UserCrtInitInfo.mKernVirtTopPt = chk;
     }
     else
-        sgTopPt = sgTop;
+        gData.UserCrtInitInfo.mKernVirtTopPt = gData.UserCrtInitInfo.mKernVirtTop;
 
     //
     // verify all pagetables between bottom and top pt are not mapped
     //
-    if (sgBotPt != sgTopPt)
+    if (gData.UserCrtInitInfo.mKernVirtBotPt != gData.UserCrtInitInfo.mKernVirtTopPt)
     {
-        chk = sgBotPt;
+        chk = gData.UserCrtInitInfo.mKernVirtBotPt;
         pPTE = (UINT32 *)K2OS_KVA_TO_PTE_ADDR(K2OS_KVA_TO_PT_ADDR(chk));
         do
         {
             K2_ASSERT(0 == ((*pPTE) & K2OSKERN_PTE_PRESENT_BIT));
             pPTE++;
             chk += K2_VA32_PAGETABLE_MAP_BYTES;
-        } while (chk != sgTopPt);
+        } while (chk != gData.UserCrtInitInfo.mKernVirtTopPt);
     }
 }

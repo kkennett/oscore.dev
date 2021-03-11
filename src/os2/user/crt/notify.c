@@ -36,7 +36,7 @@ K2OS_Notify_Create(
     UINT32 aInitBits
 )
 {
-    return (K2OS_TOKEN)CrtThread_SysCall1(K2OS_SYSCALL_ID_NOTIFY_CREATE, aInitBits);
+    return (K2OS_TOKEN)CrtKern_SysCall1(K2OS_SYSCALL_ID_NOTIFY_CREATE, aInitBits);
 }
 
 BOOL
@@ -45,6 +45,6 @@ K2OS_Notify_Signal(
     UINT32      aSignalBits
 )
 {
-    return CrtThread_SysCall2(K2OS_SYSCALL_ID_SIGNAL_NOTIFY, (UINT32)aTokNotify, aSignalBits);
+    return CrtKern_SysCall2(K2OS_SYSCALL_ID_SIGNAL_NOTIFY, (UINT32)aTokNotify, aSignalBits);
 }
 

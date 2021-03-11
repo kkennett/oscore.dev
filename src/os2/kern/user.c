@@ -390,4 +390,24 @@ KernUser_Init(
     KernArch_UserInit();
 }
 
+void
+KernUser_SysCall_FillCrtInfo(
+    K2OSKERN_OBJ_THREAD *apCurThread
+)
+{
+    K2OS_USER_THREAD_PAGE * pThreadPage;
 
+    pThreadPage = apCurThread->mpKernRwViewOfUserThreadPage;
+
+    if (apCurThread->mpProc->mId != 1)
+    {
+        apCurThread->mSysCall_Result = FALSE;
+        pThreadPage->mLastStatus = K2STAT_ERROR_NOT_ALLOWED;
+    }
+    else
+    {
+        K2MEM_Copy((UINT8 *)apCurThread->mSysCall_Arg0, &gData.UserCrtInitInfo, sizeof(CRT_INIT_INFO));
+        apCurThread->mSysCall_Result = TRUE;
+        pThreadPage->mLastStatus = K2STAT_NO_ERROR;
+    }
+}

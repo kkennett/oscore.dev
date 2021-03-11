@@ -44,5 +44,7 @@ SOURCES += exception.c
 SOURCES += critsec.c 
 SOURCES += notify.c 
 SOURCES += token.c 
+SOURCES += kern.c
+SOURCES += proc1.c
 
 include $(K2_ROOT)/src/shared/build/post.make

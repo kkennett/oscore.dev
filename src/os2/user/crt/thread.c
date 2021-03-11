@@ -59,169 +59,12 @@ K2OS_Thread_SetLastStatus(
     return result;
 }
 
-#if !K2_TARGET_ARCH_IS_ARM
-
-UINT32 
-CrtThread_SysCall2(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    return K2OS_SYSCALL(aId, aArg0);
-}
-
-UINT32 
-CrtThread_SysCall3(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-}
-
-#endif
-
-UINT32 
-CrtThread_SysCall4(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2, 
-    UINT32 aArg3
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg3 = aArg3;
-#if !K2_TARGET_ARCH_IS_ARM
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-#else
-    return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
-#endif
-}
-
-UINT32 
-CrtThread_SysCall5(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2, 
-    UINT32 aArg3, 
-    UINT32 aArg4
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg3 = aArg3;
-    pThreadPage->mSysCall_Arg4 = aArg4;
-#if !K2_TARGET_ARCH_IS_ARM
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-#else
-    return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
-#endif
-}
-
-UINT32 
-CrtThread_SysCall6(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2, 
-    UINT32 aArg3, 
-    UINT32 aArg4, 
-    UINT32 aArg5
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg3 = aArg3;
-    pThreadPage->mSysCall_Arg4 = aArg4;
-    pThreadPage->mSysCall_Arg5 = aArg5;
-#if !K2_TARGET_ARCH_IS_ARM
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-#else
-    return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
-#endif
-}
-
-UINT32 
-CrtThread_SysCall7(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2, 
-    UINT32 aArg3, 
-    UINT32 aArg4, 
-    UINT32 aArg5, 
-    UINT32 aArg6
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg3 = aArg3;
-    pThreadPage->mSysCall_Arg4 = aArg4;
-    pThreadPage->mSysCall_Arg5 = aArg5;
-    pThreadPage->mSysCall_Arg6 = aArg6;
-#if !K2_TARGET_ARCH_IS_ARM
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-#else
-    return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
-#endif
-}
-
-UINT32 
-CrtThread_SysCall8(
-    UINT32 aId, 
-    UINT32 aArg0, 
-    UINT32 aArg1, 
-    UINT32 aArg2, 
-    UINT32 aArg3, 
-    UINT32 aArg4, 
-    UINT32 aArg5, 
-    UINT32 aArg6, 
-    UINT32 aArg7
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-    pThreadPage = (K2OS_USER_THREAD_PAGE *)(K2OS_UVA_TLSAREA_BASE + (CRT_GET_CURRENT_THREAD_INDEX * K2_VA32_MEMPAGE_BYTES));
-    pThreadPage->mSysCall_Arg3 = aArg3;
-    pThreadPage->mSysCall_Arg4 = aArg4;
-    pThreadPage->mSysCall_Arg5 = aArg5;
-    pThreadPage->mSysCall_Arg6 = aArg6;
-    pThreadPage->mSysCall_Arg7 = aArg7;
-#if !K2_TARGET_ARCH_IS_ARM
-    pThreadPage->mSysCall_Arg1 = aArg1;
-    pThreadPage->mSysCall_Arg2 = aArg2;
-    return K2OS_SYSCALL(aId, aArg0);
-#else
-    return K2OS_SYSCALL(aId, aArg0, aArg1, aArg2);
-#endif
-}
-
 BOOL
 K2OS_Thread_WaitForNotify(
     K2OS_TOKEN aTokNotify
 )
 {
-    return CrtThread_SysCall1(K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT32)aTokNotify);
+    return CrtKern_SysCall1(K2OS_SYSCALL_ID_WAIT_FOR_NOTIFY, (UINT32)aTokNotify);
 }
 
 BOOL   
@@ -229,5 +72,5 @@ K2OS_Thread_TestForNotify(
     K2OS_TOKEN aTokNotify
 )
 {
-    return CrtThread_SysCall1(K2OS_SYSCALL_ID_TEST_NOTIFY, (UINT32)aTokNotify);
+    return CrtKern_SysCall1(K2OS_SYSCALL_ID_TEST_NOTIFY, (UINT32)aTokNotify);
 }

@@ -38,7 +38,7 @@
 #include <lib/k2rofshelp.h>
 #include <lib/k2elf32.h>
 #include "../../shared/lib/k2dlxsupp/dlx_struct.h"
-#include "syscallid.h"
+#include "kerniface.h"
 
 /* --------------------------------------------------------------------------------- */
 
@@ -436,6 +436,8 @@ struct _KERN_DATA
     // init data for each process' user crt segment
     //
     KERN_USERCRT_INFO       UserCrtInfo;
+    CRT_INIT_INFO           UserCrtInitInfo;
+
 
 #if K2_TARGET_ARCH_IS_ARM
     // arch specific - used in common phys init code
@@ -502,6 +504,7 @@ void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K
 void    KernThread_SysCall_WaitForNotify(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCurThread, BOOL aNonBlocking);
 
 void    KernUser_Init(void);
+void    KernUser_SysCall_FillCrtInfo(K2OSKERN_OBJ_THREAD *apCurThread);
 
 BOOL    KernIntr_OnIci(K2OSKERN_CPUCORE volatile * apThisCore, UINT32 aSrcCoreIx);
 BOOL    KernIntr_OnIrq(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_INTR *apIntr);

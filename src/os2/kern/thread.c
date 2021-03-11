@@ -116,6 +116,10 @@ KernThread_SystemCall(
         K2_ASSERT(0);
         break;
 
+    case K2OS_SYSCALL_ID_CRT_GET_INFO:
+        KernUser_SysCall_FillCrtInfo(pCurThread);
+        break;
+
     default:
         K2OSKERN_Debug("Unknown system call\n");
         pThreadPage = pCurThread->mpKernRwViewOfUserThreadPage;

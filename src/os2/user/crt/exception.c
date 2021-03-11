@@ -36,5 +36,5 @@ K2OS_RaiseException(
     K2STAT aExceptionCode
 )
 {
-    CrtThread_SysCall1(K2OS_SYSCALL_ID_RAISE_EXCEPTION, aExceptionCode);
+    CrtKern_SysCall1(K2OS_SYSCALL_ID_RAISE_EXCEPTION, aExceptionCode);
 }
