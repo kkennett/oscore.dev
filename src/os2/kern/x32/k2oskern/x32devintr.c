@@ -560,11 +560,3 @@ KernArch_PollIrq(
     return FALSE;
 }
 
-void
-KernArch_SendIci(
-    K2OSKERN_CPUCORE volatile * apThisCore,
-    UINT32                      aTargetMask
-)
-{
-    K2_ASSERT(0);
-}

@@ -180,6 +180,7 @@ KernArch_InstallPageTable(
     UINT32                  mapAttr;
     UINT32 *                pScanPte;
     UINT32                  pteLeft;
+    BOOL                    disp;
 
 //    K2OSKERN_Debug("Install process %d pageTable for %08X using page %08X\n", apProc->mId, aVirtAddrPtMaps, aPhysPageAddr);
 
@@ -250,7 +251,7 @@ KernArch_InstallPageTable(
         //
         // pde is for the kernel, so goes into all process pagetables
         //
-        K2OSKERN_SeqLock(&gData.ProcListSeqLock);
+        disp = K2OSKERN_SeqLock(&gData.ProcListSeqLock);
 
         pListLink = gData.ProcList.mpHead;
         K2_ASSERT(pListLink != NULL);
@@ -267,7 +268,7 @@ KernArch_InstallPageTable(
             pListLink = pListLink->mpNext;
         } while (pListLink != NULL);
 
-        K2OSKERN_SeqUnlock(&gData.ProcListSeqLock);
+        K2OSKERN_SeqUnlock(&gData.ProcListSeqLock, disp);
     }
     else
     {

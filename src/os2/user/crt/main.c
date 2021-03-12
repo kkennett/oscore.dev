@@ -55,6 +55,7 @@ K2_CALLCONV_REGS
 sAssert(char const * apFile, int aLineNum, char const * apCondition)
 {
     CrtDbg_Printf("ASSERT %s:%d (%s)\n", apFile, aLineNum, apCondition);
+    K2OS_RaiseException(K2STAT_EX_LOGIC);
     *((UINT32 *)0) = 0;
     while (1);
 }

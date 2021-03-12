@@ -767,6 +767,7 @@ KernPhys_RenderPtMap(
     UINT32      v;
     UINT32      endBit;
     UINT32 *    pPageCount;
+    BOOL        disp;
 
     if (1 == apProc->mId)
     {
@@ -779,7 +780,7 @@ KernPhys_RenderPtMap(
 
     pPageCount = (UINT32 *)(((UINT8 *)apProc) + (K2_VA32_MEMPAGE_BYTES * K2OS_PROC_PAGES_OFFSET_PAGECOUNT));
 
-    K2OSKERN_SeqLock(&gData.PhysMemSeqLock);
+    disp = K2OSKERN_SeqLock(&gData.PhysMemSeqLock);
 
     bit = 0;
     do
@@ -801,5 +802,5 @@ KernPhys_RenderPtMap(
         apRetMap++;
     } while (bit < endBit);
 
-    K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock);
+    K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock, disp);
 }

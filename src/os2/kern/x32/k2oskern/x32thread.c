@@ -34,11 +34,17 @@
 
 void
 KernArch_ResumeThread(
-    K2OSKERN_CPUCORE volatile * apThisCore
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    BOOL                        aUseQuantumTimer
 )
 {
     K2OSKERN_OBJ_THREAD *   pRunThread;
     UINT32                  stackPtr;
+
+    //
+    // interrupts should be off when we get here
+    //
+    K2_ASSERT(FALSE == K2OSKERN_GetIntr());
 
     K2_ASSERT(NULL != apThisCore->RunList.mpHead);
     
@@ -60,21 +66,18 @@ KernArch_ResumeThread(
     }
 
     //
-    // interrupts must be enabled or something is wrong.
+    // interrupts must be enabled in the user mode context we are returning to, or something is wrong.
     //
     K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.CS == (X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER));
     K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->DS == (X32_SEGMENT_SELECTOR_USER_DATA | X32_SELECTOR_RPL_USER));
     K2_ASSERT(((X32_EXCEPTION_CONTEXT *)stackPtr)->UserMode.EFLAGS & X32_EFLAGS_INTENABLE);
 
+    //
+    // note next interrupt does not come from inside kernel, and return to the user mode thread
+    //
+    apThisCore->mIntrWhileInKernel = FALSE;
     X32Kern_InterruptReturn((UINT32)&pRunThread->Context);
 
     K2OSKERN_Panic("Switch to Thread returned!\n");
 }
 
-void 
-KernArch_DumpThreadContext(
-    K2OSKERN_OBJ_THREAD *apThread
-)
-{
-    K2_ASSERT(0);
-}

@@ -30,63 +30,45 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "kern.h"
+#include "x32kern.h"
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqInit(
-    K2OSKERN_SEQLOCK *  apLock
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_SetIntr(
+    BOOL aEnable
 )
 {
-    apLock->mSeqIn = 0;
-    apLock->mSeqOut = 0;
-    K2_CpuWriteBarrier();
+    return !X32_SetCoreInterruptMask(!aEnable);
 }
 
-BOOL K2_CALLCONV_REGS
-K2OSKERN_SeqLock(
-    K2OSKERN_SEQLOCK *  apLock
+BOOL
+K2_CALLCONV_REGS
+K2OSKERN_GetIntr(
+    void
+    )
+{
+    return X32_GetCoreInterruptMask() ? FALSE : TRUE;
+}
+
+void    
+KernArch_SendIci(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    UINT32                      aTargetMask
 )
 {
-    BOOL    enabled;
-    UINT32  mySeq;
+    UINT32 reg;
 
-    enabled = K2OSKERN_SetIntr(FALSE);
+    /* wait for pending send bit to clear */
+    do {
+        reg = MMREG_READ32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32);
+    } while (reg & (1 << 12));
 
-    if (gData.LoadInfo.mCpuCoreCount > 1)
-    {
-        do {
-            mySeq = apLock->mSeqIn;
-            if (mySeq == K2ATOMIC_CompareExchange(&apLock->mSeqIn, mySeq + 1, mySeq))
-                break;
-            if (enabled)
-            {
-                K2OSKERN_SetIntr(TRUE);
-                K2OSKERN_MicroStall(10);
-                K2OSKERN_SetIntr(FALSE);
-            }
-        } while (1);
+    /* set target cpus mask */
+    reg = (aTargetMask & ((1 << gData.LoadInfo.mCpuCoreCount)-1)) << 24;
+    K2_ASSERT(0 != reg);
 
-        do {
-            if (apLock->mSeqOut == mySeq)
-                break;
-            K2OSKERN_MicroStall(10);
-        } while (1);
-    }
-
-    return enabled;
+    /* send to logical CPU interrupt X32KERN_VECTOR_ICI_BASE + my Index */
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_HIGH32, reg);
+    MMREG_WRITE32(K2OS_KVA_X32_LOCAPIC, X32_LOCAPIC_OFFSET_ICR_LOW32, X32_LOCAPIC_ICR_LOW_LEVEL_ASSERT | X32_LOCAPIC_ICR_LOW_LOGICAL | X32_LOCAPIC_ICR_LOW_MODE_FIXED | (X32KERN_VECTOR_ICI_BASE + apThisCore->mCoreIx));
 }
 
-void K2_CALLCONV_REGS
-K2OSKERN_SeqUnlock(
-    K2OSKERN_SEQLOCK *  apLock,
-    BOOL                aDisp
-)
-{
-    if (gData.LoadInfo.mCpuCoreCount > 1)
-    {
-        apLock->mSeqOut = apLock->mSeqOut + 1;
-        K2_CpuWriteBarrier();
-    }
-    if (aDisp)
-        K2OSKERN_SetIntr(TRUE);
-}

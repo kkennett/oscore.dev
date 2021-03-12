@@ -44,17 +44,12 @@ X32Kern_Intr_OnException(
     X32_EXCEPTION_CONTEXT *     apContext
 )
 {
-
-    //
-    // return true to run exec.  otherwise will return to interrupted activity
-    //
     if ((X32_SEGMENT_SELECTOR_USER_CODE | X32_SELECTOR_RPL_USER) == apContext->KernelMode.CS)
         return;
 
     // 
     // kernel mode exception = panic
     //
-
     K2OSKERN_Debug("Core %d, Exception in kernel mode. Context @ %08X\n", apThisCore->mCoreIx, apContext);
     K2OSKERN_Debug("Exception %d\n", apContext->Exception_Vector);
     K2OSKERN_Debug("CR2 = %08X\n", X32_ReadCR2());
@@ -109,6 +104,7 @@ X32Kern_InterruptHandler(
 {
     K2OSKERN_CPUCORE volatile * pThisCore;
     K2OSKERN_OBJ_THREAD *       pCurrentThread;
+    BOOL                        wasIntrInKernel;
     KernCpuExecReason           reason;
 
     pThisCore = K2OSKERN_GET_CURRENT_CPUCORE;
@@ -119,6 +115,9 @@ X32Kern_InterruptHandler(
         while (1);
     }
     sgInIntr[pThisCore->mCoreIx] = TRUE;
+
+    wasIntrInKernel = pThisCore->mIntrWhileInKernel;
+    pThisCore->mIntrWhileInKernel = TRUE;
 
     //
     // re-set the fs in case somebody in user land changed it
@@ -142,6 +141,7 @@ X32Kern_InterruptHandler(
     else if (aContext.Exception_Vector == 255)
     {
         K2_ASSERT(NULL != pCurrentThread);
+        K2_ASSERT(!wasIntrInKernel);        // system call from inside kernel???
         // fix up EFLAGS since it was captured by SYSENTER after kernel was entered
         aContext.UserMode.EFLAGS |= X32_EFLAGS_INTENABLE;
         if (X32Kern_Intr_OnSystemCall(pThisCore, &aContext, pCurrentThread))
@@ -166,7 +166,7 @@ X32Kern_InterruptHandler(
 
     sgInIntr[pThisCore->mCoreIx] = FALSE;
 
-    if (KernCpuExecReason_Invalid != reason)
+    if ((!wasIntrInKernel) && (KernCpuExecReason_Invalid != reason))
     {
         // save context to thread if there is one
         if (NULL != pCurrentThread)
@@ -174,11 +174,20 @@ X32Kern_InterruptHandler(
             K2MEM_Copy(&pCurrentThread->Context, &aContext, X32KERN_SIZEOF_USERMODE_EXCEPTION_CONTEXT);
         }
 
-        // this will never return
+        // 
+        // enable interrupts and enter kernel exec.
+        // Exec will never return here.  
+        // thread resume will be through KernArch_ResumeThread
+        //
+        K2OSKERN_SetIntr(TRUE);
         KernCpu_Exec(pThisCore, reason);
-
         K2OSKERN_Panic("KernCpu_Exec returned\n");
     }
+
+    //
+    // returning to previous activity which should re-enable interrupts
+    //
+    pThisCore->mIntrWhileInKernel = FALSE;
 }
 
 void 
@@ -186,19 +195,20 @@ KernArch_InstallDevIntrHandler(
     K2OSKERN_OBJ_INTR *apIntr
 )
 {
-    UINT32 irqIx;
+    UINT32  irqIx;
+    BOOL    disp;
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
+    disp = K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] == NULL);
     sgpIntrObjByIrqIx[irqIx] = apIntr;
     X32Kern_ConfigDevIrq(&apIntr->IrqConfig);
 
-    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock, disp);
 }
 
 void 
@@ -207,13 +217,14 @@ KernArch_SetDevIntrMask(
     BOOL                aMask
 )
 {
-    UINT32 irqIx;
+    UINT32  irqIx;
+    BOOL    disp;
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
+    disp = K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] != NULL);
     if (aMask)
@@ -221,7 +232,7 @@ KernArch_SetDevIntrMask(
     else
         X32Kern_UnmaskDevIrq(irqIx);
 
-    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock, disp);
 }
 
 void 
@@ -229,19 +240,20 @@ KernArch_RemoveDevIntrHandler(
     K2OSKERN_OBJ_INTR *apIntr
 )
 {
-    UINT32 irqIx;
+    UINT32  irqIx;
+    BOOL    disp;
 
     irqIx = apIntr->IrqConfig.mSourceIrq;
 
     K2_ASSERT(irqIx < X32_DEVIRQ_MAX_COUNT);
 
-    K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
+    disp = K2OSKERN_SeqLock(&gX32Kern_IntrSeqLock);
 
     K2_ASSERT(sgpIntrObjByIrqIx[irqIx] == apIntr);
     X32Kern_MaskDevIrq(irqIx);
     sgpIntrObjByIrqIx[irqIx] = NULL;
 
-    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock);
+    K2OSKERN_SeqUnlock(&gX32Kern_IntrSeqLock, disp);
 }
 
 void
@@ -263,3 +275,20 @@ KernArch_Panic(
     while (1);
 }
 
+void 
+KernArch_DumpThreadContext(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apThread
+)
+{
+    K2OSKERN_Debug("Core %d, Thread %d.\n",
+        apThisCore->mCoreIx, apThread->mIx);
+    X32Kern_DumpUserModeExceptionContext((X32_EXCEPTION_CONTEXT *)&apThread->Context);
+    X32Kern_DumpStackTrace(
+        apThread->mpProc,
+        apThread->Context.EIP,
+        apThread->Context.REGS.EBP,
+        apThread->Context.ESP,
+        &sgSymDump[apThisCore->mCoreIx * X32_SYM_NAME_MAX_LEN]
+    );
+}

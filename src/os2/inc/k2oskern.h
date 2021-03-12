@@ -60,9 +60,11 @@ UINT32 K2OSKERN_Debug(char const *apFormat, ...);
 void   K2OSKERN_Panic(char const *apFormat, ...);
 
 void    K2_CALLCONV_REGS K2OSKERN_MicroStall(UINT32 aMicroseconds);
+BOOL    K2_CALLCONV_REGS K2OSKERN_SetIntr(BOOL aEnable);
+BOOL    K2_CALLCONV_REGS K2OSKERN_GetIntr(void);
 void    K2_CALLCONV_REGS K2OSKERN_SeqInit(K2OSKERN_SEQLOCK * apLock);
-void    K2_CALLCONV_REGS K2OSKERN_SeqLock(K2OSKERN_SEQLOCK * apLock);
-void    K2_CALLCONV_REGS K2OSKERN_SeqUnlock(K2OSKERN_SEQLOCK * apLock);
+BOOL    K2_CALLCONV_REGS K2OSKERN_SeqLock(K2OSKERN_SEQLOCK * apLock);
+void    K2_CALLCONV_REGS K2OSKERN_SeqUnlock(K2OSKERN_SEQLOCK * apLock, BOOL aLockDisp);
 UINT32  K2_CALLCONV_REGS K2OSKERN_GetCpuIndex(void);
 
 //

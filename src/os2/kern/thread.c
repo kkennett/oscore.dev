@@ -105,7 +105,7 @@ KernThread_SystemCall(
         break;
 
     case K2OS_SYSCALL_ID_RAISE_EXCEPTION:
-        KernEx_RaiseException(pCurThread->mSysCall_Arg0);
+        KernThread_SysCall_RaiseException(apThisCore, pCurThread);
         break;
 
     case K2OS_SYSCALL_ID_NOTIFY_CREATE:
@@ -170,6 +170,7 @@ KernThread_SysCall_WaitForNotify(
 {
     K2OS_USER_THREAD_PAGE * pThreadPage;
     K2OSKERN_OBJ_NOTIFY *   pNotify;
+    BOOL                    disp;
 
     pThreadPage = apCurThread->mpKernRwViewOfUserThreadPage;
 
@@ -178,7 +179,7 @@ KernThread_SysCall_WaitForNotify(
     //
     pNotify = (K2OSKERN_OBJ_NOTIFY *)apCurThread->mSysCall_Arg0;
 
-    K2OSKERN_SeqLock(&pNotify->Lock);
+    disp = K2OSKERN_SeqLock(&pNotify->Lock);
 
     if (pNotify->Locked.mState == KernNotifyState_Active)
     {
@@ -225,6 +226,18 @@ KernThread_SysCall_WaitForNotify(
         }
     }
 
-    K2OSKERN_SeqUnlock(&pNotify->Lock);
+    K2OSKERN_SeqUnlock(&pNotify->Lock, disp);
 }
 
+void    
+KernThread_SysCall_RaiseException(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apCurThread
+)
+{
+    //
+    // thread manually raised exception
+    //
+    KernArch_DumpThreadContext(apThisCore, apCurThread);
+    K2OSKERN_Panic(NULL);
+}

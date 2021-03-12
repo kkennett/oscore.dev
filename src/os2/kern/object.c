@@ -47,16 +47,17 @@ KernObj_Add(
     K2OSKERN_OBJ_HEADER *apObjHdr
 )
 {
-    K2TREE_NODE *pTreeNode;
+    K2TREE_NODE *   pTreeNode;
+    BOOL            disp;
 
-    K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
+    disp = K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
 
     pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
     K2_ASSERT(NULL == pTreeNode);
 
     K2TREE_Insert(&gData.ObjTree, (UINT32)apObjHdr, &apObjHdr->ObjTreeNode);
 
-    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock);
+    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock, disp);
 }
 
 UINT32  
@@ -66,15 +67,16 @@ KernObj_AddRef(
 {
     K2TREE_NODE *   pTreeNode;
     UINT32          result;
+    BOOL            disp;
 
-    K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
+    disp = K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
 
     pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
     K2_ASSERT(NULL != pTreeNode);
 
     result = ++apObjHdr->mRefCount;
 
-    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock);
+    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock, disp);
 
     return result;
 }
@@ -87,8 +89,9 @@ KernObj_Release(
     K2TREE_NODE *   pTreeNode;
     UINT32          result;
     UINT32          v;
+    BOOL            disp;
 
-    K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
+    disp = K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
 
     pTreeNode = K2TREE_Find(&gData.ObjTree, (UINT32)apObjHdr);
     K2_ASSERT(NULL != pTreeNode);
@@ -99,7 +102,7 @@ KernObj_Release(
         K2TREE_Remove(&gData.ObjTree, &apObjHdr->ObjTreeNode);
     }
 
-    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock);
+    K2OSKERN_SeqUnlock(&gData.ObjTreeSeqLock, disp);
 
     if (0 == result)
         return 0;

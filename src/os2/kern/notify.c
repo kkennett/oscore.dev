@@ -64,10 +64,11 @@ KernNotify_Signal(
     K2OS_USER_THREAD_PAGE * pThreadPage;
     K2OSKERN_OBJ_THREAD *   pReleasedThread;
     UINT32                  result;
+    BOOL                    disp;
 
     pReleasedThread = NULL;
 
-    K2OSKERN_SeqLock(&apNotify->Lock);
+    disp = K2OSKERN_SeqLock(&apNotify->Lock);
 
     if (apNotify->Locked.mState != KernNotifyState_Waiting)
     {
@@ -104,7 +105,7 @@ KernNotify_Signal(
         }
     }
 
-    K2OSKERN_SeqUnlock(&apNotify->Lock);
+    K2OSKERN_SeqUnlock(&apNotify->Lock, disp);
 
     if (NULL != pReleasedThread)
     {

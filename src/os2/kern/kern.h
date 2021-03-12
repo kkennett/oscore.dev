@@ -212,6 +212,7 @@ struct _K2OSKERN_CPUCORE
 
     BOOL                            mIsExecuting;
     BOOL                            mIsIdle;
+    BOOL                            mIntrWhileInKernel;
 
     UINT32 volatile                 mIciFromOtherCore[K2OS_MAX_CPU_COUNT];
     K2LIST_ANCHOR                   IciOutList;
@@ -469,10 +470,10 @@ UINT32* KernArch_Translate(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT3
 void    KernArch_InstallPageTable(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddrPtMaps, UINT32 aPhysPageAddr, BOOL aZeroPageAfterMap);
 void    KernArch_UserInit(void);
 void    KernArch_FlushCache(UINT32 aVirtAddr, UINT32 aSizeBytes);
-void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore);
+void    KernArch_ResumeThread(K2OSKERN_CPUCORE volatile * apThisCore, BOOL aUseQuantumTimer);
 void    KernArch_CpuIdle(K2OSKERN_CPUCORE volatile *apThisCore);
 BOOL    KernArch_PollIrq(K2OSKERN_CPUCORE volatile *apThisCore);
-void    KernArch_DumpThreadContext(K2OSKERN_OBJ_THREAD *apThread);
+void    KernArch_DumpThreadContext(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apThread);
 void    KernArch_SendIci(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetMask);
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
@@ -502,6 +503,7 @@ void    KernThread_Exception(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
 void    KernThread_SysCall_WaitForNotify(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCurThread, BOOL aNonBlocking);
+void    KernThread_SysCall_RaiseException(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
 
 void    KernUser_Init(void);
 void    KernUser_SysCall_FillCrtInfo(K2OSKERN_OBJ_THREAD *apCurThread);

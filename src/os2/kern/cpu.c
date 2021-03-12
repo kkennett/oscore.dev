@@ -228,6 +228,11 @@ KernCpu_Exec(
     BOOL                    wasIdle;
     UINT32                  activity;
 
+    //
+    // interrupts must be enabled by the time we reach here
+    //
+    K2_ASSERT(TRUE == K2OSKERN_GetIntr());
+
     wasIdle = apThisCore->mIsIdle;
     apThisCore->mIsIdle = FALSE;
 
@@ -260,8 +265,10 @@ KernCpu_Exec(
         } while (0 != activity);
 
         //
-        // resume next activity
+        // try to resume next activity
         //
+        K2OSKERN_SetIntr(FALSE);
+
         pNextThread = K2_GET_CONTAINER(K2OSKERN_OBJ_THREAD, apThisCore->RunList.mpHead, CpuRunListLink);
         K2_ASSERT(KernThreadState_OnCoreRunList == pNextThread->mState);
         apThisCore->mThreadChanged = FALSE;
@@ -284,12 +291,13 @@ KernCpu_Exec(
                 //
                 // reschedule here, move idle thread to end of run list
                 //
+                K2OSKERN_SetIntr(TRUE);
                 KernCpu_Reschedule(apThisCore);
             }
         }
         else
         {
-            KernArch_ResumeThread(apThisCore);
+            KernArch_ResumeThread(apThisCore, (apThisCore->RunList.mNodeCount > 2) ? TRUE : FALSE);
             K2OSKERN_Panic("KernArch_ResumeThread() returned\n");
         }
 

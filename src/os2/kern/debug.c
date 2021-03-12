@@ -53,12 +53,13 @@ KernDbg_OutputWithArgs(
 )
 {
     UINT32  result;
+    BOOL    disp;
 
-    K2OSKERN_SeqLock(&gData.DebugSeqLock);
+    disp = K2OSKERN_SeqLock(&gData.DebugSeqLock);
     
     result = K2ASC_Emitf(sEmitter, NULL, (UINT32)-1, apFormat, aList);
     
-    K2OSKERN_SeqUnlock(&gData.DebugSeqLock);
+    K2OSKERN_SeqUnlock(&gData.DebugSeqLock, disp);
 
     return result;
 }
@@ -89,7 +90,11 @@ KernDbg_FindClosestSymbol(
     UINT32                  aRetSymNameBufLen
 )
 {
-    UINT32 b, e, m, v;
+    UINT32          b, e, m, v;
+    K2LIST_LINK *   pDlxListLink;
+    DLX *           pDlx;
+    UINT32          segStart;
+    K2TREE_NODE *   pTreeNode;
 
     if ((NULL == apRetSymName) ||
         (0 == aRetSymNameBufLen))
@@ -134,7 +139,42 @@ KernDbg_FindClosestSymbol(
     }
     else
     {
+        //
+        // scan process dlx list for code symbols
+        //
+        if (NULL != apCurProc->mpUserDlxList)
+        {
+            pDlxListLink = apCurProc->mpUserDlxList->mpHead;
+            if (NULL != pDlxListLink)
+            {
+                do
+                {
+                    //
+                    // look in code symbols for this dlx
+                    //
+                    pDlx = K2_GET_CONTAINER(DLX, pDlxListLink, ListLink);
+                    pDlxListLink = pDlxListLink->mpNext;
 
+                    segStart = pDlx->SegAlloc.Segment[DlxSeg_Text].mLinkAddr;
+                    if ((aAddr >= segStart) &&
+                        (aAddr < segStart + pDlx->mpInfo->SegInfo[DlxSeg_Text].mMemActualBytes))
+                    {
+                        pTreeNode = K2TREE_FindOrAfter(&pDlx->SymTree[0], aAddr);
+                        if (NULL != pTreeNode)
+                        {
+                            /* found the symbol */
+                            K2ASC_PrintfLen(apRetSymName, aRetSymNameBufLen,
+                                "%s+%x%X",
+                                ((K2DLX_SYMTREE_NODE *)pTreeNode)->mpSymName,
+                                aAddr - pTreeNode->mUserVal);
+                        }
+                        // stop looking
+                        pDlxListLink = NULL;
+                    }
+
+                } while (NULL != pDlxListLink);
+            }
+        }
     }
 }
 

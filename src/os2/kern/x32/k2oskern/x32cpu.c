@@ -202,6 +202,7 @@ X32Kern_CpuLaunch(
         K2_CpuWriteBarrier();
     }
 
+    K2OSKERN_SetIntr(TRUE);
     KernCpu_Exec(&pCoreMem->CpuCore, KernCpuExecReason_CoreStart);
 
     //
