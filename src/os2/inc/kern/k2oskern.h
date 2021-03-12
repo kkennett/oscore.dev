@@ -32,7 +32,7 @@
 #ifndef __K2OSKERN_H
 #define __K2OSKERN_H
 
-#include "k2os.h"
+#include <k2os.h>
 
 #if K2_TARGET_ARCH_IS_INTEL
 #include <lib/k2archx32.h>

@@ -30,7 +30,7 @@
 //   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include <lib/k2vmap32.h>
+#include <kern/lib/k2vmap32.h>
 
 void
 K2VMAP32_Dump(

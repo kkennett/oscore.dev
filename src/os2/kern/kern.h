@@ -33,7 +33,7 @@
 #ifndef __KERN_H
 #define __KERN_H
 
-#include <k2oshal.h>    // includes k2oskern.h
+#include <kern/k2oshal.h>    // includes kern/k2oskern.h
 #include "kerndef.inc"
 #include <lib/k2rofshelp.h>
 #include <lib/k2elf32.h>
