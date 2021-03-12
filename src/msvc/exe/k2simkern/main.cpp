@@ -580,8 +580,11 @@ static void Shutdown(void)
 
 }
 
+extern "C" void RunTest(void);
+
 int main(int argc, char** argv)
 {
+    RunTest();
     Startup();
     Run();
     Shutdown();
