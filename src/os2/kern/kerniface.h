@@ -46,18 +46,6 @@
 #define K2OS_SYSCALL_ID_RAISE_EXCEPTION     8
 #define K2OS_SYSCALL_ID_NOTIFY_CREATE       9
 #define K2OS_SYSCALL_ID_TOKEN_DESTROY       10
-#define K2OS_SYSCALL_ID_CRT_GET_INFO        11
-
-typedef struct _CRT_INIT_INFO CRT_INIT_INFO;
-struct _CRT_INIT_INFO
-{
-    UINT32  mKernVirtTop;       // top-down address of where first byte after last free page ENDS
-    UINT32  mKernVirtTopPt;     // top-down address of where first page after last free pagetable ENDS
-    UINT32  mKernVirtBot;       // bottom-up address of where first byte after last free page STARTS
-    UINT32  mKernVirtBotPt;     // bottom-up address of where first byte after last free pagetable STARTS
-
-    UINT32  mObjBytes_Notify;   // sizeof a kernel Notify object
-};
 
 /* --------------------------------------------------------------------------------- */
 

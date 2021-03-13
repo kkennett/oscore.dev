@@ -32,36 +32,6 @@
 
 #include "kern.h"
 
-static UINT32
-sGetOnePhysicalPage(
-    K2OSKERN_OBJ_HEADER *apPageOwner
-)
-{
-    K2TREE_NODE *               pTreeNode;
-    UINT32                      userVal;
-    K2OSKERN_PHYSTRACK_PAGE *   pTrackPage;
-
-    pTreeNode = K2TREE_FirstNode(&gData.PhysFreeTree);
-    K2_ASSERT(pTreeNode != NULL);
-    userVal = pTreeNode->mUserVal;
-    K2TREE_Remove(&gData.PhysFreeTree, pTreeNode);
-    pTrackPage = (K2OSKERN_PHYSTRACK_PAGE*)pTreeNode;
-    if ((userVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) > 1)
-    {
-        // some space was left in the smallest node in the tree so
-        // put that space back on the physical memory tree
-        pTreeNode++;
-        pTreeNode->mUserVal = userVal - (1 << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL);
-        K2TREE_Insert(&gData.PhysFreeTree, pTreeNode->mUserVal, pTreeNode);
-    }
-    // put the page on the overhead list
-    pTrackPage->mFlags = (KernPhysPageList_KOver << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) | (userVal & K2OSKERN_PHYSTRACK_PROP_MASK);
-    pTrackPage->mpOwnerObject = apPageOwner;
-    K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_KOver], &pTrackPage->ListLink);
-
-    return K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
-}
-
 void 
 KernUser_Init(
     void
@@ -147,7 +117,7 @@ KernUser_Init(
     //
     // allocate a physical page for the first thread's TLS area
     //
-    pFirstThread->mTlsPagePhys = sGetOnePhysicalPage((K2OSKERN_OBJ_HEADER *)&pFirstThread->Hdr);
+    pFirstThread->mTlsPagePhys = KernPhys_AllocOneKernelPage((K2OSKERN_OBJ_HEADER *)&pFirstThread->Hdr);
 
     //
     // virt offset in the process' user space is the page index from zero
@@ -190,13 +160,13 @@ KernUser_Init(
     //
     // map the pagetable for the public API page and the ROFS in the user address space
     //
-    pagePhys = sGetOnePhysicalPage(NULL);
+    pagePhys = KernPhys_AllocOneKernelPage(NULL);
     KernArch_InstallPageTable(gpProc1, K2OS_UVA_PUBLICAPI_PAGETABLE_BASE, pagePhys, TRUE);
 
     //
     // map the public API page into the kernel R/W and into user space R/O
     //
-    pagePhys = sGetOnePhysicalPage(NULL);
+    pagePhys = KernPhys_AllocOneKernelPage(NULL);
     KernMap_MakeOnePresentPage(gpProc1, K2OS_UVA_PUBLICAPI_BASE, pagePhys, K2OS_MAPTYPE_USER_TEXT);
     KernMap_MakeOnePresentPage(gpProc1, K2OS_KVA_PUBLICAPI_BASE, pagePhys, K2OS_MAPTYPE_KERN_DATA);
     K2MEM_Zero((void *)K2OS_KVA_PUBLICAPI_BASE, K2_VA32_MEMPAGE_BYTES);
@@ -282,7 +252,7 @@ KernUser_Init(
     coreIx = K2OS_UVA_LOW_BASE;
     do
     {
-        pagePhys = sGetOnePhysicalPage(&gpProc1->Hdr);
+        pagePhys = KernPhys_AllocOneKernelPage(&gpProc1->Hdr);
         KernArch_InstallPageTable(gpProc1, coreIx, pagePhys, TRUE);
         gData.UserCrtInfo.mPageTablesCount++;
         if (chkOld <= K2_VA32_PAGETABLE_MAP_BYTES)
@@ -298,7 +268,7 @@ KernUser_Init(
     coreIx = crtVirtBytes;
     do
     {
-        pagePhys = sGetOnePhysicalPage(&gpProc1->Hdr);
+        pagePhys = KernPhys_AllocOneKernelPage(&gpProc1->Hdr);
 //        K2OSKERN_Debug("MAKE %08X->%08X USER_DATA, ZERO\n", chkOld, pagePhys);
         KernMap_MakeOnePresentPage(gpProc1, chkOld, pagePhys, K2OS_MAPTYPE_USER_DATA);   // user PT, so kern mapping doesn't work in x32
         K2MEM_Zero((void *)chkOld, K2_VA32_MEMPAGE_BYTES);
@@ -390,24 +360,3 @@ KernUser_Init(
     KernArch_UserInit();
 }
 
-void
-KernUser_SysCall_FillCrtInfo(
-    K2OSKERN_OBJ_THREAD *apCurThread
-)
-{
-    K2OS_USER_THREAD_PAGE * pThreadPage;
-
-    pThreadPage = apCurThread->mpKernRwViewOfUserThreadPage;
-
-    if (apCurThread->mpProc->mId != 1)
-    {
-        apCurThread->mSysCall_Result = FALSE;
-        pThreadPage->mLastStatus = K2STAT_ERROR_NOT_ALLOWED;
-    }
-    else
-    {
-        K2MEM_Copy((UINT8 *)apCurThread->mSysCall_Arg0, &gData.UserCrtInitInfo, sizeof(CRT_INIT_INFO));
-        apCurThread->mSysCall_Result = TRUE;
-        pThreadPage->mLastStatus = K2STAT_NO_ERROR;
-    }
-}

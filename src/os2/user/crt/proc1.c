@@ -31,103 +31,10 @@
 //
 #include "crt.h"
 
-typedef union _CrtHeapTrack CrtHeapTrack;
-union _CrtHeapTrack
-{
-    K2LIST_LINK     ListLink;
-    K2HEAP_NODE     HeapNode;
-};
-
-#define INIT_TRACK_ITEMS    32
-
-static CRT_INIT_INFO    sgInitInfo;
-static K2HEAP_ANCHOR    sgKernHeap;
-static K2LIST_ANCHOR    sgTrackList;
-static CrtHeapTrack     sgInitTrack[INIT_TRACK_ITEMS];
-
-static K2HEAP_NODE *   
-sgInitAcqNode(
-    K2HEAP_ANCHOR * apHeap
-)
-{
-    CrtHeapTrack *pTrack;
-
-    K2_ASSERT(apHeap == &sgKernHeap);
-    if (0 == sgTrackList.mNodeCount)
-        return NULL;
-
-    pTrack = (CrtHeapTrack *)sgTrackList.mpHead;
-    K2LIST_Remove(&sgTrackList, &pTrack->ListLink);
-    
-    return &pTrack->HeapNode;
-}
-
-static void 
-sgInitRelNode(
-    K2HEAP_ANCHOR * apHeap,
-    K2HEAP_NODE *   apNode
-)
-{
-    K2_ASSERT(apHeap == &sgKernHeap);
-    K2LIST_AddAtTail(&sgTrackList, &((CrtHeapTrack *)apNode)->ListLink);
-}
-
 void   
 CrtKern_InitProc1(
     void
 )
 {
-    BOOL            ok;
-    UINT32          ix;
-    K2STAT          stat;
-    K2TREE_NODE *   pTreeNode;
-    K2HEAP_NODE *   pHeapNode;
 
-    ok = CrtKern_SysCall1(K2OS_SYSCALL_ID_CRT_GET_INFO, (UINT32)&sgInitInfo);
-    K2_ASSERT(ok);
-
-    K2_ASSERT(sgInitInfo.mKernVirtBot <= sgInitInfo.mKernVirtBotPt);
-    K2_ASSERT(sgInitInfo.mKernVirtTop >= sgInitInfo.mKernVirtTopPt);
-
-    //
-    // init initial heap tracking
-    //
-    K2LIST_Init(&sgTrackList);
-    for (ix = 0; ix < INIT_TRACK_ITEMS; ix++)
-    {
-        K2LIST_AddAtTail(&sgTrackList, &sgInitTrack[ix].ListLink);
-    }
-
-    //
-    // start proc1 heap
-    //
-    K2HEAP_Init(&sgKernHeap, sgInitAcqNode, sgInitRelNode);
-    if (sgInitInfo.mKernVirtBot != sgInitInfo.mKernVirtBotPt)
-    {
-        stat = K2HEAP_AddFreeSpaceNode(&sgKernHeap, sgInitInfo.mKernVirtBot, sgInitInfo.mKernVirtBotPt - sgInitInfo.mKernVirtBot, NULL);
-        K2_ASSERT(!K2STAT_IS_ERROR(stat));
-    }
-
-    if (sgInitInfo.mKernVirtTop != sgInitInfo.mKernVirtTopPt)
-    {
-        stat = K2HEAP_AddFreeSpaceNode(&sgKernHeap, sgInitInfo.mKernVirtTopPt, sgInitInfo.mKernVirtTop - sgInitInfo.mKernVirtTopPt, NULL);
-        K2_ASSERT(!K2STAT_IS_ERROR(stat));
-    }
-
-    pTreeNode = K2TREE_FirstNode(&sgKernHeap.SizeTree);
-    if (NULL == pTreeNode)
-    {
-        CrtDbg_Printf("Kernel virt Heap empty at startup\n");
-    }
-    else
-    {
-        CrtDbg_Printf("Kernel Virt heap at startup:\n----------\n");
-        do
-        {
-            pHeapNode = K2_GET_CONTAINER(K2HEAP_NODE, pTreeNode, SizeTreeNode);
-            CrtDbg_Printf("Size %08X Addr %08X\n", pHeapNode->SizeTreeNode.mUserVal, pHeapNode->AddrTreeNode.mUserVal);
-            pTreeNode = K2TREE_NextNode(&sgKernHeap.SizeTree, pTreeNode);
-        } while (pTreeNode != NULL);
-        CrtDbg_Printf("----------\n");
-    }
 }

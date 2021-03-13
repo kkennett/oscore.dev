@@ -804,3 +804,51 @@ KernPhys_RenderPtMap(
 
     K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock, disp);
 }
+
+UINT32  
+KernPhys_AllocOneKernelPage(
+    K2OSKERN_OBJ_HEADER *apPageOwner
+)
+{
+    K2TREE_NODE *               pTreeNode;
+    UINT32                      userVal;
+    K2OSKERN_PHYSTRACK_PAGE *   pTrackPage;
+    BOOL                        disp;
+
+    disp = K2OSKERN_SeqLock(&gData.PhysMemSeqLock);
+
+    pTreeNode = K2TREE_FirstNode(&gData.PhysFreeTree);
+    if (NULL == pTreeNode)
+    {
+        K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock, disp);
+        return 0;
+    }
+
+    userVal = pTreeNode->mUserVal;
+    K2TREE_Remove(&gData.PhysFreeTree, pTreeNode);
+    pTrackPage = (K2OSKERN_PHYSTRACK_PAGE*)pTreeNode;
+    if ((userVal >> K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL) > 1)
+    {
+        // some space was left in the smallest node in the tree so
+        // put that space back on the physical memory tree
+        pTreeNode++;
+        pTreeNode->mUserVal = userVal - (1 << K2OSKERN_PHYSTRACK_PAGE_COUNT_SHL);
+        K2TREE_Insert(&gData.PhysFreeTree, pTreeNode->mUserVal, pTreeNode);
+    }
+    // put the page on the overhead list
+    pTrackPage->mFlags = (KernPhysPageList_KOver << K2OSKERN_PHYSTRACK_PAGE_LIST_SHL) | (userVal & K2OSKERN_PHYSTRACK_PROP_MASK);
+    pTrackPage->mpOwnerObject = apPageOwner;
+    K2LIST_AddAtTail(&gData.PhysPageList[KernPhysPageList_KOver], &pTrackPage->ListLink);
+
+    K2OSKERN_SeqUnlock(&gData.PhysMemSeqLock, disp);
+
+    return K2OS_PHYSTRACK_TO_PHYS32((UINT32)pTrackPage);
+}
+
+void
+KernPhys_FreeOneKernelPage(
+    UINT32 aPagePhys
+)
+{
+    K2_ASSERT(0);
+}

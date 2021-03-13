@@ -112,7 +112,7 @@ KernMap_BreakOnePage(
 
     K2_ASSERT((pteOld & (K2OSKERN_PTE_PRESENT_BIT | K2OSKERN_PTE_NP_BIT)) != 0);
 
-    result = ((*pPTE) & K2_VA32_PAGEFRAME_MASK);
+    result = (pteOld & K2_VA32_PAGEFRAME_MASK);
 
     if (aNpFlags & K2OSKERN_PTE_NP_BIT)
     {
@@ -144,3 +144,15 @@ KernMap_BreakOnePage(
     return result;
 }
 
+void    
+KernMap_FlushTlb(
+    K2OSKERN_OBJ_PROCESS *  apProc,
+    UINT32                  aVirtAddr,
+    UINT32                  aPageCount
+)
+{
+    //
+    // flush this range accross all cores for the specified process
+    //
+    K2_ASSERT(0);
+}

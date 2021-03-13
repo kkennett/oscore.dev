@@ -39,6 +39,8 @@
 #include <lib/k2elf32.h>
 #include "../../shared/lib/k2dlxsupp/dlx_struct.h"
 #include "kerniface.h"
+#include <lib/k2ramheap.h>
+#include <lib/k2heap.h>
 
 /* --------------------------------------------------------------------------------- */
 
@@ -437,8 +439,6 @@ struct _KERN_DATA
     // init data for each process' user crt segment
     //
     KERN_USERCRT_INFO       UserCrtInfo;
-    CRT_INIT_INFO           UserCrtInitInfo;
-
 
 #if K2_TARGET_ARCH_IS_ARM
     // arch specific - used in common phys init code
@@ -478,12 +478,15 @@ void    KernArch_SendIci(K2OSKERN_CPUCORE volatile *apThisCore, UINT32 aTargetMa
 
 void    KernMap_MakeOnePresentPage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPhysAddr, UINTN aPageMapAttr);
 UINT32  KernMap_BreakOnePage(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aNpFlags);
+void    KernMap_FlushTlb(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aVirtAddr, UINT32 aPageCount);
 
 void    KernDbg_EarlyInit(void);
 void    KernDbg_FindClosestSymbol(K2OSKERN_OBJ_PROCESS * apCurProc, UINT32 aAddr, char *apRetSymName, UINT32 aRetSymNameBufLen);
 UINT32  KernDbg_OutputWithArgs(char const *apFormat, VALIST aList);
 
 void    KernPhys_Init(void);
+UINT32  KernPhys_AllocOneKernelPage(K2OSKERN_OBJ_HEADER *apPageOwner);
+void    KernPhys_FreeOneKernelPage(UINT32 aPhysPageAddr);
 void    KernPhys_RenderPtMap(K2OSKERN_OBJ_PROCESS *apProc, UINT8 *apRetMap);
 
 void    KernProc_Init(void);
@@ -520,7 +523,12 @@ UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
 void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify);
 UINT32  KernNotify_Signal(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
 
+void *  KernHeap_Alloc(UINT32 aBytes);
+void    KernHeap_Free(void *aPtr);
+
 void    KernVirt_Init(void);
+UINT32  KernVirt_Alloc(UINT32 aPagesCount);
+void    KernVirt_Free(UINT32 aPagesAddr);
 
 /* --------------------------------------------------------------------------------- */
 
