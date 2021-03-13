@@ -98,7 +98,6 @@ __k2oscrt_user_entry(
         //
         CrtKern_InitProc1();
     }
-    CrtToken_Init();
 
     //
     // init dynamic loader and self-init this module

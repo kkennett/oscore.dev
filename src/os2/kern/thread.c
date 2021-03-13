@@ -77,15 +77,13 @@ KernThread_SystemCall(
 {
     K2OSKERN_OBJ_THREAD *   pCurThread;
     K2OS_USER_THREAD_PAGE * pThreadPage;
+    K2OSKERN_OBJ_NOTIFY *   pNotify;
 
     pCurThread = K2OSKERN_GetThisCoreCurrentThread();
-
     K2_ASSERT(FALSE != pCurThread->mInSysCall);
     //
     // thread current context saved to its context var
     //
-
-    K2OSKERN_Debug("Thread %d slow system call\n", pCurThread->mIx);
 
     switch (pCurThread->mSysCall_Id)
     {
@@ -109,7 +107,7 @@ KernThread_SystemCall(
         break;
 
     case K2OS_SYSCALL_ID_NOTIFY_CREATE:
-        K2_ASSERT(0);
+        KernThread_SysCall_CreateNotify(apThisCore, pCurThread);
         break;
 
     case K2OS_SYSCALL_ID_TOKEN_DESTROY:
@@ -118,8 +116,8 @@ KernThread_SystemCall(
 
     default:
         K2OSKERN_Debug("Unknown system call\n");
-        pThreadPage = pCurThread->mpKernRwViewOfUserThreadPage;
         pCurThread->mSysCall_Result = 0;
+        pThreadPage = pCurThread->mpKernRwViewOfUserThreadPage;
         pThreadPage->mLastStatus = K2STAT_ERROR_NOT_IMPL;
         break;
     }
@@ -236,4 +234,13 @@ KernThread_SysCall_RaiseException(
     //
     KernArch_DumpThreadContext(apThisCore, apCurThread);
     K2OSKERN_Panic(NULL);
+}
+
+void    
+KernThread_SysCall_CreateNotify(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apCurThread
+)
+{
+    K2_ASSERT(0);
 }

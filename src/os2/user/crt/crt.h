@@ -88,6 +88,4 @@ void    CrtDlx_Init(K2ROFS const * apROFS);
 void    CrtMem_Init(void);
 K2STAT  CrtMem_AllocPhysToThread(UINT32 aPageCount, UINT32 aDisposition);
 
-void    CrtToken_Init(void);
-
 #endif // __CRT_H

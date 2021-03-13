@@ -31,14 +31,6 @@
 //
 #include "crt.h"
 
-void
-CrtToken_Init(
-    void
-)
-{
-    K2_ASSERT(0);
-}
-
 BOOL
 K2OS_Token_Destroy(
     K2OS_TOKEN aToken

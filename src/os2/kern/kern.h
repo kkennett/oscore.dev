@@ -507,6 +507,7 @@ void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
 void    KernThread_SysCall_WaitForNotify(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCurThread, BOOL aNonBlocking);
 void    KernThread_SysCall_RaiseException(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+void    KernThread_SysCall_CreateNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
 
 void    KernUser_Init(void);
 void    KernUser_SysCall_FillCrtInfo(K2OSKERN_OBJ_THREAD *apCurThread);

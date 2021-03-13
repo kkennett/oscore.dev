@@ -235,6 +235,8 @@ sKernRamHeap_CreateRange(
     if (0 == virtSpace)
         return K2STAT_ERROR_OUT_OF_MEMORY;
 
+    K2OSKERN_Debug("Allocated Virtual Range of %d pages at %08X\n", aTotalPageCount, virtSpace);
+
     //
     // pull physical pages for initial commit count
     //
@@ -519,9 +521,9 @@ sReplenishTracking(
         //
         // there is space in the heap to alloc a page - take it from the start of the smallest size chunk
         //
-        pTreeNode = K2TREE_LastNode(&sgTrack.VirtHeap.SizeTree);
+        pTreeNode = K2TREE_FirstNode(&sgTrack.VirtHeap.SizeTree);
         pHeapNode = K2_GET_CONTAINER(K2HEAP_NODE, pTreeNode, SizeTreeNode);
-        K2OSKERN_Debug("Last node in size tree = addr %08X size %08X\n", pHeapNode->AddrTreeNode.mUserVal, pHeapNode->SizeTreeNode.mUserVal);
+        K2OSKERN_Debug("Smallest node in size tree = addr %08X size %08X\n", pHeapNode->AddrTreeNode.mUserVal, pHeapNode->SizeTreeNode.mUserVal);
 
         physPageAddr = KernPhys_AllocOneKernelPage(NULL);
         K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
