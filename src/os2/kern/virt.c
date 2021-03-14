@@ -560,6 +560,10 @@ iVirtLocked_Alloc(
     UINT32 aPagesCount
 )
 {
+    K2TREE_NODE *   pTreeNode;
+    UINT32          physPageAddr;
+    UINT32          byteCount;
+
     K2OSKERN_Debug("VirtHeap.Alloc freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
     if (sgTrack.VirtHeapFreeNodeList.mNodeCount < 4)
     {
@@ -568,12 +572,65 @@ iVirtLocked_Alloc(
             return 0;
         }
     }
-    
-    return K2HEAP_Alloc(&sgTrack.VirtHeap, aPagesCount * K2_VA32_MEMPAGE_BYTES);
+
+    byteCount = aPagesCount * K2_VA32_MEMPAGE_BYTES;
+
+    pTreeNode = K2TREE_LastNode(&sgTrack.VirtHeap.SizeTree);
+    if ((pTreeNode == NULL) || (pTreeNode->mUserVal < byteCount))
+    {
+        //
+        // not enough room in virtual heap for the alloc
+        // so we need to expand it
+        //
+        if ((sgTrack.mTopPt - sgTrack.mBotPt) < byteCount)
+        {
+            //
+            // cant fit request into expandable heap space
+            //
+            K2_ASSERT(0);
+            return 0;
+        }
+
+        //
+        // map a bunch of pagetables until we have the space
+        //
+        if (NULL == pTreeNode)
+        {
+            K2OSKERN_Debug("No Free space in kern virt heap\n");
+        }
+        else
+        {
+            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
+        }
+        do
+        {
+            physPageAddr = KernPhys_AllocOneKernelPage(NULL);
+            K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
+            if (0 == physPageAddr)
+            {
+                // physical memory exhausted
+                K2_ASSERT(0);
+                return FALSE;
+            }
+
+            KernArch_InstallPageTable(gpProc1, sgTrack.mBotPt, physPageAddr, TRUE);
+
+            K2HEAP_AddFreeSpaceNode(&sgTrack.VirtHeap, sgTrack.mBotPt, K2_VA32_PAGETABLE_MAP_BYTES, NULL);
+
+            sgTrack.mBotPt += K2_VA32_PAGETABLE_MAP_BYTES;
+
+            pTreeNode = K2TREE_LastNode(&sgTrack.VirtHeap.SizeTree);
+
+            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
+
+        } while (pTreeNode->mUserVal < byteCount);
+    }
+   
+    return K2HEAP_Alloc(&sgTrack.VirtHeap, byteCount);
 }
 
 UINT32 
-KernVirt_Alloc(
+KernVirt_AllocPages(
     UINT32 aPagesCount
 )
 {
@@ -608,7 +665,7 @@ iVirtLocked_Free(
 }
 
 void 
-KernVirt_Free(
+KernVirt_FreePages(
     UINT32 aPagesAddr
 )
 {

@@ -528,8 +528,8 @@ void *  KernHeap_Alloc(UINT32 aBytes);
 void    KernHeap_Free(void *aPtr);
 
 void    KernVirt_Init(void);
-UINT32  KernVirt_Alloc(UINT32 aPagesCount);
-void    KernVirt_Free(UINT32 aPagesAddr);
+UINT32  KernVirt_AllocPages(UINT32 aPagesCount);
+void    KernVirt_FreePages(UINT32 aPagesAddr);
 
 /* --------------------------------------------------------------------------------- */
 

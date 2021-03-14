@@ -77,7 +77,6 @@ KernThread_SystemCall(
 {
     K2OSKERN_OBJ_THREAD *   pCurThread;
     K2OS_USER_THREAD_PAGE * pThreadPage;
-    K2OSKERN_OBJ_NOTIFY *   pNotify;
 
     pCurThread = K2OSKERN_GetThisCoreCurrentThread();
     K2_ASSERT(FALSE != pCurThread->mInSysCall);
