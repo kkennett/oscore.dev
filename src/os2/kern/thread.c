@@ -106,11 +106,11 @@ KernThread_SystemCall(
         break;
 
     case K2OS_SYSCALL_ID_NOTIFY_CREATE:
-        KernThread_SysCall_CreateNotify(apThisCore, pCurThread);
+        KernThread_SysCall_NotifyCreate(apThisCore, pCurThread);
         break;
 
     case K2OS_SYSCALL_ID_TOKEN_DESTROY:
-        K2_ASSERT(0);
+        KernThread_SysCall_TokenDestroy(apThisCore, pCurThread);
         break;
 
     default:
@@ -236,10 +236,29 @@ KernThread_SysCall_RaiseException(
 }
 
 void    
-KernThread_SysCall_CreateNotify(
+KernThread_SysCall_NotifyCreate(
     K2OSKERN_CPUCORE volatile * apThisCore,
     K2OSKERN_OBJ_THREAD *       apCurThread
 )
 {
     K2_ASSERT(0);
 }
+
+void    
+KernThread_SysCall_TokenDestroy(
+    K2OSKERN_CPUCORE volatile * apThisCore,
+    K2OSKERN_OBJ_THREAD *       apCurThread
+)
+{
+    K2OS_USER_THREAD_PAGE * pThreadPage;
+
+    pThreadPage = apCurThread->mpKernRwViewOfUserThreadPage;
+
+    pThreadPage->mLastStatus = KernTok_Destroy(apCurThread->mpProc, (K2OS_TOKEN)apCurThread->mSysCall_Arg0);
+    if (K2STAT_IS_ERROR(pThreadPage->mLastStatus))
+        apCurThread->mSysCall_Result = FALSE;
+    else
+        apCurThread->mSysCall_Result = TRUE;
+}
+
+

@@ -41,6 +41,32 @@ KernProc_CleanupOne(
 }
 
 static void
+sProcTokenInit(
+    K2OSKERN_OBJ_PROCESS *apProc
+)
+{
+    K2OSKERN_TOKEN_PAGE *   pTokPage;
+    UINT32                  ix;
+
+    apProc->mppTokPages = (K2OSKERN_TOKEN_PAGE **)KernHeap_Alloc(sizeof(K2OSKERN_TOKEN_PAGE *));
+    K2_ASSERT(apProc->mppTokPages != NULL);
+
+    pTokPage = (K2OSKERN_TOKEN_PAGE *)(((UINT32)apProc) + (K2OS_PROC_PAGES_OFFSET_TOKEN_TABLE * K2_VA32_MEMPAGE_BYTES));
+
+    apProc->mppTokPages[0] = pTokPage;
+    apProc->mTokPageCount = 1;
+
+    pTokPage->Hdr.mPageIndex = 0;
+    pTokPage->Hdr.mInUseCount = 1;  // this will prevent the page from ever going away as the inUseCount will never be zero
+    for (ix = 1; ix < K2OSKERN_TOKENS_PER_PAGE; ix++)
+    {
+        K2LIST_AddAtTail(&apProc->TokFreeList, &pTokPage->Tokens[ix].FreeLink);
+    }
+    apProc->mTokSalt = K2OSKERN_TOKEN_SALT_MASK;
+    apProc->mTokCount = 0;
+}
+
+static void
 sInitOne(
     K2OSKERN_OBJ_PROCESS *apProc
 )
@@ -49,6 +75,12 @@ sInitOne(
     apProc->Hdr.mfCleanup = KernProc_CleanupOne;
     K2OSKERN_SeqInit(&apProc->ThreadListSeqLock);
     K2LIST_Init(&apProc->ThreadList);
+
+    K2OSKERN_SeqInit(&apProc->TokSeqLock);
+    K2LIST_Init(&apProc->TokFreeList);
+
+    if (apProc->mId != 1)
+        sProcTokenInit(apProc);
 }
 
 void
@@ -123,4 +155,9 @@ KernProc_Init(
     pThreadPtrs[K2OS_MAX_THREAD_COUNT - 1] = 0;
     gData.mNextThreadSlotIx = 1;
     gData.mLastThreadSlotIx = K2OS_MAX_THREAD_COUNT;
+
+    //
+    // init proc1 tokens tracking now
+    //
+    sProcTokenInit(gpProc1);
 }

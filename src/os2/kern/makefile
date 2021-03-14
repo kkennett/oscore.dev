@@ -51,6 +51,7 @@ SOURCES += object.c
 SOURCES += notify.c
 SOURCES += sched.c
 SOURCES += virt.c 
+SOURCES += token.c
 
 include $(K2_ROOT)/src/shared/build/post.make
 

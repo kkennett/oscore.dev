@@ -322,6 +322,45 @@ struct _K2OSKERN_OBJ_NOTIFY
 
 /* --------------------------------------------------------------------------------- */
 
+typedef struct _K2OSKERN_TOKEN_INUSE K2OSKERN_TOKEN_INUSE;
+struct _K2OSKERN_TOKEN_INUSE
+{
+    K2OSKERN_OBJ_HEADER *   mpObjHdr;
+    UINT32                  mTokValue;
+};
+
+typedef union _K2OSKERN_TOKEN K2OSKERN_TOKEN;
+union _K2OSKERN_TOKEN
+{
+    K2OSKERN_TOKEN_INUSE    InUse;
+    K2LIST_LINK             FreeLink;
+};
+
+K2_STATIC_ASSERT(sizeof(K2OSKERN_TOKEN) == sizeof(K2LIST_LINK));
+#define K2OSKERN_TOKENS_PER_PAGE   (K2_VA32_MEMPAGE_BYTES / sizeof(K2OSKERN_TOKEN))
+
+typedef struct _K2OSKERN_TOKEN_PAGE_HDR K2OSKERN_TOKEN_PAGE_HDR;
+struct _K2OSKERN_TOKEN_PAGE_HDR
+{
+    UINT32 mPageIndex;     // index of this page in the process sparse token page array
+    UINT32 mInUseCount;    // count of tokens in this page that are in use
+};
+
+typedef union _K2OSKERN_TOKEN_PAGE K2OSKERN_TOKEN_PAGE;
+union _K2OSKERN_TOKEN_PAGE
+{
+    K2OSKERN_TOKEN_PAGE_HDR    Hdr;
+    K2OSKERN_TOKEN             Tokens[K2OSKERN_TOKENS_PER_PAGE];
+};
+
+#define K2OSKERN_TOKEN_SALT_MASK       0xFFF00000
+#define K2OSKERN_TOKEN_SALT_DEC        0x00100000
+#define K2OSKERN_TOKEN_MAX_VALUE       0x000FFFFF
+
+#define K2OSKERN_MAX_TOKENS_PER_PROC   ((K2OSKERN_TOKEN_MAX_VALUE + 1) / sizeof(K2OSKERN_TOKENS_PER_PAGE))
+
+K2_STATIC_ASSERT(sizeof(K2OSKERN_TOKEN_PAGE) == K2_VA32_MEMPAGE_BYTES);
+
 struct _K2OSKERN_OBJ_PROCESS
 {
     K2OSKERN_OBJ_HEADER     Hdr;
@@ -336,6 +375,13 @@ struct _K2OSKERN_OBJ_PROCESS
     K2LIST_ANCHOR           ThreadList;
 
     K2LIST_ANCHOR *         mpUserDlxList;   // points into user space k2oscrt.dlx data segment
+
+    K2OSKERN_SEQLOCK        TokSeqLock;
+    K2OSKERN_TOKEN_PAGE **  mppTokPages;
+    UINT32                  mTokPageCount;
+    K2LIST_ANCHOR           TokFreeList;
+    UINT32                  mTokSalt;
+    UINT32                  mTokCount;
 };
 
 #define gpProc1 ((K2OSKERN_OBJ_PROCESS * const)K2OS_KVA_PROC1)
@@ -507,7 +553,9 @@ void    KernThread_SystemCall(K2OSKERN_CPUCORE volatile *apThisCore);
 void    KernThread_SysCall_SignalNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
 void    KernThread_SysCall_WaitForNotify(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_THREAD * apCurThread, BOOL aNonBlocking);
 void    KernThread_SysCall_RaiseException(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
-void    KernThread_SysCall_CreateNotify(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+void    KernThread_SysCall_NotifyCreate(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+void    KernThread_SysCall_TokenDestroy(K2OSKERN_CPUCORE volatile *apThisCore, K2OSKERN_OBJ_THREAD *apCurThread);
+
 
 void    KernUser_Init(void);
 void    KernUser_SysCall_FillCrtInfo(K2OSKERN_OBJ_THREAD *apCurThread);
@@ -520,6 +568,10 @@ void    KernObj_Init(void);
 void    KernObj_Add(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_AddRef(K2OSKERN_OBJ_HEADER *apObjHdr);
 UINT32  KernObj_Release(K2OSKERN_OBJ_HEADER *apObjHdr);
+
+K2STAT  KernTok_CreateNoAddRef(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aObjCount, K2OSKERN_OBJ_HEADER ** appObjHdr, K2OS_TOKEN *apRetTokens);
+K2STAT  KernTok_TranslateToAddRefObjs(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aTokenCount, K2OS_TOKEN const * apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
+K2STAT  KernTok_Destroy(K2OSKERN_OBJ_PROCESS *apProc, K2OS_TOKEN aTok);
 
 void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify);
 UINT32  KernNotify_Signal(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);

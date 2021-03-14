@@ -88,7 +88,6 @@ KernObj_Release(
 {
     K2TREE_NODE *   pTreeNode;
     UINT32          result;
-    UINT32          v;
     BOOL            disp;
 
     disp = K2OSKERN_SeqLock(&gData.ObjTreeSeqLock);
@@ -117,19 +116,7 @@ KernObj_Release(
 
     if (0 == (K2OSKERN_OBJ_FLAG_EMBEDDED & apObjHdr->mObjFlags))
     {
-        //
-        // not an embedded object, so memory needs release. latch it
-        // to freed object chain and set event that says there are
-        // objects that need to be freed back to the kernel heap
-        //
-        do
-        {
-            v = (UINT32)gData.mpFreedObjChain;
-            apObjHdr->mpNextCleanup = (K2OSKERN_OBJ_HEADER * volatile)v;
-        } while (v != K2ATOMIC_CompareExchange((UINT32 volatile *)&gData.mpFreedObjChain, (UINT32)apObjHdr, v));
-
-        K2_ASSERT(0);
-//        KernSig_Set(&gData.ObjCleanupSig, 1);
+        KernHeap_Free(apObjHdr);
     }
 
     return result;
