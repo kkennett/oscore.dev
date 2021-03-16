@@ -44,12 +44,12 @@ KernTok_CreateNoAddRef(
     K2OSKERN_TOKEN_PAGE **  ppNewTokenPageList;
     K2OSKERN_TOKEN_PAGE **  ppOldTokenPageList;
     UINT32                  newTokenPageListLen;
-    BOOL                    ok;
     UINT32                  value;
     K2OSKERN_TOKEN *        pToken;
     K2LIST_LINK *           pListLink;
     K2OSKERN_TOKEN_PAGE *   pFreeTokenPage;
     UINT32                  disp;
+    UINT32                  newTokenPagePhys;
 
     K2_ASSERT(appObjHdr != NULL);
     K2_ASSERT(aObjCount > 0);
@@ -115,10 +115,9 @@ KernTok_CreateNoAddRef(
             KernHeap_Free(ppNewTokenPageList);
             ppNewTokenPageList = NULL;
 
-
-            K2OS_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
-            K2OS_VirtPagesFree((UINT32)pNewTokenPage);
-
+            newTokenPagePhys = KernMap_BreakOnePage(gpProc1, (UINT32)pNewTokenPage, 0);
+            KernPhys_FreeOneKernelPage(newTokenPagePhys);
+            KernVirt_FreePages((UINT32)pNewTokenPage);
 
             pNewTokenPage = NULL;
         }
@@ -127,11 +126,12 @@ KernTok_CreateNoAddRef(
 
         ppNewTokenPageList = (K2OSKERN_TOKEN_PAGE **)KernHeap_Alloc(sizeof(K2OSKERN_TOKEN_PAGE *) * newTokenPageListLen);
 
-
-
-        K2OS_VirtPagesAlloc((UINT32 *)&pNewTokenPage, 1, K2OS_MEMPAGE_ATTR_READWRITE);
-
-
+        newTokenPagePhys = KernPhys_AllocOneKernelPage(NULL);
+        K2_ASSERT(0 != newTokenPagePhys);
+        pNewTokenPage = (K2OSKERN_TOKEN_PAGE *)KernVirt_AllocPages(1);
+        K2_ASSERT(NULL != pNewTokenPage);
+        K2OSKERN_Debug("New Token Page map v%08X -> p%08X\n", pNewTokenPage, newTokenPagePhys);
+        KernMap_MakeOnePresentPage(gpProc1, (UINT32)pNewTokenPage, newTokenPagePhys, K2OS_MAPTYPE_KERN_DATA);
 
         pNewTokenPage->Hdr.mInUseCount = 0;
         pNewTokenPage->Hdr.mPageIndex = newTokenPageListLen - 1;
@@ -187,10 +187,9 @@ KernTok_CreateNoAddRef(
         //
         // it turned out we didn't need to expand the token list
         //
-        ok = K2OS_VirtPagesDecommit((UINT32)pNewTokenPage, 1);
-        K2_ASSERT(ok);
-        ok = K2OS_VirtPagesFree((UINT32)pNewTokenPage);
-        K2_ASSERT(ok);
+        newTokenPagePhys = KernMap_BreakOnePage(gpProc1, (UINT32)pNewTokenPage, 0);
+        KernPhys_FreeOneKernelPage(newTokenPagePhys);
+        KernVirt_FreePages((UINT32)pNewTokenPage);
     }
 
     return K2STAT_NO_ERROR;

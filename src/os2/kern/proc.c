@@ -72,6 +72,7 @@ sInitOne(
 )
 {
     apProc->Hdr.mObjType = KernObj_Process;
+    apProc->Hdr.mRefCount = 1;
     apProc->Hdr.mfCleanup = KernProc_CleanupOne;
     K2OSKERN_SeqInit(&apProc->ThreadListSeqLock);
     K2LIST_Init(&apProc->ThreadList);

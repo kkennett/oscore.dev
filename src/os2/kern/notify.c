@@ -42,16 +42,18 @@ KernNotify_CleanupOne(
 
 void
 KernNotify_InitOne(
-    K2OSKERN_OBJ_NOTIFY *apNotify
+    K2OSKERN_OBJ_NOTIFY *   apNotify,
+    UINT32                  aInitDataWord
 )
 {
-    K2MEM_Zero(&apNotify, sizeof(K2OSKERN_OBJ_NOTIFY));
+    K2MEM_Zero(apNotify, sizeof(K2OSKERN_OBJ_NOTIFY));
     apNotify->Hdr.mObjType = KernObj_Notify;
     apNotify->Hdr.mfCleanup = KernNotify_CleanupOne;
+    apNotify->Hdr.mRefCount = 1;
     K2OSKERN_SeqInit(&apNotify->Lock);
     apNotify->Locked.mState = KernNotifyState_Idle;
     K2LIST_Init(&apNotify->Locked.WaitingThreadList);
-    apNotify->Locked.mDataWord = 0;
+    apNotify->Locked.mDataWord = aInitDataWord;
 }
 
 UINT32

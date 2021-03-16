@@ -573,7 +573,7 @@ K2STAT  KernTok_CreateNoAddRef(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aObjCount, K
 K2STAT  KernTok_TranslateToAddRefObjs(K2OSKERN_OBJ_PROCESS *apProc, UINT32 aTokenCount, K2OS_TOKEN const * apTokens, K2OSKERN_OBJ_HEADER **appRetObjHdrs);
 K2STAT  KernTok_Destroy(K2OSKERN_OBJ_PROCESS *apProc, K2OS_TOKEN aTok);
 
-void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify);
+void    KernNotify_InitOne(K2OSKERN_OBJ_NOTIFY *apNotify, UINT32 aInitDataWord);
 UINT32  KernNotify_Signal(K2OSKERN_CPUCORE volatile * apThisCore, K2OSKERN_OBJ_NOTIFY * apNotify, UINT32 aSignalBits);
 
 void *  KernHeap_Alloc(UINT32 aBytes);

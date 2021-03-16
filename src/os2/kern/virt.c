@@ -235,7 +235,7 @@ sKernRamHeap_CreateRange(
     if (0 == virtSpace)
         return K2STAT_ERROR_OUT_OF_MEMORY;
 
-    K2OSKERN_Debug("Allocated Virtual Range of %d pages at %08X\n", aTotalPageCount, virtSpace);
+//    K2OSKERN_Debug("Allocated Virtual Range of %d pages at %08X\n", aTotalPageCount, virtSpace);
 
     //
     // pull physical pages for initial commit count
@@ -454,14 +454,14 @@ sReplenishTracking(
     K2STAT          stat;
     K2TREE_NODE *   pTreeNode;
 
-    K2OSKERN_Debug("VirtHeap SizeTree nodecount = %d\n", sgTrack.VirtHeap.SizeTree.mNodeCount);
+//    K2OSKERN_Debug("VirtHeap SizeTree nodecount = %d\n", sgTrack.VirtHeap.SizeTree.mNodeCount);
     if (sgTrack.VirtHeap.SizeTree.mNodeCount == 0)
     {
         //
         // need to add some free space to the heap
         //
-        K2OSKERN_Debug("toppt = %08X\n", sgTrack.mTopPt);
-        K2OSKERN_Debug("botpt = %08X\n", sgTrack.mBotPt);
+//        K2OSKERN_Debug("toppt = %08X\n", sgTrack.mTopPt);
+//        K2OSKERN_Debug("botpt = %08X\n", sgTrack.mBotPt);
         if (sgTrack.mTopPt == sgTrack.mBotPt)
         {
             //
@@ -472,7 +472,7 @@ sReplenishTracking(
         }
 
         physPageAddr = KernPhys_AllocOneKernelPage(NULL);
-        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
+//        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
         if (0 == physPageAddr)
         {
             // physical memory exhausted
@@ -480,11 +480,11 @@ sReplenishTracking(
             return FALSE;
         }
 
-        K2OSKERN_Debug("Install PT for va %08X\n", sgTrack.mTopPt - K2_VA32_PAGETABLE_MAP_BYTES);
+//        K2OSKERN_Debug("Install PT for va %08X\n", sgTrack.mTopPt - K2_VA32_PAGETABLE_MAP_BYTES);
         KernArch_InstallPageTable(gpProc1, sgTrack.mTopPt - K2_VA32_PAGETABLE_MAP_BYTES, physPageAddr, TRUE);
 
         pHeapNode = (K2HEAP_NODE *)(sgTrack.mTopPt - K2_VA32_MEMPAGE_BYTES);
-        K2OSKERN_Debug("pHeapNode = %08X\n", pHeapNode);
+//        K2OSKERN_Debug("pHeapNode = %08X\n", pHeapNode);
 
         sgTrack.mTopPt -= K2_VA32_PAGETABLE_MAP_BYTES;
 
@@ -493,7 +493,7 @@ sReplenishTracking(
         // add a page of tracking, then add the free space, then alloc the tracking from the heap
         //
         physPageAddr = KernPhys_AllocOneKernelPage(NULL);
-        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
+//        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
         if (0 == physPageAddr)
         {
             // physical memory exhausted
@@ -501,18 +501,18 @@ sReplenishTracking(
             return FALSE;
         }
 
-        K2OSKERN_Debug("Map v%08X -> p%08X\n", (UINT32)pHeapNode, physPageAddr);
+//        K2OSKERN_Debug("Map v%08X -> p%08X\n", (UINT32)pHeapNode, physPageAddr);
         KernMap_MakeOnePresentPage(gpProc1, (UINT32)pHeapNode, physPageAddr, K2OS_MAPTYPE_KERN_DATA);
         for (ix = 0; ix < HEAPNODES_PER_PAGE; ix++)
         {
             K2LIST_AddAtTail(&sgTrack.VirtHeapFreeNodeList, (K2LIST_LINK *)&pHeapNode[ix]);
         }
 
-        K2OSKERN_Debug("AddFreeSpace %08X (%08X)\n", sgTrack.mTopPt, K2_VA32_PAGETABLE_MAP_BYTES);
+//        K2OSKERN_Debug("AddFreeSpace %08X (%08X)\n", sgTrack.mTopPt, K2_VA32_PAGETABLE_MAP_BYTES);
         stat = K2HEAP_AddFreeSpaceNode(&sgTrack.VirtHeap, sgTrack.mTopPt, K2_VA32_PAGETABLE_MAP_BYTES, NULL);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
 
-        K2OSKERN_Debug("AllocAt(%08X,%08X)\n", (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
+//        K2OSKERN_Debug("AllocAt(%08X,%08X)\n", (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
         stat = K2HEAP_AllocAt(&sgTrack.VirtHeap, (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
@@ -523,10 +523,10 @@ sReplenishTracking(
         //
         pTreeNode = K2TREE_FirstNode(&sgTrack.VirtHeap.SizeTree);
         pHeapNode = K2_GET_CONTAINER(K2HEAP_NODE, pTreeNode, SizeTreeNode);
-        K2OSKERN_Debug("Smallest node in size tree = addr %08X size %08X\n", pHeapNode->AddrTreeNode.mUserVal, pHeapNode->SizeTreeNode.mUserVal);
+//        K2OSKERN_Debug("Smallest node in size tree = addr %08X size %08X\n", pHeapNode->AddrTreeNode.mUserVal, pHeapNode->SizeTreeNode.mUserVal);
 
         physPageAddr = KernPhys_AllocOneKernelPage(NULL);
-        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
+//        K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
         if (0 == physPageAddr)
         {
             // physical memory exhausted
@@ -535,23 +535,23 @@ sReplenishTracking(
         }
 
         pHeapNode = (K2HEAP_NODE *)pHeapNode->AddrTreeNode.mUserVal;
-        K2OSKERN_Debug("pHeapNode = %08X\n", pHeapNode);
+//        K2OSKERN_Debug("pHeapNode = %08X\n", pHeapNode);
 
-        K2OSKERN_Debug("Map v%08X -> p%08X\n", (UINT32)pHeapNode, physPageAddr);
+//        K2OSKERN_Debug("Map v%08X -> p%08X\n", (UINT32)pHeapNode, physPageAddr);
         KernMap_MakeOnePresentPage(gpProc1, (UINT32)pHeapNode, physPageAddr, K2OS_MAPTYPE_KERN_DATA);
         for (ix = 0; ix < HEAPNODES_PER_PAGE; ix++)
         {
             K2LIST_AddAtTail(&sgTrack.VirtHeapFreeNodeList, (K2LIST_LINK *)&pHeapNode[ix]);
         }
 
-        K2OSKERN_Debug("AllocAt(%08X,%08X)\n", (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
+//        K2OSKERN_Debug("AllocAt(%08X,%08X)\n", (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
         stat = K2HEAP_AllocAt(&sgTrack.VirtHeap, (UINT32)pHeapNode, K2_VA32_MEMPAGE_BYTES);
         K2_ASSERT(!K2STAT_IS_ERROR(stat));
     }
     //
     // should be lots of tracking structures
     //
-    K2OSKERN_Debug("VirtHeap freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
+//    K2OSKERN_Debug("VirtHeap freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
     return TRUE;
 }
 
@@ -564,7 +564,7 @@ iVirtLocked_Alloc(
     UINT32          physPageAddr;
     UINT32          byteCount;
 
-    K2OSKERN_Debug("VirtHeap.Alloc freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
+//    K2OSKERN_Debug("VirtHeap.Alloc freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
     if (sgTrack.VirtHeapFreeNodeList.mNodeCount < 4)
     {
         if (!sReplenishTracking())
@@ -594,18 +594,19 @@ iVirtLocked_Alloc(
         //
         // map a bunch of pagetables until we have the space
         //
-        if (NULL == pTreeNode)
-        {
-            K2OSKERN_Debug("No Free space in kern virt heap\n");
-        }
-        else
-        {
-            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
-        }
+//        if (NULL == pTreeNode)
+//        {
+//            K2OSKERN_Debug("No Free space in kern virt heap\n");
+//        }
+//        else
+//        {
+//            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
+//        }
+
         do
         {
             physPageAddr = KernPhys_AllocOneKernelPage(NULL);
-            K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
+//            K2OSKERN_Debug("Alloced phys page %08X\n", physPageAddr);
             if (0 == physPageAddr)
             {
                 // physical memory exhausted
@@ -621,7 +622,7 @@ iVirtLocked_Alloc(
 
             pTreeNode = K2TREE_LastNode(&sgTrack.VirtHeap.SizeTree);
 
-            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
+//            K2OSKERN_Debug("Largest Free space chunk = %08X\n", pTreeNode->mUserVal);
 
         } while (pTreeNode->mUserVal < byteCount);
     }
@@ -653,7 +654,7 @@ iVirtLocked_Free(
 {
     BOOL result;
 
-    K2OSKERN_Debug("VirtHeap.Free freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
+//    K2OSKERN_Debug("VirtHeap.Free freelist nodecount = %d\n", sgTrack.VirtHeapFreeNodeList.mNodeCount);
     if (sgTrack.VirtHeapFreeNodeList.mNodeCount < 2)
     {
         if (!sReplenishTracking())

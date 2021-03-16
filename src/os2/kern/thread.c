@@ -47,6 +47,7 @@ KernThread_InitOne(
 {
     K2MEM_Zero(apThread, sizeof(K2OSKERN_OBJ_THREAD));
     apThread->Hdr.mObjType = KernObj_Thread;
+    apThread->Hdr.mRefCount = 1;
     apThread->mState = KernThreadState_Init;
     apThread->mAffinityMask = (1 << gData.LoadInfo.mCpuCoreCount) - 1;
     apThread->Hdr.mfCleanup = KernThread_CleanupOne;
@@ -241,7 +242,37 @@ KernThread_SysCall_NotifyCreate(
     K2OSKERN_OBJ_THREAD *       apCurThread
 )
 {
-    K2_ASSERT(0);
+    K2OS_USER_THREAD_PAGE * pThreadPage;
+    K2OSKERN_OBJ_NOTIFY *   pNotify;
+    K2OSKERN_OBJ_HEADER *   pHdr;
+    K2OS_TOKEN              tokNotify;
+    K2STAT                  stat;
+
+    pThreadPage = apCurThread->mpKernRwViewOfUserThreadPage;
+
+    pNotify = (K2OSKERN_OBJ_NOTIFY *)KernHeap_Alloc(sizeof(K2OSKERN_OBJ_NOTIFY));
+    if (NULL == pNotify)
+    {
+        apCurThread->mSysCall_Result = 0;
+        pThreadPage->mLastStatus = K2STAT_ERROR_OUT_OF_MEMORY;
+    }
+
+    KernNotify_InitOne(pNotify, apCurThread->mSysCall_Arg0);
+
+    pHdr = &pNotify->Hdr;
+    stat = KernTok_CreateNoAddRef(apCurThread->mpProc, 1, &pHdr, &tokNotify);
+    if (K2STAT_IS_ERROR(stat))
+    {
+        KernHeap_Free(pNotify);
+        pThreadPage->mLastStatus = stat;
+        apCurThread->mSysCall_Result = 0;
+    }
+    else
+    {
+        KernObj_Add(&pNotify->Hdr);
+        pThreadPage->mLastStatus = K2STAT_NO_ERROR;
+        apCurThread->mSysCall_Result = (UINT32)tokNotify;
+    }
 }
 
 void    

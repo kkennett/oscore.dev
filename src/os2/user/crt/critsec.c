@@ -85,6 +85,7 @@ K2OS_CritSec_Done(
 {
     K2STAT      stat;
     IntCritSec *pSec;
+
     pSec = (IntCritSec *)((((UINT32)apSec) + (K2OS_CACHELINE_BYTES - 1)) & (~(K2OS_CACHELINE_BYTES - 1)));
 
     stat = K2OS_Token_Destroy(pSec->mTokNotify);
